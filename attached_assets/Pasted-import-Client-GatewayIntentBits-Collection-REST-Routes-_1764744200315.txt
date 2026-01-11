@@ -1,0 +1,854 @@
+import {
+    Client,
+    GatewayIntentBits,
+    Collection,
+    REST,
+    Routes,
+    EmbedBuilder,
+    PermissionFlagsBits,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ChannelType,
+} from "discord.js";
+import {
+    createEmbed,
+    errorEmbed,
+    successEmbed,
+    logEvent,
+    initializeDatabase,
+    getGuildConfig,
+} from "./utils.js";
+import express from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import cron from "node-cron"; // Added cron dependency
+
+// --- 0. DATABASE CONFIG READING ---
+// No config reading needed for Replit Database.
+
+// --- 1. REPLIT KEEP-ALIVE SERVER ---
+const app = express();
+app.get("/", (req, res) => res.send("TitanBot System Online"));
+app.listen(3000, () => console.log("🌐 Web Server is ready."));
+
+// --- BIRTHDAY SYSTEM CORE LOGIC ---
+/**
+ * Runs a daily check for birthdays across all guilds the bot is in.
+ * Handles granting the birthday role and removing it from yesterday's honorees.
+ * @param {Client} client The Discord client instance.
+ */
+async function checkBirthdays(client) {
+    const today = new Date();
+    // Use UTC for consistent scheduling across all environments
+    const currentMonth = today.getUTCMonth() + 1; // getUTCMonth is 0-indexed
+    const currentDay = today.getUTCDate();
+
+    console.log(`🎂 Running daily birthday check for UTC: ${currentMonth}/${currentDay}.`);
+
+    for (const [guildId, guild] of client.guilds.cache) {
+        try {
+            const config = await client.getGuildConfig(client, guildId);
+            const { birthdayChannelId, birthdayRoleId } = config;
+
+            if (!birthdayChannelId || !birthdayRoleId) {
+                console.log(`Skipping birthday check for ${guild.name}: Missing channel or role config.`);
+                continue;
+            }
+
+            const channel = await guild.channels.fetch(birthdayChannelId).catch(() => null);
+            if (!channel) continue;
+
+            // --- 1. ROLE REMOVAL (Cleanup from yesterday) ---
+            const trackingKey = `bday-role-tracking-${guildId}`;
+            const trackingData = (await client.db.get(trackingKey)) || {};
+            const updatedTrackingData = { ...trackingData };
+
+            for (const userId of Object.keys(trackingData)) {
+                try {
+                    const member = await guild.members.fetch(userId).catch(() => null);
+
+                    if (member && member.roles.cache.has(birthdayRoleId)) {
+                        await member.roles.remove(birthdayRoleId, "Birthday role cleanup.");
+                        console.log(`✅ Removed birthday role from ${member.user.tag} in ${guild.name}.`);
+                    }
+                    // Remove the user from tracking whether they had the role or not.
+                    delete updatedTrackingData[userId];
+                } catch (error) {
+                    console.error(`Failed to remove birthday role from user ${userId} in ${guild.name}:`, error);
+                }
+            }
+            // Save updated tracking data (clearing removed users)
+            if (Object.keys(trackingData).length > 0) {
+                await client.db.set(trackingKey, updatedTrackingData);
+            }
+
+            // --- 2. BIRTHDAY CHECK AND ROLE GRANTING (Today's birthdays) ---
+            const newTracking = {};
+            const todayBirthdays = [];
+
+            // Fetch all members to check their birthdays (Replit DB key check is hard without an index)
+            const members = await guild.members.fetch().catch(() => new Collection());
+
+            for (const [userId, member] of members) {
+                if (member.user.bot) continue;
+
+                const bdayKey = `birthday-${userId}`;
+                const bdayData = await client.db.get(bdayKey);
+
+                if (bdayData && bdayData.month === currentMonth && bdayData.day === currentDay) {
+                    todayBirthdays.push(member);
+
+                    // Grant Role
+                    try {
+                        const role = guild.roles.cache.get(birthdayRoleId);
+                        if (role) {
+                            await member.roles.add(role, "It's their birthday!");
+                            console.log(`🎉 Granted birthday role to ${member.user.tag} in ${guild.name}.`);
+                            newTracking[userId] = Date.now(); // Track for removal tomorrow
+                        }
+                    } catch (e) {
+                        console.error(`Failed to grant birthday role to ${member.user.tag}:`, e);
+                    }
+                }
+            }
+
+            // Update tracking data for today's birthdays
+            if (Object.keys(newTracking).length > 0) {
+                // Merge new tracking data with any potential existing data (should be empty after cleanup)
+                await client.db.set(trackingKey, { ...updatedTrackingData, ...newTracking });
+            }
+
+
+            // --- 3. POST MESSAGE ---
+            if (todayBirthdays.length > 0) {
+                const mentions = todayBirthdays.map(m => m.toString()).join(', ');
+                const birthdayRoleMention = `<@&${birthdayRoleId}>`;
+
+                const bdayEmbed = new EmbedBuilder()
+                    .setTitle(`🥳 Happy Birthday to ${todayBirthdays.length > 1 ? 'these members' : 'a great member'}! 🎂`)
+                    .setDescription(`Please join us in wishing a very special day to ${mentions}!`)
+                    .setColor("#FEE75C")
+                    .setTimestamp();
+
+                if (todayBirthdays.length === 1) {
+                    bdayEmbed.setThumbnail(todayBirthdays[0].user.displayAvatarURL({ dynamic: true }));
+                }
+
+                await channel.send({
+                    content: `${birthdayRoleMention} - It's time to celebrate!`,
+                    embeds: [bdayEmbed],
+                });
+                console.log(`🎁 Posted ${todayBirthdays.length} birthday announcement(s) in ${guild.name}.`);
+            }
+
+        } catch (err) {
+            console.error(`Error processing birthdays for guild ${guildId}:`, err);
+        }
+    }
+}
+// --- END BIRTHDAY SYSTEM CORE LOGIC ---
+
+// --- 2. CLIENT CONFIGURATION ---
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildModeration,
+    ],
+});
+
+// Command Collection
+client.commands = new Collection();
+const commandsPayload = [];
+
+// --- 3. DYNAMIC COMMAND LOADER ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const foldersPath = path.join(__dirname, "commands");
+
+async function loadCommands() {
+    // Create commands directory if it doesn't exist
+    if (!fs.existsSync(foldersPath)) {
+        fs.mkdirSync(foldersPath);
+        console.log("📂 Created 'commands' directory.");
+        return;
+    }
+
+    const commandFolders = fs.readdirSync(foldersPath);
+
+    for (const folder of commandFolders) {
+        const commandsPath = path.join(foldersPath, folder);
+
+        // Ensure it's a directory
+        if (!fs.lstatSync(commandsPath).isDirectory()) continue;
+
+        const commandFiles = fs
+            .readdirSync(commandsPath)
+            .filter((file) => file.endsWith(".js"));
+
+        for (const file of commandFiles) {
+            const filePath = path.join(commandsPath, file);
+            try {
+                // Dynamic Import
+                const commandModule = await import(`file://${filePath}`);
+                const command = commandModule.default;
+
+                // Attach category property to command object
+                if (command && command.data && command.execute) {
+                    command.category = folder;
+                    client.commands.set(command.data.name, command);
+                    commandsPayload.push(command.data.toJSON());
+                    console.log(`✅ Loaded ${folder}/${command.data.name}`);
+                } else {
+                    console.warn(
+                        `⚠️ Skipped ${file}: Missing 'data' or 'execute'`,
+                    );
+                }
+            } catch (err) {
+                console.error(`❌ Failed to load ${file}:`, err);
+            }
+        }
+    }
+}
+
+// --- 4. EVENT HANDLING ---
+client.once("clientReady", async () => {
+    console.log("🔄 Initializing Database...");
+
+    // Initialize Replit DB and attach db instance to client
+    const { db } = initializeDatabase();
+
+    // Attach DB to client so commands can access it via interaction.client.db
+    client.db = db;
+    // Attach the utility function to the client for easy access in handlers
+    client.getGuildConfig = getGuildConfig;
+
+    if (client.db) {
+        console.log("✅ Database initialized and attached to Client.");
+    } else {
+        console.error(
+            "❌ Database failed to initialize. Database commands will fail.",
+        );
+    }
+
+    await loadCommands();
+    console.log(`🤖 Logged in as ${client.user.tag}`);
+    console.log(`📊 Total Commands: ${client.commands.size}`);
+
+    // Register Slash Commands with Discord API
+    const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+    try {
+        console.log("🔄 Refreshing application (/) commands...");
+        await rest.put(Routes.applicationCommands(client.user.id), {
+            body: commandsPayload,
+        });
+        console.log("✨ Successfully registered application commands.");
+    } catch (error) {
+        console.error("❌ Registration Error:", error);
+    }
+
+    // --- BIRTHDAY SYSTEM SCHEDULER START ---
+    // Schedule the check to run every day at 00:05 UTC (5 minutes after midnight)
+    cron.schedule('5 0 * * *', () => {
+        checkBirthdays(client);
+    }, {
+        scheduled: true,
+        timezone: "UTC"
+    });
+    console.log("⏰ Birthday cron job scheduled for 00:05 UTC daily.");
+    // --- BIRTHDAY SYSTEM SCHEDULER END ---
+});
+
+client.on("interactionCreate", async (interaction) => {
+    // Determine the configuration object for the guild
+    const guildId = interaction.guildId;
+    let guildConfig = {};
+    if (client.db && guildId) {
+        guildConfig = await getGuildConfig(client, guildId);
+    }
+
+    // Slash Command Handling
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return;
+
+        // --- COMMAND TOGGLE CHECK ---
+        const disabledCommands = guildConfig.enabledCommands || {};
+
+        // Check if the command is explicitly disabled (false)
+        if (disabledCommands[command.data.name] === false) {
+            const isManager = interaction.member.permissions.has(
+                PermissionFlagsBits.ManageGuild,
+            );
+
+            if (!isManager) {
+                // If the user is NOT a manager, block the command execution
+                return interaction.reply({
+                    embeds: [
+                        errorEmbed(
+                            "Command Disabled",
+                            `The command **\`/${command.data.name}\`** has been disabled by a server administrator.`,
+                        ),
+                    ],
+                    ephemeral: true,
+                });
+            }
+            console.log(
+                `Bypassing block for ${command.data.name} because user is a manager.`,
+            );
+        }
+        // ----------------------------------
+
+        try {
+            // Pass the loaded guildConfig to the command's execute function
+            await command.execute(interaction, guildConfig, client);
+        } catch (error) {
+            console.error(error);
+            const errResponse = {
+                embeds: [
+                    errorEmbed(
+                        "An error occurred while executing this command.",
+                    ),
+                ],
+                ephemeral: true,
+            };
+            if (interaction.replied || interaction.deferred)
+                await interaction.followUp(errResponse);
+            else await interaction.reply(errResponse);
+        }
+    }
+
+    // Global Button Handler
+    if (interaction.isButton()) {
+        // --- 1. CREATE TICKET LOGIC (Handles the button from /ticket setup) ---
+        if (interaction.customId === "create_ticket") {
+            await interaction.deferReply({ ephemeral: true });
+
+            // Check for existing open ticket for this user (using the raw User ID in the topic)
+            const existingTicket = interaction.guild.channels.cache.find(
+                (c) =>
+                    c.topic === interaction.user.id &&
+                    c.name.startsWith("ticket-") &&
+                    c.type === ChannelType.GuildText,
+            );
+
+            if (existingTicket) {
+                return interaction.editReply({
+                    embeds: [
+                        errorEmbed(
+                            "Ticket Already Open",
+                            `You already have an open ticket: ${existingTicket}`,
+                        ),
+                    ],
+                    ephemeral: true,
+                });
+            }
+
+            // Get Category ID from config
+            const preferredCategoryId = guildConfig.ticketCategoryId;
+
+            const ticketUserName = interaction.user.username
+                .replace(/[^a-z0-9]/gi, "")
+                .toLowerCase();
+            // Using a shorter unique ID
+            const channelName = `ticket-${ticketUserName.substring(0, 10)}-${Math.random().toString(36).substring(2, 6)}`;
+
+            try {
+                let category = null;
+
+                if (preferredCategoryId) {
+                    category =
+                        interaction.guild.channels.cache.get(
+                            preferredCategoryId,
+                        );
+                }
+
+                // If configured category doesn't exist, try to find a default 'Tickets' category
+                if (!category) {
+                    category = interaction.guild.channels.cache.find(
+                        (c) =>
+                            c.name.toLowerCase() === "tickets" &&
+                            c.type === ChannelType.GuildCategory,
+                    );
+                }
+
+                // If still no category, create a new one
+                if (!category) {
+                    category = await interaction.guild.channels.create({
+                        name: "Tickets",
+                        type: ChannelType.GuildCategory,
+                        permissionOverwrites: [
+                            {
+                                id: interaction.guild.id, // @everyone role
+                                deny: [PermissionFlagsBits.ViewChannel],
+                            },
+                            {
+                                id: client.user.id, // Bot itself
+                                allow: [PermissionFlagsBits.ViewChannel],
+                            },
+                        ],
+                    });
+                }
+
+                // Create the ticket channel
+                const ticketChannel = await interaction.guild.channels.create({
+                    name: channelName,
+                    type: ChannelType.GuildText,
+                    parent: category.id,
+                    // *** FIX APPLIED HERE: Using only the raw User ID for the topic ***
+                    topic: interaction.user.id,
+                    permissionOverwrites: [
+                        {
+                            id: interaction.guild.id, // @everyone role
+                            deny: [PermissionFlagsBits.ViewChannel],
+                        },
+                        {
+                            id: interaction.user.id, // Ticket opener
+                            allow: [
+                                PermissionFlagsBits.ViewChannel,
+                                PermissionFlagsBits.SendMessages,
+                                PermissionFlagsBits.ReadMessageHistory,
+                            ],
+                        },
+                        {
+                            // Target all users with ManageChannels perm (Moderators/Admins)
+                            id: interaction.guild.id,
+                            type: 0, // Role type - this relies on general permission inheritance for staff
+                            // Note: Staff access is usually granted via a role's permissions
+                            // or higher administrative permissions (e.g., Manage Channels).
+                            // This structure ensures the user and bot can see it.
+                            // If a specific STAFF_ROLE is needed, its ID should be added here.
+                        },
+                    ],
+                });
+
+                // --- NEW TICKET WELCOME MESSAGE AND BUTTONS (Unclaimed State) ---
+                const welcomeEmbed = createEmbed(
+                    "📝 New Support Ticket Opened",
+                    `${interaction.user}, welcome! Please describe your issue here. 
+                    \n**Moderators:** Click the button below to claim this ticket and assist the user.`,
+                )
+                    .setColor("#9B59B6")
+                    .setFooter({
+                        text: `Opened by ${interaction.user.tag} | ID: ${interaction.user.id}`,
+                    });
+
+                const actionRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId("claim_ticket")
+                        .setLabel("Claim Ticket")
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji("🙋"),
+                    new ButtonBuilder()
+                        .setCustomId("close_ticket")
+                        .setLabel("Close Ticket")
+                        .setStyle(ButtonStyle.Danger)
+                        .setEmoji("🔒"),
+                );
+
+                await ticketChannel.send({
+                    content: `${interaction.user} A staff member will be with you shortly.`,
+                    embeds: [welcomeEmbed],
+                    components: [actionRow],
+                });
+
+                await interaction.editReply({
+                    embeds: [
+                        successEmbed(
+                            "Ticket Created!",
+                            `Your ticket has been opened in ${ticketChannel}.`,
+                        ),
+                    ],
+                });
+
+                // Log the ticket creation
+                const logEmbed = createEmbed(
+                    "🎫 Ticket Opened (Audit Log)",
+                    `A new ticket was opened by ${interaction.user} in ${ticketChannel}.`,
+                )
+                    .setColor("#2ECC71")
+                    .addFields(
+                        {
+                            name: "Channel",
+                            value: ticketChannel.toString(),
+                            inline: true,
+                        },
+                        {
+                            name: "User",
+                            value: `${interaction.user.tag} (${interaction.user.id})`,
+                            inline: true,
+                        },
+                    );
+                logEvent(
+                    client,
+                    interaction.guildId,
+                    logEmbed,
+                    guildConfig,
+                    ticketChannel.id,
+                    interaction.user.id,
+                );
+            } catch (e) {
+                console.error("Failed to create ticket channel:", e);
+                await interaction.editReply({
+                    embeds: [
+                        errorEmbed(
+                            "Ticket Error",
+                            "Failed to create the ticket channel. Please check the bot's permissions.",
+                        ),
+                    ],
+                });
+            }
+        }
+
+        // --- 2. COMMAND-LINKED BUTTON LOGIC (Close, Claim, Unclaim) ---
+        // This block generalizes the handling for 'close_ticket', 'claim_ticket', and the new 'unclaim_ticket'.
+        const commandButtonMap = {
+            close_ticket: "close",
+            claim_ticket: "claim",
+            unclaim_ticket: "unclaim", // Maps the 'unclaim_ticket' custom ID to the 'unclaim' command
+        };
+
+        const commandName = commandButtonMap[interaction.customId];
+
+        if (commandName) {
+            const command = client.commands.get(commandName);
+
+            if (command) {
+                try {
+                    // Check for a dedicated button handler method on the command object first
+                    if (command.handleButton) {
+                        await command.handleButton(client, interaction);
+                    } else {
+                        // Fallback: Execute the main slash command logic
+                        await command.execute(interaction, guildConfig, client);
+                    }
+                } catch (error) {
+                    console.error(
+                        `Error executing button for command ${commandName}:`,
+                        error,
+                    );
+                    // Fallback error handling
+                    const errResponse = {
+                        embeds: [
+                            errorEmbed(
+                                "Interaction Error",
+                                `Failed to process the request for the **${commandName}** command button.`,
+                            ),
+                        ],
+                        ephemeral: true,
+                    };
+
+                    // Check if the interaction has been replied to or deferred before sending followUp/reply
+                    if (interaction.deferred || interaction.replied) {
+                        await interaction.followUp(errResponse);
+                    } else {
+                        await interaction.reply(errResponse);
+                    }
+                }
+            } else {
+                return interaction.reply({
+                    embeds: [
+                        errorEmbed(
+                            "Configuration Error",
+                            `The \`/${commandName}\` command is not loaded. Check command file name.`,
+                        ),
+                    ],
+                    ephemeral: true,
+                });
+            }
+        }
+    }
+});
+
+// --- NEW AFK SYSTEM LISTENER (messageCreate) ---
+client.on("messageCreate", async (message) => {
+    // Ignore bot messages and system messages
+    if (message.author.bot || !message.guild) return;
+
+    const userId = message.author.id;
+    const guildId = message.guild.id;
+
+    // ------------------------------------
+    // 1. AFK RETURN CHECK (AFK Removal)
+    // ------------------------------------
+    const afkKey = `afk-${userId}`;
+    const afkData = await client.db.get(afkKey);
+
+    if (afkData) {
+        // --- AFK Removal Logic ---
+        try {
+            // Remove AFK status from DB
+            await client.db.delete(afkKey);
+
+            // Calculate duration
+            const durationMs = Date.now() - afkData.timestamp;
+            const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
+            const durationHours = Math.floor(
+                (durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+            );
+            const durationMinutes = Math.floor(
+                (durationMs % (1000 * 60 * 60)) / (1000 * 60),
+            );
+
+            let durationString = "";
+            if (durationDays > 0) durationString += `${durationDays} day(s), `;
+            if (durationHours > 0)
+                durationString += `${durationHours} hour(s), `;
+            durationString += `${durationMinutes} minute(s)`;
+            durationString = durationString.replace(/, $/, ""); // Clean up trailing comma
+
+            // Nickname reset logic (only for the current guild)
+            const member = message.member;
+            let nicknameResetSuccess = false;
+
+            // Check if there's old nickname data for this specific guild
+            if (afkData.guilds && afkData.guilds[guildId]) {
+                const oldNickname = afkData.guilds[guildId].oldNickname;
+                const currentNickname = member.nickname;
+                const afkPrefix = "[AFK] ";
+
+                // Check if the current nickname contains the AFK prefix/indicator
+                if (currentNickname?.startsWith(afkPrefix)) {
+                    // Try to reset the nickname
+                    // Note: If the bot lacks 'Manage Nicknames' permission or the member is server owner/higher role, this will fail silently/throw error.
+                    await member.setNickname(
+                        oldNickname || null,
+                        "AFK status removed.",
+                    );
+                    nicknameResetSuccess = true;
+                }
+            }
+
+            // Send welcome back message
+            const returnEmbed = successEmbed(
+                "👋 Welcome Back!",
+                `You are no longer AFK. You were AFK for **${durationString || "less than a minute"}** with the reason: \`\`\`${afkData.reason || "No reason provided."}\`\`\``,
+            ).setFooter({
+                text: nicknameResetSuccess
+                    ? "Your nickname was reset."
+                    : "Your nickname was not modified (e.g., bot lacks permission or nickname was changed).",
+            });
+
+            await message.reply({ embeds: [returnEmbed] });
+
+            // OPTIONAL: Log the return event
+            const config = await getGuildConfig(client, guildId);
+            const logEmbed = createEmbed(
+                "🚪 AFK Status Cleared",
+                `${message.author} is no longer AFK. Duration: ${durationString}.`,
+            ).setColor("#E67E22"); // Orange color
+            logEvent(client, guildId, logEmbed, config);
+        } catch (error) {
+            console.error(
+                `❌ Failed to clear AFK status or reset nickname for ${userId} in ${guildId}:`,
+                error,
+            );
+        }
+        // AFK removal complete, stop processing for mentions for this message
+        return;
+    }
+
+    // ------------------------------------
+    // 2. AFK MENTION CHECK
+    // ------------------------------------
+    if (message.mentions.users.size > 0) {
+        for (const [id, user] of message.mentions.users) {
+            if (user.bot || id === userId) continue; // Skip bots and self-mentions
+
+            const mentionedAfkKey = `afk-${id}`;
+            const mentionedAfkData = await client.db.get(mentionedAfkKey);
+
+            if (mentionedAfkData) {
+                const afkMember = message.guild.members.cache.get(id);
+                if (!afkMember) continue;
+
+                // Calculate AFK duration
+                const durationMs = Date.now() - mentionedAfkData.timestamp;
+                const durationDays = Math.floor(
+                    durationMs / (1000 * 60 * 60 * 24),
+                );
+                const durationHours = Math.floor(
+                    (durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+                );
+                const durationMinutes = Math.floor(
+                    (durationMs % (1000 * 60 * 60)) / (1000 * 60),
+                );
+
+                let durationString = "";
+                if (durationDays > 0)
+                    durationString += `${durationDays} day(s), `;
+                if (durationHours > 0)
+                    durationString += `${durationHours} hour(s), `;
+                durationString += `${durationMinutes} minute(s)`;
+                durationString = durationString.replace(/, $/, ""); // Clean up trailing comma
+
+                const mentionEmbed = createEmbed(
+                    "💤 User is AFK",
+                    `**${afkMember.user.tag}** is currently AFK:`,
+                )
+                    .setColor("#3498DB") // Blue color
+                    .addFields(
+                        {
+                            name: "Reason",
+                            value:
+                                mentionedAfkData.reason ||
+                                "No reason provided.",
+                            inline: false,
+                        },
+                        {
+                            name: "AFK Since",
+                            value: `<t:${Math.floor(mentionedAfkData.timestamp / 1000)}:R> (${durationString || "less than a minute"})`,
+                            inline: false,
+                        },
+                    );
+
+                // Use a reply to the original message, mentioning the author of the message that triggered the check
+                await message.channel.send({
+                    content: `Psst, ${message.author}! You mentioned an AFK user: **${afkMember.user.tag}**`,
+                    embeds: [mentionEmbed],
+                    // Use reply option to link the original message
+                    reply: {
+                        messageReference: message.id,
+                        failIfNotExists: false,
+                    },
+                });
+
+                // Since we only want to reply once for the first AFK user found, we can continue or break.
+                // For better UX, we can continue, but to prevent spam, let's just break after the first one.
+                break;
+            }
+        }
+    }
+});
+// --- END NEW AFK SYSTEM LISTENER ---
+
+// --- LOGGING EVENT LISTENERS ---
+
+// 1. Member Join
+client.on("guildMemberAdd", async (member) => {
+    if (!member.guild) return;
+    const joinEmbed = new EmbedBuilder()
+        .setColor("#00FF00")
+        .setTitle("📥 Member Joined")
+        .setDescription(
+            `${member.user} (${member.user.tag}) has joined the server.`,
+        )
+        .setThumbnail(member.user.displayAvatarURL())
+        .addFields(
+            { name: "User ID", value: member.id, inline: true },
+            {
+                name: "Account Created",
+                value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`,
+                inline: true,
+            },
+        );
+    // Fetch fresh config for logging purposes
+    const config = await getGuildConfig(client, member.guild.id);
+    logEvent(client, member.guild.id, joinEmbed, config);
+});
+
+// 2. Member Leave
+client.on("guildMemberRemove", async (member) => {
+    if (!member.guild) return;
+    const leaveEmbed = new EmbedBuilder()
+        .setColor("#FF0000")
+        .setTitle("📤 Member Left")
+        .setDescription(`${member.user.tag} has left the server.`)
+        .setThumbnail(member.user.displayAvatarURL())
+        .addFields(
+            { name: "User ID", value: member.id, inline: true },
+            {
+                name: "Join Date",
+                value: member.joinedAt
+                    ? `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`
+                    : "Unknown",
+                inline: true,
+            },
+        );
+    // Fetch fresh config for logging purposes
+    const config = await getGuildConfig(client, member.guild.id);
+    logEvent(client, member.guild.id, leaveEmbed, config);
+});
+
+// 3. Message Deleted
+client.on("messageDelete", async (message) => {
+    if (message.author?.bot || !message.guild) return;
+
+    const deleteEmbed = new EmbedBuilder()
+        .setColor("#FFC300")
+        .setTitle("🗑️ Message Deleted")
+        .setDescription(
+            `A message sent by ${message.author} was deleted in ${message.channel}.`,
+        )
+        .addFields(
+            {
+                name: "User",
+                value: `${message.author.tag} (${message.author.id})`,
+                inline: false,
+            },
+            {
+                name: "Channel",
+                value: message.channel.toString(),
+                inline: true,
+            },
+            {
+                name: "Content",
+                value: message.content
+                    ? `\`\`\`${message.content.substring(0, 1000)}\`\`\``
+                    : "*[Content not cached]*",
+            },
+        );
+
+    // Fetch fresh config for logging purposes
+    const config = await getGuildConfig(client, message.guild.id);
+    logEvent(client, message.guild.id, deleteEmbed, config);
+});
+
+// 4. Message Edited
+client.on("messageUpdate", async (oldMessage, newMessage) => {
+    if (
+        oldMessage.author?.bot ||
+        !oldMessage.guild ||
+        oldMessage.content === newMessage.content
+    )
+        return;
+
+    const editEmbed = new EmbedBuilder()
+        .setColor("#8A2BE2")
+        .setTitle("📝 Message Edited")
+        .setDescription(
+            `A message by ${oldMessage.author} was edited in ${oldMessage.channel}. [Jump to Message](${newMessage.url})`,
+        )
+        .addFields(
+            {
+                name: "Channel",
+                value: oldMessage.channel.toString(),
+                inline: true,
+            },
+            {
+                name: "Original Content",
+                value: oldMessage.content
+                    ? `\`\`\`${oldMessage.content.substring(0, 500)}\`\`\``
+                    : "*[Content not cached]*",
+            },
+            {
+                name: "New Content",
+                value: newMessage.content
+                    ? `\`\`\`${newMessage.content.substring(0, 500)}\`\`\``
+                    : "*[Content not cached]*",
+            },
+        );
+
+    // Fetch fresh config for logging purposes
+    const config = await getGuildConfig(client, oldMessage.guild.id);
+    logEvent(client, oldMessage.guild.id, editEmbed, config);
+});
+
+// --- 5. INITIALIZATION ---
+if (!process.env.TOKEN) console.log("⚠️ WARNING: 'TOKEN' secret is missing.");
+client.login(process.env.TOKEN);
