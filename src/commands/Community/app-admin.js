@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -110,7 +110,7 @@ export default {
     ),
 };
 
-export async function execute(interaction) {
+    async execute(interaction) {
     if (!interaction.inGuild()) {
         return interaction.reply({
             embeds: [errorEmbed("This command can only be used in a server.")],
@@ -611,3 +611,4 @@ async function updateLogStatus(interaction, logChannelId) {
         console.error("Error updating log status:", error);
     }
 }
+};

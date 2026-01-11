@@ -2,7 +2,9 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-const SHOP_ITEMS = shop.SHOP_ITEMS;
+import { shopItems } from '../../shop_config.js';
+
+const SHOP_ITEMS = shopItems;
 
 export default {
     data: new SlashCommandBuilder()

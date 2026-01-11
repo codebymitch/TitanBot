@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
+import { shopItemsList } from '../../shop_config.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
