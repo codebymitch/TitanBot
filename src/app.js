@@ -125,8 +125,8 @@ class TitanBot extends Client {
       try {
         const counters = await getServerCounters(this, guildId);
         for (const [counterName, counter] of Object.entries(counters)) {
-          if (counter.enabled) {
-            await updateCounter(this, guild, counterName);
+          if (counter && counter.enabled) {
+            await updateCounter(this, guild, counter);
           }
         }
       } catch (error) {

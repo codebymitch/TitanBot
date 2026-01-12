@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { getColor } from '../config/theme.js';
+import { getColor } from '../config/bot.js';
 
 export function createEmbed({
   title = '',
