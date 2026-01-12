@@ -1,6 +1,29 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+
+// Helper functions (mocked or should be imported if they exist elsewhere)
+async function getApplicationSettings(client, guildId) {
+    // Implement or import logic to get settings from DB
+    return client.db?.settings?.get(guildId) || {};
+}
+
+async function saveApplicationSettings(client, guildId, updates) {
+    // Implement or import logic to save settings to DB
+}
+
+async function getApplication(client, guildId, appId) {
+    // Implement or import logic to get application from DB
+}
+
+async function getApplications(client, guildId, filters) {
+    // Implement or import logic to get applications from DB
+    return [];
+}
+
+async function updateApplication(client, guildId, appId, updates) {
+    // Implement or import logic to update application in DB
+}
 
 // Migrated from: commands/Community/app-admin.js
 export default {
@@ -108,61 +131,63 @@ export default {
             .setName("questions")
             .setDescription("Configure application questions")
     ),
-};
+
+    category: "Community",
 
     async execute(interaction) {
-    if (!interaction.inGuild()) {
-        return interaction.reply({
-            embeds: [errorEmbed("This command can only be used in a server.")],
-            ephemeral: true,
-        });
-    }
-
-    const { options, guild, member } = interaction;
-    const subcommand = options.getSubcommand();
-
-    // Check permissions
-    const settings = await getApplicationSettings(interaction.client, guild.id);
-    const isManager =
-        member.permissions.has(PermissionFlagsBits.ManageGuild) ||
-        (settings.managerRoles &&
-            settings.managerRoles.some((roleId) =>
-                member.roles.cache.has(roleId),
-            ));
-
-    if (!isManager) {
-        return interaction.reply({
-            embeds: [
-                errorEmbed(
-                    "You do not have permission to manage applications.",
-                ),
-            ],
-            ephemeral: true,
-        });
-    }
-
-    try {
-        if (subcommand === "setup") {
-            await handleSetup(interaction, settings);
-        } else if (subcommand === "view") {
-            await handleView(interaction);
-        } else if (subcommand === "review") {
-            await handleReview(interaction);
-        } else if (subcommand === "list") {
-            await handleList(interaction);
-        } else if (subcommand === "questions") {
-            await handleQuestions(interaction, settings);
+        if (!interaction.inGuild()) {
+            return interaction.reply({
+                embeds: [errorEmbed("This command can only be used in a server.")],
+                ephemeral: true,
+            });
         }
-    } catch (error) {
-        console.error("Error in app-admin command:", error);
-        interaction.reply({
-            embeds: [
-                errorEmbed("An error occurred while processing your request."),
-            ],
-            ephemeral: true,
-        });
+
+        const { options, guild, member } = interaction;
+        const subcommand = options.getSubcommand();
+
+        // Check permissions
+        const settings = await getApplicationSettings(interaction.client, guild.id);
+        const isManager =
+            member.permissions.has(PermissionFlagsBits.ManageGuild) ||
+            (settings.managerRoles &&
+                settings.managerRoles.some((roleId) =>
+                    member.roles.cache.has(roleId),
+                ));
+
+        if (!isManager) {
+            return interaction.reply({
+                embeds: [
+                    errorEmbed(
+                        "You do not have permission to manage applications.",
+                    ),
+                ],
+                ephemeral: true,
+            });
+        }
+
+        try {
+            if (subcommand === "setup") {
+                await handleSetup(interaction, settings);
+            } else if (subcommand === "view") {
+                await handleView(interaction);
+            } else if (subcommand === "review") {
+                await handleReview(interaction);
+            } else if (subcommand === "list") {
+                await handleList(interaction);
+            } else if (subcommand === "questions") {
+                await handleQuestions(interaction, settings);
+            }
+        } catch (error) {
+            console.error("Error in app-admin command:", error);
+            interaction.reply({
+                embeds: [
+                    errorEmbed("An error occurred while processing your request."),
+                ],
+                ephemeral: true,
+            });
+        }
     }
-}
+};
 
 async function handleSetup(interaction, settings) {
     const logChannel = interaction.options.getChannel("log-channel");
@@ -275,8 +300,7 @@ async function handleView(interaction) {
         });
     }
 
-    const statusColor =
-        BotConfig.applications.statusColors[application.status] || "#000000";
+    const statusColor = application.status === "approved" ? "#00FF00" : (application.status === "denied" ? "#FF0000" : "#FFFF00");
     const embed = createEmbed(
         `Application #${application.id} - ${application.roleName}`,
         `**User:** <@${application.userId}> (${application.userId})\n         **Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}\n` +
@@ -362,8 +386,7 @@ async function handleReview(interaction) {
     }
 
     const status = action === "approve" ? "approved" : "denied";
-    const statusColor =
-        BotConfig.applications.statusColors[status] || "#000000";
+    const statusColor = status === "approved" ? "#00FF00" : "#FF0000";
 
     // Update the application
     await updateApplication(interaction.client, interaction.guild.id, appId, {
@@ -487,7 +510,7 @@ async function handleList(interaction) {
 
     const embed = createEmbed(
         "Applications",
-        `Showing ${applications.length} of ${applications.length} applications.`,
+        `Showing ${applications.length} applications.`,
     );
 
     applications.forEach((app) => {
@@ -504,8 +527,7 @@ async function handleList(interaction) {
             value:
                 `**ID:** \`${app.id}\`\n` +
                 `**Status:** ${status}\n` +
-                `**Date:** ${new Date(app.createdAt).toLocaleString()}\n` +
-                `[View Application](/app-admin view id:${app.id})`,
+                `**Date:** ${new Date(app.createdAt).toLocaleString()}`,
             inline: true,
         });
     });
@@ -523,7 +545,7 @@ async function handleQuestions(interaction, settings) {
         .setTitle("Edit Application Questions");
 
     const questions =
-        settings.questions || BotConfig.applications.defaultQuestions;
+        settings.questions || ["Question 1", "Question 2"];
 
     // Add a text input for each question (up to 5)
     for (let i = 0; i < 5; i++) {
@@ -601,7 +623,6 @@ async function updateLogStatus(interaction, logChannelId) {
         const logStatusCommand = interaction.client.commands.get("logstatus");
         if (logStatusCommand) {
             // This assumes you have a logstatus command that can be updated
-            // You may need to adjust this based on your actual implementation
             await logStatusCommand.updateLogChannel(
                 interaction.guild.id,
                 logChannelId,
@@ -611,4 +632,3 @@ async function updateLogStatus(interaction, logChannelId) {
         console.error("Error updating log status:", error);
     }
 }
-};
