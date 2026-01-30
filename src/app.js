@@ -104,10 +104,10 @@ class TitanBot extends Client {
       // Register commands after login
       await this.registerCommands();
       
-      // Start cron jobs
-      this.setupCronJobs();
-      
       logger.info('Bot is running!');
+      
+      // Start cron jobs after bot is ready
+      this.setupCronJobs();
     } catch (error) {
       logger.error('Failed to start bot:', error);
       process.exit(1);
@@ -132,6 +132,12 @@ class TitanBot extends Client {
   }
 
   async updateAllCounters() {
+    // Check if database is available
+    if (!this.db) {
+      console.warn('Database not available for counter updates');
+      return;
+    }
+    
     for (const [guildId, guild] of this.guilds.cache) {
       try {
         const counters = await getServerCounters(this, guildId);

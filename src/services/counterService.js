@@ -74,6 +74,12 @@ export async function updateCounter(client, guild, counter) {
  */
 export async function getServerCounters(client, guildId) {
   try {
+    // Check if database is available
+    if (!client || !client.db) {
+      console.warn('Database not available for getServerCounters');
+      return {};
+    }
+    
     const data = await client.db.get(`counters:${guildId}`);
     
     // Handle various data formats and filter out invalid entries

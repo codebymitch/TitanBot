@@ -9,12 +9,17 @@ export default {
   name: Events.InteractionCreate,
   async execute(interaction, client) {
     try {
+      // Debug: Log all interactions
+      logger.debug(`Received interaction: ${interaction.type} - ${interaction.commandName || interaction.customId || 'unknown'}`);
+      
       // Handle chat input commands
       if (interaction.isChatInputCommand()) {
+        logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`);
         const command = client.commands.get(interaction.commandName);
 
         if (!command) {
           logger.error(`No command matching ${interaction.commandName} was found.`);
+          logger.debug(`Available commands: ${Array.from(client.commands.keys()).join(', ')}`);
           return;
         }
 
