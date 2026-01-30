@@ -44,17 +44,17 @@ export default {
           // Check command signature and call accordingly
           const executeString = command.execute.toString();
           
-          if (executeString.includes('interaction, guildConfig, client')) {
-            // Commands expecting (interaction, guildConfig, client)
-            await command.execute(interaction, guildConfig, client);
-          } else if (executeString.includes('interaction, config, client') || executeString.includes('interaction, client, config')) {
+          if (executeString.includes('async execute(interaction, config, client)')) {
             // Commands expecting (interaction, config, client)
+            await command.execute(interaction, guildConfig, client);
+          } else if (executeString.includes('async execute(interaction, guildConfig, client)')) {
+            // Commands expecting (interaction, guildConfig, client)
             await command.execute(interaction, guildConfig, client);
           } else if (executeString.includes('interaction, client')) {
             // Commands expecting (interaction, client)
             await command.execute(interaction, client);
           } else {
-            // Commands expecting (interaction) only
+            // Commands expecting (interaction) only - try with just interaction first
             await command.execute(interaction);
           }
         } catch (error) {
