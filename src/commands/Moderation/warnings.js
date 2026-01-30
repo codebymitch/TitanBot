@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logEvent } from '../../utils/moderation.js';
 
 // Migrated from: commands/Moderation/warnings.js
 export default {
@@ -53,6 +54,24 @@ export default {
                 .slice(0, 25);
 
             embed.addFields(warningFields);
+
+            // Log the action for audit purposes
+            await logEvent({
+                client,
+                guild: interaction.guild,
+                event: {
+                    action: "Warnings Viewed",
+                    target: `${target.tag} (${target.id})`,
+                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    reason: `Viewed ${totalWarns} warnings`,
+                    metadata: {
+                        userId: target.id,
+                        moderatorId: interaction.user.id,
+                        totalWarnings: totalWarns,
+                        validWarnings: validWarnings.length
+                    }
+                }
+            });
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {

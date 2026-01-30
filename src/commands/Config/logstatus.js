@@ -77,12 +77,13 @@ export default {
         const birthdayStatus = currentConfig.birthdayChannelId ? 
             "✅ **Enabled**" : "❌ **Disabled**";
 
+        // Enhanced moderation logging status
+        const moderationLoggingStatus = currentConfig.enableLogging && currentConfig.logChannelId 
+            ? "✅ **Enabled**" : "❌ **Disabled**";
+
         // Additional systems
         const applicationConfig = await getApplicationSettings(client, interaction.guildId);
         const applicationStatus = applicationConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
-        
-        const modlogConfig = await getModlogSettings(client, interaction.guildId);
-        const modlogStatus = modlogConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
 
         // --- LOG IGNORE FILTERS STATUS ---
         const ignoredUsers = currentConfig.logIgnore?.users || [];
@@ -136,8 +137,8 @@ export default {
                     inline: true,
                 },
                 {
-                    name: "� Mod Logs",
-                    value: modlogStatus,
+                    name: "🔨 Enhanced Moderation Logging",
+                    value: moderationLoggingStatus,
                     inline: true,
                 },
                 {

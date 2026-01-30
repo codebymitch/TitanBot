@@ -1,7 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { logEvent } from '../../utils/moderation.js';
+import { logModerationAction } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
 
 // Migrated from: commands/Moderation/ban.js
 export default {
@@ -87,40 +88,22 @@ export default {
 
             await interaction.guild.members.ban(user, { reason });
 
-            // --- LOGGING THE ACTION ---
-            const banEmbed = new EmbedBuilder()
-                .setColor("#721919") // Dark Red
-                .setTitle("🔨 Member Banned (Action Log)")
-                .setDescription(
-                    `${user.tag} has been permanently banned from the server.`,
-                )
-                .setThumbnail(user.displayAvatarURL())
-                .addFields(
-                    {
-                        name: "Target User",
-                        value: `${user.tag} (${user.id})`,
-                        inline: false,
-                    },
-                    {
-                        name: "Moderator",
-                        value: `${interaction.user.tag} (${interaction.user.id})`,
-                        inline: true,
-                    },
-                    { name: "Reason", value: reason, inline: false },
-                )
-                .setTimestamp();
-
-            await logEvent({
+            // Log the moderation action with enhanced system
+            const caseId = await logModerationAction({
                 client,
-                guildId: interaction.guildId,
+                guild: interaction.guild,
                 event: {
                     action: "Member Banned",
                     target: `${user.tag} (${user.id})`,
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason
+                    reason,
+                    metadata: {
+                        userId: user.id,
+                        moderatorId: interaction.user.id,
+                        permanent: true
+                    }
                 }
             });
-            // ---------------------------
 
             await interaction.editReply({
                 embeds: [
@@ -130,7 +113,7 @@ export default {
                 ],
             });
         } catch (error) {
-            console.error("Ban Error:", error);
+            logger.error("Ban Error:", error);
             await interaction.editReply({
                 embeds: [
                     errorEmbed(

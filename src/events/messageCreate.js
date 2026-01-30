@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData, saveUserLevelData } from '../utils/database.js';
 import { addXp } from '../services/xpSystem.js';
 import { botConfig } from '../config/bot.js';
+import { handleAFKMentions } from '../handlers/afkHandler.js';
 
 export default {
   name: Events.MessageCreate,
@@ -15,6 +16,9 @@ export default {
       if (message.content.startsWith(botConfig.commands.prefix)) {
         await handlePrefixCommand(message, client);
       }
+
+      // Handle AFK mentions
+      await handleAFKMentions(message, client);
 
       // Handle leveling (existing functionality)
       await handleLeveling(message, client);

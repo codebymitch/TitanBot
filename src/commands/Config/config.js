@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { getGuildConfig, setGuildConfig } from '../../services/guildConfig.js';
 
-// Migrated from: commands/Birthday/config.js
 export default {
     data: new SlashCommandBuilder()
         .setName("config")
@@ -32,7 +31,6 @@ export default {
                 ),
         ),
 
-    // Command Execution
     async execute(interaction, config, client) {
         if (
             !interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)

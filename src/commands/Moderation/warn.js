@@ -1,7 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { logEvent } from '../../utils/moderation.js';
+import { logModerationAction } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
 
 // Migrated from: commands/Moderation/warn.js
 export default {
@@ -75,38 +76,21 @@ export default {
 
             const totalWarns = warningsArray.length;
 
-            const warnEmbed = createEmbed(
-                "⚠️ User Warned (Action Log)",
-                `${target.tag} received a warning from ${moderator}.`,
-            )
-                .setColor("#FEE75C")
-                .addFields(
-                    {
-                        name: "Target User",
-                        value: `${target.tag} (${target.id})`,
-                        inline: false,
-                    },
-                    {
-                        name: "Moderator",
-                        value: `${moderator.tag} (${moderator.id})`,
-                        inline: true,
-                    },
-                    {
-                        name: "Total Warns",
-                        value: `${totalWarns}`,
-                        inline: true,
-                    },
-                    { name: "Reason", value: reason, inline: false },
-                );
-
-            await logEvent({
+            // Log the moderation action with enhanced system
+            const caseId = await logModerationAction({
                 client,
-                guildId: interaction.guildId,
+                guild: interaction.guild,
                 event: {
                     action: "User Warned",
                     target: `${target.tag} (${target.id})`,
                     executor: `${moderator.tag} (${moderator.id})`,
-                    reason: `${reason}\nTotal Warns: ${totalWarns}`
+                    reason,
+                    metadata: {
+                        userId: target.id,
+                        moderatorId: moderator.id,
+                        totalWarns,
+                        warningNumber: totalWarns
+                    }
                 }
             });
 
@@ -119,7 +103,7 @@ export default {
                 ],
             });
         } catch (error) {
-            console.error("Warn Command Error:", error);
+            logger.error("Warn Command Error:", error);
             await interaction.editReply({
                 embeds: [
                     errorEmbed(

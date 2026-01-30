@@ -55,12 +55,18 @@ export default {
             // Log the action using the proper logging system
             await logEvent({
                 client: interaction.client,
-                guildId: interaction.guildId,
+                guild: interaction.guild,
                 event: {
                     action: "DM Sent",
                     target: `${targetUser.tag} (${targetUser.id})`,
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}\nMessage: ${message}`
+                    reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}\nMessage: ${message}`,
+                    metadata: {
+                        userId: targetUser.id,
+                        moderatorId: interaction.user.id,
+                        anonymous,
+                        messageLength: message.length
+                    }
                 }
             });
 

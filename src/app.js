@@ -81,32 +81,25 @@ class TitanBot extends Client {
 
   async start() {
     try {
-      // Wait a moment for environment variables to be fully loaded (Railway specific)
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Initialize database
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
       
-      // Start the web server for keep-alive
       this.startWebServer();
       
       logger.info('Starting to load commands...');
       await loadCommands(this);
       logger.info(`Command loading completed. Total commands loaded: ${this.commands.size}`);
       
-      // Load other handlers
       await this.loadHandlers();
       
-      // Login to Discord first
       await this.login(this.config.bot.token);
       
-      // Register commands after login
       await this.registerCommands();
       
       logger.info('Bot is running!');
       
-      // Start cron jobs after bot is ready
       this.setupCronJobs();
     } catch (error) {
       logger.error('Failed to start bot:', error);
@@ -117,24 +110,21 @@ class TitanBot extends Client {
   startWebServer() {
     const app = express();
     app.get("/", (req, res) => res.send("TitanBot System Online"));
-    app.listen(3000, () => console.log(" Web Server is ready."));
+    app.listen(3000, () => logger.info("Web Server is ready."));
   }
 
   setupCronJobs() {
     // Daily birthday check at 6 AM UTC
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
-    
     // Check giveaways every minute
     cron.schedule('* * * * *', () => checkGiveaways(this));
-    
     // Update counters every 15 minutes
     cron.schedule('*/15 * * * *', () => this.updateAllCounters());
   }
 
   async updateAllCounters() {
-    // Check if database is available
     if (!this.db) {
-      console.warn('Database not available for counter updates');
+      logger.warn('Database not available for counter updates');
       return;
     }
     
@@ -147,7 +137,7 @@ class TitanBot extends Client {
           }
         }
       } catch (error) {
-        console.error(`Error updating counters for guild ${guildId}:`, error);
+        logger.error(`Error updating counters for guild ${guildId}:`, error);
       }
     }
   }
@@ -210,7 +200,7 @@ try {
   const bot = new TitanBot();
   bot.start();
 } catch (error) {
-  console.error('Fatal error during bot startup:', error);
+  logger.error('Fatal error during bot startup:', error);
   process.exit(1);
 }
 

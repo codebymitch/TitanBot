@@ -7,7 +7,6 @@ import { getPromoRow } from '../../utils/components.js';
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
 
-// Migrated from: commands/Utility/weather.js
 export default {
     data: new SlashCommandBuilder()
         .setName("weather")

@@ -70,11 +70,16 @@ export default {
 
       await logEvent({
         client,
-        guildId: interaction.guildId,
+        guild: interaction.guild,
         event: {
           action: "Channel Locked",
           target: channel.toString(),
-          executor: `${interaction.user.tag} (${interaction.user.id})`
+          executor: `${interaction.user.tag} (${interaction.user.id})`,
+          metadata: {
+            channelId: channel.id,
+            category: channel.parent?.name || 'None',
+            moderatorId: interaction.user.id
+          }
         }
       });
       // ---------------------------

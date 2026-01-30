@@ -96,11 +96,15 @@ export default {
 
             await logEvent({
                 client,
-                guildId: interaction.guildId,
+                guild: interaction.guild,
                 event: {
-                    action: "Member Timeout Removed",
+                    action: "Member Untimeouted",
                     target: `${targetUser.tag} (${targetUser.id})`,
-                    executor: `${interaction.user.tag} (${interaction.user.id})`
+                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    metadata: {
+                        userId: targetUser.id,
+                        previousTimeout: member.communicationDisabledUntilTimestamp
+                    }
                 }
             });
             // ---------------------------

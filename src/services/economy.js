@@ -43,9 +43,7 @@ export function getMaxBankCapacity(userData) {
 export async function getEconomyData(client, guildId, userId) {
     try {
         const key = getEconomyKey(guildId, userId);
-        console.log(`[Economy] Getting data for key: ${key}`);
         
-        // Use the database wrapper instead of direct client.db access
         const data = await getFromDb(key, {
             wallet: 0,
             bank: 0,
@@ -61,11 +59,9 @@ export async function getEconomyData(client, guildId, userId) {
             cooldowns: {}
         });
         
-        console.log(`[Economy] Retrieved data:`, data);
         return data;
     } catch (error) {
-        console.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
-        // Return default economy data structure
+        logger.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
         return {
             wallet: 0,
             bank: 0,
@@ -95,13 +91,9 @@ export async function setEconomyData(client, guildId, userId, newData) {
     try {
         const key = getEconomyKey(guildId, userId);
         
-        // Get existing data first
         const existingData = await getEconomyData(client, guildId, userId);
-        
-        // Merge existing data with new data, with new data taking precedence
         const mergedData = { ...existingData, ...newData };
         
-        // Use the database wrapper instead of direct client.db access
         await setInDb(key, mergedData);
         return true;
     } catch (error) {
@@ -150,7 +142,7 @@ export async function addMoney(client, guildId, userId, amount, type = 'wallet')
             ...(type === 'bank' ? { maxBank: getMaxBankCapacity(userData) } : {})
         };
     } catch (error) {
-        console.error(`Error adding money to ${type} for user ${userId} in guild ${guildId}:`, error);
+        logger.error(`Error adding money to ${type} for user ${userId} in guild ${guildId}:`, error);
         return { success: false, error: 'An error occurred while processing your request' };
     }
 }
@@ -201,7 +193,7 @@ export async function removeMoney(client, guildId, userId, amount, type = 'walle
             newBalance: type === 'bank' ? userData.bank : userData.wallet
         };
     } catch (error) {
-        console.error(`Error removing money from ${type} for user ${userId} in guild ${guildId}:`, error);
+        logger.error(`Error removing money from ${type} for user ${userId} in guild ${guildId}:`, error);
         return { success: false, error: 'An error occurred while processing your request' };
     }
 }
@@ -276,7 +268,7 @@ export async function transferMoney(client, guildId, userId, amount, direction) 
         };
         
     } catch (error) {
-        console.error(`Error transferring money (${direction}) for user ${userId} in guild ${guildId}:`, error);
+        logger.error(`Error transferring money (${direction}) for user ${userId} in guild ${guildId}:`, error);
         return { success: false, error: 'An error occurred while processing your request' };
     }
 }
@@ -310,7 +302,7 @@ export async function checkCooldown(client, guildId, userId, action, cooldownTim
         return { onCooldown: false };
         
     } catch (error) {
-        console.error(`Error checking cooldown for ${action} for user ${userId} in guild ${guildId}:`, error);
+        logger.error(`Error checking cooldown for ${action} for user ${userId} in guild ${guildId}:`, error);
         return { onCooldown: true, timeLeft: cooldownTime };
     }
 }

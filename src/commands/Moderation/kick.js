@@ -1,7 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { logEvent } from '../../utils/moderation.js';
+import { logModerationAction } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
 
 // Migrated from: commands/Moderation/kick.js
 export default {
@@ -94,38 +95,21 @@ export default {
 
       await member.kick(reason);
 
-      // --- LOGGING THE ACTION ---
-      const kickEmbed = new EmbedBuilder()
-        .setColor("#FFA500") // Orange
-        .setTitle("👢 Member Kicked (Action Log)")
-        .setDescription(`${targetUser.tag} has been kicked from the server.`)
-        .setThumbnail(targetUser.displayAvatarURL())
-        .addFields(
-          {
-            name: "Target User",
-            value: `${targetUser.tag} (${targetUser.id})`,
-            inline: false,
-          },
-          {
-            name: "Moderator",
-            value: `${interaction.user.tag} (${interaction.user.id})`,
-            inline: true,
-          },
-          { name: "Reason", value: reason, inline: false },
-        )
-        .setTimestamp();
-
-      await logEvent({
+      // Log the moderation action with enhanced system
+      const caseId = await logModerationAction({
         client,
-        guildId: interaction.guildId,
+        guild: interaction.guild,
         event: {
           action: "Member Kicked",
           target: `${targetUser.tag} (${targetUser.id})`,
           executor: `${interaction.user.tag} (${interaction.user.id})`,
-          reason
+          reason,
+          metadata: {
+            userId: targetUser.id,
+            moderatorId: interaction.user.id
+          }
         }
       });
-      // ---------------------------
 
       await interaction.editReply({
         embeds: [
@@ -135,7 +119,7 @@ export default {
         ],
       });
     } catch (error) {
-      console.error("Kick Error:", error);
+      logger.error("Kick Error:", error);
       await interaction.editReply({
         embeds: [
           errorEmbed(

@@ -69,12 +69,18 @@ export default {
 
       await logEvent({
         client,
-        guildId: interaction.guildId,
+        guild: interaction.guild,
         event: {
           action: "Messages Purged",
           target: `${channel} (${deletedCount} messages)`,
           executor: `${interaction.user.tag} (${interaction.user.id})`,
-          reason: `Deleted ${deletedCount} messages`
+          reason: `Deleted ${deletedCount} messages`,
+          metadata: {
+            channelId: channel.id,
+            messageCount: deletedCount,
+            requestedAmount: amount,
+            moderatorId: interaction.user.id
+          }
         }
       });
       // ---------------------------

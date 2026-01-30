@@ -1,7 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { logEvent } from '../../utils/moderation.js';
+import { logModerationAction } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
 
 
 // Duration choices for Discord's UI
@@ -107,39 +108,24 @@ export default {
                 durationChoices.find((c) => c.value === durationMinutes)
                     ?.name || `${durationMinutes} minutes`;
 
-            // --- LOGGING THE ACTION ---
-            const timeoutEmbed = createEmbed(
-                "⏳ User Timed Out (Action Log)",
-                `${targetUser.tag} has been timed out by ${interaction.user}.`,
-            )
-                .setColor("#F1C40F") // Yellow for Temporary Restriction
-                .addFields(
-                    {
-                        name: "Target User",
-                        value: `${targetUser.tag} (${targetUser.id})`,
-                        inline: false,
-                    },
-                    { name: "Duration", value: durationDisplay, inline: true },
-                    {
-                        name: "Moderator",
-                        value: `${interaction.user.tag} (${interaction.user.id})`,
-                        inline: true,
-                    },
-                    { name: "Reason", value: reason, inline: false },
-                );
-
-            await logEvent({
+            // Log the moderation action with enhanced system
+            const caseId = await logModerationAction({
                 client,
-                guildId: interaction.guildId,
+                guild: interaction.guild,
                 event: {
                     action: "Member Timed Out",
                     target: `${targetUser.tag} (${targetUser.id})`,
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
                     reason: `${reason}\nDuration: ${durationDisplay}`,
-                    duration: durationDisplay
+                    duration: durationDisplay,
+                    metadata: {
+                        userId: targetUser.id,
+                        moderatorId: interaction.user.id,
+                        durationMinutes,
+                        timeoutEnds: new Date(Date.now() + durationMs).toISOString()
+                    }
                 }
             });
-            // ---------------------------
 
             await interaction.editReply({
                 embeds: [
@@ -150,7 +136,7 @@ export default {
                 ],
             });
         } catch (error) {
-            console.error("Timeout Error:", error);
+            logger.error("Timeout Error:", error);
             await interaction.editReply({
                 embeds: [
                     errorEmbed(

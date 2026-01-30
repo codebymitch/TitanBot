@@ -1,9 +1,8 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 
-// Migrated from: commands/Welcome/welcome.js
 export default {
     data: new SlashCommandBuilder()
         .setName('welcome')

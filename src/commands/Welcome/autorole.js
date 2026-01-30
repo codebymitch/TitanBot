@@ -3,7 +3,6 @@ import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 
-// Migrated from: commands/Welcome/autorole.js
 export default {
     data: new SlashCommandBuilder()
         .setName('autorole')

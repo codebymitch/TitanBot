@@ -69,6 +69,7 @@ export default {
         try {
             if (disableLogging) {
                 currentConfig.logChannelId = null;
+                currentConfig.enableLogging = false;
                 // 🔑 2. Save using guildConfig service
                 await setGuildConfig(client, guildId, currentConfig);
 
@@ -103,6 +104,7 @@ export default {
 
             // Update local config object
             currentConfig.logChannelId = logChannel.id;
+            currentConfig.enableLogging = true;
 
             // 🔑 4. Save using guildConfig service
             await setGuildConfig(client, guildId, currentConfig);
@@ -119,12 +121,17 @@ export default {
             // Log the action using the newly updated config
             await logEvent({
                 client,
-                guildId,
+                guild: interaction.guild,
                 event: {
                     action: "Log Channel Activated",
                     target: logChannel.toString(),
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason: `Logging set by ${interaction.user}`
+                    reason: `Logging set by ${interaction.user}`,
+                    metadata: {
+                        channelId: logChannel.id,
+                        moderatorId: interaction.user.id,
+                        loggingEnabled: true
+                    }
                 }
             });
         } catch (error) {
