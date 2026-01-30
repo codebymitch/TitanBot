@@ -149,32 +149,44 @@ export async function registerCommands(client, guildId) {
         const commands = [];
         let totalSubcommands = 0;
         
+        console.log(`Starting command registration for ${client.commands.size} commands...`);
+        
         // Convert commands to JSON for registration
         for (const command of client.commands.values()) {
-            // Skip commands that shouldn't be registered (e.g., context menus)
-            if (command.data && typeof command.data.toJSON === 'function') {
-                commands.push(command.data.toJSON());
+            // Skip duplicates (only register by command name, not aliases)
+            if (command.data && typeof command.data.toJSON === 'function' && !commands.find(cmd => cmd.name === command.data.name)) {
+                const commandJson = command.data.toJSON();
+                commands.push(commandJson);
                 
                 // Count subcommands for this command
-                const subcommands = getSubcommandInfo(command.data.toJSON());
+                const subcommands = getSubcommandInfo(commandJson);
                 totalSubcommands += subcommands.length;
+                
+                console.log(`Registering command: ${command.data.name}`);
             }
         }
         
         // Calculate total commands including subcommands
         const totalCommandsWithSubs = commands.length + totalSubcommands;
         
+        console.log(`Attempting to register ${commands.length} base commands (${totalCommandsWithSubs} total with subcommands)`);
+        
         if (guildId) {
             // Register commands for a specific guild (faster for development)
+            console.log(`Registering commands for guild: ${guildId}`);
             const guild = await client.guilds.fetch(guildId);
             await guild.commands.set(commands);
+            console.log(`Successfully registered ${totalCommandsWithSubs} guild commands`);
             logger.info(`Registered ${totalCommandsWithSubs} guild commands`);
         } else {
             // Register commands globally
+            console.log('Registering commands globally...');
             await client.application.commands.set(commands);
+            console.log(`Successfully registered ${totalCommandsWithSubs} global commands`);
             logger.info(`Registered ${totalCommandsWithSubs} global commands`);
         }
     } catch (error) {
+        console.error('Error registering commands:', error);
         logger.error('Error registering commands:', error);
         throw error;
     }
