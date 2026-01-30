@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
 // Migrated from: commands/Moderation/warnings.js
@@ -24,25 +24,23 @@ export default {
 
         try {
             const warningsKey = `warnings-${guildId}-${target.id}`;
-            const userWarns = (await client.db.get(warningsKey)) || [];
-            const totalWarns = userWarns.length;
+            const userWarns = await client.db.get(warningsKey);
+            
+            // Ensure userWarns is an array, handle corrupted or invalid data
+            const warningsArray = Array.isArray(userWarns) ? userWarns : [];
+            const validWarnings = warningsArray.filter((w) => w && typeof w === 'object' && w.reason && w.moderatorId && w.date);
+            const totalWarns = validWarnings.length;
 
             if (totalWarns === 0)
                 return interaction.editReply({
                     embeds: [
-                        createEmbed(
-                            `Warnings: ${target.tag}`,
-                            "✅ This user has no recorded warnings.",
-                        ).setColor("#2ECC71"),
+                        createEmbed({ title: `Warnings: ${target.tag}`, description: "✅ This user has no recorded warnings.", }).setColor("#2ECC71"),
                     ],
                 });
 
-            const embed = createEmbed(
-                `Warnings: ${target.tag}`,
-                `Total Warnings: **${totalWarns}**`,
-            ).setColor("#F39C12");
+            const embed = createEmbed({ title: `Warnings: ${target.tag}`, description: `Total Warnings: **${totalWarns}**`, }).setColor("#F39C12");
 
-            const warningFields = userWarns
+            const warningFields = validWarnings
                 .map((w, i) => {
                     const discordTimestamp = Math.floor(w.date / 1000);
 

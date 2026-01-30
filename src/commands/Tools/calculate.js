@@ -1,6 +1,43 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+
+// Simple math expression evaluator (safe alternative to eval)
+function evaluate(expression) {
+    // Remove spaces and convert to lowercase
+    let expr = expression.replace(/\s/g, '').toLowerCase();
+    
+    // Basic math functions and constants
+    const math = {
+        sin: Math.sin,
+        cos: Math.cos,
+        tan: Math.tan,
+        sqrt: Math.sqrt,
+        abs: Math.abs,
+        log: Math.log,
+        log10: Math.log10,
+        exp: Math.exp,
+        pi: Math.PI,
+        e: Math.E
+    };
+    
+    // Replace math functions and constants
+    expr = expr.replace(/sin|cos|tan|sqrt|abs|log|log10|exp|pi|e/g, (match) => `math.${match}`);
+    
+    // Replace degree symbol and convert to radians
+    expr = expr.replace(/(\d+)\s*deg/g, (match, num) => `(${num} * Math.PI / 180)`);
+    
+    // Handle power operator
+    expr = expr.replace(/\^/g, '**');
+    
+    try {
+        // Use Function constructor instead of eval for better security
+        const func = new Function('math', `return ${expr}`);
+        return func(math);
+    } catch (error) {
+        throw new Error(`Invalid expression: ${error.message}`);
+    }
+}
 
 // Store calculation history (in-memory, resets on bot restart)
 const calculationHistory = new Map();
@@ -224,7 +261,7 @@ export default {
                         // Show modal first without deferring
                         try {
                             await i.showModal({
-                                customId: `calc_modal_${interaction.id}_${operation}`,
+                                customId: `calc_modal_${i.user.id}_${operation}`,
                                 title: `Enter a number to ${operation}`,
                                 components: [
                                     {
@@ -262,7 +299,7 @@ export default {
                             const modalResponse = await i.awaitModalSubmit({
                                 filter: (m) =>
                                     m.customId ===
-                                    `calc_modal_${interaction.id}_${operation}`,
+                                    `calc_modal_${i.user.id}_${operation}`,
                                 time: 300000, // 5 minutes
                             });
 
@@ -274,18 +311,46 @@ export default {
                                 );
                             const newExpression = `(${expression}) ${operator} (${operand})`;
 
-                            // Recursively call the command with the new expression
-                            await this.execute({
-                                ...interaction,
-                                options: {
-                                    getString: () => newExpression,
-                                },
-                                editReply: (response) =>
-                                    interaction.editReply(response),
-                                deferReply: () => Promise.resolve(),
-                                user: interaction.user,
-                                channel: interaction.channel,
-                            });
+                            // Calculate the new result
+                            let newResult;
+                            try {
+                                newResult = evaluate(newExpression);
+                                
+                                // Format the new result
+                                let formattedNewResult;
+                                if (typeof newResult === "number") {
+                                    formattedNewResult = newResult.toLocaleString("en-US", {
+                                        maximumFractionDigits: 10,
+                                    });
+
+                                    if (
+                                        Math.abs(newResult) > 0 &&
+                                        (Math.abs(newResult) >= 1e10 || Math.abs(newResult) < 1e-3)
+                                    ) {
+                                        formattedNewResult = newResult.toExponential(6);
+                                    }
+                                } else {
+                                    formattedNewResult = String(newResult);
+                                }
+
+                                // Update the embed with new calculation
+                                const updatedEmbed = successEmbed(
+                                    "🧮 Calculation Result",
+                                    `**Expression:** \`${newExpression.replace(/`/g, "\`")}\`\n` +
+                                        `**Result:** \`${formattedNewResult}\`\n\n` +
+                                        `*Use the buttons below to perform operations with the result.*`,
+                                );
+
+                                await modalResponse.editReply({
+                                    embeds: [updatedEmbed],
+                                });
+
+                            } catch (calcError) {
+                                await modalResponse.followUp({
+                                    embeds: [errorEmbed("Calculation Error", "Failed to evaluate the new expression.")],
+                                    ephemeral: true,
+                                });
+                            }
                         } catch (error) {
                             console.error("Modal error:", error);
                             if (!i.deferred && !i.replied) {

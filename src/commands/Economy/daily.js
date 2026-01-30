@@ -1,18 +1,30 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getEconomyData, setEconomyData } from '../../services/economy.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
+import { formatDuration } from '../../utils/helpers.js';
+import { botConfig } from '../../config/bot.js';
 
 const DAILY_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const DAILY_AMOUNT = 1000;
 const PREMIUM_BONUS_PERCENTAGE = 0.1; // 10% bonus
-// 
 
 export default {
+    // Slash command data
     data: new SlashCommandBuilder()
         .setName("daily")
         .setDescription("Claim your daily cash reward!"),
-    category: "economy", // Ensure the category is defined
+    
+    // Prefix command data
+    name: "daily",
+    aliases: ["claim", "reward"],
+    description: "Claim your daily cash reward!",
+    category: "Economy",
+    usage: `${botConfig.commands.prefix}daily`,
+    cooldown: 1440, // 24 hours in minutes
 
+    // Slash command execution
     async execute(interaction, config, client) {
         // Use ephemeral: false for the daily command since it's typically public
         await interaction.deferReply();
@@ -23,7 +35,7 @@ export default {
 
         try {
             const userData = await getEconomyData(client, guildId, userId);
-            const lastDaily = userData.cooldowns.daily || 0;
+            const lastDaily = userData.lastDaily || 0;
 
             // --- 1. Cooldown Check ---
             if (now < lastDaily + DAILY_COOLDOWN) {
@@ -63,8 +75,8 @@ export default {
             }
 
             // --- 3. Update Data ---
-            userData.cash += earned;
-            userData.cooldowns.daily = now; // Update the cooldown timestamp
+            userData.wallet += earned;
+            userData.lastDaily = now; // Update the cooldown timestamp
 
             await setEconomyData(client, guildId, userId, userData);
 
@@ -75,7 +87,7 @@ export default {
             )
                 .addFields({
                     name: "New Cash Balance",
-                    value: `$${userData.cash.toLocaleString()}`,
+                    value: `$${userData.wallet.toLocaleString()}`,
                     inline: true,
                 })
                 .setFooter({
@@ -97,4 +109,82 @@ export default {
             });
         }
     },
+
+    // Prefix command execution
+    async executeMessage(message, args, client) {
+        const userId = message.author.id;
+        const guildId = message.guild.id;
+        const now = Date.now();
+
+        try {
+            const userData = await getEconomyData(client, guildId, userId);
+            const lastDaily = userData.lastDaily || 0;
+            const cooldownRemaining = lastDaily + DAILY_COOLDOWN - now;
+
+            if (cooldownRemaining > 0) {
+                const timeString = formatDuration(cooldownRemaining);
+                return message.reply({
+                    embeds: [
+                        errorEmbed(
+                            "⏰ Daily Reward Cooldown",
+                            `You need to wait **${timeString}** before claiming your next daily reward.`,
+                        ),
+                    ],
+                });
+            }
+
+            // --- 2. Calculate Earnings ---
+            let earned = DAILY_AMOUNT;
+            let bonusMessage = "";
+            let hasPremiumRole = false;
+
+            // Check for premium role bonus
+            const guildConfig = await getGuildConfig(client, guildId);
+            if (guildConfig.premiumRoleId) {
+                const member = message.guild.members.cache.get(userId);
+                if (member && member.roles.cache.has(guildConfig.premiumRoleId)) {
+                    const bonusAmount = Math.floor(
+                        DAILY_AMOUNT * PREMIUM_BONUS_PERCENTAGE,
+                    );
+                    earned += bonusAmount;
+                    bonusMessage = `\n✨ **Premium Bonus:** +$${bonusAmount.toLocaleString()}`;
+                    hasPremiumRole = true;
+                }
+            }
+
+            // --- 3. Update Data ---
+            userData.wallet += earned;
+            userData.lastDaily = now; // Update the cooldown timestamp
+
+            await setEconomyData(client, guildId, userId, userData);
+
+            // --- 4. Prepare Response ---
+            const embed = successEmbed(
+                "✅ Daily Reward Claimed!",
+                `You have claimed your daily **$${earned.toLocaleString()}**!${bonusMessage}`,
+            )
+                .addFields({
+                    name: "New Cash Balance",
+                    value: `$${userData.wallet.toLocaleString()}`,
+                    inline: true,
+                })
+                .setFooter({
+                    text: hasPremiumRole
+                        ? `Next claim in 24 hours. (Premium Active)`
+                        : `Next claim in 24 hours.`,
+                });
+
+            await message.reply({ embeds: [embed] });
+        } catch (error) {
+            console.error("Daily command execution error:", error);
+            await message.reply({
+                embeds: [
+                    errorEmbed(
+                        "System Error",
+                        "An unexpected error occurred while claiming your reward. Check the console for details.",
+                    ),
+                ],
+            });
+        }
+    }
 };

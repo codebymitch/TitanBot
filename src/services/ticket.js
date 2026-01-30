@@ -6,24 +6,21 @@ import {
   EmbedBuilder,
   PermissionFlagsBits
 } from 'discord.js';
-import { 
-  getGuildConfig,
-  getTicketData,
-  saveTicketData,
-  deleteTicketData
-} from './database.js';
+import { getGuildConfig } from './guildConfig.js';
+import { getTicketData, saveTicketData, deleteTicketData, getFromDb, setInDb } from './database.js';
 import { logger } from '../utils/logger.js';
 import { createEmbed, errorEmbed } from '../utils/embeds.js';
 
 // Priority mapping
 const PRIORITY_MAP = {
+  none: { name: '⚪ NONE', color: '#95a5a6', emoji: '⚪', label: 'None' },
   low: { name: '🔵 LOW', color: '#3498db', emoji: '🔵', label: 'Low' },
   medium: { name: '🟢 MEDIUM', color: '#2ecc71', emoji: '🟢', label: 'Medium' },
   high: { name: '🟡 HIGH', color: '#f1c40f', emoji: '🟡', label: 'High' },
   urgent: { name: '🔴 URGENT', color: '#e74c3c', emoji: '🔴', label: 'Urgent' }
 };
 
-export async function createTicket(guild, member, categoryId, reason = 'No reason provided', priority = 'medium') {
+export async function createTicket(guild, member, categoryId, reason = 'No reason provided', priority = 'none') {
   try {
     const config = await getGuildConfig({}, guild.id);
     const ticketConfig = config.tickets || {};
@@ -51,10 +48,17 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     
     // Create ticket channel
     const ticketNumber = await getNextTicketNumber(guild.id);
-    const channelName = (ticketConfig.ticketName || 'ticket-{number}')
-      .replace('{number}', ticketNumber)
-      .replace('{username}', member.user.username)
-      .substring(0, 32); // Max channel name length is 32
+    
+    // Force the channel name to use our format, ignoring any config that might be corrupted
+    let channelName = `ticket-${ticketNumber}`;
+    
+    // Add priority emoji to channel name if priority is not 'none'
+    if (priority !== 'none') {
+      const priorityInfo = PRIORITY_MAP[priority];
+      if (priorityInfo) {
+        channelName = `${priorityInfo.emoji} ${channelName}`;
+      }
+    }
     
     const channel = await guild.channels.create({
       name: channelName,
@@ -94,18 +98,18 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       createdAt: new Date().toISOString(),
       status: 'open',
       claimedBy: null,
-      priority: priority || 'medium',
+      priority: priority || 'none',
       reason,
     };
     
     await saveTicketData(guild.id, channel.id, ticketData);
     
     // Send ticket message
-    const priorityInfo = PRIORITY_MAP[priority] || PRIORITY_MAP.medium;
+    const priorityInfo = PRIORITY_MAP[priority] || PRIORITY_MAP.none;
     
     const embed = createEmbed({
       title: `Ticket #${ticketNumber}`,
-      description: `${member}, thanks for creating a ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`,
+      description: `${member.toString()}, thanks for creating a ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`,
       color: priorityInfo.color,
       fields: [
         { name: 'Status', value: '🟢 Open', inline: true },
@@ -149,8 +153,10 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       );
     }
     
+    const messageContent = `${member.toString()}${ticketConfig.supportRoles?.length ? ' ' + ticketConfig.supportRoles.map(r => `<@&${r}>`).join(' ') : ''}`;
+    
     await channel.send({ 
-      content: `${member} ${ticketConfig.supportRoles?.map(r => `<@&${r}>`).join(' ')}`,
+      content: messageContent,
       embeds: [embed],
       components: [row] 
     });
@@ -182,10 +188,27 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
     await saveTicketData(channel.guild.id, channel.id, ticketData);
     
     // Update channel permissions
-    await channel.permissionOverwrites.edit(ticketData.userId, {
-      ViewChannel: false,
-      SendMessages: false,
-    });
+    try {
+      const user = await channel.guild.members.fetch(ticketData.userId).catch(() => null);
+      const targetUser = user?.user || await channel.client.users.fetch(ticketData.userId).catch(() => null);
+      
+      if (targetUser) {
+        const overwrite = channel.permissionOverwrites.cache.get(ticketData.userId);
+        if (overwrite) {
+          await overwrite.edit({
+            ViewChannel: false,
+            SendMessages: false,
+          });
+        } else {
+          await channel.permissionOverwrites.create(targetUser, {
+            ViewChannel: false,
+            SendMessages: false,
+          });
+        }
+      }
+    } catch (permError) {
+      console.warn('Could not update user permissions for closed ticket:', permError.message);
+    }
     
     // Update ticket message
     const messages = await channel.messages.fetch();
@@ -202,8 +225,17 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
         statusField.value = '🔴 Closed';
       }
       
+      // Create a new embed to avoid validation issues with the existing one
+      const updatedEmbed = createEmbed({
+        title: embed.title || 'Ticket',
+        description: embed.description || 'Ticket discussion',
+        color: '#e74c3c',
+        fields: embed.fields || [],
+        footer: embed.footer
+      });
+      
       await ticketMessage.edit({ 
-        embeds: [embed],
+        embeds: [updatedEmbed],
         components: [] // Remove all buttons
       });
     }
@@ -211,12 +243,22 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
     // Send close message
     const closeEmbed = createEmbed({
       title: 'Ticket Closed',
-      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}`,
+      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}\n\n📋 This channel will be deleted in 5 seconds.`,
       color: '#e74c3c',
       footer: { text: `Ticket ID: ${ticketData.id}` }
     });
     
     await channel.send({ embeds: [closeEmbed] });
+    
+    // Wait 5 seconds before deleting the channel to allow users to see the close message
+    setTimeout(async () => {
+      try {
+        await channel.delete('Ticket closed and archived');
+        logger.info(`Deleted ticket channel ${channel.name} (${channel.id})`);
+      } catch (deleteError) {
+        logger.error(`Failed to delete ticket channel ${channel.id}:`, deleteError);
+      }
+    }, 5000);
     
     return { success: true, ticketData };
     
@@ -264,24 +306,35 @@ export async function claimTicket(channel, claimer) {
         claimedField.value = claimer.toString();
       }
       
-      const claimButton = ticketMessage.components[0]?.components?.find(
-        b => b.customId === 'ticket_claim'
+      // Rebuild the action row with updated claim button
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('ticket_close')
+          .setLabel('Close Ticket')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🔒'),
+        new ButtonBuilder()
+          .setCustomId('ticket_claim')
+          .setLabel('Claimed')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('🙋')
+          .setDisabled(true),
+        new ButtonBuilder()
+          .setCustomId('ticket_transcript')
+          .setLabel('Transcript')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('📜')
       );
-      
-      if (claimButton) {
-        claimButton.setLabel('Claimed')
-          .setDisabled(true)
-          .setStyle(ButtonStyle.Secondary);
-      }
       
       await ticketMessage.edit({ 
         embeds: [embed],
-        components: ticketMessage.components 
+        components: [row] 
       });
     }
     
     // Send claim message
     const claimEmbed = createEmbed({
+      title: 'Ticket Claimed',
       description: `🎉 ${claimer} has claimed this ticket!`,
       color: '#2ecc71'
     });
@@ -300,11 +353,9 @@ export async function claimTicket(channel, claimer) {
 }
 
 async function getNextTicketNumber(guildId) {
-  const key = `guild:${guildId}:ticket_counter`;
-  const current = await db.get(key) || 0;
-  const next = current + 1;
-  await db.set(key, next);
-  return next.toString().padStart(4, '0');
+  // Generate a random 3-digit number (100-999)
+  const randomTicket = Math.floor(Math.random() * 900) + 100;
+  return randomTicket.toString();
 }
 
 export async function updateTicketPriority(channel, priority, updater) {
@@ -326,6 +377,24 @@ export async function updateTicketPriority(channel, priority, updater) {
     
     await saveTicketData(channel.guild.id, channel.id, ticketData);
     
+    // Update channel name with priority emoji (except for 'none')
+    if (priority !== 'none') {
+      const priorityEmoji = priorityInfo.emoji;
+      const currentName = channel.name;
+      
+      // Remove any existing priority emoji from channel name
+      const cleanName = currentName.replace(/[🔵🟢🟡🔴⚪]/g, '').trim();
+      
+      // Add priority emoji at the beginning
+      const newName = `${priorityEmoji} ${cleanName}`;
+      
+      try {
+        await channel.setName(newName);
+      } catch (nameError) {
+        logger.warn(`Could not update channel name for priority: ${nameError.message}`);
+      }
+    }
+    
     // Update ticket message
     const messages = await channel.messages.fetch();
     const ticketMessage = messages.find(m => 
@@ -335,18 +404,22 @@ export async function updateTicketPriority(channel, priority, updater) {
     
     if (ticketMessage) {
       const embed = ticketMessage.embeds[0];
-      embed.color = priorityInfo.color;
       
-      const description = embed.description?.split('\n**Priority:**')[0];
-      if (description) {
-        embed.description = `${description}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`;
-      }
+      // Create a new embed with updated priority
+      const updatedEmbed = createEmbed({
+        title: embed.title || 'Ticket',
+        description: embed.description?.split('\n**Priority:**')[0] + `\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`,
+        color: priorityInfo.color,
+        fields: embed.fields || [],
+        footer: embed.footer
+      });
       
-      await ticketMessage.edit({ embeds: [embed] });
+      await ticketMessage.edit({ embeds: [updatedEmbed] });
     }
     
     // Send priority update message
     const updateEmbed = createEmbed({
+      title: 'Priority Updated',
       description: `📊 Ticket priority updated to **${priorityInfo.emoji} ${priorityInfo.label}** by ${updater}`,
       color: priorityInfo.color
     });

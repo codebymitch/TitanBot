@@ -17,7 +17,7 @@ export default {
 
         // FIX: Passing null/undefined instead of an empty string ("") for the description
         // The createEmbed function handles the description being optional or null/undefined.
-        const embed = createEmbed("🏓 Pong!", null).addFields(
+        const embed = createEmbed({ title: "🏓 Pong!", description: null }).addFields(
             { name: "Bot Latency", value: `${latency}ms`, inline: true },
             { name: "API Latency", value: `${apiLatency}ms`, inline: true },
         );

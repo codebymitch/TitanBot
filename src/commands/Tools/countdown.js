@@ -117,15 +117,108 @@ export default {
             // Store reference
             activeCountdowns.set(countdownId, countdownData);
 
-            // Clean up when the message is deleted
-            message
-                .createMessageComponentCollector({
-                    time: totalSeconds * 1000 + 60000,
-                })
-                .on("end", () => {
-                    // Clean up the countdown when the collector ends
-                    cleanupCountdown(countdownId);
-                });
+            // Set up a collector for the countdown buttons
+            const filter = (i) => {
+                return i.customId.startsWith('countdown_') && 
+                       i.customId.endsWith(countdownId) && 
+                       i.user.id === interaction.user.id;
+            };
+            
+            const collector = message.createMessageComponentCollector({ 
+                filter, 
+                time: totalSeconds * 1000 + 60000 
+            });
+            
+            collector.on('collect', async (i) => {
+                const [action, id] = i.customId.split('_').slice(1);
+                
+                if (id !== countdownId) return;
+                
+                const countdownData = activeCountdowns.get(countdownId);
+                if (!countdownData) {
+                    await i.reply({
+                        content: "This countdown has expired or was cancelled.",
+                        ephemeral: true,
+                    });
+                    return;
+                }
+
+                // Check if the user has permission to control the countdown
+                if (!i.member.permissions.has("MANAGE_MESSAGES")) {
+                    await i.reply({
+                        content: 'You need the "Manage Messages" permission to control countdowns.',
+                        ephemeral: true,
+                    });
+                    return;
+                }
+
+                switch (action) {
+                    case "pause":
+                        if (countdownData.isPaused) {
+                            // Resume the countdown
+                            countdownData.isPaused = false;
+                            countdownData.endTime = Date.now() + countdownData.remainingTime;
+                            startCountdown(countdownId, countdownData);
+
+                            // Update the message with new button state
+                            const currentEmbed = countdownData.message.embeds[0];
+                            await countdownData.message.edit({
+                                embeds: [currentEmbed],
+                                components: [createControlButtons(countdownId, false)],
+                            });
+
+                            await i.reply({
+                                content: "▶️ Countdown resumed!",
+                                ephemeral: true,
+                            });
+                        } else {
+                            // Pause the countdown
+                            clearInterval(countdownData.interval);
+                            countdownData.isPaused = true;
+                            countdownData.remainingTime = countdownData.endTime - Date.now();
+
+                            // Update the message with new button state
+                            const currentEmbed = countdownData.message.embeds[0];
+                            await countdownData.message.edit({
+                                embeds: [currentEmbed],
+                                components: [createControlButtons(countdownId, true)],
+                            });
+
+                            await i.reply({
+                                content: "⏸️ Countdown paused!",
+                                ephemeral: true,
+                            });
+                        }
+                        break;
+
+                    case "cancel":
+                        // Cancel the countdown
+                        clearInterval(countdownData.interval);
+
+                        const embed = successEmbed(
+                            `⏱️ ${countdownData.title} (Cancelled)`,
+                            "The countdown was cancelled.",
+                        );
+
+                        await countdownData.message.edit({
+                            embeds: [embed],
+                            components: [],
+                        });
+
+                        cleanupCountdown(countdownId);
+
+                        await i.reply({
+                            content: "❌ Countdown cancelled!",
+                            ephemeral: true,
+                        });
+                        break;
+                }
+            });
+            
+            collector.on("end", () => {
+                // Clean up the countdown when the collector ends
+                cleanupCountdown(countdownId);
+            });
 
             await interaction.editReply({
                 content: "✅ Countdown started!",

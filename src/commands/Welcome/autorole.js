@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 
 // Migrated from: commands/Welcome/autorole.js
 export default {
@@ -46,7 +47,7 @@ export default {
 
             try {
                 const config = await getWelcomeConfig(client, guild.id);
-                const autoRoles = new Set(config.autoRoles || []);
+                const autoRoles = new Set(config.roleIds || []);
                 
                 if (autoRoles.has(role.id)) {
                     return interaction.reply({
@@ -60,7 +61,7 @@ export default {
                 
                 // Update the configuration
                 await updateWelcomeConfig(client, guild.id, {
-                    autoRoles: Array.from(autoRoles)
+                    roleIds: Array.from(autoRoles)
                 });
 
                 await interaction.reply({
@@ -68,7 +69,6 @@ export default {
                     ephemeral: true
                 });
             } catch (error) {
-                console.error('Error adding auto-role:', error);
                 await interaction.reply({
                     content: '❌ An error occurred while adding the role.',
                     ephemeral: true
@@ -81,7 +81,7 @@ export default {
 
             try {
                 const config = await getWelcomeConfig(client, guild.id);
-                const autoRoles = new Set(config.autoRoles || []);
+                const autoRoles = new Set(config.roleIds || []);
                 
                 if (!autoRoles.has(role.id)) {
                     return interaction.reply({
@@ -95,7 +95,7 @@ export default {
                 
                 // Update the configuration
                 await updateWelcomeConfig(client, guild.id, {
-                    autoRoles: Array.from(autoRoles)
+                    roleIds: Array.from(autoRoles)
                 });
 
                 await interaction.reply({
@@ -103,7 +103,6 @@ export default {
                     ephemeral: true
                 });
             } catch (error) {
-                console.error('Error removing auto-role:', error);
                 await interaction.reply({
                     content: '❌ An error occurred while removing the role.',
                     ephemeral: true
@@ -114,7 +113,7 @@ export default {
         else if (subcommand === 'list') {
             try {
                 const config = await getWelcomeConfig(client, guild.id);
-                const autoRoles = Array.isArray(config.autoRoles) ? config.autoRoles : [];
+                const autoRoles = Array.isArray(config.roleIds) ? config.roleIds : [];
 
                 if (autoRoles.length === 0) {
                     return interaction.reply({
@@ -142,7 +141,7 @@ export default {
                 if (invalidRoleIds.length > 0) {
                     const updatedRoles = autoRoles.filter(id => !invalidRoleIds.includes(id));
                     await updateWelcomeConfig(client, guild.id, {
-                        autoRoles: updatedRoles
+                        roleIds: updatedRoles
                     });
                 }
 
@@ -155,7 +154,7 @@ export default {
 
                 // Create an embed with the list of roles
                 const embed = new EmbedBuilder()
-                    .setColor(client.config.embeds.colors.primary)
+                    .setColor(0x0099ff) // Blue color
                     .setTitle('Auto-Assigned Roles')
                     .setDescription(validRoles.map(r => `• ${r}`).join('\n'))
                     .setFooter({ text: `Total: ${validRoles.length} role(s)` });
@@ -166,7 +165,6 @@ export default {
                 });
 
             } catch (error) {
-                console.error('Error listing auto-roles:', error);
                 await interaction.reply({
                     content: '❌ An error occurred while listing auto-assigned roles.',
                     ephemeral: true

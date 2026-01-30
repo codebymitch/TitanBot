@@ -1,6 +1,7 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getLeaderboard, getLevelingConfig, getXpForLevel } from '../../utils/database.js';
 
 // Migrated from: commands/Leveling/leaderboard.js
 export default {
@@ -27,10 +28,7 @@ export default {
             if (!levelingConfig?.enabled) {
                 return interaction.editReply({
                     embeds: [
-                        createEmbed(
-                            "Leveling Disabled",
-                            "The leveling system is currently disabled on this server.",
-                        ),
+                        createEmbed({ title: "Leveling Disabled", description: "The leveling system is currently disabled on this server.", }),
                     ],
                 });
             }
@@ -38,10 +36,7 @@ export default {
             if (leaderboard.length === 0) {
                 return interaction.editReply({
                     embeds: [
-                        createEmbed(
-                            "Leaderboard",
-                            "No level data found for this server yet. Start chatting to gain XP!",
-                        ),
+                        createEmbed({ title: "Leaderboard", description: "No level data found for this server yet. Start chatting to gain XP!", }),
                     ],
                 });
             }
@@ -91,10 +86,7 @@ export default {
             console.error("Leaderboard command error:", error);
             await interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        "An error occurred while fetching the leaderboard. Please try again later.",
-                    ),
+                    createEmbed({ title: "Error", description: "An error occurred while fetching the leaderboard. Please try again later.", }),
                 ],
             });
         }

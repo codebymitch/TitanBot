@@ -15,7 +15,6 @@
   "dependencies": {
     "@discordjs/rest": "^2.6.0",
     "@discordjs/voice": "^0.19.0",
-    "@replit/database": "^3.0.1",
     "axios": "^1.13.2",
     "discord.js": "^14.25.1",
     "express": "^5.1.0",
@@ -28,6 +27,7 @@
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "play-dl": "^1.9.7",
+    "redis": "^5.10.0",
     "titan-ultimate-bot": "file:",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"

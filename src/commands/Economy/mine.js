@@ -1,6 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getEconomyData, setEconomyData } from '../../services/economy.js';
+import { botConfig } from '../../config/bot.js';
 
 // --- Configuration ---
 const MINE_COOLDOWN = 60 * 60 * 1000; // 1 hour
@@ -17,14 +19,23 @@ const MINE_LOCATIONS = [
 ];
 
 export default {
+    // Slash command data
     data: new SlashCommandBuilder()
         .setName("mine")
         .setDescription(
             "Go mining for valuable minerals to earn a cash reward.",
         )
         .setDMPermission(false),
+    
+    // Prefix command data
+    name: "mine",
+    aliases: ["dig", "excavate", "prospect"],
+    description: "Go mining for valuable minerals to earn a cash reward.",
     category: "Economy",
+    usage: `${botConfig.commands.prefix}mine`,
+    cooldown: 60, // 1 hour
 
+    // Slash command execution
     async execute(interaction, config, client) {
         await interaction.deferReply();
 
@@ -34,8 +45,8 @@ export default {
 
         try {
             const userData = await getEconomyData(client, guildId, userId);
-            const lastMine = userData.cooldowns.mine || 0;
-            const hasPickaxe = userData.upgrades["diamond_pickaxe"] || 0; // Check for Diamond Pickaxe
+            const lastMine = userData.lastMine || 0;
+            const hasPickaxe = userData.inventory["diamond_pickaxe"] || 0; // Check for Diamond Pickaxe in inventory
 
             // --- 1. Check Cooldown ---
             if (now < lastMine + MINE_COOLDOWN) {
@@ -78,8 +89,8 @@ export default {
                 ];
 
             // --- 3. Update Data ---
-            userData.cash += finalEarned;
-            userData.cooldowns.mine = now; // Update cooldown
+            userData.wallet += finalEarned;
+            userData.lastMine = now; // Update cooldown
 
             // Save data
             await setEconomyData(client, guildId, userId, userData);
@@ -91,7 +102,7 @@ export default {
             )
                 .addFields({
                     name: "💵 New Cash Balance",
-                    value: `$${userData.cash.toLocaleString()}`,
+                    value: `$${userData.wallet.toLocaleString()}`,
                     inline: true,
                 })
                 .setFooter({ text: `Next mine available in 1 hour.` });

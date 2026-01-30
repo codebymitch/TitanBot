@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
 
@@ -79,10 +79,7 @@ export default {
             const condition = getWeatherDescription(weatherCode);
 
             // --- Step 3: Create the Embed ---
-            const embed = createEmbed(
-                `🌎 Weather in ${cityDisplay}, ${country}`,
-                condition.description,
-            )
+            const embed = createEmbed({ title: `🌎 Weather in ${cityDisplay}, ${country}`, description: condition.description })
                 .addFields(
                     {
                         name: "🌡️ Temperature",

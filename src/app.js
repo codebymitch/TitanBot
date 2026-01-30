@@ -18,19 +18,19 @@ import fs from 'fs/promises';
 import express from 'express';
 import cron from 'node-cron';
 import config from './config/index.js';
-import { initializeDatabase, getFromDb, setInDb, deleteFromDb } from './services/database.js';
+import { initializeDatabase, getFromDb, setInDb, deleteFromDb } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
 import { getAFKKey } from './utils/afk.js';
 import { giveawayKey, getGuildGiveaways } from './utils/giveaways.js';
 import { handleReactionRoles } from './handlers/reactionRoles.js';
 import { createEmbed, errorEmbed, successEmbed } from './utils/embeds.js';
-import { getLevelingConfig, getUserLevelData, saveUserLevelData, getXpForLevel, addXp } from './services/leveling.js';
+import { getLevelingConfig, getUserLevelData, saveUserLevelData, getXpForLevel } from './utils/database.js';
+import { addXp } from './services/xpSystem.js';
 import { getServerCounters, saveServerCounters, updateCounter } from './services/counterService.js';
-import { handleCountdownInteraction } from './commands/Tools/countdown.js';
 import { logger } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
-import commandHandler from './handlers/commands.js';
+import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
 
 class TitanBot extends Client {
   constructor() {
@@ -75,25 +75,26 @@ class TitanBot extends Client {
   async start() {
     try {
       // Initialize database
-      this.db = await initializeDatabase(this);
+      const dbInstance = await initializeDatabase();
+      this.db = dbInstance.db;
       
       // Start the web server for keep-alive
       this.startWebServer();
       
-      // Load command handler
-      await commandHandler(this);
+      // Load commands using the new loader
+      await loadCommands(this);
       
       // Load other handlers
       await this.loadHandlers();
       
-      // Register commands
+      // Login to Discord first
+      await this.login(this.config.bot.token);
+      
+      // Register commands after login
       await this.registerCommands();
       
       // Start cron jobs
       this.setupCronJobs();
-      
-      // Login to Discord
-      await this.login(this.config.bot.token);
       
       logger.info('Bot is running!');
     } catch (error) {
@@ -120,7 +121,6 @@ class TitanBot extends Client {
   }
 
   async updateAllCounters() {
-    console.log(" Running scheduled counter update...");
     for (const [guildId, guild] of this.guilds.cache) {
       try {
         const counters = await getServerCounters(this, guildId);
@@ -150,37 +150,38 @@ class TitanBot extends Client {
         }
       }
     }
+    
+    // Load todo button handlers
+    try {
+      const { default: loadTodoButtons } = await import('./handlers/todoButtonLoader.js');
+      await loadTodoButtons(this);
+      logger.info('Loaded todo button handlers');
+    } catch (error) {
+      logger.error('Error loading todo button handlers:', error);
+    }
+    
+    // Load ticket button handlers
+    try {
+      const { default: loadTicketButtons } = await import('./handlers/ticketButtonLoader.js');
+      await loadTicketButtons(this);
+      logger.info('Loaded ticket button handlers');
+    } catch (error) {
+      logger.error('Error loading ticket button handlers:', error);
+    }
+    
+    // Load giveaway button handlers
+    try {
+      const { loadGiveawayButtons } = await import('./handlers/giveawayButtonLoader.js');
+      loadGiveawayButtons(this);
+      logger.info('Loaded giveaway button handlers');
+    } catch (error) {
+      logger.error('Error loading giveaway button handlers:', error);
+    }
   }
 
   async registerCommands() {
     try {
-      if (!this.config.bot.clientId) {
-        logger.error('CLIENT_ID is required for command registration. Please set the CLIENT_ID environment variable.');
-        return;
-      }
-
-      const commands = [];
-      
-      // Get all command data from the commands collection
-      for (const [_, command] of this.commands) {
-        if (command.data) {
-          commands.push(command.data.toJSON());
-        }
-      }
-
-      if (this.config.bot.guildId) {
-        await this.rest.put(
-          Routes.applicationGuildCommands(this.config.bot.clientId, this.config.bot.guildId),
-          { body: commands }
-        );
-        logger.info(`Registered ${commands.length} guild commands`);
-      } else {
-        await this.rest.put(
-          Routes.applicationCommands(this.config.bot.clientId),
-          { body: commands }
-        );
-        logger.info(`Registered ${commands.length} global commands`);
-      }
+      await registerSlashCommands(this, this.config.bot.guildId);
     } catch (error) {
       logger.error('Error registering commands:', error);
     }

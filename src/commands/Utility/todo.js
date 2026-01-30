@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getFromDb, setInDb } from '../../services/database.js';
 
 // Helper function to generate a unique ID for shared lists
 function generateShareId() {
@@ -34,8 +35,8 @@ export default {
                 .setDescription("Mark a task as complete")
                 .addIntegerOption(option =>
                     option
-                        .setName("id")
-                        .setDescription("The ID of the task to complete")
+                        .setName("number")
+                        .setDescription("The number of the task to complete")
                         .setRequired(true)
                 )
         )
@@ -45,8 +46,8 @@ export default {
                 .setDescription("Remove a task from your to-do list")
                 .addIntegerOption(option =>
                     option
-                        .setName("id")
-                        .setDescription("The ID of the task to remove")
+                        .setName("number")
+                        .setDescription("The number of the task to remove")
                         .setRequired(true)
                 )
         )
@@ -93,13 +94,30 @@ export default {
                                 .setRequired(true)
                         )
                 )
+                .addSubcommand(subcommand =>
+                    subcommand
+                        .setName("addtask")
+                        .setDescription("Add a task to a shared to-do list")
+                        .addStringOption(option =>
+                            option
+                                .setName("list_id")
+                                .setDescription("ID of the shared list")
+                                .setRequired(true)
+                        )
+                        .addStringOption(option =>
+                            option
+                                .setName("task")
+                                .setDescription("The task to add")
+                                .setRequired(true)
+                        )
+                )
         )
         .setDMPermission(false)
         .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
     category: "Utility",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         const userId = interaction.user.id;
         const subcommand = interaction.options.getSubcommand();
@@ -108,19 +126,30 @@ export default {
         // Helper function to get or create shared list
         async function getOrCreateSharedList(listId, creatorId = null, listName = null) {
             const listKey = `shared_todo_${listId}`;
-            let listData = await client.db.get(listKey);
+            let listData = await getFromDb(listKey, null);
             
-            if (!listData && creatorId) {
-                listData = {
-                    id: listId,
-                    name: listName,
-                    creatorId,
-                    members: [creatorId],
-                    tasks: [],
-                    nextId: 1,
-                    createdAt: new Date().toISOString()
-                };
-                await client.db.set(listKey, listData);
+            if (!listData || (listData.ok === false && listData.error)) {
+                if (creatorId) {
+                    listData = {
+                        id: listId,
+                        name: listName,
+                        creatorId,
+                        members: [creatorId],
+                        tasks: [],
+                        nextId: 1,
+                        createdAt: new Date().toISOString()
+                    };
+                    await setInDb(listKey, listData);
+                } else {
+                    return null;
+                }
+            }
+            
+            // Ensure listData has the required structure if it exists
+            if (listData) {
+                if (!Array.isArray(listData.tasks)) listData.tasks = [];
+                if (!listData.nextId) listData.nextId = 1;
+                if (!Array.isArray(listData.members)) listData.members = [];
             }
             
             return listData;
@@ -137,10 +166,12 @@ export default {
                         await getOrCreateSharedList(listId, userId, listName);
                         
                         // Add this list to user's shared lists
-                        const userSharedLists = await client.db.get(`user_shared_lists_${userId}`) || [];
-                        if (!userSharedLists.includes(listId)) {
-                            userSharedLists.push(listId);
-                            await client.db.set(`user_shared_lists_${userId}`, userSharedLists);
+                        const userSharedLists = await getFromDb(`user_shared_lists_${userId}`, []);
+                        // Ensure it's an array
+                        const sharedListsArray = Array.isArray(userSharedLists) ? userSharedLists : [];
+                        if (!sharedListsArray.includes(listId)) {
+                            sharedListsArray.push(listId);
+                            await setInDb(`user_shared_lists_${userId}`, sharedListsArray);
                         }
                         
                         return interaction.editReply({
@@ -175,13 +206,15 @@ export default {
                         // Add member if not already added
                         if (!listData.members.includes(memberToAdd.id)) {
                             listData.members.push(memberToAdd.id);
-                            await client.db.set(`shared_todo_${listId}`, listData);
+                            await setInDb(`shared_todo_${listId}`, listData);
                             
                             // Add list to member's shared lists
-                            const memberLists = await client.db.get(`user_shared_lists_${memberToAdd.id}`) || [];
-                            if (!memberLists.includes(listId)) {
-                                memberLists.push(listId);
-                                await client.db.set(`user_shared_lists_${memberToAdd.id}`, memberLists);
+                            const memberLists = await getFromDb(`user_shared_lists_${memberToAdd.id}`, []);
+                            // Ensure it's an array
+                            const memberListsArray = Array.isArray(memberLists) ? memberLists : [];
+                            if (!memberListsArray.includes(listId)) {
+                                memberListsArray.push(listId);
+                                await setInDb(`user_shared_lists_${memberToAdd.id}`, memberListsArray);
                             }
                             
                             return interaction.editReply({
@@ -216,11 +249,35 @@ export default {
                         }
                         
                         if (listData.tasks.length === 0) {
+                            // Show list info even when empty
+                            const memberList = listData.members.map(memberId => {
+                                const member = interaction.guild.members.cache.get(memberId);
+                                return member ? member.user.username : `<@${memberId}>`;
+                            }).join(', ');
+                            
+                            const owner = interaction.guild.members.cache.get(listData.creatorId);
+                            const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
+                            
                             return interaction.editReply({
                                 embeds: [
                                     successEmbed(
-                                        `Shared List: ${listData.name}`, 
-                                        "This list is currently empty!"
+                                        `📋 **${listData.name}**\n\n` +
+                                        `👑 **Owner:** ${ownerName}\n` +
+                                        `👥 **Members:** ${memberList}\n\n` +
+                                        `*This list is currently empty. Use the "Add Task" button to add tasks!*`,
+                                        `Shared List (ID: \`${listId}\`)`
+                                    )
+                                ],
+                                components: [
+                                    new ActionRowBuilder().addComponents(
+                                        new ButtonBuilder()
+                                            .setCustomId(`shared_todo_add_${listId}`)
+                                            .setLabel('Add Task')
+                                            .setStyle(ButtonStyle.Primary),
+                                        new ButtonBuilder()
+                                            .setCustomId(`shared_todo_complete_${listId}`)
+                                            .setLabel('Complete Task')
+                                            .setStyle(ButtonStyle.Success)
                                     )
                                 ]
                             });
@@ -228,18 +285,29 @@ export default {
                         
                         const taskList = listData.tasks
                             .map(task => 
-                                `${task.completed ? '✅' : '📝'} ${task.id}. ${task.text} ` +
+                                `${task.completed ? '✅' : '📝'} #${task.id} ${task.text} ` +
                                 `\`[${new Date(task.createdAt).toLocaleDateString()}]` +
                                 (task.completed ? ` • Completed by ${task.completedBy}` : '') + '`'
                             )
                             .join('\n');
-                            
+
+                        // Show list info with tasks
+                        const memberList = listData.members.map(memberId => {
+                            const member = interaction.guild.members.cache.get(memberId);
+                            return member ? member.user.username : `<@${memberId}>`;
+                        }).join(', ');
+                        
+                        const owner = interaction.guild.members.cache.get(listData.creatorId);
+                        const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
+
+                        const fullListDisplay = `📋 **${listData.name}**\n\n` +
+                            `👑 **Owner:** ${ownerName}\n` +
+                            `👥 **Members:** ${memberList}\n\n` +
+                            `**Tasks:**\n${taskList}`;
+
                         return interaction.editReply({
                             embeds: [
-                                successEmbed(
-                                    `Shared List: ${listData.name}`, 
-                                    taskList
-                                )
+                                successEmbed(fullListDisplay, `Shared List (ID: \`${listId}\`)`)
                             ],
                             components: [
                                 new ActionRowBuilder().addComponents(
@@ -255,19 +323,64 @@ export default {
                             ]
                         });
                     }
+                    
+                    case 'addtask': {
+                        const listId = interaction.options.getString('list_id');
+                        const taskText = interaction.options.getString('task');
+                        
+                        const listData = await getOrCreateSharedList(listId);
+                        
+                        if (!listData) {
+                            return interaction.editReply({
+                                embeds: [errorEmbed("Error", "Shared list not found.")]
+                            });
+                        }
+                        
+                        // Check if user is a member
+                        if (!listData.members.includes(userId)) {
+                            return interaction.editReply({
+                                embeds: [errorEmbed("Error", "You don't have access to this list.")]
+                            });
+                        }
+                        
+                        // Add the task
+                        const newTask = {
+                            id: listData.nextId++,
+                            text: taskText,
+                            completed: false,
+                            createdAt: new Date().toISOString(),
+                            createdBy: userId
+                        };
+                        
+                        listData.tasks.push(newTask);
+                        await setInDb(`shared_todo_${listId}`, listData);
+                        
+                        return interaction.editReply({
+                            embeds: [
+                                successEmbed("Task Added", `Added "${taskText}" to the shared list "${listData.name}"`)
+                            ]
+                        });
+                    }
                 }
                 return;
             }
 
             // Handle regular todo commands
-            const userData = await client.db.get(`todo_${userId}`) || {
+            const dbKey = `todo_${userId}`;
+            
+            const userData = await getFromDb(dbKey, {
                 tasks: [],
                 nextId: 1
-            };
+            });
+            
+            // Ensure userData has the required structure
+            if (!userData.tasks) userData.tasks = [];
+            if (!userData.nextId) userData.nextId = 1;
 
             switch (subcommand) {
                 case 'add': {
                     const taskText = interaction.options.getString('task');
+                    
                     const newTask = {
                         id: userData.nextId++,
                         text: taskText,
@@ -276,7 +389,7 @@ export default {
                     };
                     
                     userData.tasks.push(newTask);
-                    await client.db.set(`todo_${userId}`, userData);
+                    await setInDb(dbKey, userData);
                     
                     return interaction.editReply({
                         embeds: [
@@ -291,27 +404,27 @@ export default {
                 case 'list': {
                     if (userData.tasks.length === 0) {
                         return interaction.editReply({
-                            embeds: [successEmbed("Your To-Do List", "Your to-do list is empty!")],
+                            embeds: [successEmbed("Your to-do list is empty!", "Your To-Do List")],
                         });
                     }
 
                     const taskList = userData.tasks
                         .map(task => 
-                            `${task.completed ? '✅' : '📝'} ${task.id}. ${task.text} ` +
-                            `\`[${new Date(task.createdAt).toLocaleDateString()}]\``
+                            `${task.completed ? '✅' : '📝'} #${task.id} ${task.text} ` +
+                            `\`[${new Date(task.createdAt).toLocaleDateString()}\``
                         )
                         .join('\n');
 
                     return interaction.editReply({
                         embeds: [
-                            successEmbed("Your To-Do List", taskList)
+                            successEmbed(taskList, "Your To-Do List")
                         ],
                     });
                 }
 
                 case 'complete': {
-                    const taskId = interaction.options.getInteger('id');
-                    const task = userData.tasks.find(t => t.id === taskId);
+                    const taskNumber = interaction.options.getInteger('number');
+                    const task = userData.tasks.find(t => t.id === taskNumber);
                     
                     if (!task) {
                         return interaction.editReply({
@@ -320,7 +433,7 @@ export default {
                     }
                     
                     task.completed = true;
-                    await client.db.set(`todo_${userId}`, userData);
+                    await setInDb(`todo_${userId}`, userData);
                     
                     return interaction.editReply({
                         embeds: [
@@ -330,8 +443,8 @@ export default {
                 }
 
                 case 'remove': {
-                    const taskId = interaction.options.getInteger('id');
-                    const taskIndex = userData.tasks.findIndex(t => t.id === taskId);
+                    const taskNumber = interaction.options.getInteger('number');
+                    const taskIndex = userData.tasks.findIndex(t => t.id === taskNumber);
                     
                     if (taskIndex === -1) {
                         return interaction.editReply({
@@ -340,7 +453,7 @@ export default {
                     }
                     
                     const [removedTask] = userData.tasks.splice(taskIndex, 1);
-                    await client.db.set(`todo_${userId}`, userData);
+                    await setInDb(`todo_${userId}`, userData);
                     
                     return interaction.editReply({
                         embeds: [

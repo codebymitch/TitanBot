@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
 
 // Migrated from: commands/Reaction_roles/rlist.js
 export default {
@@ -13,20 +14,8 @@ export default {
         try {
             await interaction.deferReply({ ephemeral: true });
 
-            // Get all reaction role messages for this guild
-            const allKeysResult = await interaction.client.db.list();
-            const allKeys = allKeysResult?.value || [];
-            const guildReactionRoles = [];
-
-            for (const key of allKeys) {
-                if (key.startsWith('reaction_roles_')) {
-                    const dataResult = await interaction.client.db.get(key);
-                    const data = dataResult?.value || dataResult;
-                    if (data && data.guildId === interaction.guildId) {
-                        guildReactionRoles.push(data);
-                    }
-                }
-            }
+            // Get all reaction role messages for this guild using the service
+            const guildReactionRoles = await getAllReactionRoleMessages(interaction.client, interaction.guildId);
 
             if (guildReactionRoles.length === 0) {
                 return interaction.editReply({
@@ -47,7 +36,7 @@ export default {
                     name: `Message ID: ${rr.messageId}`,
                     value: `Channel: ${channel || 'Unknown'}\n` +
                            `Message: ${message ? `[Jump to Message](${message.url})` : 'Message not found'}\n` +
-                           `Roles: ${rr.roles.length} roles configured`
+                           `Roles: ${rr.roles ? Object.keys(rr.roles).length : rr.roles?.length || 0} roles configured`
                 });
             }
 

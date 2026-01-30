@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder, MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getGuildConfig, setGuildConfig } from '../../services/guildConfig.js';
 
 // Migrated from: commands/Birthday/config.js
 export default {
@@ -15,31 +16,24 @@ export default {
                 .setDescription("Manage birthday announcement settings.")
                 .addSubcommand((subcommand) =>
                     subcommand
-                        .setName("set_channel")
+                        .setName("toggle")
                         .setDescription(
-                            "Set the channel for birthday announcements.",
+                            "Enable or disable birthday announcements by selecting a channel.",
                         )
                         .addChannelOption((option) =>
                             option
                                 .setName("channel")
                                 .setDescription(
-                                    "The text channel for birthday announcements.",
+                                    "The text channel for birthday announcements (leave empty to disable).",
                                 )
-                                .setRequired(true)
+                                .setRequired(false)
                                 .addChannelTypes(ChannelType.GuildText),
-                        ),
-                )
-                .addSubcommand((subcommand) =>
-                    subcommand
-                        .setName("status")
-                        .setDescription(
-                            "View the current birthday configuration.",
                         ),
                 ),
         ),
 
     // Command Execution
-    async execute(interaction, guildConfig, client) {
+    async execute(interaction, config, client) {
         if (
             !interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)
         ) {
@@ -50,79 +44,66 @@ export default {
                         "You need the `Manage Server` permission to use this command.",
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
         const subcommandGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
         const guildId = interaction.guildId;
-        const configKey = getGuildConfigKey(guildId);
+
+        // Get current guild config
+        let guildConfig = await getGuildConfig(client, guildId);
 
         if (subcommandGroup === "birthday") {
-            if (subcommand === "set_channel") {
+            if (subcommand === "toggle") {
                 const channel = interaction.options.getChannel("channel");
 
                 try {
-                    // Update the config locally and in the database
-                    guildConfig.birthdayChannelId = channel.id;
-                    await client.db.set(configKey, guildConfig);
+                    if (channel) {
+                        // Enable birthday announcements
+                        guildConfig.birthdayChannelId = channel.id;
+                        await setGuildConfig(client, guildId, guildConfig);
 
-                    return interaction.reply({
-                        embeds: [
-                            successEmbed(
-                                "🎂 Birthday Channel Set",
-                                `Birthday announcements will now be posted in ${channel}.`,
-                            ),
-                        ],
-                        ephemeral: true,
-                    });
+                        return interaction.reply({
+                            embeds: [
+                                successEmbed(
+                                    "🎂 Birthday Announcements Enabled",
+                                    `Birthday announcements will now be posted in ${channel}.`,
+                                ),
+                            ],
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    } else {
+                        // Disable birthday announcements
+                        guildConfig.birthdayChannelId = null;
+                        await setGuildConfig(client, guildId, guildConfig);
+
+                        return interaction.reply({
+                            embeds: [
+                                successEmbed(
+                                    "🎂 Birthday Announcements Disabled",
+                                    "Birthday announcements have been disabled. No channel selected.",
+                                ),
+                            ],
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    }
                 } catch (error) {
                     console.error(
-                        `Error setting birthday channel in ${guildId}:`,
+                        `Error toggling birthday system in ${guildId}:`,
                         error,
                     );
                     return interaction.reply({
                         embeds: [
                             errorEmbed(
                                 "Configuration Failed",
-                                "Could not save the channel to the database.",
+                                "Could not save the birthday configuration to the database.",
                             ),
                         ],
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                 }
-            } else if (subcommand === "status") {
-                const channelId = guildConfig.birthdayChannelId;
-                const channelMention = channelId
-                    ? `<#${channelId}>`
-                    : "`Not set`";
-
-                return interaction.reply({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setTitle("🎂 Birthday Configuration Status")
-                            .setDescription(
-                                "Current settings for automatic birthday announcements.",
-                            )
-                            .addFields(
-                                {
-                                    name: "Announcement Channel",
-                                    value: channelMention,
-                                    inline: false,
-                                },
-                                {
-                                    name: "Status",
-                                    value: channelId
-                                        ? "✅ Enabled"
-                                        : "⚠️ Disabled (No channel set)",
-                                    inline: false,
-                                },
-                            )
-                            .setColor("#F39C12"), // Orange color
-                    ],
-                    ephemeral: true,
-                });
             }
         }
     },

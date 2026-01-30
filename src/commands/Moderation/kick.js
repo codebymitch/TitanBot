@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logEvent } from '../../utils/moderation.js';
 
 // Migrated from: commands/Moderation/kick.js
 export default {
@@ -114,7 +115,16 @@ export default {
         )
         .setTimestamp();
 
-      logEvent(client, interaction.guildId, kickEmbed);
+      await logEvent({
+        client,
+        guildId: interaction.guildId,
+        event: {
+          action: "Member Kicked",
+          target: `${targetUser.tag} (${targetUser.id})`,
+          executor: `${interaction.user.tag} (${interaction.user.id})`,
+          reason
+        }
+      });
       // ---------------------------
 
       await interaction.editReply({

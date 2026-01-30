@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 
 // Migrated from: commands/Welcome/goodbye.js
 export default {
@@ -40,12 +41,17 @@ export default {
             const image = options.getString('image');
 
             try {
-                // Update the goodbye configuration
+                // Update the goodbye configuration (uses separate controls)
                 await updateWelcomeConfig(client, guild.id, {
                     goodbyeEnabled: true,
-                    goodbyeChannel: channel.id,
-                    goodbyeMessage: message,
-                    goodbyeImage: image || undefined
+                    goodbyeChannelId: channel.id,
+                    leaveMessage: message,
+                    leaveEmbed: {
+                        title: "Goodbye {user.tag}",
+                        description: message,
+                        color: 0xff0000, // Red color for goodbye
+                        ...(image && { image: { url: image } })
+                    }
                 });
 
                 // Create a preview of the goodbye message
@@ -56,7 +62,7 @@ export default {
                     .replace(/{memberCount}/g, guild.memberCount.toLocaleString());
 
                 const embed = new EmbedBuilder()
-                    .setColor(client.config.embeds.colors.success)
+                    .setColor(0x00ff00) // Green color for success
                     .setTitle('✅ Goodbye System Configured')
                     .setDescription(`Goodbye messages will now be sent to ${channel}`)
                     .addFields(
@@ -71,7 +77,6 @@ export default {
 
                 await interaction.reply({ embeds: [embed] });
             } catch (error) {
-                console.error('Error setting up goodbye system:', error);
                 await interaction.reply({ 
                     content: '❌ An error occurred while setting up the goodbye system.', 
                     ephemeral: true 
@@ -93,7 +98,6 @@ export default {
                     ephemeral: true
                 });
             } catch (error) {
-                console.error('Error toggling goodbye messages:', error);
                 await interaction.reply({ 
                     content: '❌ An error occurred while toggling goodbye messages.', 
                     ephemeral: true 

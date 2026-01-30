@@ -1,18 +1,50 @@
 import { EmbedBuilder } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from './guildConfig.js';
-import Database from '@replit/database';
+import { addXp } from './xpSystem.js';
+import { redisDb } from '../utils/redisDatabase.js';
 
 // Initialize database connection
-const db = new Database();
+let db = null;
+let useFallback = false;
+
+// Check if we're in a Replit environment (for backward compatibility)
+const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
+
+// Async database initialization
+async function initializeLevelingDatabase() {
+  try {
+    // Try to connect to Redis first
+    const redisConnected = await redisDb.connect();
+    if (redisConnected) {
+      db = redisDb;
+      logger.info('✅ Redis Database initialized for leveling service');
+      return;
+    }
+  } catch (error) {
+    logger.warn('Redis connection failed for leveling service, using fallback:', error.message);
+  }
+  
+  // Fallback to mock database for non-Replit environments
+  db = {
+    get: async (key, defaultValue = null) => defaultValue,
+    set: async (key, value, ttl = null) => true,
+    delete: async (key) => true,
+    list: async (prefix) => [],
+    exists: async (key) => false,
+    increment: async (key, amount = 1) => amount,
+    decrement: async (key, amount = 1) => -amount
+  };
+  useFallback = true;
+  logger.info('Using mock database for leveling service (fallback)');
+}
+
+// Initialize database immediately
+initializeLevelingDatabase();
 
 // XP required for each level (exponential formula)
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
-
-export function getXpForLevel(level) {
-  return Math.floor(BASE_XP * Math.pow(level, XP_MULTIPLIER));
-}
 
 export function getLevelFromXp(xp) {
   let level = 0;
@@ -29,82 +61,6 @@ export function getLevelFromXp(xp) {
     currentXp: xp,
     xpNeeded: getXpForLevel(level)
   };
-}
-
-export async function addXp(client, guild, member, xpToAdd) {
-  try {
-    const config = await getLevelingConfig(client, guild.id);
-    
-    // Check if leveling is enabled
-    if (!config.enabled) {
-      return { success: false, reason: 'Leveling is disabled in this server' };
-    }
-    
-    // Get current level data
-    const levelData = await getUserLevelData(client, guild.id, member.id);
-    
-    // Add XP
-    levelData.xp += xpToAdd;
-    levelData.totalXp += xpToAdd;
-    
-    // Check for level up
-    const { level, xpNeeded } = getLevelFromXp(levelData.totalXp);
-    const didLevelUp = level > levelData.level;
-    
-    if (didLevelUp) {
-      levelData.level = level;
-      levelData.xp = levelData.totalXp - (levelData.totalXp - xpToAdd);
-      
-      // Handle role rewards
-      if (config.roleRewards && config.roleRewards[level]) {
-        const roleId = config.roleRewards[level];
-        const role = guild.roles.cache.get(roleId);
-        
-        if (role) {
-          try {
-            await member.roles.add(role);
-          } catch (error) {
-            logger.error(`Failed to add role ${roleId} to ${member.id}:`, error);
-          }
-        }
-      }
-      
-      // Send level up message
-      const levelUpChannel = config.levelUpChannel ? 
-        guild.channels.cache.get(config.levelUpChannel) : 
-        guild.systemChannel;
-      
-      if (levelUpChannel && levelUpChannel.isTextBased()) {
-        const message = config.levelUpMessage
-          .replace(/{user}/g, member.toString())
-          .replace(/{level}/g, level)
-          .replace(/{xp}/g, levelData.xp)
-          .replace(/{xpNeeded}/g, xpNeeded);
-        
-        try {
-          await levelUpChannel.send(message);
-        } catch (error) {
-          logger.error('Failed to send level up message:', error);
-        }
-      }
-    }
-    
-    // Save updated data
-    await saveUserLevelData(client, guild.id, member.id, levelData);
-    
-    return {
-      success: true,
-      level: levelData.level,
-      xp: levelData.xp,
-      totalXp: levelData.totalXp,
-      xpNeeded,
-      leveledUp: didLevelUp
-    };
-    
-  } catch (error) {
-    logger.error('Error adding XP:', error);
-    return { success: false, error: error.message };
-  }
 }
 
 export async function getLeaderboard(client, guildId, limit = 10) {
@@ -179,29 +135,6 @@ export function createLeaderboardEmbed(leaderboard, guild) {
   return embed;
 }
 
-/**
- * Debug function to get raw user data from database
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @param {string} userId - The ID of the user
- * @returns {Promise<Object|null>} Raw user data or null if error
- */
-export async function debugGetRawUserData(client, guildId, userId) {
-  try {
-    if (!client.db) {
-      console.error("Database not initialized in client");
-      return null;
-    }
-    const key = `${guildId}:leveling:user:${userId}`;
-    const data = await client.db.get(key);
-    console.log(JSON.stringify(data, null, 2));
-    return data;
-  } catch (error) {
-    console.error("Error in debugGetRawUserData:", error);
-    return null;
-  }
-}
-
 // --- DATABASE FUNCTIONS FOR LEVELING ---
 
 export async function getLevelingConfig(client, guildId) {
@@ -243,4 +176,15 @@ export async function getUserLevelData(client, guildId, userId) {
 export async function saveUserLevelData(client, guildId, userId, data) {
   const key = `${guildId}:leveling:user:${userId}`;
   await client.db.set(key, data);
+}
+
+export async function saveLevelingConfig(client, guildId, config) {
+  try {
+    const guildConfig = await getGuildConfig(client, guildId);
+    guildConfig.leveling = config;
+    return await client.db.set(`${guildId}:config`, guildConfig);
+  } catch (error) {
+    logger.error('Error saving leveling config:', error);
+    throw error;
+  }
 }

@@ -1,5 +1,5 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
 // Migrated from: commands/Tools/randomuser.js
@@ -21,7 +21,7 @@ export default {
                 .setRequired(false))
         .addBooleanOption(option =>
             option.setName('mention')
-                .setDescription('Mention the selected user (default: true)')
+                .setDescription('Mention the selected user (default: false)')
                 .setRequired(false)),
 
     async execute(interaction) {
@@ -40,12 +40,9 @@ export default {
             const role = interaction.options.getRole('role');
             const includeBots = interaction.options.getBoolean('bots') || false;
             const onlineOnly = interaction.options.getBoolean('online') || false;
-            const shouldMention = interaction.options.getBoolean('mention') ?? true;
+            const shouldMention = interaction.options.getBoolean('mention') || false;
             
-            // Fetch all members to ensure we have the full list
-            await interaction.guild.members.fetch();
-            
-            // Filter members based on options
+            // Use existing cache instead of fetching all members to avoid rate limiting
             let members = interaction.guild.members.cache.filter(member => {
                 // Skip bots unless explicitly included
                 if (member.user.bot && !includeBots) return false;
@@ -92,65 +89,24 @@ export default {
                 .map(role => role.toString())
                 .slice(0, 10); // Limit to 10 roles to avoid embed field limits
             
-            // Create the embed
+            // Create the embed with limited information for privacy
             const embed = successEmbed(
                 '🎲 Random User Selected',
-                shouldMention ? `${selectedMember}` : `**${user.tag}**`
+                shouldMention ? `${selectedMember}` : `**${user.username}**`
             )
             .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
             .addFields(
-                { name: '👤 Username', value: user.tag, inline: true },
-                { name: '🆔 User ID', value: user.id, inline: true },
-                { name: '📅 Account Created', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true },
-                { name: '📆 Joined Server', value: joinDate ? `<t:${Math.floor(joinDate.getTime() / 1000)}:R>` : 'Unknown', inline: true },
+                { name: '👤 Username', value: user.username, inline: true },
                 { name: '🤖 Bot', value: user.bot ? 'Yes' : 'No', inline: true },
-                { name: `🎭 Roles (${roles.length})`, value: roles.length > 0 ? roles.join(' ') : 'No roles', inline: false }
+                { name: `🎭 Roles (${roles.length})`, value: roles.length > 0 ? roles.slice(0, 5).join(' ') + (roles.length > 5 ? ` +${roles.length - 5} more` : '') : 'No roles', inline: false }
             )
             .setColor(selectedMember.displayHexColor || '#3498db');
-            
-            // Add status information if available
-            if (selectedMember.presence) {
-                let status = selectedMember.presence.status;
-                let statusText = status.charAt(0).toUpperCase() + status.slice(1);
-                
-                // Get custom status or activity
-                let activity = '';
-                if (selectedMember.presence.activities.length > 0) {
-                    const activities = selectedMember.presence.activities;
-                    const customStatus = activities.find(a => a.type === 'CUSTOM');
-                    const playingActivity = activities.find(a => a.type === 'PLAYING');
-                    const streamingActivity = activities.find(a => a.type === 'STREAMING');
-                    const listeningActivity = activities.find(a => a.type === 'LISTENING');
-                    const watchingActivity = activities.find(a => a.type === 'WATCHING');
-                    const competingActivity = activities.find(a => a.type === 'COMPETING');
-                    
-                    if (customStatus && customStatus.state) {
-                        activity = `**Custom Status:** ${customStatus.state}`;
-                    } else if (streamingActivity) {
-                        activity = `**Streaming:** [${streamingActivity.name}](${streamingActivity.url})`;
-                    } else if (listeningActivity) {
-                        activity = `**Listening to:** ${listeningActivity.name}`;
-                        if (listeningActivity.details) activity += ` - ${listeningActivity.details}`;
-                    } else if (watchingActivity) {
-                        activity = `**Watching:** ${watchingActivity.name}`;
-                    } else if (playingActivity) {
-                        activity = `**Playing:** ${playingActivity.name}`;
-                    } else if (competingActivity) {
-                        activity = `**Competing in:** ${competingActivity.name}`;
-                    }
-                }
-                
-                embed.addFields(
-                    { name: '🟢 Status', value: statusText, inline: true },
-                    { name: activity ? '💬 Activity' : '\u200B', value: activity || '\u200B', inline: true }
-                );
-            }
             
             // Add a button to pick another user
             const row = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`randomuser_${interaction.id}_again`)
+                        .setCustomId(`randomuser_${interaction.user.id}_again`)
                         .setLabel('🎲 Pick Another User')
                         .setStyle(ButtonStyle.Primary)
                 );
@@ -164,34 +120,76 @@ export default {
             });
             
             // Set up a collector for the button
-            const filter = (i) => i.customId === `randomuser_${interaction.id}_again` && i.user.id === interaction.user.id;
+            const filter = (i) => i.customId === `randomuser_${interaction.user.id}_again` && i.user.id === interaction.user.id;
             const collector = response.createMessageComponentCollector({ filter, time: 300000 }); // 5 minutes
             
             collector.on('collect', async (i) => {
                 try {
-                    // Defer the update
-                    await i.deferUpdate();
+                    // Select a new random user
+                    let newMembers = interaction.guild.members.cache.filter(member => {
+                        // Skip bots unless explicitly included
+                        if (member.user.bot && !includeBots) return false;
+                        
+                        // Skip offline users if onlineOnly is true
+                        if (onlineOnly && member.presence?.status === 'offline') return false;
+                        
+                        // Check role if specified
+                        if (role && !member.roles.cache.has(role.id)) return false;
+                        
+                        return true;
+                    });
                     
-                    // Run the command again with the same options
-                    await this.execute({
-                        ...interaction,
-                        options: {
-                            getRole: (name) => interaction.options.getRole(name),
-                            getBoolean: (name) => interaction.options.getBoolean(name)
-                        },
-                        editReply: (response) => {
-                            // Update the original message with the new result
-                            return interaction.editReply(response);
-                        },
-                        deferReply: () => Promise.resolve(),
-                        user: interaction.user,
-                        channel: interaction.channel,
-                        guild: interaction.guild
+                    let newMemberArray = Array.from(newMembers.values());
+                    
+                    // Remove the bot itself from the selection if includeBots is false
+                    if (!includeBots) {
+                        newMemberArray = newMemberArray.filter(member => !member.user.bot);
+                    }
+                    
+                    if (newMemberArray.length === 0) {
+                        await i.update({
+                            embeds: [errorEmbed('No Users Found', 'No users found matching the criteria.')],
+                            components: [row]
+                        });
+                        return;
+                    }
+                    
+                    // Select a new random member
+                    const newRandomIndex = Math.floor(Math.random() * newMemberArray.length);
+                    const newSelectedMember = newMemberArray[newRandomIndex];
+                    const newUser = newSelectedMember.user;
+                    
+                    // Get new roles
+                    const newRoles = newSelectedMember.roles.cache
+                        .filter(r => r.id !== interaction.guild.id)
+                        .sort((a, b) => b.position - a.position)
+                        .map(r => r.toString())
+                        .slice(0, 10);
+                    
+                    // Create new embed
+                    const newEmbed = successEmbed(
+                        '🎲 Random User Selected',
+                        shouldMention ? `${newSelectedMember}` : `**${newUser.username}**`
+                    )
+                    .setThumbnail(newUser.displayAvatarURL({ dynamic: true, size: 256 }))
+                    .addFields(
+                        { name: '👤 Username', value: newUser.username, inline: true },
+                        { name: '🤖 Bot', value: newUser.bot ? 'Yes' : 'No', inline: true },
+                        { name: `🎭 Roles (${newRoles.length})`, value: newRoles.length > 0 ? newRoles.slice(0, 5).join(' ') + (newRoles.length > 5 ? ` +${newRoles.length - 5} more` : '') : 'No roles', inline: false }
+                    )
+                    .setColor(newSelectedMember.displayHexColor || '#3498db');
+                    
+                    // Update the message
+                    await i.update({
+                        content: shouldMention ? `${newSelectedMember}, you've been chosen!` : null,
+                        embeds: [newEmbed],
+                        components: [row],
+                        allowedMentions: { users: shouldMention ? [newUser.id] : [] }
                     });
                     
                 } catch (error) {
                     console.error('Button interaction error:', error);
-                    await i.followUp({
+                    await i.reply({
                         content: 'An error occurred while selecting another user.',
                         ephemeral: true
                     });

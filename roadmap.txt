@@ -1,10 +1,49 @@
 TitanBot/
-├── package.json          # Dependencies and configuration
-├── index.js              # Main Command Handler & Bot Loader
-├── utils.js              # Embeds, Database, and Helpers
-└── commands/             # (Created dynamically by index.js if missing)
-    ├── Core/             # help.js, ping.js, uptime.js...
-    ├── Moderation/       # ban.js, kick.js, mute.js...
-    ├── Economy/          # balance.js, work.js, shop.js...
-    ├── Utility/          # userinfo.js, serverinfo.js...
-    └── Tickets/          # ticket.js, close.js...
+├── package.json              # Dependencies and configuration
+├── index.js                  # Bot entry point (starts src/app.js)
+├── src/                      # Main application source code
+│   ├── app.js               # Main bot application and Discord client
+│   ├── shop_config.js       # Shop configuration
+│   ├── commands/            # Slash commands organized by category
+│   │   ├── Core/           # help.js, ping.js, uptime.js...
+│   │   ├── Moderation/     # ban.js, kick.js, mute.js...
+│   │   ├── Economy/        # balance.js, work.js, shop.js...
+│   │   ├── Utility/        # userinfo.js, serverinfo.js...
+│   │   └── Tickets/        # ticket.js, close.js...
+│   ├── config/             # Configuration files
+│   │   ├── index.js        # Main configuration
+│   │   ├── bot.js          # Bot settings and appearance
+│   │   ├── redis.js        # Redis database configuration
+│   │   └── shop/           # Shop item configurations
+│   ├── events/             # Discord event handlers
+│   │   ├── guildCreate.js
+│   │   ├── guildDelete.js
+│   │   ├── interactionCreate.js
+│   │   ├── messageCreate.js
+│   │   └── ready.js
+│   ├── handlers/           # Command and interaction handlers
+│   │   ├── commandLoader.js
+│   │   ├── interactions.js
+│   │   ├── reactionRoles.js
+│   │   └── ticketButtonLoader.js
+│   ├── interactions/       # Select menu and modal handlers
+│   ├── services/           # Business logic and data services
+│   │   ├── database.js     # Redis database operations
+│   │   ├── economy.js      # Economy system
+│   │   ├── guildConfig.js  # Guild configuration management
+│   │   ├── leveling.js     # XP and leveling system
+│   │   ├── ticket.js       # Ticket system
+│   │   └── xpSystem.js     # Experience calculations
+│   └── utils/              # Utility functions and helpers
+│       ├── database.js     # Main database wrapper with Redis
+│       ├── redisDatabase.js # Redis client implementation
+│       ├── embeds.js       # Discord embed utilities
+│       ├── logger.js       # Logging system
+│       ├── economy.js      # Economy utilities
+│       ├── giveaways.js    # Giveaway management
+│       └── welcome.js      # Welcome system
+├── database/               # Database backup files
+├── logs/                   # Application logs
+├── test-redis.js          # Redis integration test
+├── README-REDIS.md         # Redis migration documentation
+└── .env                    # Environment variables

@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
 
 // Migrated from: commands/Leveling/levelremove.js
 export default {
@@ -38,10 +39,7 @@ export default {
             // If we're already at level 0, don't make any changes
             if (userData.level === 0) {
                 return interaction.editReply({
-                    embeds: [createEmbed(
-                        "Level Remove",
-                        `${targetUser.tag} is already at level 0.`
-                    )]
+                    embeds: [createEmbed({ title: "Level Remove", description: `${targetUser.tag} is already at level 0.` })]
                 });
             }
             
@@ -57,19 +55,13 @@ export default {
             await saveUserLevelData(client, interaction.guildId, targetUser.id, userData);
             
             await interaction.editReply({
-                embeds: [createEmbed(
-                    "Levels Removed",
-                    `Successfully removed ${levelsToRemove} levels from ${targetUser.tag}. They are now level ${newLevel}.`
-                )]
+                embeds: [createEmbed({ title: "Levels Removed", description: `Successfully removed ${levelsToRemove} levels from ${targetUser.tag}. They are now level ${newLevel}.` })]
             });
             
         } catch (error) {
             console.error("LevelRemove command error:", error);
             await interaction.editReply({
-                embeds: [createEmbed(
-                    "Error",
-                    "An error occurred while removing levels from the user."
-                )]
+                embeds: [createEmbed({ title: "Error", description: "An error occurred while removing levels from the user." })]
             });
         }
     }

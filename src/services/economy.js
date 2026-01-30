@@ -49,7 +49,13 @@ export function getMaxBankCapacity(userData) {
 export async function getEconomyData(client, guildId, userId) {
     try {
         const key = getEconomyKey(guildId, userId);
-        const data = await client.db.get(key);
+        console.log('Getting economy data with key:', key);
+        const dbResponse = await client.db.get(key);
+        console.log('Raw data from DB:', dbResponse);
+        
+        // Handle Replit Database response format
+        const data = dbResponse && dbResponse.value ? dbResponse.value : dbResponse;
+        console.log('Extracted data:', data);
         
         // Default economy data structure
         const defaultData = {
@@ -67,7 +73,9 @@ export async function getEconomyData(client, guildId, userId) {
             cooldowns: {}
         };
 
-        return { ...defaultData, ...(data || {}) };
+        const result = { ...defaultData, ...(data || {}) };
+        console.log('Final economy data:', result);
+        return result;
     } catch (error) {
         console.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
         throw error;
@@ -85,7 +93,18 @@ export async function getEconomyData(client, guildId, userId) {
 export async function setEconomyData(client, guildId, userId, newData) {
     try {
         const key = getEconomyKey(guildId, userId);
-        await client.db.set(key, { ...DEFAULT_ECONOMY_DATA, ...newData });
+        console.log('Setting economy data with key:', key);
+        console.log('Data to save:', newData);
+        
+        // Get existing data first
+        const existingData = await getEconomyData(client, guildId, userId);
+        
+        // Merge existing data with new data, with new data taking precedence
+        const mergedData = { ...existingData, ...newData };
+        
+        console.log('Merged data to save:', mergedData);
+        await client.db.set(key, mergedData);
+        console.log('Data saved successfully');
         return true;
     } catch (error) {
         logger.error('Error saving economy data:', error);

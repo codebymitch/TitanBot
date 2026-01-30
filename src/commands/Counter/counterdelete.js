@@ -1,6 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getServerCounters, saveServerCounters } from '../../services/counterService.js';
+import { BotConfig } from '../../config/bot.js';
 
 // Migrated from: commands/Counter/counterdelete.js
 export default {
@@ -20,7 +22,7 @@ export default {
     category: "Counter",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         const counterId = interaction.options.getString("counter_id");
         const { guild } = interaction;
@@ -32,11 +34,7 @@ export default {
         if (counterIndex === -1) {
             return interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        BotConfig.counters.messages.counterNotFound,
-                        BotConfig.embeds.colors.error,
-                    ),
+                    createEmbed({ title: "Error", description: BotConfig.counters?.messages?.counterNotFound || "Counter not found. Use `/counterlist` to see available counters." }),
                 ],
             });
         }
@@ -76,29 +74,21 @@ export default {
 
             // Format success message from config
             const successMessage =
-                BotConfig.counters.messages.counterDeleted.replace(
+                (BotConfig.counters?.messages?.counterDeleted || "✅ Deleted counter **{id}**").replace(
                     "{id}",
                     counterId,
                 ) + (channelDeleted ? " The channel has been removed." : "");
 
             interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        " Counter Deleted",
-                        successMessage,
-                        BotConfig.embeds.colors.success,
-                    ),
+                    createEmbed({ title: "✅ Counter Deleted", description: successMessage }),
                 ],
             });
         } catch (error) {
             console.error("Error deleting counter:", error);
             interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        `Failed to delete counter: ${error.message}`,
-                        BotConfig.embeds.colors.error,
-                    ),
+                    createEmbed({ title: "Error", description: `Failed to delete counter: ${error.message}` }),
                 ],
             });
         }

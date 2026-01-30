@@ -1,11 +1,15 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { shopItems } from "../../shop_config.js";
+import { shopItems } from "../../config/shop/items.js";
+import { getEconomyData, setEconomyData } from '../../services/economy.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
+import { botConfig } from '../../config/bot.js';
 
 const SHOP_ITEMS = shopItems;
 
 export default {
+    // Slash command data
     data: new SlashCommandBuilder()
         .setName("buy")
         .setDescription("Purchase an item from the shop.")
@@ -21,10 +25,20 @@ export default {
             option
                 .setName("quantity")
                 .setDescription("The amount of the item to buy (default is 1).")
-                .setRequired(false),
-        ),
-    category: "economy", // Ensure the category is defined
+                .setMinValue(1)
+                .setMaxValue(100)
+        )
+        .setDMPermission(false),
+    
+    // Prefix command data
+    name: "buy",
+    aliases: ["purchase", "shop"],
+    description: "Purchase an item from the shop.",
+    category: "Economy",
+    usage: `${botConfig.commands.prefix}buy <item_id> [quantity]`,
+    cooldown: 5,
 
+    // Slash command execution
     async execute(interaction, config, client) {
         await interaction.deferReply({ ephemeral: true });
 

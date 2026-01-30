@@ -1,9 +1,12 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getEconomyKey } from '../../services/database.js';
+import { botConfig } from '../../config/bot.js';
 
 // Migrated from: commands/Economy/eleaderboard.js
 export default {
+    // Slash command data
     data: new SlashCommandBuilder()
         .setName("eleaderboard")
         .setDescription("View the server's top 10 richest users.")
@@ -19,8 +22,16 @@ export default {
                 .setRequired(false),
         )
         .setDMPermission(false),
+    
+    // Prefix command data
+    name: "eleaderboard",
+    aliases: ["richlist", "top", "lb"],
+    description: "View the server's top 10 richest users.",
     category: "Economy",
+    usage: `${botConfig.commands.prefix}eleaderboard [sort_by]`,
+    cooldown: 10,
 
+    // Slash command execution
     async execute(interaction, config, client) {
         await interaction.deferReply();
 
@@ -29,10 +40,10 @@ export default {
 
         try {
             // Replit DB prefix search to get all economy keys for this guild
-            const prefix = `economy:${guildId}:`;
+            const prefix = `guild:${guildId}:economy:`;
 
-            // NOTE: We use client.db.db.list(prefix) to access the raw Database list method.
-            let allKeys = await client.db.db.list(prefix);
+            // NOTE: We use client.db.list(prefix) to access the Database list method.
+            let allKeys = await client.db.list(prefix);
 
             // 🌟 FIX: Ensure allKeys is an array before iterating 🌟
             if (!Array.isArray(allKeys)) {
@@ -61,9 +72,9 @@ export default {
                 if (userData) {
                     allUserData.push({
                         userId: userId,
-                        cash: userData.cash || 0,
+                        cash: userData.wallet || 0,
                         bank: userData.bank || 0,
-                        net_worth: (userData.cash || 0) + (userData.bank || 0),
+                        net_worth: (userData.wallet || 0) + (userData.bank || 0),
                     });
                 }
             }

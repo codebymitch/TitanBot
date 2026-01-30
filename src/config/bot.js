@@ -3,6 +3,8 @@
  * Centralized configuration for Titan Bot
  */
 
+import { ActivityType } from "discord.js";
+
 // Default bot configuration
 export const botConfig = {
   // Bot presence and status
@@ -11,7 +13,7 @@ export const botConfig = {
     activities: [
       {
         name: "/help | Titan Bot",
-        type: "PLAYING",
+        type: ActivityType.Playing,
       },
     ],
   },

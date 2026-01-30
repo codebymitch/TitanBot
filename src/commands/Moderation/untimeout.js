@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logEvent } from '../../utils/moderation.js';
 
 // Migrated from: commands/Moderation/untimeout.js
 export default {
@@ -93,7 +94,15 @@ export default {
                     },
                 );
 
-            logEvent(client, interaction.guildId, untimeoutEmbed);
+            await logEvent({
+                client,
+                guildId: interaction.guildId,
+                event: {
+                    action: "Member Timeout Removed",
+                    target: `${targetUser.tag} (${targetUser.id})`,
+                    executor: `${interaction.user.tag} (${interaction.user.id})`
+                }
+            });
             // ---------------------------
 
             await interaction.editReply({

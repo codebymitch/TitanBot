@@ -1,5 +1,9 @@
 import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
+import { getGuildConfig } from '../services/guildConfig.js';
+import { errorEmbed } from '../utils/embeds.js';
+import { handleApplicationModal } from '../commands/Community/apply.js';
+import { handleApplicationButton, handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -14,8 +18,40 @@ export default {
           return;
         }
 
+        // Check if command is disabled for this guild
+        let guildConfig = null;
+        if (interaction.guild) {
+          guildConfig = await getGuildConfig(client, interaction.guild.id);
+          if (guildConfig?.disabledCommands?.[interaction.commandName]) {
+            return interaction.reply({
+              embeds: [
+                errorEmbed(
+                  "Command Disabled",
+                  `The command \`/${interaction.commandName}\` has been disabled by the server administrators.`
+                ),
+              ],
+              ephemeral: true
+            });
+          }
+        }
+
         try {
-          await command.execute(interaction, client);
+          // Check command signature and call accordingly
+          const executeString = command.execute.toString();
+          
+          if (executeString.includes('interaction, guildConfig, client')) {
+            // Commands expecting (interaction, guildConfig, client)
+            await command.execute(interaction, guildConfig, client);
+          } else if (executeString.includes('interaction, config, client') || executeString.includes('interaction, client, config')) {
+            // Commands expecting (interaction, config, client)
+            await command.execute(interaction, guildConfig, client);
+          } else if (executeString.includes('interaction, client')) {
+            // Commands expecting (interaction, client)
+            await command.execute(interaction, client);
+          } else {
+            // Commands expecting (interaction) only
+            await command.execute(interaction);
+          }
         } catch (error) {
           logger.error(`Error executing ${interaction.commandName}`, error);
           
@@ -33,6 +69,42 @@ export default {
       }
       // Handle buttons
       else if (interaction.isButton()) {
+        // Handle application buttons first
+        if (interaction.customId.startsWith('app_approve_') || interaction.customId.startsWith('app_deny_')) {
+          try {
+            await handleApplicationButton(interaction);
+          } catch (error) {
+            logger.error(`Error handling application button ${interaction.customId}`, error);
+            await interaction.reply({
+              content: 'There was an error processing this button!',
+              ephemeral: true
+            }).catch(console.error);
+          }
+          return;
+        }
+        
+        // Handle todo buttons which use underscore separator
+        if (interaction.customId.startsWith('shared_todo_')) {
+          const parts = interaction.customId.split('_');
+          const buttonType = parts.slice(0, 3).join('_'); // shared_todo_add or shared_todo_complete
+          const listId = parts[3];
+          const button = client.buttons.get(buttonType);
+          
+          if (button) {
+            try {
+              await button.execute(interaction, client, [listId]);
+            } catch (error) {
+              logger.error(`Error executing button ${buttonType}`, error);
+              await interaction.reply({
+                content: 'There was an error processing this button!',
+                ephemeral: true
+              }).catch(console.error);
+            }
+          }
+          return;
+        }
+        
+        // Handle regular buttons with colon separator
         const [customId, ...args] = interaction.customId.split(':');
         const button = client.buttons.get(customId);
 
@@ -67,6 +139,35 @@ export default {
       }
       // Handle modals
       else if (interaction.isModalSubmit()) {
+        // Handle application modals first
+        if (interaction.customId.startsWith('app_modal_')) {
+          try {
+            await handleApplicationModal(interaction);
+          } catch (error) {
+            logger.error(`Error handling application modal ${interaction.customId}`, error);
+            await interaction.reply({
+              content: 'There was an error processing this form!',
+              ephemeral: true
+            }).catch(console.error);
+          }
+          return;
+        }
+        
+        // Handle application review modals
+        if (interaction.customId.startsWith('app_review_')) {
+          try {
+            await handleApplicationReviewModal(interaction);
+          } catch (error) {
+            logger.error(`Error handling application review modal ${interaction.customId}`, error);
+            await interaction.reply({
+              content: 'There was an error processing this form!',
+              ephemeral: true
+            }).catch(console.error);
+          }
+          return;
+        }
+        
+        // Handle regular modals with colon separator (this includes shared_todo modals)
         const [customId, ...args] = interaction.customId.split(':');
         const modal = client.modals.get(customId);
 

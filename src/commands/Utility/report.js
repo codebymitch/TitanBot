@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
 
 // Migrated from: commands/Utility/report.js
 export default {
@@ -66,10 +67,7 @@ export default {
                 });
             }
 
-            const reportEmbed = createEmbed(
-                `🚨 NEW USER REPORT: ${targetUser.tag}`,
-                `**Reported By:** ${interaction.user.tag} (\`${interaction.user.id}\`)\n**Reported User:** ${targetUser.tag} (\`${targetUser.id}\`)`,
-            )
+            const reportEmbed = createEmbed({ title: `🚨 NEW USER REPORT: ${targetUser.tag}`, description: `**Reported By:** ${interaction.user.tag} (\`${interaction.user.id}\`)\n**Reported User:** ${targetUser.tag} (\`${targetUser.id}\`)` })
                 .setColor(0xff0000) // Red color for urgency
                 .setThumbnail(targetUser.displayAvatarURL())
                 .addFields(
@@ -95,10 +93,7 @@ export default {
             // 5. Confirmation reply (Ephemeral)
             await interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "✅ Report Submitted",
-                        `Your report against **${targetUser.tag}** has been successfully filed and sent to the moderation team. Thank you!`,
-                    ),
+                    createEmbed({ title: "✅ Report Submitted", description: `Your report against **${targetUser.tag}** has been successfully filed and sent to the moderation team. Thank you!`, }),
                 ],
             });
         } catch (error) {

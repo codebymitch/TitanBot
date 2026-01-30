@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -15,10 +15,7 @@ export default {
 
     const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`;
 
-    const embed = createEmbed(
-      "🔗 Invite This Bot",
-      "Click the button below to add your customized bot to a server. This link uses your bot's unique ID and requests Administrator permissions.",
-    ).setThumbnail(interaction.client.user.displayAvatarURL());
+    const embed = createEmbed({ title: "🔗 Invite This Bot", description: "Click the button below to add your customized bot to a server. This link uses your bot's unique ID and requests Administrator permissions.", }).setThumbnail(interaction.client.user.displayAvatarURL());
 
     // Create the dedicated invite button
     const inviteButton = new ButtonBuilder()

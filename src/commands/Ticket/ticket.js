@@ -1,6 +1,8 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
+import { logEvent } from '../../utils/moderation.js';
 
 // Migrated from: commands/Ticket/ticket.js
 export default {
@@ -76,15 +78,16 @@ export default {
             const panelChannel =
                 interaction.options.getChannel("panel_channel");
             const categoryChannel = interaction.options.getChannel("category");
-            const panelMessage = interaction.options.getString("panel_message"); // <-- New
+            const panelMessage = interaction.options.getString("panel_message") || "Click the button below to create a support ticket."; // <-- New
             const buttonLabel =
                 interaction.options.getString("button_label") ||
                 "Create Ticket"; // <-- New
 
-            const setupEmbed = createEmbed(
-                "🎫 Support Tickets",
-                panelMessage, // Use the user-provided message
-            ).setColor("#3498DB");
+            const setupEmbed = createEmbed({ 
+                title: "🎫 Support Tickets", 
+                description: panelMessage,
+                color: "#3498DB"
+            });
 
             const ticketButton = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -130,11 +133,11 @@ export default {
                 });
 
                 // --- Logging ---
-                const logEmbed = createEmbed(
-                    "🔧 Ticket System Setup (Configuration Log)",
-                    `The ticket panel was set up in ${panelChannel} by ${interaction.user}.`,
-                )
-                    .setColor("#F39C12")
+                const logEmbed = createEmbed({
+                    title: "🔧 Ticket System Setup (Configuration Log)",
+                    description: `The ticket panel was set up in ${panelChannel} by ${interaction.user}.`,
+                    color: "#F39C12"
+                })
                     .addFields(
                         {
                             name: "Panel Channel",
@@ -155,7 +158,16 @@ export default {
                         },
                     );
 
-                logEvent(client, interaction.guildId, logEmbed);
+                logEvent({
+                    client,
+                    guildId: interaction.guildId,
+                    event: {
+                        action: "Ticket System Setup",
+                        target: panelChannel.toString(),
+                        executor: interaction.user.toString(),
+                        reason: "Ticket panel configuration"
+                    }
+                });
             } catch (error) {
                 console.error("Ticket Setup Error:", error);
                 await interaction.editReply({

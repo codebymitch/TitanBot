@@ -1,5 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
 // Migrated from: commands/Reaction_roles/rsetup.js
@@ -119,14 +119,15 @@ export default {
                 roles: roles.map(role => role.id)
             };
 
-            // Save the reaction role data to the database
+            // Save the reaction role data to the database using consistent key format
+            const key = `reaction_roles:${interaction.guildId}:${message.id}`;
             console.log(`[ReactionRole] Saving reaction role data for message ${message.id}:`, reactionRoleData);
             try {
-                await interaction.client.db.set(`reaction_roles_${message.id}`, reactionRoleData);
+                await interaction.client.db.set(key, reactionRoleData);
                 console.log(`[ReactionRole] Successfully saved reaction role data for message ${message.id}`);
                 
                 // Verify the data was saved
-                const savedData = await interaction.client.db.get(`reaction_roles_${message.id}`);
+                const savedData = await interaction.client.db.get(key);
                 console.log(`[ReactionRole] Verified saved data for message ${message.id}:`, savedData);
                 
                 if (!savedData) {

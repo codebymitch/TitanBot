@@ -89,17 +89,66 @@ export async function removeReactionRole(client, guildId, messageId, emoji) {
 export async function getAllReactionRoleMessages(client, guildId) {
     try {
         const prefix = `reaction_roles:${guildId}:`;
-        const keys = await client.db.list(prefix);
+        
+        let keys;
+        try {
+            // Try to list keys with prefix
+            keys = await client.db.list(prefix);
+            
+            // Handle different response formats
+            if (keys && typeof keys === 'object') {
+                if (Array.isArray(keys)) {
+                    // Already an array
+                } else if (keys.value && Array.isArray(keys.value)) {
+                    // Response format: { value: [...] }
+                    keys = keys.value;
+                } else {
+                    // Try to get all keys and filter
+                    const allKeys = await client.db.list();
+                    
+                    if (Array.isArray(allKeys)) {
+                        keys = allKeys.filter(key => key.startsWith(prefix));
+                    } else if (allKeys.value && Array.isArray(allKeys.value)) {
+                        keys = allKeys.value.filter(key => key.startsWith(prefix));
+                    } else {
+                        return [];
+                    }
+                }
+            } else {
+                return [];
+            }
+        } catch (listError) {
+            console.error(`[ReactionRole] Error listing keys:`, listError);
+            return [];
+        }
         
         if (!keys || keys.length === 0) {
             return [];
         }
 
         const messages = [];
+        
         for (const key of keys) {
-            const data = await client.db.get(key);
-            if (data) {
-                messages.push(data);
+            try {
+                const data = await client.db.get(key);
+                
+                if (data) {
+                    // Handle database response format
+                    let actualData;
+                    if (data && data.ok && data.value) {
+                        actualData = data.value;
+                    } else if (data && data.value) {
+                        actualData = data.value;
+                    } else {
+                        actualData = data;
+                    }
+                    
+                    if (actualData) {
+                        messages.push(actualData);
+                    }
+                }
+            } catch (dataError) {
+                console.error(`[ReactionRole] Error getting data for key ${key}:`, dataError);
             }
         }
 

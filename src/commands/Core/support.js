@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -19,10 +19,7 @@ export default {
 
     await interaction.reply({
       embeds: [
-        createEmbed(
-          "🚑 Need Help?",
-          "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!",
-        ),
+        createEmbed({ title: "🚑 Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!", }),
       ],
       // Use the custom ActionRow with the defined button
       components: [actionRow],

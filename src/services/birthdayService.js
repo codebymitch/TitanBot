@@ -1,4 +1,5 @@
 import { getGuildConfig } from './guildConfig.js';
+import { getGuildBirthdays } from '../utils/database.js';
 
 /**
  * Check for birthdays across all guilds and send birthday messages

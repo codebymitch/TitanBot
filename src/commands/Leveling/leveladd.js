@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
 
 // Migrated from: commands/Leveling/leveladd.js
 export default {
@@ -57,20 +58,14 @@ export default {
 
             await interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Levels Added",
-                        `Successfully added ${levelsToAdd} levels to ${targetUser.tag}.`,
-                    ),
+                    createEmbed({ title: "Levels Added", description: `Successfully added ${levelsToAdd} levels to ${targetUser.tag}.`, }),
                 ],
             });
         } catch (error) {
             console.error("LevelAdd command error:", error);
             await interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        "An error occurred while adding levels to the user.",
-                    ),
+                    createEmbed({ title: "Error", description: "An error occurred while adding levels to the user.", }),
                 ],
             });
         }

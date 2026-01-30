@@ -1,6 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getGuildConfig, setGuildConfig } from '../../services/guildConfig.js';
+import { logEvent } from '../../utils/moderation.js';
 
 // Migrated from: commands/Config/setlogchannel.js
 export default {
@@ -57,10 +59,8 @@ export default {
         }
 
         const guildId = interaction.guildId;
-        // 🔑 1. Define the correct key for storage
-        const configKey = getGuildConfigKey(guildId);
 
-        // 🔑 2. Fetch the current config using the correct key helper
+        // 🔑 1. Fetch the current config using guildConfig service
         const currentConfig = await getGuildConfig(client, guildId);
 
         const logChannel = interaction.options.getChannel("channel");
@@ -69,8 +69,8 @@ export default {
         try {
             if (disableLogging) {
                 currentConfig.logChannelId = null;
-                // 🔑 3. Use the correct key to save
-                await client.db.set(configKey, currentConfig);
+                // 🔑 2. Save using guildConfig service
+                await setGuildConfig(client, guildId, currentConfig);
 
                 return interaction.editReply({
                     embeds: [
@@ -104,8 +104,8 @@ export default {
             // Update local config object
             currentConfig.logChannelId = logChannel.id;
 
-            // 🔑 4. Use the correct key to save the updated config
-            await client.db.set(configKey, currentConfig);
+            // 🔑 4. Save using guildConfig service
+            await setGuildConfig(client, guildId, currentConfig);
 
             await interaction.editReply({
                 embeds: [
@@ -117,15 +117,16 @@ export default {
             });
 
             // Log the action using the newly updated config
-            logEvent(
+            await logEvent({
                 client,
                 guildId,
-                successEmbed(
-                    "Log Channel Activated",
-                    `Logging set by ${interaction.user}.`,
-                ).setColor("#3498DB"),
-                currentConfig,
-            );
+                event: {
+                    action: "Log Channel Activated",
+                    target: logChannel.toString(),
+                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    reason: `Logging set by ${interaction.user}`
+                }
+            });
         } catch (error) {
             console.error("Error setting log channel:", error);
             await interaction.editReply({

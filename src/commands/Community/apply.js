@@ -1,26 +1,14 @@
 import { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-
-// Helper functions (these should ideally be imported from a centralized utility)
-async function getApplicationSettings(client, guildId) {
-    return client.db?.settings?.get(guildId) || {};
-}
-
-async function getUserApplications(client, guildId, userId) {
-    // Mock implementation or import from DB handler
-    return [];
-}
-
-async function createApplication(client, application) {
-    // Mock implementation or import from DB handler
-    return { id: 'temp-id' };
-}
-
-async function getApplication(client, guildId, appId) {
-    // Mock implementation or import from DB handler
-    return null;
-}
+import { 
+    getApplicationSettings, 
+    getUserApplications, 
+    createApplication, 
+    getApplication,
+    getApplicationRoles,
+    updateApplication
+} from '../../utils/database.js';
 
 // Migrated from: commands/Community/apply.js
 export default {
@@ -31,11 +19,11 @@ export default {
             subcommand
                 .setName("submit")
                 .setDescription("Submit an application for a role")
-                .addRoleOption((option) =>
+                .addStringOption((option) =>
                     option
-                        .setName("role")
-                        .setDescription("The role you're applying for")
-                        .setRequired(true),
+                        .setName("application")
+                        .setDescription("The application you want to submit")
+                        .setRequired(true)
                 ),
         )
         .addSubcommand((subcommand) =>
@@ -48,6 +36,11 @@ export default {
                         .setDescription("Application ID (leave empty to see all)")
                         .setRequired(false),
                 ),
+        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("list")
+                .setDescription("List available applications to apply for"),
         ),
 
     category: "Community",
@@ -84,6 +77,8 @@ export default {
                 await handleSubmit(interaction, settings);
             } else if (subcommand === "status") {
                 await handleStatus(interaction);
+            } else if (subcommand === "list") {
+                await handleList(interaction);
             }
         } catch (error) {
             console.error("Error in apply command:", error);
@@ -97,9 +92,173 @@ export default {
     }
 };
 
+// Handle modal submissions for applications
+export async function handleApplicationModal(interaction) {
+    if (!interaction.isModalSubmit()) return;
+    
+    const customId = interaction.customId;
+    if (!customId.startsWith('app_modal_')) return;
+    
+    const roleId = customId.split('_')[2];
+    
+    // Get application roles to find the application name
+    const applicationRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
+    const applicationRole = applicationRoles.find(appRole => appRole.roleId === roleId);
+    
+    if (!applicationRole) {
+        return interaction.reply({
+            embeds: [errorEmbed('Application configuration not found.')],
+            ephemeral: true
+        });
+    }
+    
+    const role = interaction.guild.roles.cache.get(roleId);
+    
+    if (!role) {
+        return interaction.reply({
+            embeds: [errorEmbed('Role not found.')],
+            ephemeral: true
+        });
+    }
+    
+    // Get answers from modal
+    const answers = [];
+    const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
+    const questions = settings.questions || ["Why do you want this role?", "What is your experience?"];
+    
+    for (let i = 0; i < questions.length; i++) {
+        const answer = interaction.fields.getTextInputValue(`q${i}`);
+        answers.push({
+            question: questions[i],
+            answer: answer
+        });
+    }
+    
+    // Create the application
+    try {
+        const application = await createApplication(interaction.client, {
+            guildId: interaction.guild.id,
+            userId: interaction.user.id,
+            roleId: roleId,
+            roleName: applicationRole.name,
+            username: interaction.user.tag,
+            avatar: interaction.user.displayAvatarURL(),
+            answers: answers
+        });
+        
+        // Send confirmation
+        const embed = successEmbed(
+            'Application Submitted',
+            `Your application for **${applicationRole.name}** has been submitted successfully!\n\n` +
+            `Application ID: \`${application.id}\`\n` +
+            `You can check the status with \`/apply status id:${application.id}\``
+        );
+        
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+        
+        // Log the application if log channel is set
+        const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
+        if (settings.logChannelId) {
+            const logChannel = interaction.guild.channels.cache.get(settings.logChannelId);
+            if (logChannel) {
+                const logEmbed = createEmbed({
+                    title: '📝 New Application',
+                    description: `**User:** <@${interaction.user.id}> (${interaction.user.tag})\n` +
+                        `**Application:** ${applicationRole.name}\n` +
+                        `**Role:** ${role.name}\n` +
+                        `**Application ID:** \`${application.id}\`\n` +
+                        `**Status:** Pending`
+                }).setColor('#FFFF00');
+                
+                const logMessage = await logChannel.send({ embeds: [logEmbed] });
+                
+                // Update application with log message info
+                await updateApplication(interaction.client, interaction.guild.id, application.id, {
+                    logMessageId: logMessage.id,
+                    logChannelId: settings.logChannelId
+                });
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error creating application:', error);
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({
+                embeds: [errorEmbed('Failed to submit application. Please try again later.')],
+                ephemeral: true
+            });
+        } else {
+            await interaction.reply({
+                embeds: [errorEmbed('Failed to submit application. Please try again later.')],
+                ephemeral: true
+            });
+        }
+    }
+}
+
+async function handleList(interaction) {
+    try {
+        const applicationRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
+        
+        if (applicationRoles.length === 0) {
+            return interaction.reply({
+                embeds: [errorEmbed("No applications are currently available.")],
+                ephemeral: true,
+            });
+        }
+
+        const embed = createEmbed({
+            title: "Available Applications",
+            description: "Here are the roles you can apply for:"
+        });
+
+        applicationRoles.forEach((appRole, index) => {
+            const role = interaction.guild.roles.cache.get(appRole.roleId);
+            embed.addFields({
+                name: `${index + 1}. ${appRole.name}`,
+                value: `**Role:** ${role ? `<@&${appRole.roleId}>` : 'Role not found'}\n` +
+                       `**Apply with:** \`/apply submit application:"${appRole.name}"\``,
+                inline: false
+            });
+        });
+
+        embed.setFooter({
+            text: "Use /apply submit application:<name> to apply for any of these roles."
+        });
+
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+    } catch (error) {
+        console.error('Error listing applications:', error);
+        return interaction.reply({
+            embeds: [errorEmbed('Failed to load applications. Please try again later.')],
+            ephemeral: true
+        });
+    }
+}
+
 async function handleSubmit(interaction, settings) {
-    const role = interaction.options.getRole("role");
+    const applicationName = interaction.options.getString("application");
     const member = interaction.member;
+
+    // Get configured application roles
+    const applicationRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
+    
+    // Find the application role
+    const applicationRole = applicationRoles.find(appRole => 
+        appRole.name.toLowerCase() === applicationName.toLowerCase()
+    );
+
+    if (!applicationRole) {
+        return interaction.reply({
+            embeds: [
+                errorEmbed(
+                    "Application not found.",
+                    "Use `/apply list` to see available applications."
+                ),
+            ],
+            ephemeral: true,
+        });
+    }
 
     // Check if user has any pending applications
     const userApps = await getUserApplications(
@@ -120,10 +279,19 @@ async function handleSubmit(interaction, settings) {
         });
     }
 
+    // Get the role object
+    const role = interaction.guild.roles.cache.get(applicationRole.roleId);
+    if (!role) {
+        return interaction.reply({
+            embeds: [errorEmbed('The role for this application no longer exists.')],
+            ephemeral: true
+        });
+    }
+
     // Create and show the application modal
     const modal = new ModalBuilder()
-        .setCustomId(`app_modal_${role.id}`)
-        .setTitle(`Application for ${role.name}`);
+        .setCustomId(`app_modal_${applicationRole.roleId}`)
+        .setTitle(`Application for ${applicationRole.name}`);
 
     // Add text inputs for each question
     const questions =
@@ -169,10 +337,7 @@ async function handleStatus(interaction) {
             });
         }
 
-        const embed = createEmbed(
-            `Application #${application.id} - ${application.roleName}`,
-            `**Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}`
-        );
+        const embed = createEmbed({ title: `Application #${application.id} - ${application.roleName}`, description: `**Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}` });
 
         return interaction.reply({ embeds: [embed], ephemeral: true });
     } else {
@@ -191,10 +356,7 @@ async function handleStatus(interaction) {
             });
         }
 
-        const embed = createEmbed(
-            "Your Applications",
-            "Here are your recent applications."
-        );
+        const embed = createEmbed({ title: "Your Applications", description: "Here are your recent applications." });
 
         return interaction.reply({ embeds: [embed], ephemeral: true });
     }

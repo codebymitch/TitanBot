@@ -65,6 +65,66 @@ export const shopItems = [
             multiplier: 1.5,
             uses: 1
         }
+    },
+    {
+        id: 'fishing_rod',
+        name: '🎣 Fishing Rod',
+        price: 5000,
+        description: 'Used for fishing commands',
+        type: 'tool',
+        durability: 100,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 1.0
+        }
+    },
+    {
+        id: 'pickaxe',
+        name: '⛏️ Pickaxe',
+        price: 7500,
+        description: 'Used for mining commands',
+        type: 'tool',
+        durability: 100,
+        effect: {
+            type: 'mining_yield',
+            multiplier: 1.2
+        }
+    },
+    {
+        id: 'laptop',
+        name: '💻 Laptop',
+        price: 15000,
+        description: 'Increases work earnings',
+        type: 'tool',
+        durability: 200,
+        effect: {
+            type: 'work_yield',
+            multiplier: 1.5
+        }
+    },
+    {
+        id: 'lucky_charm',
+        name: '🍀 Lucky Charm',
+        price: 10000,
+        description: 'Increases luck for gambling',
+        type: 'consumable',
+        effect: {
+            type: 'gamble_boost',
+            multiplier: 1.3,
+            uses: 3
+        }
+    },
+    {
+        id: 'bank_note',
+        name: '📜 Bank Note',
+        price: 25000,
+        description: 'Increases bank capacity by 10,000',
+        type: 'upgrade',
+        maxLevel: 10,
+        effect: {
+            type: 'bank_capacity',
+            increase: 10000
+        }
     }
 ];
 

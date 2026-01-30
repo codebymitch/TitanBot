@@ -29,10 +29,7 @@ function createCommandListEmbed() {
     const foldersPath = path.join(process.cwd(), "commands");
     const commandFolders = fs.readdirSync(foldersPath);
 
-    const embed = createEmbed(
-        "📜 TitanBot Command List",
-        "Here is a complete list of all available commands, organized by category.",
-    );
+    const embed = createEmbed({ title: "📜 TitanBot Command List", description: "Here is a complete list of all available commands, organized by category.", });
 
     let totalCommands = 0;
 

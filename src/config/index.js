@@ -35,9 +35,6 @@ const config = {
       ...botConfig.shop,
       ...shop,
     },
-
-    // Merge with any additional bot config
-    ...botConfig,
   },
 
   // Database configuration

@@ -1,6 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getEconomyData, setEconomyData } from '../../services/economy.js';
+import { botConfig } from '../../config/bot.js';
 
 // --- Configuration ---
 const ROB_COOLDOWN = 4 * 60 * 60 * 1000; // 4 hours
@@ -10,6 +12,7 @@ const FINE_PERCENTAGE = 0.1; // Robber loses 10% of their cash if caught/failed
 
 
 export default {
+    // Slash command data
     data: new SlashCommandBuilder()
         .setName("rob")
         .setDescription("Attempt to steal cash from another user.")
@@ -20,7 +23,14 @@ export default {
                 .setRequired(true),
         )
         .setDMPermission(false),
+    
+    // Prefix command data
+    name: "rob",
+    aliases: ["steal", "mug"],
+    description: "Attempt to steal cash from another user.",
     category: "Economy",
+    usage: `${botConfig.commands.prefix}rob <user>`,
+    cooldown: 240, // 4 hours
 
     async execute(interaction, config, client) {
         await interaction.deferReply();
@@ -51,7 +61,7 @@ export default {
                 guildId,
                 victimUser.id,
             );
-            const lastRob = robberData.cooldowns.rob || 0;
+            const lastRob = robberData.lastRob || 0;
 
             // --- 2. Cooldown Check ---
             if (now < lastRob + ROB_COOLDOWN) {
@@ -72,7 +82,7 @@ export default {
             }
 
             // --- 3. Victim Check ---
-            if (victimData.cash < 500) {
+            if (victimData.wallet < 500) {
                 // Set a minimum cash requirement for a worthwhile robbery
                 return interaction.editReply({
                     embeds: [
@@ -109,11 +119,11 @@ export default {
             if (isSuccessful) {
                 // Success: Robber gains cash, Victim loses cash
                 const amountStolen = Math.floor(
-                    victimData.cash * ROB_PERCENTAGE,
+                    victimData.wallet * ROB_PERCENTAGE,
                 );
 
-                robberData.cash += amountStolen;
-                victimData.cash -= amountStolen;
+                robberData.wallet += amountStolen;
+                victimData.wallet -= amountStolen;
 
                 resultEmbed = successEmbed(
                     "💰 Robbery Successful!",
@@ -122,13 +132,13 @@ export default {
             } else {
                 // Failure: Robber loses cash (fined), Victim loses nothing
                 const fineAmount = Math.floor(
-                    robberData.cash * FINE_PERCENTAGE,
+                    robberData.wallet * FINE_PERCENTAGE,
                 );
 
-                if (robberData.cash < fineAmount) {
-                    robberData.cash = 0;
+                if (robberData.wallet < fineAmount) {
+                    robberData.wallet = 0;
                 } else {
-                    robberData.cash -= fineAmount;
+                    robberData.wallet -= fineAmount;
                 }
 
                 resultEmbed = errorEmbed(
@@ -138,7 +148,7 @@ export default {
             }
 
             // --- 6. Update Data and Respond ---
-            robberData.cooldowns.rob = now;
+            robberData.lastRob = now;
 
             await setEconomyData(client, guildId, robberId, robberData);
             await setEconomyData(client, guildId, victimUser.id, victimData);
@@ -147,12 +157,12 @@ export default {
                 .addFields(
                     {
                         name: `Your New Cash (${interaction.user.username})`,
-                        value: `$${robberData.cash.toLocaleString()}`,
+                        value: `$${robberData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
                         name: `Victim's New Cash (${victimUser.username})`,
-                        value: `$${victimData.cash.toLocaleString()}`,
+                        value: `$${victimData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                 )

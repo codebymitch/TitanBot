@@ -30,7 +30,7 @@ export default async (client) => {
             }
             
             client[type].set(interaction.name, interaction);
-            logger.debug(`Loaded ${type.slice(0, -1)}: ${interaction.name}`);
+            logger.info(`Loaded ${type.slice(0, -1)}: ${interaction.name}`);
           } catch (error) {
             logger.error(`Error loading interaction ${file} in ${type}:`, error);
           }

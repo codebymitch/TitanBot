@@ -1,6 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { BotConfig } from '../../config/bot.js';
+import { getServerCounters, saveServerCounters, updateCounter } from '../../services/counterService.js';
 
 // Migrated from: commands/Counter/countercreate.js
 export default {
@@ -33,7 +35,7 @@ export default {
     category: "ServerStats",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         const type = interaction.options.getString("type");
         const channelType = interaction.options.getString("channeltype");
@@ -44,19 +46,26 @@ export default {
         if (!counterType) {
             return interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        `Invalid counter type: ${type}. Please contact support if you believe this is an error.`,
-                    ),
+                    createEmbed({ title: "Error", description: `Invalid counter type: ${type}. Please contact support if you believe this is an error.`, }),
                 ],
             });
         }
 
         // Generate channel name from config
-        const channelName = BotConfig.counters.defaults.name.replace(
+        const channelNameTemplate = BotConfig.counters?.defaults?.name || "📊 {type} Counter";
+        console.log('Channel name template:', channelNameTemplate);
+        console.log('Counter type:', counterType);
+        console.log('Counter type name:', counterType.name);
+        
+        const channelName = channelNameTemplate.replace(
             "{type}",
             counterType.name,
+        ).replace(
+            "{name}",
+            counterType.name,
         );
+        
+        console.log('Final channel name:', channelName);
 
         // Check permissions
         if (
@@ -66,10 +75,7 @@ export default {
         ) {
             return interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        BotConfig.counters.messages.missingManageChannels,
-                    ),
+                    createEmbed({ title: "Error", description: BotConfig.counters?.messages?.missingManageChannels || "I need the 'Manage Channels' permission to create counters." }),
                 ],
             });
         }
@@ -87,14 +93,14 @@ export default {
                     // Deny specified permissions for everyone
                     {
                         id: guild.roles.everyone.id,
-                        deny: BotConfig.counters.permissions.deny
+                        deny: (BotConfig.counters?.permissions?.deny || ['Connect', 'SendMessages'])
                             .map((perm) => PermissionFlagsBits[perm])
                             .filter((perm) => perm !== undefined),
                     },
                     // Allow specified permissions for the bot
                     {
                         id: client.user.id,
-                        allow: BotConfig.counters.permissions.allow
+                        allow: (BotConfig.counters?.permissions?.allow || ['ViewChannel', 'ReadMessageHistory'])
                             .map((perm) => PermissionFlagsBits[perm])
                             .filter((perm) => perm !== undefined),
                     },
@@ -132,11 +138,7 @@ export default {
             console.error("Error creating channel:", error);
             return interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        `Failed to create ${channelType} channel: ${error.message}`,
-                        BotConfig.embeds.colors.error,
-                    ),
+                    createEmbed({ title: "Error", description: `Failed to create ${channelType} channel: ${error.message}` }),
                 ],
             });
         }
@@ -168,21 +170,43 @@ export default {
                 throw new Error("Failed to save counter to database");
             }
 
+            // Verify the counter was saved correctly
+            console.log('Verifying counter was saved...');
+            const verifyCounters = await getServerCounters(client, guild.id);
+            console.log('Verification - retrieved counters after save:', verifyCounters);
+            
+            // Get the counter we just added (last one in the array)
+            const lastAddedCounter = counters[counters.length - 1];
+            console.log('Looking for counter with ID:', lastAddedCounter.id);
+            
+            const savedCounter = verifyCounters.find(c => c.id === lastAddedCounter.id);
+            console.log('Found counter:', savedCounter);
+            
+            if (!savedCounter) {
+                console.error('Counter was not found in database after save!');
+                console.error('Expected counter ID:', lastAddedCounter.id);
+                console.error('Available counter IDs:', verifyCounters.map(c => c.id));
+                throw new Error("Counter verification failed - not found in database");
+            }
+            console.log('Counter verification successful!');
+
             // Update the counter display
-            await updateCounter(client, guild, counters[counters.length - 1]);
+            const newCounter = counters[counters.length - 1];
+            console.log('Updating counter:', newCounter);
+            console.log('Guild member count:', guild.memberCount);
+            
+            const updateSuccess = await updateCounter(client, guild, newCounter);
+            console.log('Counter update success:', updateSuccess);
 
             // Format success message from config
-            const successMessage = BotConfig.counters.messages.counterCreated
+            const messageTemplate = BotConfig.counters?.messages?.counterCreated || "✅ {type} counter created in {channel}!";
+            const successMessage = messageTemplate
                 .replace("{type}", counterType.name)
                 .replace("{channel}", channel.toString());
 
             return interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "✅ Counter Created",
-                        successMessage,
-                        BotConfig.embeds.colors.success,
-                    ),
+                    createEmbed({ title: "✅ Counter Created", description: successMessage }),
                 ],
             });
         } catch (error) {
@@ -193,11 +217,7 @@ export default {
 
             return interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        `Failed to save counter: ${error.message}. The channel has been removed.`,
-                        BotConfig.embeds.colors.error,
-                    ),
+                    createEmbed({ title: "Error", description: `Failed to save counter: ${error.message}. The channel has been removed.` }),
                 ],
             });
         }

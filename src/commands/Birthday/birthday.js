@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getGuildBirthdays, setBirthday } from '../../utils/database.js';
 
 const MONTHS = [
     "January",
@@ -16,6 +17,39 @@ const MONTHS = [
     "November",
     "December",
 ];
+
+/**
+ * Parse month input from various formats (full name, abbreviation, or number)
+ * @param {string} monthInput - The month input from user
+ * @returns {number|null} The month number (1-12) or null if invalid
+ */
+function parseMonthInput(monthInput) {
+    if (!monthInput) return null;
+    
+    // If it's already a number from choices, use it directly
+    if (!isNaN(parseInt(monthInput))) {
+        const num = parseInt(monthInput);
+        return num >= 1 && num <= 12 ? num : null;
+    }
+    
+    // Handle string input (full month names or abbreviations)
+    const monthMap = {
+        'january': 1, 'jan': 1,
+        'february': 2, 'feb': 2,
+        'march': 3, 'mar': 3,
+        'april': 4, 'apr': 4,
+        'may': 5,
+        'june': 6, 'jun': 6,
+        'july': 7, 'jul': 7,
+        'august': 8, 'aug': 8,
+        'september': 9, 'sep': 9,
+        'october': 10, 'oct': 10,
+        'november': 11, 'nov': 11,
+        'december': 12, 'dec': 12
+    };
+    
+    return monthMap[monthInput.toLowerCase()] || null;
+}
 // Migrated from: commands/Birthday/birthday.js
 export default {
     data: new SlashCommandBuilder()
@@ -25,15 +59,27 @@ export default {
             subcommand
                 .setName("register")
                 .setDescription("Set your birthday (month and day only).")
-                .addIntegerOption((option) =>
+                .addStringOption((option) =>
                     option
                         .setName("month")
                         .setDescription(
-                            "The month of your birthday (1 for Jan, 12 for Dec).",
+                            "The month of your birthday (e.g., January, Jan, 1).",
                         )
                         .setRequired(true)
-                        .setMinValue(1)
-                        .setMaxValue(12),
+                        .addChoices(
+                            { name: "January (Jan)", value: "1" },
+                            { name: "February (Feb)", value: "2" },
+                            { name: "March (Mar)", value: "3" },
+                            { name: "April (Apr)", value: "4" },
+                            { name: "May", value: "5" },
+                            { name: "June (Jun)", value: "6" },
+                            { name: "July (Jul)", value: "7" },
+                            { name: "August (Aug)", value: "8" },
+                            { name: "September (Sep)", value: "9" },
+                            { name: "October (Oct)", value: "10" },
+                            { name: "November (Nov)", value: "11" },
+                            { name: "December (Dec)", value: "12" },
+                        ),
                 )
                 .addIntegerOption((option) =>
                     option
@@ -69,8 +115,23 @@ export default {
         const subcommand = interaction.options.getSubcommand();
 
         if (subcommand === "register") {
-            const month = interaction.options.getInteger("month");
+            const monthInput = interaction.options.getString("month");
             const day = interaction.options.getInteger("day");
+
+            // Parse month input using helper function
+            const month = parseMonthInput(monthInput);
+            
+            if (!month) {
+                return interaction.reply({
+                    embeds: [
+                        errorEmbed(
+                            "Invalid Month",
+                            "Please enter a valid month name (e.g., January, Jan) or number (1-12).",
+                        ),
+                    ],
+                    ephemeral: true,
+                });
+            }
 
             // Simple validation for day based on month (doesn't check leap years)
             const daysInMonth = new Date(2000, month, 0).getDate(); // Get days in month (using 2000 as a non-leap year base, though 0 is the key)

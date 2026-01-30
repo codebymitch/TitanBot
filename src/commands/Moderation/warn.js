@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logEvent } from '../../utils/moderation.js';
 
 // Migrated from: commands/Moderation/warn.js
 export default {
@@ -58,18 +59,21 @@ export default {
 
         try {
             const warningsKey = `warnings-${guildId}-${target.id}`;
-            let userWarns = (await client.db.get(warningsKey)) || [];
+            const userWarns = await client.db.get(warningsKey);
+            
+            // Ensure userWarns is an array, handle corrupted or invalid data
+            const warningsArray = Array.isArray(userWarns) ? userWarns : [];
 
             const newWarning = {
                 reason: reason,
                 moderatorId: moderator.id,
                 date: Date.now(),
             };
-            userWarns.push(newWarning);
+            warningsArray.push(newWarning);
 
-            await client.db.set(warningsKey, userWarns);
+            await client.db.set(warningsKey, warningsArray);
 
-            const totalWarns = userWarns.length;
+            const totalWarns = warningsArray.length;
 
             const warnEmbed = createEmbed(
                 "⚠️ User Warned (Action Log)",
@@ -95,7 +99,16 @@ export default {
                     { name: "Reason", value: reason, inline: false },
                 );
 
-            logEvent(client, interaction.guildId, warnEmbed, config);
+            await logEvent({
+                client,
+                guildId: interaction.guildId,
+                event: {
+                    action: "User Warned",
+                    target: `${target.tag} (${target.id})`,
+                    executor: `${moderator.tag} (${moderator.id})`,
+                    reason: `${reason}\nTotal Warns: ${totalWarns}`
+                }
+            });
 
             await interaction.editReply({
                 embeds: [

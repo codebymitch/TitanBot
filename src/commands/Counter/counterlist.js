@@ -1,6 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getServerCounters, saveServerCounters } from '../../services/counterService.js';
+import { BotConfig } from '../../config/bot.js';
 
 // Migrated from: commands/Counter/counterlist.js
 export default {
@@ -11,20 +13,19 @@ export default {
     category: "Counter",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         const { guild } = interaction;
         const counters = await getServerCounters(client, guild.id);
+        
+        console.log('Retrieved counters:', counters);
+        console.log('Number of counters:', counters.length);
 
         if (counters.length === 0) {
             return interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "No Counters",
-                        BotConfig.counters.messages.noCounters ||
-                            "There are no active counters in this server. Use `/countercreate` to create one.",
-                        BotConfig.embeds.colors.info,
-                    ),
+                    createEmbed({ title: "No Counters", description: BotConfig.counters.messages.noCounters ||
+                            "There are no active counters in this server. Use `/countercreate` to create one." }),
                 ],
             });
         }
@@ -34,6 +35,13 @@ export default {
 
         for (const counter of counters) {
             const channel = guild.channels.cache.get(counter.channelId);
+            
+            // Skip counters for deleted channels and mark for cleanup
+            if (!channel) {
+                console.warn(`Skipping counter ${counter.id} - channel ${counter.channelId} not found`);
+                continue;
+            }
+            
             const counterType = BotConfig.counters.types[counter.type] || {
                 name: counter.type,
                 description: `Counts ${counter.type.replace("_", " ")}`,
@@ -57,6 +65,13 @@ export default {
             });
         }
 
+        // Clean up orphaned counters (counters for deleted channels)
+        const validCounters = counters.filter(counter => guild.channels.cache.has(counter.channelId));
+        if (validCounters.length !== counters.length) {
+            console.log(`Cleaning up ${counters.length - validCounters.length} orphaned counters`);
+            await saveServerCounters(client, guild.id, validCounters);
+        }
+
         // Format the counter list
         const counterSections = [];
 
@@ -66,7 +81,7 @@ export default {
                     const channelMention = c.channel
                         ? c.channel.toString()
                         : "*Deleted Channel*";
-                    let info = `• ${channelMention}`;
+                    let info = `• **ID:** \`${c.id}\` - ${channelMention}`;
 
                     if (c.createdAt) {
                         info += ` (Created: <t:${Math.floor(c.createdAt.getTime() / 1000)}:R>)`;
@@ -91,11 +106,7 @@ export default {
         for (const section of counterSections) {
             if (currentSection.length + section.length + 2 > maxLength) {
                 embeds.push(
-                    createEmbed(
-                        "Active Counters",
-                        currentSection,
-                        BotConfig.embeds.colors.primary,
-                    ),
+                    createEmbed({ title: "Active Counters", description: currentSection }),
                 );
                 currentSection = section;
             } else {
@@ -106,11 +117,7 @@ export default {
         // Add the last section
         if (currentSection) {
             embeds.push(
-                createEmbed(
-                    "Active Counters",
-                    currentSection,
-                    BotConfig.embeds.colors.primary,
-                ),
+                createEmbed({ title: "Active Counters", description: currentSection }),
             );
         }
 
@@ -122,9 +129,20 @@ export default {
             });
         }
 
+        // Handle case where all counters were invalid
+        if (embeds.length === 0) {
+            return interaction.editReply({
+                embeds: [
+                    createEmbed({ 
+                        title: "No Valid Counters", 
+                        description: "No valid counters found. There may be corrupted data in the database." 
+                    })
+                ]
+            });
+        }
+
         interaction.editReply({
             embeds: embeds,
-            ephemeral: true,
         });
     },
 };

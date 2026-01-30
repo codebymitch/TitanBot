@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, version } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -16,14 +16,11 @@ export default {
     );
     const nodeVersion = process.version;
 
-    const embed = createEmbed(
-      "📊 System Statistics",
-      "Real-time performance metrics.",
-    ).addFields(
+    const embed = createEmbed({ title: "📊 System Statistics", description: "Real-time performance metrics.", }).addFields(
       { name: "Servers", value: `${totalGuilds}`, inline: true },
       { name: "Users", value: `${totalMembers}`, inline: true },
       { name: "Node.js", value: `${nodeVersion}`, inline: true },
-      { name: "Discord.js", value: `v${djsVersion}`, inline: true },
+      { name: "Discord.js", value: `v${version}`, inline: true },
       {
         name: "Memory Usage",
         value: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`,

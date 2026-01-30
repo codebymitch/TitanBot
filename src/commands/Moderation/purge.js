@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logEvent } from '../../utils/moderation.js';
 
 // Migrated from: commands/Moderation/purge.js
 export default {
@@ -66,7 +67,16 @@ export default {
           { name: "Count", value: `${deletedCount} messages`, inline: false },
         );
 
-      logEvent(client, interaction.guildId, purgeEmbed);
+      await logEvent({
+        client,
+        guildId: interaction.guildId,
+        event: {
+          action: "Messages Purged",
+          target: `${channel} (${deletedCount} messages)`,
+          executor: `${interaction.user.tag} (${interaction.user.id})`,
+          reason: `Deleted ${deletedCount} messages`
+        }
+      });
       // ---------------------------
 
       // Send ephemeral success message

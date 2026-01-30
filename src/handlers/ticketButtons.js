@@ -1,0 +1,344 @@
+import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
+import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
+import { getGuildConfig } from '../services/guildConfig.js';
+import { logEvent } from '../utils/moderation.js';
+
+const createTicketHandler = {
+  name: 'create_ticket',
+  async execute(interaction, client) {
+    try {
+      const config = await getGuildConfig(client, interaction.guildId);
+      const categoryId = config.ticketCategoryId || null;
+      
+      // Create a modal for ticket reason
+      const modal = new ModalBuilder()
+        .setCustomId('create_ticket_modal')
+        .setTitle('Create a Ticket');
+
+      const reasonInput = new TextInputBuilder()
+        .setCustomId('reason')
+        .setLabel('Why are you creating this ticket?')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Describe your issue...')
+        .setRequired(true)
+        .setMaxLength(1000);
+
+      const actionRow = new ActionRowBuilder().addComponents(reasonInput);
+      modal.addComponents(actionRow);
+      
+      await interaction.showModal(modal);
+    } catch (error) {
+      console.error('Error creating ticket modal:', error);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          embeds: [errorEmbed('Error', 'Could not open ticket creation form.')],
+          ephemeral: true
+        });
+      } else {
+        await interaction.followUp({
+          embeds: [errorEmbed('Error', 'Could not open ticket creation form.')],
+          ephemeral: true
+        });
+      }
+    }
+  }
+};
+
+const createTicketModalHandler = {
+  name: 'create_ticket_modal',
+  async execute(interaction, client) {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      
+      const reason = interaction.fields.getTextInputValue('reason');
+      const config = await getGuildConfig(client, interaction.guildId);
+      const categoryId = config.ticketCategoryId || null;
+      
+      const result = await createTicket(
+        interaction.guild,
+        interaction.member,
+        categoryId,
+        reason
+      );
+      
+      if (result.success) {
+        await interaction.editReply({
+          embeds: [successEmbed(
+            'Ticket Created',
+            `Your ticket has been created in ${result.channel}!`
+          )]
+        });
+      } else {
+        await interaction.editReply({
+          embeds: [errorEmbed('Error', result.error || 'Failed to create ticket.')],
+          ephemeral: true
+        });
+      }
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      await interaction.editReply({
+        embeds: [errorEmbed('Error', 'An error occurred while creating your ticket.')],
+        ephemeral: true
+      });
+    }
+  }
+};
+
+const closeTicketHandler = {
+  name: 'ticket_close',
+  async execute(interaction, client) {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      
+      const result = await closeTicket(interaction.channel, interaction.user);
+      
+      if (result.success) {
+        await interaction.editReply({
+          embeds: [successEmbed('Ticket Closed', 'This ticket has been closed.')],
+          ephemeral: true
+        });
+        
+        // Log the event
+        await logEvent({
+          client,
+          guildId: interaction.guildId,
+          event: {
+            action: 'Ticket Closed',
+            target: interaction.channel.toString(),
+            executor: interaction.user.toString(),
+            reason: 'Closed via ticket button'
+          }
+        });
+      } else {
+        await interaction.editReply({
+          embeds: [errorEmbed('Error', result.error || 'Failed to close ticket.')],
+          ephemeral: true
+        });
+      }
+    } catch (error) {
+      console.error('Error closing ticket:', error);
+      await interaction.editReply({
+        embeds: [errorEmbed('Error', 'An error occurred while closing the ticket.')],
+        ephemeral: true
+      });
+    }
+  }
+};
+
+const claimTicketHandler = {
+  name: 'ticket_claim',
+  async execute(interaction, client) {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      
+      const result = await claimTicket(interaction.channel, interaction.user);
+      
+      if (result.success) {
+        await interaction.editReply({
+          embeds: [successEmbed('Ticket Claimed', 'You have successfully claimed this ticket!')],
+          ephemeral: true
+        });
+        
+        // Log the event
+        await logEvent({
+          client,
+          guildId: interaction.guildId,
+          event: {
+            action: 'Ticket Claimed',
+            target: interaction.channel.toString(),
+            executor: interaction.user.toString()
+          }
+        });
+      } else {
+        await interaction.editReply({
+          embeds: [errorEmbed('Error', result.error || 'Failed to claim ticket.')],
+          ephemeral: true
+        });
+      }
+    } catch (error) {
+      console.error('Error claiming ticket:', error);
+      await interaction.editReply({
+        embeds: [errorEmbed('Error', 'An error occurred while claiming the ticket.')],
+        ephemeral: true
+      });
+    }
+  }
+};
+
+const priorityTicketHandler = {
+  name: 'ticket_priority',
+  async execute(interaction, client, args) {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      
+      const priority = args[0];
+      const result = await updateTicketPriority(interaction.channel, priority, interaction.user);
+      
+      if (result.success) {
+        await interaction.editReply({
+          embeds: [successEmbed('Priority Updated', `Ticket priority set to ${priority}.`)],
+          ephemeral: true
+        });
+      } else {
+        await interaction.editReply({
+          embeds: [errorEmbed('Error', result.error || 'Failed to update priority.')],
+          ephemeral: true
+        });
+      }
+    } catch (error) {
+      console.error('Error updating ticket priority:', error);
+      await interaction.editReply({
+        embeds: [errorEmbed('Error', 'An error occurred while updating the priority.')],
+        ephemeral: true
+      });
+    }
+  }
+};
+
+const transcriptTicketHandler = {
+  name: 'ticket_transcript',
+  async execute(interaction, client) {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      
+      // Get all messages in the channel, excluding system messages
+      const messages = await interaction.channel.messages.fetch({ limit: 100 });
+      console.log('Total messages fetched:', messages?.size || 0);
+      
+      if (!messages || messages.size === 0) {
+        await interaction.editReply({
+          embeds: [errorEmbed('No Messages', 'No messages found in this ticket channel.')],
+          ephemeral: true
+        });
+        return;
+      }
+      
+      // Convert Collection to Array and filter properly
+      const messagesArray = Array.from(messages.values());
+      const userMessages = messagesArray.filter(m => {
+        const hasAuthor = m.author && typeof m.author === 'object';
+        const hasTag = hasAuthor && m.author.tag;
+        const isUserMessage = m.type === 0; // Default message type
+        
+        if (!hasAuthor) {
+          console.log('Filtering message without author:', m.id, m.type);
+        } else if (!hasTag) {
+          console.log('Message author exists but no tag:', m.id, m.author);
+        }
+        
+        return hasAuthor && hasTag && isUserMessage;
+      });
+      
+      console.log('Filtered user messages:', userMessages?.length || 0);
+      const sortedMessages = userMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+      
+      if (!sortedMessages || sortedMessages.length === 0) {
+        await interaction.editReply({
+          embeds: [errorEmbed('No User Messages', 'No user messages found to include in the transcript.')],
+          ephemeral: true
+        });
+        return;
+      }
+      
+      // Create HTML transcript content
+      let htmlTranscript = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Ticket Transcript - ${interaction.channel.name}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .message { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3498db; }
+        .timestamp { color: #7f8c8d; font-size: 0.9em; }
+        .author { font-weight: bold; color: #2c3e50; }
+        .content { margin: 10px 0; }
+        .attachments { background: #ecf0f1; padding: 10px; border-radius: 4px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>� Ticket Transcript</h1>
+        <p><strong>Channel:</strong> ${interaction.channel.name}</p>
+        <p><strong>Created:</strong> <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F></p>
+        <p><strong>Generated:</strong> <t:${Math.floor(Date.now() / 1000)}:F></p>
+        <p><strong>Messages:</strong> ${sortedMessages.length}</p>
+    </div>
+`;
+      
+      for (const message of sortedMessages) {
+        console.log('Processing message:', message.id, 'Author exists:', !!message.author, 'Attachments exist:', !!message.attachments);
+        
+        const timestamp = `<t:${Math.floor(message.createdTimestamp / 1000)}:t>`;
+        const author = message.author?.tag || message.author?.username || 'Unknown User';
+        const content = message.content || '*No content (embed/attachment only)*';
+        
+        htmlTranscript += `
+    <div class="message">
+        <div class="timestamp">[${timestamp}]</div>
+        <div class="author">${author}</div>
+        <div class="content">${content.replace(/\n/g, '<br>')}</div>`;
+        
+        // Add attachment info if any
+        if (message.attachments && message.attachments.size > 0) {
+          htmlTranscript += `
+        <div class="attachments">
+            📎 Attachments: ${message.attachments.map(a => `<a href="${a.url}">${a.name}</a>`).join(', ')}
+        </div>`;
+        }
+        
+        htmlTranscript += `
+    </div>`;
+      }
+      
+      htmlTranscript += `
+</body>
+</html>`;
+      
+      // Send HTML file as DM
+      const { Buffer } = await import('buffer');
+      const buffer = Buffer.from(htmlTranscript, 'utf-8');
+      
+      try {
+        await interaction.user.send({
+          content: `📜 **Ticket Transcript** for \`${interaction.channel.name}\``,
+          files: [{
+            attachment: buffer,
+            name: `ticket-transcript-${interaction.channel.name}.html`
+          }]
+        });
+        
+        await interaction.editReply({
+          embeds: [{
+            title: '✅ Transcript Sent',
+            description: 'The ticket transcript has been sent to your DMs as an HTML file.',
+            color: 4689679 // 0x2ecc71 in decimal
+          }],
+          ephemeral: true
+        });
+      } catch (dmError) {
+        console.error('Could not DM user:', dmError);
+        await interaction.editReply({
+          embeds: [errorEmbed('DM Failed', 'I couldn\'t send you the transcript. Please enable DMs from server members.')],
+          ephemeral: true
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error creating transcript:', error);
+      await interaction.editReply({
+        embeds: [errorEmbed('Error', 'Failed to create ticket transcript.')],
+        ephemeral: true
+      });
+    }
+  }
+};
+
+export default createTicketHandler;
+export { 
+  createTicketModalHandler, 
+  closeTicketHandler, 
+  claimTicketHandler, 
+  priorityTicketHandler,
+  transcriptTicketHandler 
+};

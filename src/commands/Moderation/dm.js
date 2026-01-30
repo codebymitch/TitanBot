@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logEvent } from '../../utils/moderation.js';
 
 // Migrated from: commands/Moderation/dm.js
 export default {
@@ -51,21 +52,17 @@ export default {
                 ]
             });
 
-            // Log the action
-            if (config.logging?.dmLogChannel) {
-                const logChannel = await interaction.guild.channels.fetch(config.logging.dmLogChannel);
-                if (logChannel) {
-                    await logChannel.send({
-                        embeds: [
-                            successEmbed(
-                                "DM Sent",
-                                `**From:** ${interaction.user.tag} (${interaction.user.id})\n                                **To:** ${targetUser.tag} (${targetUser.id})\n                                **Anonymous:** ${anonymous ? 'Yes' : 'No'}\n
-                                **Message:**\n                                ${message}`
-                            )
-                        ]
-                    });
+            // Log the action using the proper logging system
+            await logEvent({
+                client: interaction.client,
+                guildId: interaction.guildId,
+                event: {
+                    action: "DM Sent",
+                    target: `${targetUser.tag} (${targetUser.id})`,
+                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}\nMessage: ${message}`
                 }
-            }
+            });
 
             return interaction.editReply({
                 embeds: [

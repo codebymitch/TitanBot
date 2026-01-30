@@ -19,9 +19,9 @@ export default {
 
     // Calculate account creation time
     const createdTimestamp = Math.floor(user.createdAt.getTime() / 1000);
-    const joinedTimestamp = Math.floor(member.joinedAt.getTime() / 1000);
+    const joinedTimestamp = member?.joinedAt ? Math.floor(member.joinedAt.getTime() / 1000) : null;
 
-    const embed = createEmbed(`👤 User Info: ${user.username}`, null)
+    const embed = createEmbed({ title: `👤 User Info: ${user.username}`, description: "" })
       .setThumbnail(user.displayAvatarURL({ size: 256 }))
       .addFields(
         { name: "ID", value: user.id, inline: true },
@@ -29,7 +29,7 @@ export default {
         {
           name: "Roles",
           value:
-            member.roles.cache.size > 1
+            member && member.roles.cache.size > 1
               ? member.roles.cache
                   .map((r) => r.name)
                   .slice(0, 5)
@@ -44,12 +44,12 @@ export default {
         },
         {
           name: "Joined Server",
-          value: `<t:${joinedTimestamp}:R>`,
+          value: joinedTimestamp ? `<t:${joinedTimestamp}:R>` : "Not in server",
           inline: false,
         },
         {
           name: "Highest Role",
-          value: member.roles.highest.name,
+          value: member?.roles?.highest?.name || "None",
           inline: true,
         },
       );

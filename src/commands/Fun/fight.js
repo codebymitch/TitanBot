@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
 // Utility to generate a random number within a range
@@ -57,8 +57,8 @@ export default {
     const outcomeText = log.join("\n");
 
     const embed = successEmbed(
-      `🏆 Duel Complete!`,
       `${outcomeText}\n\n👑 **${winner.username}** has defeated ${loser.username} and claims the victory!`,
+      `🏆 Duel Complete!`
     );
 
     await interaction.editReply({ embeds: [embed] });

@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getServerCounters, updateCounter } from '../../services/counterService.js';
 
 // Migrated from: commands/Counter/counterupdate.js
 export default {
@@ -12,7 +13,7 @@ export default {
     category: "ServerStats",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         const { guild } = interaction;
         const counters = await getServerCounters(client, guild.id);
@@ -20,10 +21,7 @@ export default {
         if (counters.length === 0) {
             return interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "No Counters",
-                        "There are no counters to update.",
-                    ),
+                    createEmbed({ title: "No Counters", description: "There are no counters to update.", }),
                 ],
             });
         }
@@ -37,10 +35,7 @@ export default {
 
         interaction.editReply({
             embeds: [
-                createEmbed(
-                    "Counters Updated",
-                    `Successfully updated ${successCount} out of ${counters.length} counters.`,
-                ),
+                createEmbed({ title: "Counters Updated", description: `Successfully updated ${successCount} out of ${counters.length} counters.`, }),
             ],
         });
     },

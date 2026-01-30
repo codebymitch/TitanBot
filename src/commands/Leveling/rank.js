@@ -1,6 +1,7 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getUserLevelData, getLevelingConfig, getXpForLevel } from '../../utils/database.js';
 
 // Migrated from: commands/Leveling/rank.js
 export default {
@@ -29,34 +30,20 @@ export default {
             if (!member) {
                 return interaction.editReply({
                     embeds: [
-                        createEmbed(
-                            "Error",
-                            "Could not find the specified user in this server.",
-                        ),
+                        createEmbed({ title: "Error", description: "Could not find the specified user in this server.", }),
                     ],
                 });
             }
-
-            // Add debug logging
-            console.log("User ID:", targetUser.id);
-            console.log("Guild ID:", interaction.guildId);
 
             const [userData, levelingConfig] = await Promise.all([
                 getUserLevelData(client, interaction.guildId, targetUser.id),
                 getLevelingConfig(client, interaction.guildId),
             ]);
 
-            console.log("Retrieved user data:", userData);
-            console.log("Leveling config:", levelingConfig);
-            console.log("=========================\n");
-
             if (!levelingConfig?.enabled) {
                 return interaction.editReply({
                     embeds: [
-                        createEmbed(
-                            "Leveling Disabled",
-                            "The leveling system is currently disabled on this server.",
-                        ),
+                        createEmbed({ title: "Leveling Disabled", description: "The leveling system is currently disabled on this server.", }),
                     ],
                 });
             }
@@ -68,7 +55,7 @@ export default {
                 totalXp: userData?.totalXp ?? 0,
             };
 
-            const xpNeeded = getXpForLevel(safeUserData.level);
+            const xpNeeded = getXpForLevel(safeUserData.level + 1); // XP needed for NEXT level
             const progress =
                 xpNeeded > 0
                     ? Math.floor((safeUserData.xp / xpNeeded) * 100)
@@ -107,10 +94,7 @@ export default {
             console.error("Rank command error:", error);
             await interaction.editReply({
                 embeds: [
-                    createEmbed(
-                        "Error",
-                        "An error occurred while fetching rank information. Please try again later.",
-                    ),
+                    createEmbed({ title: "Error", description: "An error occurred while fetching rank information. Please try again later.", }),
                 ],
             });
         }

@@ -6,6 +6,7 @@ import {
     PermissionFlagsBits 
 } from 'discord.js';
 import { getColor } from './database.js';
+import { BotConfig } from '../config/bot.js';
 
 /**
  * Generates priority map from BotConfig for ticket priorities.
@@ -40,13 +41,14 @@ export function getTicketKey(guildId, channelId) {
 }
 
 /**
- * Checks if a channel is a ticket channel
+ * Checks if a channel is a ticket channel and returns the owner ID
  * @param {import('discord.js').TextChannel} channel - The channel to check
- * @returns {boolean} Whether the channel is a ticket
+ * @returns {string|null} The ticket owner ID or null if not a ticket
  */
 export function isTicketChannel(channel) {
-    return channel?.name?.startsWith('ticket-') || 
-           channel?.topic?.includes('Ticket ID:');
+    const topic = channel?.topic || '';
+    const match = topic.match(/Ticket ID: (\d+)/);
+    return match ? match[1] : null;
 }
 
 /**

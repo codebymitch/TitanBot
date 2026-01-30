@@ -1,6 +1,8 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
+import { getLevelingConfig, getWelcomeConfig, getApplicationSettings, getModlogSettings } from '../../utils/database.js';
 
 // Migrated from: commands/Config/logstatus.js
 export default {
@@ -61,16 +63,28 @@ export default {
             "role",
         );
 
-        // --- Disabled Commands Status ---
-        const disabledCommands = currentConfig.enabledCommands || {};
-        const disabledList = Object.entries(disabledCommands)
-            .filter(([name, enabled]) => enabled === false)
-            .map(([name]) => `\`/${name}\``);
+        // --- TOGGLEABLE SYSTEMS STATUS ---
+        const levelingConfig = await getLevelingConfig(client, interaction.guildId);
+        const levelingStatus = levelingConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
+        
+        const welcomeConfig = await getWelcomeConfig(client, interaction.guildId);
+        const welcomeStatus = welcomeConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
+        const goodbyeStatus = welcomeConfig?.goodbyeEnabled ? "✅ **Enabled**" : "❌ **Disabled**";
+        
+        const autoRoleStatus = getStatus(currentConfig.autoRole, "role");
+        
+        // Check birthday system status
+        const birthdayStatus = currentConfig.birthdayChannelId ? 
+            "✅ **Enabled**" : "❌ **Disabled**";
 
-        const disabledCommandsStatus =
-            disabledList.length > 0 ? disabledList.join(", ") : "✅ None";
+        // Additional systems
+        const applicationConfig = await getApplicationSettings(client, interaction.guildId);
+        const applicationStatus = applicationConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
+        
+        const modlogConfig = await getModlogSettings(client, interaction.guildId);
+        const modlogStatus = modlogConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
 
-        // --- Log Ignore Filters Status ---
+        // --- LOG IGNORE FILTERS STATUS ---
         const ignoredUsers = currentConfig.logIgnore?.users || [];
         const ignoredChannels = currentConfig.logIgnore?.channels || [];
 
@@ -90,38 +104,58 @@ export default {
             .setColor("#3498DB")
             .setTimestamp()
             .addFields(
-                // Configuration Section
+                // 🎮 Core Systems Section
                 {
-                    name: "📝 Audit Log Channel",
-                    value: logChannelStatus,
+                    name: "🎮 Leveling System",
+                    value: levelingStatus,
                     inline: true,
                 },
                 {
-                    name: "🚨 Report Log Channel",
-                    value: reportChannelStatus,
+                    name: "🎂 Birthday System",
+                    value: birthdayStatus,
                     inline: true,
                 },
                 {
-                    // --- NEW FIELD ADDED ---
-                    name: "👑 Premium Shop Role",
+                    name: "👋 Welcome System",
+                    value: welcomeStatus,
+                    inline: true,
+                },
+                {
+                    name: "👋 Goodbye System",
+                    value: goodbyeStatus,
+                    inline: true,
+                },
+                {
+                    name: "🤖 Auto Role",
+                    value: autoRoleStatus,
+                    inline: true,
+                },
+                {
+                    name: "� Applications",
+                    value: applicationStatus,
+                    inline: true,
+                },
+                {
+                    name: "� Mod Logs",
+                    value: modlogStatus,
+                    inline: true,
+                },
+                {
+                    name: "� Premium Role",
                     value: premiumRoleStatus,
                     inline: true,
                 },
+                // 📊 Configuration Channels Section
                 {
-                    name: "🚫 Disabled Commands",
-                    value: disabledCommandsStatus,
+                    name: "📊 Configuration Channels",
+                    value: "**Audit Logs:** " + logChannelStatus + "\n**Report Logs:** " + reportChannelStatus,
                     inline: false,
                 },
-                // Ignore Filters Section
+                // ❌ Filter Settings Section
                 {
-                    name: "❌ Ignored Users (Log Filter)",
-                    value: formatIdList(ignoredUsers),
-                    inline: true,
-                },
-                {
-                    name: "❌ Ignored Channels (Log Filter)",
-                    value: formatIdList(ignoredChannels),
-                    inline: true,
+                    name: "❌ Log Filters",
+                    value: "**Users:** " + formatIdList(ignoredUsers) + "\n**Channels:** " + formatIdList(ignoredChannels),
+                    inline: false,
                 },
             );
 

@@ -1,29 +1,114 @@
-import Database from "@replit/database";
+import { redisDb } from './redisDatabase.js';
+import { MemoryStorage } from './memoryStorage.js';
+import { logger } from './logger.js';
 import { BotConfig } from '../config/bot.js';
 
+// Initialize database connection
+let db = null;
+let useFallback = false;
+
+// Check if we're in a Replit environment (for backward compatibility)
+const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
+
+// Initialize Redis or fallback database
+async function initializeDatabaseConnection() {
+    try {
+        // Try to connect to Redis first
+        const redisConnected = await redisDb.connect();
+        if (redisConnected) {
+            db = redisDb;
+            logger.info('✅ Redis Database initialized');
+            return;
+        }
+    } catch (error) {
+        logger.warn('Redis connection failed, using fallback:', error.message);
+    }
+    
+    // Fallback to memory storage
+    db = new MemoryStorage();
+    useFallback = true;
+    logger.info('🔄 Using in-memory storage as fallback');
+}
+
 /**
- * Wrapper class for Replit Database with common operations
+ * Wrapper class for Database with Redis support and fallback
  */
-class ReplitDb {
+class DatabaseWrapper {
     constructor() {
-        this.db = new Database();
+        this.initialized = false;
     }
 
-    async set(key, value) {
-        return this.db.set(key, value);
+    async initialize() {
+        if (!this.initialized) {
+            await initializeDatabaseConnection();
+            this.initialized = true;
+        }
+        return db;
+    }
+
+    async set(key, value, ttl = null) {
+        await this.initialize();
+        return db.set(key, value, ttl);
     }
 
     async get(key, defaultValue = null) {
-        const value = await this.db.get(key);
-        return value === null ? defaultValue : value;
+        await this.initialize();
+        return db.get(key, defaultValue);
     }
 
     async delete(key) {
-        return this.db.delete(key);
+        await this.initialize();
+        return db.delete(key);
     }
 
     async list(prefix) {
-        return this.db.list(prefix);
+        await this.initialize();
+        return db.list(prefix);
+    }
+
+    async exists(key) {
+        await this.initialize();
+        if (db.exists) {
+            return db.exists(key);
+        }
+        // Fallback for memory storage
+        const value = await db.get(key);
+        return value !== null;
+    }
+
+    async increment(key, amount = 1) {
+        await this.initialize();
+        if (db.increment) {
+            return db.increment(key, amount);
+        }
+        // Fallback for memory storage
+        const current = await db.get(key, 0);
+        const newValue = current + amount;
+        await db.set(key, newValue);
+        return newValue;
+    }
+
+    async decrement(key, amount = 1) {
+        await this.initialize();
+        if (db.decrement) {
+            return db.decrement(key, amount);
+        }
+        // Fallback for memory storage
+        const current = await db.get(key, 0);
+        const newValue = current - amount;
+        await db.set(key, newValue);
+        return newValue;
+    }
+
+    isAvailable() {
+        return db && !useFallback;
+    }
+
+    getConnectionType() {
+        if (useFallback) {
+            return 'memory';
+        }
+        return 'redis';
     }
 }
 
@@ -33,22 +118,60 @@ class ReplitDb {
  */
 export async function initializeDatabase() {
     try {
-        console.log("Initializing Replit Database...");
-        const db = new ReplitDb();
-        console.log("✅ Replit Database initialized.");
-        return { db };
+        logger.log("Initializing Database (Redis with fallback)...");
+        const dbWrapper = new DatabaseWrapper();
+        await dbWrapper.initialize();
+        logger.log("✅ Database initialized (Redis or memory fallback)");
+        return { db: dbWrapper };
     } catch (error) {
-        console.error("❌ Replit Database Initialization Error:", error);
+        logger.error("❌ Database Initialization Error:", error);
         return { db: null };
     }
 }
 
+// Get a value from the database with a default value if not found
+export async function getFromDb(key, defaultValue = null) {
+    try {
+        const dbInstance = new DatabaseWrapper();
+        const value = await dbInstance.get(key);
+        return value === null ? defaultValue : value;
+    } catch (error) {
+        logger.error(`Error getting value for key ${key}:`, error);
+        return defaultValue;
+    }
+}
+
+// Set a value in the database
+export async function setInDb(key, value, ttl = null) {
+    try {
+        const dbInstance = new DatabaseWrapper();
+        await dbInstance.set(key, value, ttl);
+        return true;
+    } catch (error) {
+        logger.error(`Error setting value for key ${key}:`, error);
+        return false;
+    }
+}
+
+// Delete a key from the database
+export async function deleteFromDb(key) {
+    try {
+        const dbInstance = new DatabaseWrapper();
+        await dbInstance.delete(key);
+        return true;
+    } catch (error) {
+        logger.error(`Error deleting key ${key}:`, error);
+        return false;
+    }
+}
+
 /**
- * Recursively unwraps Replit database data
+ * Extract actual data from database response (for backward compatibility)
  * @param {any} data - Data to unwrap
  * @returns {any} Unwrapped data
  */
 export function unwrapReplitData(data) {
+    // For backward compatibility with Replit database structure
     if (
         typeof data === "object" &&
         data !== null &&
@@ -125,8 +248,8 @@ export async function setGuildConfig(client, guildId, config) {
     }
 }
 
-// Export database instance and utilities
-export { ReplitDb };
+// Export database wrapper and utilities
+export { DatabaseWrapper, redisDb };
 
 // Export message helper
 export const getMessage = (key, replacements = {}) => {
@@ -162,6 +285,12 @@ export const getColor = (path, fallback = "#000000") => {
 export async function getGuildBirthdays(client, guildId) {
     const key = getGuildBirthdaysKey(guildId);
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.get !== "function") {
+            console.error("Database client is not available for getGuildBirthdays.");
+            return {};
+        }
+
         const rawData = await client.db.get(key, {});
         // Birthdays are stored as a map: { 'userId': { month: number, day: number }, ... }
         return unwrapReplitData(rawData) || {};
@@ -182,6 +311,12 @@ export async function getGuildBirthdays(client, guildId) {
  */
 export async function setBirthday(client, guildId, userId, month, day) {
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.set !== "function") {
+            console.error("Database client is not available for setBirthday.");
+            return false;
+        }
+
         const key = getGuildBirthdaysKey(guildId);
         const birthdays = await getGuildBirthdays(client, guildId);
         birthdays[userId] = { month, day };
@@ -202,6 +337,12 @@ export async function setBirthday(client, guildId, userId, month, day) {
  */
 export async function deleteBirthday(client, guildId, userId) {
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.set !== "function") {
+            console.error("Database client is not available for deleteBirthday.");
+            return false;
+        }
+
         const key = getGuildBirthdaysKey(guildId);
         const birthdays = await getGuildBirthdays(client, guildId);
         if (birthdays[userId]) {
@@ -239,6 +380,12 @@ export function getMonthName(monthNum) {
 export async function getGuildGiveaways(client, guildId) {
     const key = giveawayKey(guildId);
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.get !== "function") {
+            console.error("Database client is not available for getGuildGiveaways.");
+            return {};
+        }
+
         const giveaways = await client.db.get(key, {});
         return unwrapReplitData(giveaways) || {};
     } catch (error) {
@@ -256,11 +403,24 @@ export async function getGuildGiveaways(client, guildId) {
  */
 export async function saveGiveaway(client, guildId, giveawayData) {
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.set !== "function") {
+            console.error("Database client is not available for saveGiveaway.");
+            return false;
+        }
+
         const key = giveawayKey(guildId);
         const giveaways = await getGuildGiveaways(client, guildId);
-        giveaways[giveawayData.messageId] = giveawayData;
+        const existingIndex = giveaways.findIndex(g => g.messageId === giveawayData.messageId);
+        
+        if (existingIndex >= 0) {
+            giveaways[existingIndex] = giveawayData;
+        } else {
+            giveaways.push(giveawayData);
+        }
+        
         await client.db.set(key, giveaways);
-        return true;
+        return giveawayData;
     } catch (error) {
         console.error('Error saving giveaway:', error);
         return false;
@@ -364,6 +524,8 @@ export async function getWelcomeConfig(client, guildId) {
                 thumbnail: true,
                 footer: `You are member #{memberCount}`
             },
+            goodbyeEnabled: unwrapped.goodbyeEnabled || false,
+            goodbyeChannelId: unwrapped.goodbyeChannelId || null,
             leaveMessage: unwrapped.leaveMessage || "{user.tag} has left the server.",
             leaveEmbed: unwrapped.leaveEmbed || {
                 title: "Goodbye {user.tag}",
@@ -398,6 +560,8 @@ export async function getWelcomeConfig(client, guildId) {
                 thumbnail: true,
                 footer: `You are member #{memberCount}`
             },
+            goodbyeEnabled: false,
+            goodbyeChannelId: null,
             leaveMessage: "{user.tag} has left the server.",
             leaveEmbed: {
                 title: "Goodbye {user.tag}",
@@ -490,6 +654,28 @@ export function getUserLevelKey(guildId, userId) {
 export async function getLevelingConfig(client, guildId) {
     const key = getLevelingKey(guildId);
     try {
+        // Check if database is available (including memory fallback)
+        if (!client.db || typeof client.db.get !== "function") {
+            console.error("Database client is not available for getLevelingConfig.");
+            // Return default config
+            return {
+                enabled: false,
+                xpPerMessage: { min: 15, max: 25 },
+                levelUpMessage: "{user.mention} has leveled up to level **{level}**! 🎉",
+                levelUpChannelId: null,
+                ignoredChannels: [],
+                ignoredRoles: [],
+                roleRewards: {},
+                xpCooldown: 60,
+                maxLevel: 100,
+                xpMultiplier: 1.0,
+                xpMultipliers: {},
+                announceLevelUp: true,
+                stackRoleRewards: false,
+                blacklistedUsers: []
+            };
+        }
+
         const config = await client.db.get(key, {});
         const unwrapped = unwrapReplitData(config);
         
@@ -514,7 +700,14 @@ export async function getLevelingConfig(client, guildId) {
             blacklistedUsers: []
         };
         
-        return { ...defaultConfig, ...unwrapped };
+        const finalConfig = { ...defaultConfig, ...unwrapped };
+        
+        // Log if using memory storage
+        if (client.db.isAvailable && !client.db.isAvailable()) {
+            console.log(`📝 Using in-memory storage for leveling config (guild: ${guildId})`);
+        }
+        
+        return finalConfig;
     } catch (error) {
         console.error(`Error getting leveling config for guild ${guildId}:`, error);
         return {
@@ -546,7 +739,22 @@ export async function getLevelingConfig(client, guildId) {
 export async function saveLevelingConfig(client, guildId, config) {
     const key = getLevelingKey(guildId);
     try {
+        // Check if database is available (including memory fallback)
+        if (!client.db || typeof client.db.set !== "function") {
+            console.error("Database client is not available for saveLevelingConfig.");
+            return false;
+        }
+
         await client.db.set(key, config);
+        
+        // Log if using memory storage
+        if (client.db.isAvailable && !client.db.isAvailable()) {
+            console.log(`💾 Saved leveling config to in-memory storage (guild: ${guildId})`);
+            console.log(`🔧 Leveling system is now ${config.enabled ? 'ENABLED' : 'DISABLED'} (in-memory only)`);
+        } else {
+            console.log(`💾 Saved leveling config to database (guild: ${guildId})`);
+        }
+        
         return true;
     } catch (error) {
         console.error(`Error saving leveling config for guild ${guildId}:`, error);
@@ -564,6 +772,19 @@ export async function saveLevelingConfig(client, guildId, config) {
 export async function getUserLevelData(client, guildId, userId) {
     const key = getUserLevelKey(guildId, userId);
     try {
+        // Check if database is available (including memory fallback)
+        if (!client.db || typeof client.db.get !== "function") {
+            // Return default user data without error logging for memory storage
+            return {
+                xp: 0,
+                level: 0,
+                totalXp: 0,
+                lastMessage: 0,
+                rank: 0,
+                xpToNextLevel: getXpForLevel(1)
+            };
+        }
+
         const data = await client.db.get(key, null);
         if (!data) {
             return {
@@ -611,6 +832,12 @@ export async function getUserLevelData(client, guildId, userId) {
 export async function saveUserLevelData(client, guildId, userId, data) {
     const key = getUserLevelKey(guildId, userId);
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.set !== "function") {
+            console.error("Database client is not available for saveUserLevelData.");
+            return false;
+        }
+
         // Calculate additional fields
         const levelData = {
             ...data,
@@ -650,27 +877,48 @@ export function getXpForLevel(level) {
  */
 export async function getLeaderboard(client, guildId, limit = 10) {
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.list !== "function") {
+            console.error("Database client is not available for getLeaderboard.");
+            return [];
+        }
+
         const prefix = `guild:${guildId}:leveling:users:`;
-        const keys = await client.db.list(prefix);
+        let keys = await client.db.list(prefix);
         
-        if (!keys || keys.length === 0) {
+        // Ensure keys is an array
+        if (!Array.isArray(keys)) {
+            // Try to handle if it's an object with values
+            if (typeof keys === 'object' && keys !== null) {
+                keys = Object.keys(keys).filter(key => key.startsWith(prefix));
+            } else {
+                return [];
+            }
+        }
+        
+        if (keys.length === 0) {
             return [];
         }
         
         // Get all user data in parallel
         const userDataPromises = keys.map(async (key) => {
-            const userId = key.replace(prefix, '');
-            const data = await client.db.get(key);
-            if (!data) return null;
-            
-            const unwrapped = unwrapReplitData(data);
-            return {
-                userId,
-                xp: unwrapped.xp || 0,
-                level: unwrapped.level || 0,
-                totalXp: unwrapped.totalXp || 0,
-                rank: 0 // Will be set after sorting
-            };
+            try {
+                const userId = key.replace(prefix, '');
+                const data = await client.db.get(key);
+                if (!data) return null;
+                
+                const unwrapped = unwrapReplitData(data);
+                return {
+                    userId,
+                    xp: unwrapped.xp || 0,
+                    level: unwrapped.level || 0,
+                    totalXp: unwrapped.totalXp || 0,
+                    rank: 0 // Will be set after sorting
+                };
+            } catch (error) {
+                console.error(`Error processing leaderboard key ${key}:`, error);
+                return null;
+            }
         });
         
         let userData = (await Promise.all(userDataPromises)).filter(Boolean);
@@ -694,6 +942,63 @@ export async function getLeaderboard(client, guildId, limit = 10) {
 // ====================
 // APPLICATION SYSTEM UTILS
 // ====================
+
+/**
+ * Get the application roles key for a guild
+ * @param {string} guildId - The guild ID
+ * @returns {string} The application roles key
+ */
+export function getApplicationRolesKey(guildId) {
+    return `guild:${guildId}:applications:roles`;
+}
+
+/**
+ * Get application roles for a guild
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @returns {Promise<Array>} Array of application roles
+ */
+export async function getApplicationRoles(client, guildId) {
+    try {
+        // Check if database is available
+        if (!client.db || typeof client.db.get !== "function") {
+            console.error("Database client is not available for getApplicationRoles.");
+            return [];
+        }
+
+        const key = getApplicationRolesKey(guildId);
+        const roles = await client.db.get(key, []);
+        const unwrappedRoles = unwrapReplitData(roles);
+        return Array.isArray(unwrappedRoles) ? unwrappedRoles : [];
+    } catch (error) {
+        console.error(`Error getting application roles for guild ${guildId}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Save application roles for a guild
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {Array} roles - Array of application roles
+ * @returns {Promise<boolean>} Whether the operation was successful
+ */
+export async function saveApplicationRoles(client, guildId, roles) {
+    try {
+        // Check if database is available
+        if (!client.db || typeof client.db.set !== "function") {
+            console.error("Database client is not available for saveApplicationRoles.");
+            return false;
+        }
+
+        const key = getApplicationRolesKey(guildId);
+        await client.db.set(key, roles);
+        return true;
+    } catch (error) {
+        console.error(`Error saving application roles for guild ${guildId}:`, error);
+        return false;
+    }
+}
 
 /**
  * Get the application settings key for a guild
@@ -837,14 +1142,26 @@ export async function createApplication(client, application) {
     };
     
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.set !== "function") {
+            console.error("Database client is not available for createApplication.");
+            throw new Error("Database not available");
+        }
+
         // Save the application
         await client.db.set(key, newApplication);
         
         // Add to user's applications
         const userKey = getUserApplicationsKey(guildId, userId);
         const userApplications = await client.db.get(userKey, []);
-        userApplications.push(applicationId);
-        await client.db.set(userKey, userApplications);
+        const unwrappedApplications = unwrapReplitData(userApplications);
+        
+        // Ensure we have an array
+        const applicationsArray = Array.isArray(unwrappedApplications) ? unwrappedApplications : [];
+        applicationsArray.push(applicationId);
+        
+        await client.db.set(userKey, applicationsArray);
+        console.log(`Successfully created application ${applicationId} for user ${userId}`);
         
         return newApplication;
     } catch (error) {
@@ -911,8 +1228,19 @@ export async function updateApplication(client, guildId, applicationId, updates)
 export async function getUserApplications(client, guildId, userId) {
     const userKey = getUserApplicationsKey(guildId, userId);
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.get !== "function") {
+            console.error("Database client is not available for getUserApplications.");
+            return [];
+        }
+
         const applicationIds = await client.db.get(userKey, []);
-        const applicationPromises = applicationIds.map(id => 
+        const unwrappedIds = unwrapReplitData(applicationIds);
+        
+        // Ensure we have an array
+        const idsArray = Array.isArray(unwrappedIds) ? unwrappedIds : [];
+        
+        const applicationPromises = idsArray.map(id => 
             getApplication(client, guildId, id)
         );
         
@@ -944,8 +1272,25 @@ export async function getApplications(client, guildId, filters = {}) {
     } = filters;
     
     try {
+        // Check if database is available
+        if (!client.db || typeof client.db.list !== "function") {
+            console.error("Database client is not available for getApplications.");
+            return [];
+        }
+
         const prefix = `guild:${guildId}:applications:`;
-        const keys = await client.db.list(prefix);
+        let keys = await client.db.list(prefix);
+        
+        // Ensure keys is an array
+        if (!Array.isArray(keys)) {
+            // Try to handle if it's an object with values
+            if (typeof keys === 'object' && keys !== null) {
+                const keyArray = Object.keys(keys).filter(key => key.startsWith(prefix));
+                keys = keyArray;
+            } else {
+                return [];
+            }
+        }
         
         // Filter out the settings key
         const applicationKeys = keys.filter(key => !key.endsWith('settings') && key.includes('applications:'));
@@ -972,323 +1317,6 @@ export async function getApplications(client, guildId, filters = {}) {
         return applications.slice(offset, offset + limit);
     } catch (error) {
         console.error(`Error getting applications for guild ${guildId}:`, error);
-        return [];
-    }
-}
-
-// ====================
-// INVITE TRACKING UTILS
-// ====================
-
-/**
- * Get the invite tracking key for a guild
- * @param {string} guildId - The guild ID
- * @returns {string} The invite tracking key
- */
-export function getInviteTrackingKey(guildId) {
-    return `guild:${guildId}:invites:tracking`;
-}
-
-/**
- * Get the member invites key for a user in a guild
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {string} The member invites key
- */
-export function getMemberInvitesKey(guildId, userId) {
-    return `guild:${guildId}:invites:members:${userId}`;
-}
-
-/**
- * Get the invite uses key for an invite code
- * @param {string} guildId - The guild ID
- * @param {string} inviteCode - The invite code
- * @returns {string} The invite uses key
- */
-export function getInviteUsesKey(guildId, inviteCode) {
-    return `guild:${guildId}:invites:uses:${inviteCode}`;
-}
-
-/**
- * Get the fake account key for a user
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {string} The fake account key
- */
-export function getFakeAccountKey(guildId, userId) {
-    return `guild:${guildId}:invites:fake:${userId}`;
-}
-
-/**
- * Track when a member joins using an invite
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {GuildMember} member - The member who joined
- * @param {Invite} invite - The invite used
- * @returns {Promise<boolean>} Whether the operation was successful
- */
-export async function trackInviteJoin(client, guildId, member, invite) {
-    try {
-        const userId = member.user.id;
-        const inviterId = invite.inviter?.id;
-        const inviteCode = invite.code;
-        
-        if (!inviterId || inviterId === client.user.id) {
-            return false; // Skip if no inviter or it's the bot
-        }
-        
-        // Get or create invite tracking data
-        const trackingKey = getInviteTrackingKey(guildId);
-        const trackingData = await client.db.get(trackingKey, {});
-        
-        // Update invite uses
-        const inviteUsesKey = getInviteUsesKey(guildId, inviteCode);
-        const inviteUses = await client.db.get(inviteUsesKey, 0);
-        await client.db.set(inviteUsesKey, inviteUses + 1);
-        
-        // Update member's invite data
-        const memberKey = getMemberInvitesKey(guildId, inviterId);
-        const memberInvites = await client.db.get(memberKey, {
-            total: 0,
-            valid: 0,
-            left: 0,
-            fake: 0,
-            invited: [],
-            invitedBy: null
-        });
-        
-        // Add to inviter's invited list
-        if (!memberInvites.invited.includes(userId)) {
-            memberInvites.invited.push(userId);
-        }
-        
-        memberInvites.total = memberInvites.invited.length;
-        memberInvites.valid = memberInvites.total - memberInvites.left - memberInvites.fake;
-        
-        await client.db.set(memberKey, memberInvites);
-        
-        // Set the inviter for the new member
-        const newMemberKey = getMemberInvitesKey(guildId, userId);
-        const newMemberData = {
-            invitedBy: inviterId,
-            inviteUsed: inviteCode,
-            joinedAt: Date.now(),
-            isFake: false
-        };
-        
-        await client.db.set(newMemberKey, newMemberData);
-        
-        // Update tracking data
-        trackingData[userId] = {
-            inviterId,
-            inviteCode,
-            timestamp: Date.now()
-        };
-        
-        await client.db.set(trackingKey, trackingData);
-        
-        return true;
-    } catch (error) {
-        console.error(`Error tracking invite join for user ${member?.id} in guild ${guildId}:`, error);
-        return false;
-    }
-}
-
-/**
- * Mark a member as having left the server
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID of the member who left
- * @returns {Promise<boolean>} Whether the operation was successful
- */
-export async function trackMemberLeave(client, guildId, userId) {
-    try {
-        const memberKey = getMemberInvitesKey(guildId, userId);
-        const memberData = await client.db.get(memberKey, {});
-        
-        if (memberData.invitedBy) {
-            // Update inviter's stats
-            const inviterKey = getMemberInvitesKey(guildId, memberData.invitedBy);
-            const inviterData = await client.db.get(inviterKey, { invited: [], left: 0, fake: 0 });
-            
-            // Remove from invited list if exists
-            inviterData.invited = inviterData.invited.filter(id => id !== userId);
-            
-            // Update counts
-            if (memberData.isFake) {
-                inviterData.fake = Math.max(0, (inviterData.fake || 0) - 1);
-            } else {
-                inviterData.left = Math.max(0, (inviterData.left || 0) + 1);
-            }
-            
-            inviterData.valid = Math.max(0, (inviterData.total || 0) - (inviterData.left || 0) - (inviterData.fake || 0));
-            
-            await client.db.set(inviterKey, inviterData);
-        }
-        
-        // Remove the member's data
-        await client.db.delete(memberKey);
-        
-        return true;
-    } catch (error) {
-        console.error(`Error tracking member leave for user ${userId} in guild ${guildId}:`, error);
-        return false;
-    }
-}
-
-/**
- * Mark an account as potentially fake
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID to mark as fake
- * @returns {Promise<boolean>} Whether the operation was successful
- */
-export async function markAsFakeAccount(client, guildId, userId) {
-    try {
-        const memberKey = getMemberInvitesKey(guildId, userId);
-        const memberData = await client.db.get(memberKey, {});
-        
-        if (!memberData.invitedBy) {
-            return false; // No inviter to update
-        }
-        
-        // Update member data
-        memberData.isFake = true;
-        await client.db.set(memberKey, memberData);
-        
-        // Update inviter's stats
-        const inviterKey = getMemberInvitesKey(guildId, memberData.invitedBy);
-        const inviterData = await client.db.get(inviterKey, { invited: [], fake: 0 });
-        
-        if (!inviterData.invited.includes(userId)) {
-            inviterData.invited.push(userId);
-        }
-        
-        inviterData.fake = (inviterData.fake || 0) + 1;
-        inviterData.valid = Math.max(0, (inviterData.total || 0) - (inviterData.left || 0) - inviterData.fake);
-        
-        await client.db.set(inviterKey, inviterData);
-        
-        // Mark in fake accounts list
-        const fakeKey = getFakeAccountKey(guildId, userId);
-        await client.db.set(fakeKey, { timestamp: Date.now() });
-        
-        return true;
-    } catch (error) {
-        console.error(`Error marking user ${userId} as fake in guild ${guildId}:`, error);
-        return false;
-    }
-}
-
-/**
- * Get a member's invite stats
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {Promise<Object>} The member's invite statistics
- */
-export async function getMemberInviteStats(client, guildId, userId) {
-    try {
-        const memberKey = getMemberInvitesKey(guildId, userId);
-        const stats = await client.db.get(memberKey, {
-            total: 0,
-            valid: 0,
-            left: 0,
-            fake: 0,
-            invited: []
-        });
-        
-        return stats;
-    } catch (error) {
-        console.error(`Error getting invite stats for user ${userId} in guild ${guildId}:`, error);
-        return {
-            total: 0,
-            valid: 0,
-            left: 0,
-            fake: 0,
-            invited: []
-        };
-    }
-}
-
-/**
- * Get detailed invite information
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} inviteCode - The invite code
- * @returns {Promise<Object>} Detailed invite information
- */
-export async function getInviteDetails(client, guildId, inviteCode) {
-    try {
-        const inviteUsesKey = getInviteUsesKey(guildId, inviteCode);
-        const uses = await client.db.get(inviteUsesKey, 0);
-        
-        // Get the inviter's user ID from the first use if available
-        const trackingKey = getInviteTrackingKey(guildId);
-        const trackingData = await client.db.get(trackingKey, {});
-        
-        let inviterId = null;
-        for (const [userId, data] of Object.entries(trackingData)) {
-            if (data.inviteCode === inviteCode) {
-                inviterId = data.inviterId;
-                break;
-            }
-        }
-        
-        return {
-            code: inviteCode,
-            uses,
-            inviterId,
-            createdAt: null, // This would need to be tracked separately
-            maxUses: 0, // This would need to be tracked separately
-            temporary: false, // This would need to be tracked separately
-            channelId: null // This would need to be tracked separately
-        };
-    } catch (error) {
-        console.error(`Error getting invite details for code ${inviteCode} in guild ${guildId}:`, error);
-        return {
-            code: inviteCode,
-            uses: 0,
-            inviterId: null,
-            createdAt: null,
-            maxUses: 0,
-            temporary: false,
-            channelId: null
-        };
-    }
-}
-
-/**
- * Get guild invite leaderboard
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {number} limit - Maximum number of entries to return (default: 10)
- * @returns {Promise<Array>} Sorted array of invite statistics
- */
-export async function getInviteLeaderboard(client, guildId, limit = 10) {
-    try {
-        const prefix = `guild:${guildId}:invites:members:`;
-        const keys = await client.db.list(prefix);
-        
-        if (!keys || keys.length === 0) {
-            return [];
-        }
-        
-        // Get all member invite data in parallel
-        const memberPromises = keys.map(key => client.db.get(key));
-        const members = (await Promise.all(memberPromises))
-            .filter(member => member && member.total > 0);
-        
-        // Sort by valid invites (descending)
-        members.sort((a, b) => (b.valid || 0) - (a.valid || 0));
-        
-        // Add ranks and limit results
-        return members.slice(0, limit).map((member, index) => ({
-            ...member,
-            rank: index + 1
-        }));
-    } catch (error) {
-        console.error(`Error getting invite leaderboard for guild ${guildId}:`, error);
         return [];
     }
 }

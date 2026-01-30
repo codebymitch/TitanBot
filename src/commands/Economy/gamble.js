@@ -1,6 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getEconomyData, setEconomyData } from '../../services/economy.js';
+import { botConfig } from '../../config/bot.js';
 
 // --- Configuration ---
 // Base chance of winning (40%)
@@ -13,6 +15,7 @@ const PAYOUT_MULTIPLIER = 2.0;
 const GAMBLE_COOLDOWN = 5 * 60 * 1000;
 
 export default {
+    // Slash command data
     data: new SlashCommandBuilder()
         .setName("gamble")
         .setDescription("Bet a certain amount of cash and try your luck.")
@@ -21,11 +24,19 @@ export default {
                 .setName("amount")
                 .setDescription("The amount of cash to bet.")
                 .setRequired(true)
-                .setMinValue(1),
+                .setMinValue(1)
         )
         .setDMPermission(false),
+    
+    // Prefix command data
+    name: "gamble",
+    aliases: ["bet", "wager", "risk"],
+    description: "Bet a certain amount of cash and try your luck.",
     category: "Economy",
+    usage: `${botConfig.commands.prefix}gamble <amount>`,
+    cooldown: 5,
 
+    // Slash command execution
     async execute(interaction, config, client) {
         await interaction.deferReply();
 
@@ -36,7 +47,7 @@ export default {
 
         try {
             const userData = await getEconomyData(client, guildId, userId);
-            const lastGamble = userData.cooldowns.gamble || 0;
+            const lastGamble = userData.lastGamble || 0;
             let cloverCount = userData.inventory["lucky_clover"] || 0;
 
             // --- 1. Cooldown Check ---
@@ -56,12 +67,12 @@ export default {
             }
 
             // --- 2. Funds Check ---
-            if (userData.cash < betAmount) {
+            if (userData.wallet < betAmount) {
                 return interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Insufficient Cash",
-                            `You only have $${userData.cash.toLocaleString()} cash, but you are trying to bet $${betAmount.toLocaleString()}.`,
+                            `You only have $${userData.wallet.toLocaleString()} cash, but you are trying to bet $${betAmount.toLocaleString()}.`,
                         ),
                     ],
                 });
@@ -103,14 +114,14 @@ export default {
             }
 
             // --- 5. Update Database ---
-            userData.cash += cashChange;
-            userData.cooldowns.gamble = now; // Update cooldown
+            userData.wallet += cashChange;
+            userData.lastGamble = now; // Update cooldown
 
             // Save data
             await setEconomyData(client, guildId, userId, userData);
 
             // --- 6. Send Response ---
-            const newCash = userData.cash;
+            const newCash = userData.wallet;
 
             resultEmbed.addFields({
                 name: "💵 New Cash Balance",

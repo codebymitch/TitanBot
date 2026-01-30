@@ -1,9 +1,12 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { transferMoney, getEconomyData, getMaxBankCapacity, setEconomyData } from '../../services/economy.js';
+import { botConfig } from '../../config/bot.js';
 
 // Migrated from: commands/Economy/deposit.js
 export default {
+    // Slash command data
     data: new SlashCommandBuilder()
         .setName("deposit")
         .setDescription("Deposit cash into your bank account.")
@@ -17,8 +20,16 @@ export default {
                     .setRequired(true),
         )
         .setDMPermission(false),
+    
+    // Prefix command data
+    name: "deposit",
+    aliases: ["dep", "bank"],
+    description: "Deposit cash into your bank account.",
     category: "Economy",
+    usage: `${botConfig.commands.prefix}deposit <amount|all>`,
+    cooldown: 5,
 
+    // Slash command execution
     async execute(interaction, config, client) {
         await interaction.deferReply();
 
@@ -34,7 +45,7 @@ export default {
 
             // --- 1. HANDLE 'ALL' INPUT AND PARSING ---
             if (amountInput.toLowerCase() === "all") {
-                depositAmount = userData.cash;
+                depositAmount = userData.wallet;
             } else {
                 // Parse the string input to a number
                 depositAmount = parseInt(amountInput);
@@ -65,9 +76,9 @@ export default {
             }
 
             // --- 2. Cash Availability Check (Only needed if a specific number > cash was entered) ---
-            if (depositAmount > userData.cash) {
+            if (depositAmount > userData.wallet) {
                 // Adjust depositAmount to user's cash if a high number was given
-                depositAmount = userData.cash;
+                depositAmount = userData.wallet;
                 // Optional: Notify user that the amount was capped to their available cash
                 await interaction.followUp({
                     embeds: [
@@ -125,7 +136,7 @@ export default {
                 });
             }
 
-            userData.cash -= depositAmount;
+            userData.wallet -= depositAmount;
             userData.bank += depositAmount;
 
             await setEconomyData(client, guildId, userId, userData);
@@ -136,7 +147,7 @@ export default {
             ).addFields(
                 {
                     name: "💵 New Cash Balance",
-                    value: `$${userData.cash.toLocaleString()}`,
+                    value: `$${userData.wallet.toLocaleString()}`,
                     inline: true,
                 },
                 {
@@ -159,5 +170,106 @@ export default {
             });
         }
     },
+
+    // Prefix command execution
+    async executeMessage(message, args, client) {
+        const userId = message.author.id;
+        const guildId = message.guild.id;
+        
+        // Get amount from command arguments
+        const amountInput = args[0];
+
+        if (!amountInput) {
+            return message.reply({
+                embeds: [
+                    errorEmbed(
+                        "Missing Amount",
+                        "Please specify an amount to deposit. Usage: `!deposit <amount|all>`",
+                    ),
+                ],
+            });
+        }
+
+        try {
+            const userData = await getEconomyData(client, guildId, userId);
+            const maxBank = getMaxBankCapacity(userData);
+
+            // Parse amount input
+            let depositAmount;
+            if (amountInput.toLowerCase() === "all") {
+                depositAmount = userData.wallet;
+            } else {
+                const parsedAmount = parseInt(amountInput);
+                if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                    return message.reply({
+                        embeds: [
+                            errorEmbed(
+                                "Invalid Amount",
+                                "Please provide a valid positive number or 'all'.",
+                            ),
+                        ],
+                    });
+                }
+                depositAmount = parsedAmount;
+            }
+
+            // Validation checks
+            if (depositAmount > userData.wallet) {
+                return message.reply({
+                    embeds: [
+                        errorEmbed(
+                            "Insufficient Cash",
+                            `You only have **$${userData.wallet.toLocaleString()}** in cash.`,
+                        ),
+                    ],
+                });
+            }
+
+            if (userData.bank + depositAmount > maxBank) {
+                return message.reply({
+                    embeds: [
+                        errorEmbed(
+                            "Bank Capacity Exceeded",
+                            `Your bank can only hold **$${maxBank.toLocaleString()}**. You currently have **$${userData.bank.toLocaleString()}**.`,
+                        ),
+                    ],
+                });
+            }
+
+            // Process deposit
+            userData.wallet -= depositAmount;
+            userData.bank += depositAmount;
+
+            await setEconomyData(client, guildId, userId, userData);
+
+            const embed = successEmbed(
+                "💸 Deposit Successful",
+                `You successfully deposited **$${depositAmount.toLocaleString()}** into your bank.`,
+            ).addFields(
+                {
+                    name: "💵 New Cash Balance",
+                    value: `$${userData.wallet.toLocaleString()}`,
+                    inline: true,
+                },
+                {
+                    name: "🏦 New Bank Balance",
+                    value: `$${userData.bank.toLocaleString()} / $${maxBank.toLocaleString()}`,
+                    inline: true,
+                },
+            );
+
+            await message.reply({ embeds: [embed] });
+        } catch (error) {
+            console.error("Deposit command error:", error);
+            await message.reply({
+                embeds: [
+                    errorEmbed(
+                        "System Error",
+                        "Could not process your deposit.",
+                    ),
+                ],
+            });
+        }
+    }
 };
 

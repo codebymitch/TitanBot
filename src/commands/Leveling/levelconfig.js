@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getLevelingConfig, saveLevelingConfig } from '../../utils/database.js';
 
 // Migrated from: commands/Leveling/levelconfig.js
 export default {
@@ -79,10 +80,7 @@ export default {
                     await saveLevelingConfig(client, interaction.guildId, levelingConfig);
                     
                     await interaction.editReply({
-                        embeds: [createEmbed(
-                            "Leveling System Updated",
-                            `The leveling system has been ${enabled ? "enabled" : "disabled"}.`
-                        )]
+                        embeds: [createEmbed({ title: "Leveling System Updated", description: `The leveling system has been ${enabled ? "enabled" : "disabled"}.` })]
                     });
                     break;
                 }
@@ -94,10 +92,7 @@ export default {
                     await saveLevelingConfig(client, interaction.guildId, levelingConfig);
                     
                     await interaction.editReply({
-                        embeds: [createEmbed(
-                            "Level Up Channel Set",
-                            `Level up notifications will now be sent in ${channel}.`
-                        )]
+                        embeds: [createEmbed({ title: "Level Up Channel Set", description: `Level up notifications will now be sent in ${channel}.` })]
                     });
                     break;
                 }
@@ -108,10 +103,7 @@ export default {
                     
                     if (min > max) {
                         return interaction.editReply({
-                            embeds: [createEmbed(
-                                "Invalid Range",
-                                "The minimum XP cannot be greater than the maximum XP."
-                            )]
+                            embeds: [createEmbed({ title: "Invalid Range", description: "The minimum XP cannot be greater than the maximum XP." })]
                         });
                     }
                     
@@ -119,10 +111,7 @@ export default {
                     await saveLevelingConfig(client, interaction.guildId, levelingConfig);
                     
                     await interaction.editReply({
-                        embeds: [createEmbed(
-                            "XP Range Updated",
-                            `XP per message is now between ${min} and ${max}.`
-                        )]
+                        embeds: [createEmbed({ title: "XP Range Updated", description: `XP per message is now between ${min} and ${max}.` })]
                     });
                     break;
                 }
@@ -134,10 +123,7 @@ export default {
                     await saveLevelingConfig(client, interaction.guildId, levelingConfig);
                     
                     await interaction.editReply({
-                        embeds: [createEmbed(
-                            "Level Up Message Updated",
-                            `The level up message has been updated.`
-                        )]
+                        embeds: [createEmbed({ title: "Level Up Message Updated", description: `The level up message has been updated.` })]
                     });
                     break;
                 }
@@ -146,10 +132,7 @@ export default {
         } catch (error) {
             console.error("LevelConfig command error:", error);
             await interaction.editReply({
-                embeds: [createEmbed(
-                    "Error",
-                    "An error occurred while updating the leveling configuration."
-                )]
+                embeds: [createEmbed({ title: "Error", description: "An error occurred while updating the leveling configuration." })]
             });
         }
     }

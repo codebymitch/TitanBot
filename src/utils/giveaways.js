@@ -1,6 +1,6 @@
-import { EmbedBuilder } from 'discord.js';
-import { BotConfig } from '../config/bot.js';
-import { getGuildGiveaways as getGuildGiveawaysDb, saveGiveaway as saveGiveawayDb, deleteGiveaway as deleteGiveawayDb } from './database.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import botConfig from '../config/bot.js';
+import { getGuildGiveaways as getGuildGiveawaysDb, saveGiveaway as saveGiveawayDb, deleteGiveaway as deleteGiveawayDb, unwrapReplitData } from './database.js';
 
 /**
  * Generate a consistent key for giveaways in the database
@@ -21,7 +21,8 @@ export async function getGuildGiveaways(client, guildId) {
     try {
         const key = giveawayKey(guildId);
         const giveaways = await client.db.get(key, {});
-        return giveaways || {};
+        const unwrappedGiveaways = unwrapReplitData(giveaways);
+        return unwrappedGiveaways || {};
     } catch (error) {
         console.error(`Error getting giveaways for guild ${guildId}:`, error);
         return {};
@@ -82,14 +83,16 @@ export async function deleteGiveaway(client, guildId, messageId) {
  */
 export function createGiveawayEmbed(giveaway, status, winners = []) {
     const isEnded = status === 'ended';
+    const participants = giveaway.participants || [];
+    
     const embed = new EmbedBuilder()
         .setTitle(`🎉 ${giveaway.prize}`)
-        .setDescription(giveaway.description || '')
-        .setColor(isEnded ? BotConfig.colors.error : BotConfig.colors.success)
+        .setDescription(giveaway.description || 'Enter this amazing giveaway!')
+        .setColor(isEnded ? botConfig.embeds.colors.error : botConfig.embeds.colors.success)
         .addFields(
             { name: 'Hosted by', value: `<@${giveaway.hostId}>`, inline: true },
             { name: 'Winners', value: `${giveaway.winnerCount}`, inline: true },
-            { name: 'Entries', value: `${giveaway.entrants?.length || 0}`, inline: true }
+            { name: 'Entries', value: `${participants.length}`, inline: true }
         );
 
     if (isEnded) {
@@ -97,9 +100,10 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
             { name: 'Winners', value: winners.length > 0 ? winners.map(id => `<@${id}>`).join(', ') : 'No winners' }
         );
     } else {
-        const endsAt = new Date(giveaway.endsAt).toLocaleString();
+        // Use Discord's timestamp format for local time display
+        const endTime = giveaway.endsAt || giveaway.endTime;
         embed.addFields(
-            { name: 'Ends at', value: endsAt }
+            { name: 'Ends at', value: `<t:${Math.floor(endTime / 1000)}:R>` }
         );
     }
 
@@ -112,7 +116,8 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
  * @returns {boolean} Whether the giveaway has ended
  */
 export function isGiveawayEnded(giveaway) {
-    return Date.now() > giveaway.endsAt;
+    const endTime = giveaway.endsAt || giveaway.endTime;
+    return Date.now() > endTime;
 }
 
 /**
@@ -126,4 +131,48 @@ export function pickWinners(entrants, count) {
     
     const shuffled = [...entrants].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+/**
+ * Create an embed for a giveaway (alias for createGiveawayEmbed)
+ * @param {Object} giveaway - The giveaway data
+ * @param {string} status - The status of the giveaway ('active', 'ended', 'reroll')
+ * @param {Array<string>} [winners=[]] - Array of winner user IDs
+ * @returns {EmbedBuilder} The formatted embed
+ */
+export function giveawayEmbed(giveaway, status, winners = []) {
+    return createGiveawayEmbed(giveaway, status, winners);
+}
+
+/**
+ * Create action row with giveaway buttons
+ * @param {boolean} ended - Whether the giveaway has ended
+ * @returns {ActionRowBuilder} The action row with buttons
+ */
+export function giveawayButtons(ended) {
+    if (ended) {
+        return new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('giveaway_reroll')
+                .setLabel('🎲 Reroll')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(false),
+            new ButtonBuilder()
+                .setCustomId('giveaway_end')
+                .setLabel('✅ Ended')
+                .setStyle(ButtonStyle.Success)
+                .setDisabled(true)
+        );
+    } else {
+        return new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('giveaway_join')
+                .setLabel('🎉 Join')
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId('giveaway_end')
+                .setLabel('🛑 End')
+                .setStyle(ButtonStyle.Danger)
+        );
+    }
 }

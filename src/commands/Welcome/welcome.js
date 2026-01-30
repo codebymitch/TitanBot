@@ -1,6 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 
 // Migrated from: commands/Welcome/welcome.js
 export default {
@@ -47,8 +48,8 @@ export default {
             try {
                 // Update the welcome configuration
                 const newConfig = await updateWelcomeConfig(client, guild.id, {
-                    welcomeEnabled: true,
-                    welcomeChannel: channel.id,
+                    enabled: true,
+                    channelId: channel.id,
                     welcomeMessage: message,
                     welcomeImage: image || undefined,
                     welcomePing: ping
@@ -62,7 +63,7 @@ export default {
                     .replace(/{memberCount}/g, guild.memberCount.toLocaleString());
 
                 const embed = new EmbedBuilder()
-                    .setColor(client.config.embeds.colors.success)
+                    .setColor(0x00ff00) // Green color for success
                     .setTitle('✅ Welcome System Configured')
                     .setDescription(`Welcome messages will now be sent to ${channel}`)
                     .addFields(
@@ -78,7 +79,6 @@ export default {
 
                 await interaction.reply({ embeds: [embed] });
             } catch (error) {
-                console.error('Error setting up welcome system:', error);
                 await interaction.reply({ 
                     content: '❌ An error occurred while setting up the welcome system.', 
                     ephemeral: true 
@@ -89,10 +89,10 @@ export default {
         else if (subcommand === 'toggle') {
             try {
                 const currentConfig = await getWelcomeConfig(client, guild.id);
-                const newStatus = !currentConfig.welcomeEnabled;
+                const newStatus = !currentConfig.enabled;
                 
                 await updateWelcomeConfig(client, guild.id, {
-                    welcomeEnabled: newStatus
+                    enabled: newStatus
                 });
 
                 await interaction.reply({
@@ -100,7 +100,6 @@ export default {
                     ephemeral: true
                 });
             } catch (error) {
-                console.error('Error toggling welcome messages:', error);
                 await interaction.reply({ 
                     content: '❌ An error occurred while toggling welcome messages.', 
                     ephemeral: true 

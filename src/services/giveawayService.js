@@ -15,8 +15,13 @@ export function pickWinners(participants, count) {
  */
 export async function checkGiveaways(client) {
   try {
+    // Check if database is available (including memory fallback)
+    if (!client.db || typeof client.db.get !== "function") {
+      return; // Silently return if no database available
+    }
+
     for (const [guildId, guild] of client.guilds.cache) {
-      const giveawayDbKey = `giveaways:${guildId}`;
+      const giveawayDbKey = `guild:${guildId}:giveaways`;
       const giveaways = await client.db.get(giveawayDbKey) || {};
       const now = Date.now();
       let updated = false;
@@ -24,17 +29,16 @@ export async function checkGiveaways(client) {
       for (const [messageId, giveaway] of Object.entries(giveaways)) {
         // Skip invalid giveaway objects
         if (!giveaway || typeof giveaway !== 'object') {
-          console.warn(`Invalid giveaway object for message ${messageId} in guild ${guildId}`);
           continue;
         }
 
         // Check if giveaway has required properties
-        if (!giveaway.endsAt) {
-          console.warn(`Giveaway ${messageId} in guild ${guildId} missing endsAt property`);
+        const endTime = giveaway.endsAt || giveaway.endTime;
+        if (!endTime) {
           continue;
         }
 
-        if (giveaway.endsAt <= now && !giveaway.ended) {
+        if (endTime <= now && !giveaway.ended) {
           // End the giveaway
           giveaway.ended = true;
           updated = true;
@@ -46,8 +50,8 @@ export async function checkGiveaways(client) {
             const message = await channel.messages.fetch(messageId).catch(() => null);
             if (!message) continue;
             
-            const entries = giveaway.entries || [];
-            const winners = pickWinners(entries, giveaway.winnerCount);
+            const participants = giveaway.participants || [];
+            const winners = pickWinners(participants, giveaway.winnerCount);
             
             // Update the message
             const winnerMentions = winners.length > 0 
@@ -60,7 +64,7 @@ export async function checkGiveaways(client) {
               title: '🎉 Giveaway Ended!',
               fields: [
                 { name: 'Winners', value: winnerMentions, inline: true },
-                { name: 'Entries', value: entries.length.toString(), inline: true },
+                { name: 'Entries', value: participants.length.toString(), inline: true },
                 { name: 'Prize', value: giveaway.prize || 'Mystery Prize!', inline: true }
               ],
               color: 0xff0000,

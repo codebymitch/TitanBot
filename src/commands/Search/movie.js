@@ -1,5 +1,6 @@
+import axios from 'axios';
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '4e44d9029b1270a757cddc766a1bcb63';
@@ -158,8 +159,8 @@ export default {
 
             // Create the embed with successEmbed for consistent styling
             const embed = successEmbed(
-                `${mediaTitle} (${year})`,
                 details.overview || "No overview available.",
+                `${mediaTitle} (${year})`
             )
                 .setURL(`https://www.themoviedb.org/${type}/${result.id}`)
                 .setThumbnail(

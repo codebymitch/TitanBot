@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logEvent } from '../../utils/moderation.js';
 
 
 // Duration choices for Discord's UI
@@ -127,7 +128,17 @@ export default {
                     { name: "Reason", value: reason, inline: false },
                 );
 
-            logEvent(client, interaction.guildId, timeoutEmbed);
+            await logEvent({
+                client,
+                guildId: interaction.guildId,
+                event: {
+                    action: "Member Timed Out",
+                    target: `${targetUser.tag} (${targetUser.id})`,
+                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    reason: `${reason}\nDuration: ${durationDisplay}`,
+                    duration: durationDisplay
+                }
+            });
             // ---------------------------
 
             await interaction.editReply({

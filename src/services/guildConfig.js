@@ -15,12 +15,23 @@ export async function getGuildConfig(client, guildId) {
         prefix: BotConfig.prefix,
         modRole: null,
         adminRole: null,
-        modLogChannel: null,
+        logChannelId: null, // Changed from modLogChannel for consistency
         welcomeChannel: null,
         welcomeMessage: 'Welcome {user} to {server}!',
         autoRole: null,
         ...config
     };
+}
+
+/**
+ * Set guild configuration
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {Object} config - The configuration to save
+ * @returns {Promise<boolean>} Whether the operation was successful
+ */
+export async function setGuildConfig(client, guildId, config) {
+    return await setGuildConfigDb(client, guildId, config);
 }
 
 /**

@@ -1,30 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners } from '../../utils/giveaways.js';
 
-/**
- * Utility to pick random unique winners from an array of entries.
- * (Duplicated from gend.js for self-contained command logic)
- * @param {string[]} entries - Array of user IDs.
- * @param {number} count - Number of winners to pick.
- * @returns {string[]} Array of winner IDs.
- */
-function pickWinners(entries, count) {
-    if (entries.length === 0) return [];
-
-    const winners = [];
-    // Clone and shuffle the array
-    const shuffledEntries = [...entries].sort(() => 0.5 - Math.random());
-
-    // Take the top 'count' unique entries
-    const uniqueShuffledEntries = [...new Set(shuffledEntries)];
-
-    for (let i = 0; i < Math.min(count, uniqueShuffledEntries.length); i++) {
-        winners.push(uniqueShuffledEntries[i]);
-    }
-
-    return winners;
-}
 // Migrated from: commands/Giveaway/greroll.js
 export default {
     data: new SlashCommandBuilder()
@@ -178,7 +156,7 @@ export default {
             );
 
             const newEmbed = giveawayEmbed(giveaway, "reroll", newWinnerIds);
-            const newRow = giveawayButtons(true, participants.length); // Still ended
+            const newRow = giveawayButtons(true); // Still ended
 
             await message.edit({
                 content: "🔄 **GIVEAWAY REROLLED** 🔄",

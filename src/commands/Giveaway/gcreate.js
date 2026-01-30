@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { giveawayEmbed, giveawayButtons, saveGiveaway } from '../../utils/giveaways.js';
 
 const parseDuration = (durationString) => {
     // Regex to match formats like "1h", "30m", "5d", "10s"
@@ -48,7 +49,7 @@ const parseDuration = (durationString) => {
 export default {
     data: new SlashCommandBuilder()
         .setName("gcreate")
-        .setDescription("Starts a new giveaway in the current channel.")
+        .setDescription("Starts a new giveaway in a specified channel.")
         .addStringOption((option) =>
             option
                 .setName("duration")
@@ -70,6 +71,13 @@ export default {
                 .setName("prize")
                 .setDescription("The prize being given away.")
                 .setRequired(true),
+        )
+        .addChannelOption((option) =>
+            option
+                .setName("channel")
+                .setDescription("The channel to send the giveaway to (defaults to current channel).")
+                .addChannelTypes(ChannelType.GuildText)
+                .setRequired(false),
         )
         .setDefaultMemberPermissions(0x0000000000000008n), // Administrator permission
 
@@ -107,6 +115,7 @@ export default {
         const durationString = interaction.options.getString("duration");
         const winnerCount = interaction.options.getInteger("winners");
         const prize = interaction.options.getString("prize");
+        const targetChannel = interaction.options.getChannel("channel") || interaction.channel;
 
         const durationMs = parseDuration(durationString);
 
@@ -127,11 +136,12 @@ export default {
             // 1. Send the initial giveaway message
             const initialGiveawayData = {
                 messageId: "placeholder", // Will be updated after sending the message
-                channelId: interaction.channelId,
+                channelId: targetChannel.id,
                 guildId: interaction.guildId,
                 prize: prize,
                 hostId: interaction.user.id,
                 endTime: endTime,
+                endsAt: endTime, // Store both for consistency
                 winnerCount: winnerCount,
                 // ** 🚩 FIX: Use 'participants' for consistency with the rest of the logic **
                 participants: [],
@@ -139,13 +149,9 @@ export default {
             };
 
             const embed = giveawayEmbed(initialGiveawayData, "active");
-            // Pass the initial entry count (0) to the button helper
-            const row = giveawayButtons(
-                false,
-                initialGiveawayData.participants.length,
-            );
+            const row = giveawayButtons(false);
 
-            const giveawayMessage = await interaction.channel.send({
+            const giveawayMessage = await targetChannel.send({
                 content: "🎉 **NEW GIVEAWAY** 🎉",
                 embeds: [embed],
                 components: [row],
@@ -164,7 +170,7 @@ export default {
                 embeds: [
                     successEmbed(
                         "Giveaway Started!",
-                        `A new giveaway for **${prize}** has been successfully started in ${interaction.channel} and will end in ${durationString}.`,
+                        `A new giveaway for **${prize}** has been successfully started in ${targetChannel} and will end in ${durationString}.`,
                     ),
                 ],
             });

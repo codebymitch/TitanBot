@@ -20,7 +20,7 @@ export default {
     const uptimeStr = `${days}d, ${hours}h, ${minutes}m, ${seconds}s`;
 
     await interaction.reply({
-      embeds: [createEmbed("⏱️ System Uptime", `**${uptimeStr}**`)],
+      embeds: [createEmbed({ title: "⏱️ System Uptime", description: `**${uptimeStr}**` })],
     });
   },
 };

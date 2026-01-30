@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
 
 // Migrated from: commands/Leveling/levelset.js
 export default {
@@ -44,19 +45,13 @@ export default {
             await saveUserLevelData(client, interaction.guildId, targetUser.id, userData);
             
             await interaction.editReply({
-                embeds: [createEmbed(
-                    "Level Set",
-                    `Successfully set ${targetUser.tag}'s level to ${newLevel}.`
-                )]
+                embeds: [createEmbed({ title: "Level Set", description: `Successfully set ${targetUser.tag}'s level to ${newLevel}.` })]
             });
             
         } catch (error) {
             console.error("LevelSet command error:", error);
             await interaction.editReply({
-                embeds: [createEmbed(
-                    "Error",
-                    "An error occurred while setting the user's level."
-                )]
+                embeds: [createEmbed({ title: "Error", description: "An error occurred while setting the user's level." })]
             });
         }
     }

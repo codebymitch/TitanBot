@@ -18,10 +18,8 @@ export default {
   async execute(interaction) {
     const user = interaction.options.getUser("target") || interaction.user;
 
-    const embed = createEmbed(
-      `${user.username}'s Avatar`,
-      `[Download Link](${user.displayAvatarURL({ size: 2048, dynamic: true })})`,
-    ).setImage(user.displayAvatarURL({ size: 2048, dynamic: true }));
+    const embed = createEmbed({ title: `${user.username}'s Avatar`, description: `[Download Link](${user.displayAvatarURL({ size: 2048, dynamic: true })})` })
+      .setImage(user.displayAvatarURL({ size: 2048, dynamic: true }));
 
     await interaction.reply({ embeds: [embed] });
   },
