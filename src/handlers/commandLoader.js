@@ -94,25 +94,36 @@ export async function loadCommands(client) {
             // Get the primary command name from the command data
             const primaryCommandName = command.data.name;
             
+            console.log(`Processing command: ${primaryCommandName} from ${filePath}`);
+            
             // Only add the command if it hasn't been added before (prevent duplicates)
             if (!client.commands.has(primaryCommandName)) {
+                console.log(`Adding new command: ${primaryCommandName}`);
                 // Add the command to the collection with the command name as the key
                 client.commands.set(primaryCommandName, command);
                 
                 // Register aliases for prefix commands (economy commands) - but ONLY for prefix commands
                 if (command.aliases && command.category === 'Economy') {
+                    console.log(`Adding aliases for ${primaryCommandName}: ${command.aliases.join(', ')}`);
                     for (const alias of command.aliases) {
                         // Don't override existing commands with aliases
                         if (!client.commands.has(alias)) {
                             client.commands.set(alias, command);
+                        } else {
+                            console.log(`Skipping alias ${alias} - already exists`);
                         }
                     }
                 }
                 
                 // Also register by name for prefix commands (economy commands)
                 if (command.name && command.category === 'Economy' && !client.commands.has(command.name)) {
+                    console.log(`Adding prefix name: ${command.name} for command ${primaryCommandName}`);
                     client.commands.set(command.name, command);
+                } else if (command.name && command.category === 'Economy') {
+                    console.log(`Skipping prefix name ${command.name} - already exists`);
                 }
+            } else {
+                console.log(`Skipping duplicate command: ${primaryCommandName}`);
             }
             
             // Log command with subcommand details
