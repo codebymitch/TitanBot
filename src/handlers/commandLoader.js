@@ -148,33 +148,53 @@ export async function registerCommands(client, guildId) {
     try {
         const commands = [];
         let totalSubcommands = 0;
+        const registeredNames = new Set(); // Track unique command names
         
         console.log(`Starting command registration for ${client.commands.size} commands...`);
         
         // Convert commands to JSON for registration
         for (const command of client.commands.values()) {
             // Skip duplicates (only register by command name, not aliases)
-            if (command.data && typeof command.data.toJSON === 'function' && !commands.find(cmd => cmd.name === command.data.name)) {
-                const commandJson = command.data.toJSON();
-                commands.push(commandJson);
+            if (command.data && typeof command.data.toJSON === 'function') {
+                const commandName = command.data.name;
                 
-                // Count subcommands for this command
-                const subcommands = getSubcommandInfo(commandJson);
-                totalSubcommands += subcommands.length;
-                
-                console.log(`Registering command: ${command.data.name}`);
+                // Only register if we haven't seen this command name before
+                if (!registeredNames.has(commandName)) {
+                    registeredNames.add(commandName);
+                    const commandJson = command.data.toJSON();
+                    commands.push(commandJson);
+                    
+                    // Count subcommands for this command
+                    const subcommands = getSubcommandInfo(commandJson);
+                    totalSubcommands += subcommands.length;
+                    
+                    console.log(`Registering command: ${commandName}`);
+                } else {
+                    console.log(`Skipping duplicate command: ${commandName}`);
+                }
             }
         }
         
         // Calculate total commands including subcommands
         const totalCommandsWithSubs = commands.length + totalSubcommands;
         
-        console.log(`Attempting to register ${commands.length} base commands (${totalCommandsWithSubs} total with subcommands)`);
+        console.log(`Attempting to register ${commands.length} unique base commands (${totalCommandsWithSubs} total with subcommands)`);
         
         if (guildId) {
             // Register commands for a specific guild (faster for development)
             console.log(`Registering commands for guild: ${guildId}`);
+            
+            // First, clear existing guild commands to prevent duplicates
             const guild = await client.guilds.fetch(guildId);
+            const existingCommands = await guild.commands.fetch();
+            console.log(`Found ${existingCommands.size} existing guild commands, clearing...`);
+            
+            if (existingCommands.size > 0) {
+                await guild.commands.set([]);
+                console.log('Cleared existing guild commands');
+            }
+            
+            // Now register the new commands
             await guild.commands.set(commands);
             console.log(`Successfully registered ${totalCommandsWithSubs} guild commands`);
             logger.info(`Registered ${totalCommandsWithSubs} guild commands`);
