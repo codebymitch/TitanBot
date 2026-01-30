@@ -10,7 +10,8 @@
     "migrate-commands": "node scripts/migrate-commands.js",
     "simple-migrate": "node scripts/simple-migrate.js",
     "register-commands": "node scripts/register-commands.js",
-    "deploy": "npm run migrate-commands && npm run register-commands"
+    "deploy": "npm run migrate-commands && npm run register-commands",
+    "railway:start": "NODE_ENV=production node src/app.js"
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.0",

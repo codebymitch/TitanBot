@@ -81,6 +81,9 @@ class TitanBot extends Client {
 
   async start() {
     try {
+      // Wait a moment for environment variables to be fully loaded (Railway specific)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Initialize database
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;

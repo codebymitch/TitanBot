@@ -267,6 +267,14 @@ export const botConfig = {
 export function validateConfig(config) {
   const errors = [];
 
+  // Debug: Log environment variables (without sensitive data)
+  console.log('Environment variables check:');
+  console.log('TOKEN exists:', !!process.env.TOKEN);
+  console.log('CLIENT_ID exists:', !!process.env.CLIENT_ID);
+  console.log('GUILD_ID exists:', !!process.env.GUILD_ID);
+  console.log('REDIS_URL exists:', !!process.env.REDIS_URL);
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+
   if (!process.env.TOKEN) {
     errors.push("Bot token is required (TOKEN environment variable)");
   }
