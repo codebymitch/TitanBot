@@ -66,6 +66,8 @@ export async function loadCommands(client) {
     const commandsPath = path.join(__dirname, '../commands');
     const commandFiles = await getAllFiles(commandsPath);
     
+    logger.info(`Found ${commandFiles.length} command files to load`);
+    
     for (const filePath of commandFiles) {
         try {
             // Convert Windows paths to forward slashes for consistency

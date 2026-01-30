@@ -88,8 +88,9 @@ class TitanBot extends Client {
       // Start the web server for keep-alive
       this.startWebServer();
       
-      // Load commands using the new loader
+      logger.info('Starting to load commands...');
       await loadCommands(this);
+      logger.info(`Command loading completed. Total commands loaded: ${this.commands.size}`);
       
       // Load other handlers
       await this.loadHandlers();
