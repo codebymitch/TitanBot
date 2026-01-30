@@ -68,6 +68,24 @@ export async function loadCommands(client) {
     
     logger.info(`Found ${commandFiles.length} command files to load`);
     
+    // Debug: Check for duplicate files
+    const uniqueFiles = [...new Set(commandFiles)];
+    if (commandFiles.length !== uniqueFiles.length) {
+        console.log(`⚠️ Found ${commandFiles.length - uniqueFiles.length} duplicate files!`);
+        
+        // Find duplicates
+        const fileCounts = {};
+        commandFiles.forEach(file => {
+            fileCounts[file] = (fileCounts[file] || 0) + 1;
+        });
+        
+        Object.entries(fileCounts).forEach(([file, count]) => {
+            if (count > 1) {
+                console.log(`Duplicate file: ${file} (${count} times)`);
+            }
+        });
+    }
+    
     // Debug: Log all files being processed
     console.log('All command files found:');
     commandFiles.forEach((file, index) => {
