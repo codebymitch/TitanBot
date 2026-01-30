@@ -7,25 +7,28 @@ import { logger } from '../utils/logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export default async (client) => {
-  try {
+export default async function loadEvents(client) {
     const eventsPath = join(__dirname, '../events');
-    const eventFiles = (await readdir(eventsPath)).filter(file => file.endsWith('.js'));
+    const eventFiles = await readdir(eventsPath).then(files => files.filter(file => file.endsWith('.js')));
+
+    console.log(`Loading ${eventFiles.length} event files...`);
 
     for (const file of eventFiles) {
-      const event = (await import(`../events/${file}`)).default;
-      
-      if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args));
-      } else {
-        client.on(event.name, (...args) => event.execute(...args));
-      }
-      
-      logger.debug(`Loaded event: ${event.name}`);
+        const filePath = join(eventsPath, file);
+        try {
+            const { default: event } = await import(`file://${filePath}`);
+            
+            if (event.once) {
+                client.once(event.name, (...args) => event.execute(...args, client));
+                console.log(`Registered once event: ${event.name}`);
+            } else {
+                client.on(event.name, (...args) => event.execute(...args, client));
+                console.log(`Registered on event: ${event.name}`);
+            }
+        } catch (error) {
+            logger.error(`Error loading event ${file}:`, error);
+        }
     }
     
-    logger.info(`Loaded ${eventFiles.length} events`);
-  } catch (error) {
-    logger.error('Error loading events:', error);
-  }
-};
+    console.log(`Event loading completed. Registered events: ${client.eventNames().join(', ')}`);
+}

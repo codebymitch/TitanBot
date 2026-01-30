@@ -8,6 +8,13 @@ import { handleApplicationButton, handleApplicationReviewModal } from '../comman
 export default {
   name: Events.InteractionCreate,
   async execute(interaction, client) {
+    console.log(`=== INTERACTION RECEIVED ===`);
+    console.log(`Type: ${interaction.type}`);
+    console.log(`Command: ${interaction.commandName}`);
+    console.log(`User: ${interaction.user.tag}`);
+    console.log(`Guild: ${interaction.guild?.name || 'DM'}`);
+    console.log(`========================`);
+    
     try {
       // Debug: Log all interactions
       logger.debug(`Received interaction: ${interaction.type} - ${interaction.commandName || interaction.customId || 'unknown'}`);
