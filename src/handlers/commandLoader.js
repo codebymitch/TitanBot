@@ -68,6 +68,15 @@ export async function loadCommands(client) {
     
     logger.info(`Found ${commandFiles.length} command files to load`);
     
+    // Debug: Log all files being processed
+    console.log('All command files found:');
+    commandFiles.forEach((file, index) => {
+        console.log(`${index + 1}. ${file}`);
+    });
+    
+    // Track unique command data names to prevent actual duplicates
+    const uniqueCommandNames = new Set();
+    
     for (const filePath of commandFiles) {
         try {
             // Convert Windows paths to forward slashes for consistency
@@ -96,9 +105,11 @@ export async function loadCommands(client) {
             
             console.log(`Processing command: ${primaryCommandName} from ${filePath}`);
             
-            // Only add the command if it hasn't been added before (prevent duplicates)
-            if (!client.commands.has(primaryCommandName)) {
+            // Only add the command if we haven't seen this command name before (prevent duplicates)
+            if (!uniqueCommandNames.has(primaryCommandName)) {
+                uniqueCommandNames.add(primaryCommandName);
                 console.log(`Adding new command: ${primaryCommandName}`);
+                
                 // Add the command to the collection with the command name as the key
                 client.commands.set(primaryCommandName, command);
                 

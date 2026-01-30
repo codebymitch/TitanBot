@@ -654,77 +654,33 @@ export function getUserLevelKey(guildId, userId) {
 export async function getLevelingConfig(client, guildId) {
     const key = getLevelingKey(guildId);
     try {
-        // Check if database is available (including memory fallback)
-        if (!client.db || typeof client.db.get !== "function") {
-            console.error("Database client is not available for getLevelingConfig.");
-            // Return default config
-            return {
-                enabled: false,
-                xpPerMessage: { min: 15, max: 25 },
-                levelUpMessage: "{user.mention} has leveled up to level **{level}**! 🎉",
-                levelUpChannelId: null,
-                ignoredChannels: [],
-                ignoredRoles: [],
-                roleRewards: {},
-                xpCooldown: 60,
-                maxLevel: 100,
-                xpMultiplier: 1.0,
-                xpMultipliers: {},
-                announceLevelUp: true,
-                stackRoleRewards: false,
-                blacklistedUsers: []
-            };
-        }
-
-        const config = await client.db.get(key, {});
-        const unwrapped = unwrapReplitData(config);
-        
-        // Default configuration
-        const defaultConfig = {
+        // Use the database wrapper instead of direct client.db access
+        const config = await getFromDb(key, {
             enabled: false,
-            xpPerMessage: {
-                min: 15,
-                max: 25
-            },
-            levelUpMessage: "{user.mention} has leveled up to level **{level}**! 🎉",
-            levelUpChannelId: null,
-            ignoredChannels: [],
-            ignoredRoles: [],
-            roleRewards: {},
-            xpCooldown: 60, // seconds
-            maxLevel: 100,
-            xpMultiplier: 1.0,
-            xpMultipliers: {},
-            announceLevelUp: true,
-            stackRoleRewards: false,
-            blacklistedUsers: []
-        };
+            xpPerMessage: 10,
+            xpPerMinute: 60,
+            cooldownEnabled: true,
+            messageLengthMultiplier: true,
+            levelUpMessages: true,
+            levelUpChannel: null,
+            roles: {},
+            milestones: {}
+        });
         
-        const finalConfig = { ...defaultConfig, ...unwrapped };
-        
-        // Log if using memory storage
-        if (client.db.isAvailable && !client.db.isAvailable()) {
-            console.log(`📝 Using in-memory storage for leveling config (guild: ${guildId})`);
-        }
-        
-        return finalConfig;
+        return config;
     } catch (error) {
-        console.error(`Error getting leveling config for guild ${guildId}:`, error);
+        logger.error('Error getting leveling config:', error);
+        // Return default config
         return {
             enabled: false,
-            xpPerMessage: { min: 15, max: 25 },
-            levelUpMessage: "{user.mention} has leveled up to level **{level}**! 🎉",
-            levelUpChannelId: null,
-            ignoredChannels: [],
-            ignoredRoles: [],
-            roleRewards: {},
-            xpCooldown: 60,
-            maxLevel: 100,
-            xpMultiplier: 1.0,
-            xpMultipliers: {},
-            announceLevelUp: true,
-            stackRoleRewards: false,
-            blacklistedUsers: []
+            xpPerMessage: 10,
+            xpPerMinute: 60,
+            cooldownEnabled: true,
+            messageLengthMultiplier: true,
+            levelUpMessages: true,
+            levelUpChannel: null,
+            roles: {},
+            milestones: {}
         };
     }
 }
@@ -739,22 +695,10 @@ export async function getLevelingConfig(client, guildId) {
 export async function saveLevelingConfig(client, guildId, config) {
     const key = getLevelingKey(guildId);
     try {
-        // Check if database is available (including memory fallback)
-        if (!client.db || typeof client.db.set !== "function") {
-            console.error("Database client is not available for saveLevelingConfig.");
-            return false;
-        }
-
-        await client.db.set(key, config);
+        // Use the database wrapper instead of direct client.db access
+        await setInDb(key, config);
         
-        // Log if using memory storage
-        if (client.db.isAvailable && !client.db.isAvailable()) {
-            console.log(`💾 Saved leveling config to in-memory storage (guild: ${guildId})`);
-            console.log(`🔧 Leveling system is now ${config.enabled ? 'ENABLED' : 'DISABLED'} (in-memory only)`);
-        } else {
-            console.log(`💾 Saved leveling config to database (guild: ${guildId})`);
-        }
-        
+        console.log(`💾 Saved leveling config to database (guild: ${guildId})`);
         return true;
     } catch (error) {
         console.error(`Error saving leveling config for guild ${guildId}:`, error);
@@ -772,20 +716,8 @@ export async function saveLevelingConfig(client, guildId, config) {
 export async function getUserLevelData(client, guildId, userId) {
     const key = getUserLevelKey(guildId, userId);
     try {
-        // Check if database is available (including memory fallback)
-        if (!client.db || typeof client.db.get !== "function") {
-            // Return default user data without error logging for memory storage
-            return {
-                xp: 0,
-                level: 0,
-                totalXp: 0,
-                lastMessage: 0,
-                rank: 0,
-                xpToNextLevel: getXpForLevel(1)
-            };
-        }
-
-        const data = await client.db.get(key, null);
+        // Use the database wrapper instead of direct client.db access
+        const data = await getFromDb(key, null);
         if (!data) {
             return {
                 xp: 0,
@@ -797,14 +729,13 @@ export async function getUserLevelData(client, guildId, userId) {
             };
         }
         
-        const unwrapped = unwrapReplitData(data);
         const levelData = {
-            xp: unwrapped.xp || 0,
-            level: unwrapped.level || 0,
-            totalXp: unwrapped.totalXp || 0,
-            lastMessage: unwrapped.lastMessage || 0,
-            rank: unwrapped.rank || 0,
-            xpToNextLevel: getXpForLevel((unwrapped.level || 0) + 1)
+            xp: data.xp || 0,
+            level: data.level || 0,
+            totalXp: data.totalXp || 0,
+            lastMessage: data.lastMessage || 0,
+            rank: data.rank || 0,
+            xpToNextLevel: getXpForLevel((data.level || 0) + 1)
         };
         
         return levelData;
@@ -832,12 +763,7 @@ export async function getUserLevelData(client, guildId, userId) {
 export async function saveUserLevelData(client, guildId, userId, data) {
     const key = getUserLevelKey(guildId, userId);
     try {
-        // Check if database is available
-        if (!client.db || typeof client.db.set !== "function") {
-            console.error("Database client is not available for saveUserLevelData.");
-            return false;
-        }
-
+        // Use the database wrapper instead of direct client.db access
         // Calculate additional fields
         const levelData = {
             ...data,
@@ -850,7 +776,7 @@ export async function saveUserLevelData(client, guildId, userId, data) {
             updatedAt: Date.now()
         };
         
-        await client.db.set(key, levelData);
+        await setInDb(key, levelData);
         return true;
     } catch (error) {
         console.error(`Error saving level data for user ${userId} in guild ${guildId}:`, error);

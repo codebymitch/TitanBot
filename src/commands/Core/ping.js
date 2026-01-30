@@ -25,7 +25,6 @@ export default {
         await interaction.editReply({
             content: null,
             embeds: [embed],
-            components: [getPromoRow()],
         });
     },
 };
