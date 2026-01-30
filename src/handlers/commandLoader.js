@@ -91,28 +91,37 @@ export async function loadCommands(client) {
             command.category = category;
             command.filePath = normalizedPath;
             
-            // Add the command to the collection with the command name as the key
-            client.commands.set(command.data.name, command);
+            // Get the primary command name from the command data
+            const primaryCommandName = command.data.name;
             
-            // Register aliases for prefix commands (economy commands)
-            if (command.aliases && command.category === 'Economy') {
-                for (const alias of command.aliases) {
-                    client.commands.set(alias, command);
+            // Only add the command if it hasn't been added before (prevent duplicates)
+            if (!client.commands.has(primaryCommandName)) {
+                // Add the command to the collection with the command name as the key
+                client.commands.set(primaryCommandName, command);
+                
+                // Register aliases for prefix commands (economy commands) - but ONLY for prefix commands
+                if (command.aliases && command.category === 'Economy') {
+                    for (const alias of command.aliases) {
+                        // Don't override existing commands with aliases
+                        if (!client.commands.has(alias)) {
+                            client.commands.set(alias, command);
+                        }
+                    }
                 }
-            }
-            
-            // Also register by name for prefix commands
-            if (command.name && command.category === 'Economy') {
-                client.commands.set(command.name, command);
+                
+                // Also register by name for prefix commands (economy commands)
+                if (command.name && command.category === 'Economy' && !client.commands.has(command.name)) {
+                    client.commands.set(command.name, command);
+                }
             }
             
             // Log command with subcommand details
             const subcommands = getSubcommandInfo(command.data.toJSON());
             
             if (subcommands.length > 0) {
-                logger.info(`Loaded command: ${command.data.name} with subcommands: ${subcommands.join(', ')}`);
+                logger.info(`Loaded command: ${primaryCommandName} with subcommands: ${subcommands.join(', ')}`);
             } else {
-                logger.debug(`Loaded command: ${command.data.name}`);
+                logger.debug(`Loaded command: ${primaryCommandName}`);
             }
             
         } catch (error) {
@@ -130,11 +139,15 @@ export async function loadCommands(client) {
         return total + getSubcommandInfo(cmd.data.toJSON()).length;
     }, 0);
     
-    // Calculate total commands including subcommands as individual commands
-    const baseCommands = client.commands.size;
-    const totalCommandsWithSubs = baseCommands + totalSubcommands;
+    // Calculate total unique commands (excluding aliases)
+    const uniqueCommands = new Set();
+    for (const [name, command] of client.commands.entries()) {
+        if (command.data && command.data.name) {
+            uniqueCommands.add(command.data.name);
+        }
+    }
     
-    logger.info(`Successfully loaded ${totalCommandsWithSubs} commands (${commandsWithSubcommands.length} with subcommands, ${totalSubcommands} total subcommands)`);
+    logger.info(`Successfully loaded ${uniqueCommands.size} unique commands (${client.commands.size} total including aliases) (${commandsWithSubcommands.length} with subcommands, ${totalSubcommands} total subcommands)`);
     return client.commands;
 }
 
@@ -192,6 +205,8 @@ export async function registerCommands(client, guildId) {
             if (existingCommands.size > 0) {
                 await guild.commands.set([]);
                 console.log('Cleared existing guild commands');
+                // Wait a moment for Discord to process the clearing
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
             
             // Now register the new commands
