@@ -1,5 +1,6 @@
 import { BotConfig } from "../config/bot.js";
-import { getEconomyKey, getFromDb, setInDb } from './database.js';
+import { getEconomyKey } from './database.js';
+import { getFromDb, setInDb } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
 // Use bank capacity from config
@@ -39,13 +40,10 @@ export function getMaxBankCapacity(userData) {
  * @param {string} userId - The user ID
  * @returns {Promise<Object>} The user's economy data
  */
-/**
- * Get economy data for a user
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
 export async function getEconomyData(client, guildId, userId) {
     try {
         const key = getEconomyKey(guildId, userId);
+        console.log(`[Economy] Getting data for key: ${key}`);
         
         // Use the database wrapper instead of direct client.db access
         const data = await getFromDb(key, {
@@ -63,6 +61,7 @@ export async function getEconomyData(client, guildId, userId) {
             cooldowns: {}
         });
         
+        console.log(`[Economy] Retrieved data:`, data);
         return data;
     } catch (error) {
         console.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
