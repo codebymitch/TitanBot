@@ -1,5 +1,5 @@
 import { BotConfig } from "../config/bot.js";
-import { getEconomyKey } from './database.js';
+import { getEconomyKey, getFromDb, setInDb } from './database.js';
 import { logger } from '../utils/logger.js';
 
 // Use bank capacity from config
@@ -43,22 +43,31 @@ export function getMaxBankCapacity(userData) {
  * Get economy data for a user
  * @param {Object} client - The Discord client
  * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {Promise<Object>} The user's economy data
- */
 export async function getEconomyData(client, guildId, userId) {
     try {
         const key = getEconomyKey(guildId, userId);
-        console.log('Getting economy data with key:', key);
-        const dbResponse = await client.db.get(key);
-        console.log('Raw data from DB:', dbResponse);
         
-        // Handle Replit Database response format
-        const data = dbResponse && dbResponse.value ? dbResponse.value : dbResponse;
-        console.log('Extracted data:', data);
+        // Use the database wrapper instead of direct client.db access
+        const data = await getFromDb(key, {
+            wallet: 0,
+            bank: 0,
+            bankLevel: 1,
+            lastDaily: 0,
+            lastWeekly: 0,
+            lastWork: 0,
+            lastCrime: 0,
+            lastRob: 0,
+            lastDeposit: 0,
+            lastWithdraw: 0,
+            inventory: {},
+            cooldowns: {}
+        });
         
-        // Default economy data structure
-        const defaultData = {
+        return data;
+    } catch (error) {
+        console.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
+        // Return default economy data structure
+        return {
             wallet: 0,
             bank: 0,
             bankLevel: 1,
@@ -72,13 +81,6 @@ export async function getEconomyData(client, guildId, userId) {
             inventory: {},
             cooldowns: {}
         };
-
-        const result = { ...defaultData, ...(data || {}) };
-        console.log('Final economy data:', result);
-        return result;
-    } catch (error) {
-        console.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
-        throw error;
     }
 }
 
@@ -93,8 +95,6 @@ export async function getEconomyData(client, guildId, userId) {
 export async function setEconomyData(client, guildId, userId, newData) {
     try {
         const key = getEconomyKey(guildId, userId);
-        console.log('Setting economy data with key:', key);
-        console.log('Data to save:', newData);
         
         // Get existing data first
         const existingData = await getEconomyData(client, guildId, userId);
@@ -102,9 +102,8 @@ export async function setEconomyData(client, guildId, userId, newData) {
         // Merge existing data with new data, with new data taking precedence
         const mergedData = { ...existingData, ...newData };
         
-        console.log('Merged data to save:', mergedData);
-        await client.db.set(key, mergedData);
-        console.log('Data saved successfully');
+        // Use the database wrapper instead of direct client.db access
+        await setInDb(key, mergedData);
         return true;
     } catch (error) {
         logger.error('Error saving economy data:', error);

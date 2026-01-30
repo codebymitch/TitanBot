@@ -1,4 +1,4 @@
-import { Events } from 'discord.js';
+import { Events, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { errorEmbed } from '../utils/embeds.js';
@@ -27,11 +27,11 @@ export default {
             return interaction.reply({
               embeds: [
                 errorEmbed(
-                  "Command Disabled",
-                  `The command \`/${interaction.commandName}\` has been disabled by the server administrators.`
-                ),
+                  'This command has been disabled for this server.',
+                  'Command Disabled'
+                )
               ],
-              ephemeral: true
+              flags: [MessageFlags.Ephemeral]
             });
           }
         }
@@ -61,7 +61,7 @@ export default {
           
           const reply = {
             content: 'There was an error while executing this command!',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
           };
 
           if (interaction.replied || interaction.deferred) {
@@ -81,7 +81,7 @@ export default {
             logger.error(`Error handling application button ${interaction.customId}`, error);
             await interaction.reply({
               content: 'There was an error processing this button!',
-              ephemeral: true
+              flags: [MessageFlags.Ephemeral]
             }).catch(console.error);
           }
           return;
@@ -101,7 +101,7 @@ export default {
               logger.error(`Error executing button ${buttonType}`, error);
               await interaction.reply({
                 content: 'There was an error processing this button!',
-                ephemeral: true
+                flags: [MessageFlags.Ephemeral]
               }).catch(console.error);
             }
           }
@@ -120,7 +120,7 @@ export default {
           logger.error(`Error executing button ${customId}`, error);
           await interaction.reply({
             content: 'There was an error processing this button!',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
           }).catch(console.error);
         }
       }
@@ -137,7 +137,7 @@ export default {
           logger.error(`Error executing select menu ${customId}`, error);
           await interaction.reply({
             content: 'There was an error processing this selection!',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
           }).catch(console.error);
         }
       }
@@ -151,7 +151,7 @@ export default {
             logger.error(`Error handling application modal ${interaction.customId}`, error);
             await interaction.reply({
               content: 'There was an error processing this form!',
-              ephemeral: true
+              flags: [MessageFlags.Ephemeral]
             }).catch(console.error);
           }
           return;
@@ -165,7 +165,7 @@ export default {
             logger.error(`Error handling application review modal ${interaction.customId}`, error);
             await interaction.reply({
               content: 'There was an error processing this form!',
-              ephemeral: true
+              flags: [MessageFlags.Ephemeral]
             }).catch(console.error);
           }
           return;
@@ -183,7 +183,7 @@ export default {
           logger.error(`Error executing modal ${customId}`, error);
           await interaction.reply({
             content: 'There was an error processing this form!',
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
           }).catch(console.error);
         }
       }
