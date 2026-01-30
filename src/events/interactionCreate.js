@@ -8,17 +8,7 @@ import { handleApplicationButton, handleApplicationReviewModal } from '../comman
 export default {
   name: Events.InteractionCreate,
   async execute(interaction, client) {
-    console.log(`=== INTERACTION RECEIVED ===`);
-    console.log(`Type: ${interaction.type}`);
-    console.log(`Command: ${interaction.commandName}`);
-    console.log(`User: ${interaction.user.tag}`);
-    console.log(`Guild: ${interaction.guild?.name || 'DM'}`);
-    console.log(`========================`);
-    
     try {
-      // Debug: Log all interactions
-      logger.debug(`Received interaction: ${interaction.type} - ${interaction.commandName || interaction.customId || 'unknown'}`);
-      
       // Handle chat input commands
       if (interaction.isChatInputCommand()) {
         logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`);
@@ -26,7 +16,6 @@ export default {
 
         if (!command) {
           logger.error(`No command matching ${interaction.commandName} was found.`);
-          logger.debug(`Available commands: ${Array.from(client.commands.keys()).join(', ')}`);
           return;
         }
 

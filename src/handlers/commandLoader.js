@@ -68,30 +68,6 @@ export async function loadCommands(client) {
     
     logger.info(`Found ${commandFiles.length} command files to load`);
     
-    // Debug: Check for duplicate files
-    const uniqueFiles = [...new Set(commandFiles)];
-    if (commandFiles.length !== uniqueFiles.length) {
-        console.log(`⚠️ Found ${commandFiles.length - uniqueFiles.length} duplicate files!`);
-        
-        // Find duplicates
-        const fileCounts = {};
-        commandFiles.forEach(file => {
-            fileCounts[file] = (fileCounts[file] || 0) + 1;
-        });
-        
-        Object.entries(fileCounts).forEach(([file, count]) => {
-            if (count > 1) {
-                console.log(`Duplicate file: ${file} (${count} times)`);
-            }
-        });
-    }
-    
-    // Debug: Log all files being processed
-    console.log('All command files found:');
-    commandFiles.forEach((file, index) => {
-        console.log(`${index + 1}. ${file}`);
-    });
-    
     // Track unique command data names to prevent actual duplicates
     const uniqueCommandNames = new Set();
     
@@ -121,38 +97,27 @@ export async function loadCommands(client) {
             // Get the primary command name from the command data
             const primaryCommandName = command.data.name;
             
-            console.log(`Processing command: ${primaryCommandName} from ${filePath}`);
-            
             // Only add the command if we haven't seen this command name before (prevent duplicates)
             if (!uniqueCommandNames.has(primaryCommandName)) {
                 uniqueCommandNames.add(primaryCommandName);
-                console.log(`Adding new command: ${primaryCommandName}`);
                 
                 // Add the command to the collection with the command name as the key
                 client.commands.set(primaryCommandName, command);
                 
                 // Register aliases for prefix commands (economy commands) - but ONLY for prefix commands
                 if (command.aliases && command.category === 'Economy') {
-                    console.log(`Adding aliases for ${primaryCommandName}: ${command.aliases.join(', ')}`);
                     for (const alias of command.aliases) {
                         // Don't override existing commands with aliases
                         if (!client.commands.has(alias)) {
                             client.commands.set(alias, command);
-                        } else {
-                            console.log(`Skipping alias ${alias} - already exists`);
                         }
                     }
                 }
                 
                 // Also register by name for prefix commands (economy commands)
                 if (command.name && command.category === 'Economy' && !client.commands.has(command.name)) {
-                    console.log(`Adding prefix name: ${command.name} for command ${primaryCommandName}`);
                     client.commands.set(command.name, command);
-                } else if (command.name && command.category === 'Economy') {
-                    console.log(`Skipping prefix name ${command.name} - already exists`);
                 }
-            } else {
-                console.log(`Skipping duplicate command: ${primaryCommandName}`);
             }
             
             // Log command with subcommand details
@@ -203,8 +168,6 @@ export async function registerCommands(client, guildId) {
         let totalSubcommands = 0;
         const registeredNames = new Set(); // Track unique command names
         
-        console.log(`Starting command registration for ${client.commands.size} commands...`);
-        
         // Convert commands to JSON for registration
         for (const command of client.commands.values()) {
             // Skip duplicates (only register by command name, not aliases)
@@ -220,10 +183,6 @@ export async function registerCommands(client, guildId) {
                     // Count subcommands for this command
                     const subcommands = getSubcommandInfo(commandJson);
                     totalSubcommands += subcommands.length;
-                    
-                    console.log(`Registering command: ${commandName}`);
-                } else {
-                    console.log(`Skipping duplicate command: ${commandName}`);
                 }
             }
         }
@@ -231,37 +190,28 @@ export async function registerCommands(client, guildId) {
         // Calculate total commands including subcommands
         const totalCommandsWithSubs = commands.length + totalSubcommands;
         
-        console.log(`Attempting to register ${commands.length} unique base commands (${totalCommandsWithSubs} total with subcommands)`);
-        
         if (guildId) {
             // Register commands for a specific guild (faster for development)
-            console.log(`Registering commands for guild: ${guildId}`);
             
             // First, clear existing guild commands to prevent duplicates
             const guild = await client.guilds.fetch(guildId);
             const existingCommands = await guild.commands.fetch();
-            console.log(`Found ${existingCommands.size} existing guild commands, clearing...`);
             
             if (existingCommands.size > 0) {
                 await guild.commands.set([]);
-                console.log('Cleared existing guild commands');
                 // Wait a moment for Discord to process the clearing
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
             
             // Now register the new commands
             await guild.commands.set(commands);
-            console.log(`Successfully registered ${totalCommandsWithSubs} guild commands`);
             logger.info(`Registered ${totalCommandsWithSubs} guild commands`);
         } else {
             // Register commands globally
-            console.log('Registering commands globally...');
             await client.application.commands.set(commands);
-            console.log(`Successfully registered ${totalCommandsWithSubs} global commands`);
             logger.info(`Registered ${totalCommandsWithSubs} global commands`);
         }
     } catch (error) {
-        console.error('Error registering commands:', error);
         logger.error('Error registering commands:', error);
         throw error;
     }

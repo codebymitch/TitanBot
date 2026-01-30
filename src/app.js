@@ -80,49 +80,35 @@ class TitanBot extends Client {
   }
 
   async start() {
-    console.log('TitanBot.start() called');
     try {
-      console.log('Step 1: Waiting for environment variables...');
       // Wait a moment for environment variables to be fully loaded (Railway specific)
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log('Step 2: Initializing database...');
       // Initialize database
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
-      console.log('Database initialized successfully');
       
-      console.log('Step 3: Starting web server...');
       // Start the web server for keep-alive
       this.startWebServer();
       
-      console.log('Step 4: Loading commands...');
       logger.info('Starting to load commands...');
       await loadCommands(this);
       logger.info(`Command loading completed. Total commands loaded: ${this.commands.size}`);
-      console.log(`Commands loaded: ${this.commands.size}`);
       
-      console.log('Step 5: Loading handlers...');
       // Load other handlers
       await this.loadHandlers();
       
-      console.log('Step 6: Logging into Discord...');
       // Login to Discord first
       await this.login(this.config.bot.token);
-      console.log('Discord login successful');
       
-      console.log('Step 7: Registering commands...');
       // Register commands after login
       await this.registerCommands();
       
-      console.log('Step 8: Setting up cron jobs...');
       logger.info('Bot is running!');
       
       // Start cron jobs after bot is ready
       this.setupCronJobs();
-      console.log('TitanBot startup completed successfully');
     } catch (error) {
-      console.error('Failed to start bot:', error);
       logger.error('Failed to start bot:', error);
       process.exit(1);
     }
@@ -220,13 +206,8 @@ class TitanBot extends Client {
 }
 
 // Start the bot when this file is run directly
-console.log('=== TitanBot Starting ===');
-console.log('Node.js version:', process.version);
-console.log('Environment:', process.env.NODE_ENV);
-
 try {
   const bot = new TitanBot();
-  console.log('Bot instance created successfully');
   bot.start();
 } catch (error) {
   console.error('Fatal error during bot startup:', error);
