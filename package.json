@@ -30,9 +30,10 @@
     "redis": "^5.10.0",
     "titan-ultimate-bot": "file:",
     "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "web-streams-polyfill": "^3.3.3"
   },
   "engines": {
-    "node": ">=16.9.0"
+    "node": ">=18.0.0"
   }
 }

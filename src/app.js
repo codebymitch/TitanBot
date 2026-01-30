@@ -17,6 +17,13 @@ import path from 'path';
 import fs from 'fs/promises';
 import express from 'express';
 import cron from 'node-cron';
+
+// Polyfill for ReadableStream in older Node.js environments
+import { ReadableStream } from 'web-streams-polyfill';
+if (typeof global.ReadableStream === 'undefined') {
+    global.ReadableStream = ReadableStream;
+}
+
 import config from './config/index.js';
 import { initializeDatabase, getFromDb, setInDb, deleteFromDb } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
