@@ -32,7 +32,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         try {
             const filterType = interaction.options.getString('filter') || 'all';
@@ -133,7 +133,7 @@ export default {
                 if (buttonInteraction.user.id !== interaction.user.id) {
                     await buttonInteraction.followUp({
                         content: 'You cannot use these buttons. Run `/cases` to get your own case view.',
-                        ephemeral: true
+                        flags: ["Ephemeral"]
                     });
                     return;
                 }

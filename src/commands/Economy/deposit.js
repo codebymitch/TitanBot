@@ -87,7 +87,7 @@ export default {
                             `You tried to deposit more than you have. Depositing your remaining cash: **$${depositAmount.toLocaleString()}**`,
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -119,7 +119,7 @@ export default {
                                 `You only had space for **$${depositAmount.toLocaleString()}** in your bank account (Max: $${maxBank.toLocaleString()}). The rest remains in your cash.`,
                             ),
                         ],
-                        ephemeral: true,
+                        flags: ["Ephemeral"],
                     });
                 }
             }

@@ -22,7 +22,7 @@ export default {
   category: "moderation",
 
   async execute(interaction, config, client) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: ["Ephemeral"] });
 
     // Permission check (redundant, but safe)
     if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers))

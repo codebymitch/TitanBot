@@ -16,7 +16,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: ["Ephemeral"] });
 
             const messageId = interaction.options.getString('message_id');
             const key = `reaction_roles:${interaction.guildId}:${messageId}`;

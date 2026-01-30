@@ -12,7 +12,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: ["Ephemeral"] });
 
             // Get all reaction role messages for this guild using the service
             const guildReactionRoles = await getAllReactionRoleMessages(interaction.client, interaction.guildId);

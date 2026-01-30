@@ -48,7 +48,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: ["Ephemeral"] });
 
             const minutes = interaction.options.getInteger("minutes") || 0;
             const seconds = interaction.options.getInteger("seconds") || 0;
@@ -65,7 +65,7 @@ export default {
                             "Please specify a duration of at least 1 second.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -78,7 +78,7 @@ export default {
                             "Countdown cannot be longer than 24 hours.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -138,7 +138,7 @@ export default {
                 if (!countdownData) {
                     await i.reply({
                         content: "This countdown has expired or was cancelled.",
-                        ephemeral: true,
+                        flags: ["Ephemeral"],
                     });
                     return;
                 }
@@ -147,7 +147,7 @@ export default {
                 if (!i.member.permissions.has("MANAGE_MESSAGES")) {
                     await i.reply({
                         content: 'You need the "Manage Messages" permission to control countdowns.',
-                        ephemeral: true,
+                        flags: ["Ephemeral"],
                     });
                     return;
                 }
@@ -169,7 +169,7 @@ export default {
 
                             await i.reply({
                                 content: "▶️ Countdown resumed!",
-                                ephemeral: true,
+                                flags: ["Ephemeral"],
                             });
                         } else {
                             // Pause the countdown
@@ -186,7 +186,7 @@ export default {
 
                             await i.reply({
                                 content: "⏸️ Countdown paused!",
-                                ephemeral: true,
+                                flags: ["Ephemeral"],
                             });
                         }
                         break;
@@ -209,7 +209,7 @@ export default {
 
                         await i.reply({
                             content: "❌ Countdown cancelled!",
-                            ephemeral: true,
+                            flags: ["Ephemeral"],
                         });
                         break;
                 }
@@ -222,7 +222,7 @@ export default {
 
             await interaction.editReply({
                 content: "✅ Countdown started!",
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         } catch (error) {
             console.error("Countdown command error:", error);
@@ -233,7 +233,7 @@ export default {
                         "Failed to start the countdown. Please try again.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
     },
@@ -249,7 +249,7 @@ export async function handleCountdownInteraction(interaction) {
     if (!countdownData) {
         await interaction.reply({
             content: "This countdown has expired or was cancelled.",
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
         return true;
     }
@@ -259,7 +259,7 @@ export async function handleCountdownInteraction(interaction) {
         await interaction.reply({
             content:
                 'You need the "Manage Messages" permission to control countdowns.',
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
         return true;
     }
@@ -282,7 +282,7 @@ export async function handleCountdownInteraction(interaction) {
 
                 await interaction.reply({
                     content: "▶️ Countdown resumed!",
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             } else {
                 // Pause the countdown
@@ -300,7 +300,7 @@ export async function handleCountdownInteraction(interaction) {
 
                 await interaction.reply({
                     content: "⏸️ Countdown paused!",
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
             break;
@@ -323,7 +323,7 @@ export async function handleCountdownInteraction(interaction) {
 
             await interaction.reply({
                 content: "❌ Countdown cancelled!",
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
             break;
     }

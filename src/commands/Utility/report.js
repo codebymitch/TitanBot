@@ -30,7 +30,7 @@ export default {
      * @param {import('discord.js').Client} client
      */
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true }); // The user's reply is private
+        await interaction.deferReply({ flags: ["Ephemeral"] }); // The user's reply is private
 
         const targetUser = interaction.options.getUser("user");
         const reason = interaction.options.getString("reason");

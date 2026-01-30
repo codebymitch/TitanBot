@@ -153,7 +153,7 @@ export default {
         if (!interaction.inGuild()) {
             return interaction.reply({
                 embeds: [errorEmbed("This command can only be used in a server.")],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -176,7 +176,7 @@ export default {
                         "You do not have permission to manage applications.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -200,7 +200,7 @@ export default {
                 embeds: [
                     errorEmbed("An error occurred while processing your request."),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
     }
@@ -217,7 +217,7 @@ async function handleSetup(interaction, settings) {
         if (!logChannel.isTextBased()) {
             return interaction.reply({
                 embeds: [errorEmbed("The log channel must be a text channel.")],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
         updates.logChannelId = logChannel.id;
@@ -292,7 +292,7 @@ async function showCurrentSettings(interaction, settings) {
 
     await interaction.reply({
         embeds: [embed],
-        ephemeral: true,
+        flags: ["Ephemeral"],
     });
 }
 
@@ -307,7 +307,7 @@ async function handleView(interaction) {
     if (!application) {
         return interaction.reply({
             embeds: [errorEmbed("Application not found.")],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     }
 
@@ -356,12 +356,12 @@ async function handleView(interaction) {
         await interaction.reply({
             embeds: [embed],
             components: [row],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     } else {
         await interaction.reply({
             embeds: [embed],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     }
 }
@@ -380,7 +380,7 @@ async function handleReview(interaction) {
     if (!application) {
         return interaction.reply({
             embeds: [errorEmbed("Application not found.")],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     }
 
@@ -389,7 +389,7 @@ async function handleReview(interaction) {
             embeds: [
                 errorEmbed("This application has already been processed."),
             ],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     }
 
@@ -475,7 +475,7 @@ async function handleReview(interaction) {
                 `The application has been ${status}.`,
             ),
         ],
-        ephemeral: true,
+        flags: ["Ephemeral"],
     });
 }
 
@@ -521,7 +521,7 @@ async function handleList(interaction) {
                 text: "Users can apply with /apply submit or see available roles with /apply list"
             });
 
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
         } else {
             return interaction.reply({
                 embeds: [
@@ -530,7 +530,7 @@ async function handleList(interaction) {
                         "Use `/app-admin roles add` to configure application roles first."
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
     }
@@ -563,7 +563,7 @@ async function handleList(interaction) {
 
     await interaction.reply({
         embeds: [embed],
-        ephemeral: true,
+        flags: ["Ephemeral"],
     });
 }
 
@@ -614,7 +614,7 @@ async function handleQuestions(interaction, settings) {
         if (newQuestions.length === 0) {
             return modalResponse.reply({
                 embeds: [errorEmbed("You must provide at least one question.")],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -635,7 +635,7 @@ async function handleQuestions(interaction, settings) {
                         newQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n"),
                 ),
             ],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     } catch (error) {
         if (error.message.includes("timeout")) {
@@ -658,7 +658,7 @@ async function handleRoles(interaction) {
             if (currentRoles.length === 0) {
                 return interaction.reply({
                     embeds: [errorEmbed("No application roles have been configured.")],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -676,14 +676,14 @@ async function handleRoles(interaction) {
                 });
             });
 
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
         }
 
         if (action === "add") {
             if (!role) {
                 return interaction.reply({
                     embeds: [errorEmbed("You must specify a role to add.")],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -693,7 +693,7 @@ async function handleRoles(interaction) {
             if (currentRoles.some(appRole => appRole.roleId === role.id)) {
                 return interaction.reply({
                     embeds: [errorEmbed("This role is already configured for applications.")],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -710,7 +710,7 @@ async function handleRoles(interaction) {
                     "Role Added",
                     `**${customName}** has been added to the application system.\nUsers can now apply for this role using \`/apply submit\`.`
                 )],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -718,7 +718,7 @@ async function handleRoles(interaction) {
             if (!role) {
                 return interaction.reply({
                     embeds: [errorEmbed("You must specify a role to remove.")],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -727,7 +727,7 @@ async function handleRoles(interaction) {
             if (roleIndex === -1) {
                 return interaction.reply({
                     embeds: [errorEmbed("This role is not configured for applications.")],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -740,14 +740,14 @@ async function handleRoles(interaction) {
                     "Role Removed",
                     `**${removedRole.name}** has been removed from the application system.`
                 )],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
     } catch (error) {
         console.error("Error handling roles command:", error);
         return interaction.reply({
             embeds: [errorEmbed("An error occurred while managing application roles.")],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     }
 }
@@ -768,14 +768,14 @@ export async function handleApplicationButton(interaction) {
         if (!application) {
             return interaction.reply({
                 embeds: [errorEmbed('Application not found.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
         
         if (application.status !== 'pending') {
             return interaction.reply({
                 embeds: [errorEmbed('This application has already been processed.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
         
@@ -787,7 +787,7 @@ export async function handleApplicationButton(interaction) {
         if (!isManager) {
             return interaction.reply({
                 embeds: [errorEmbed('You do not have permission to manage applications.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
         
@@ -812,7 +812,7 @@ export async function handleApplicationButton(interaction) {
         console.error('Error handling application button:', error);
         await interaction.reply({
             embeds: [errorEmbed('An error occurred while processing the application.')],
-            ephemeral: true
+            flags: ["Ephemeral"]
         });
     }
 }
@@ -834,7 +834,7 @@ export async function handleApplicationReviewModal(interaction) {
         if (!application) {
             return interaction.reply({
                 embeds: [errorEmbed('Application not found.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
         
@@ -908,14 +908,14 @@ export async function handleApplicationReviewModal(interaction) {
                     `The application has been ${status}.`
                 )
             ],
-            ephemeral: true
+            flags: ["Ephemeral"]
         });
         
     } catch (error) {
         console.error('Error processing application review:', error);
         await interaction.reply({
             embeds: [errorEmbed('An error occurred while processing the application.')],
-            ephemeral: true
+            flags: ["Ephemeral"]
         });
     }
 }

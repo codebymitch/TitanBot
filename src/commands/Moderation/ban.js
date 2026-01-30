@@ -24,7 +24,7 @@ export default {
     // Added client argument for logEvent
     async execute(interaction, config, client) {
         // Defer reply for the ban action
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         // Permission check is slightly redundant due to setDefaultMemberPermissions, but good practice
         if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers))

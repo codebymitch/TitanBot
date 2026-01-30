@@ -166,7 +166,7 @@ export default {
                         "This command can only be used inside a server.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -187,11 +187,11 @@ export default {
             );
 
             // Send initial reply
-            const replyMessage = await interaction.editReply({
+            const reply = await interaction.editReply({
                 embeds,
                 components,
-                fetchReply: true,
             });
+            const replyMessage = await reply.fetch();
 
             // --- Button Collector ---
             const collector = replyMessage.createMessageComponentCollector({
@@ -204,7 +204,7 @@ export default {
                 if (!i.customId.includes("_month")) {
                     return i.reply({
                         content: "Unknown action.",
-                        ephemeral: true,
+                        flags: ["Ephemeral"],
                     });
                 }
 

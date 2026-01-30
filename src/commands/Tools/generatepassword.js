@@ -28,7 +28,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: ["Ephemeral"] });
             
             const length = interaction.options.getInteger('length') || 16;
             const includeUppercase = interaction.options.getBoolean('uppercase') ?? true;
@@ -38,7 +38,7 @@ export default {
             if (length < 8 || length > 50) {
                 return interaction.editReply({
                     embeds: [errorEmbed('Error', 'Password length must be between 8 and 50 characters.')],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -141,7 +141,7 @@ export default {
             console.error('Generate Password command error:', error);
             await interaction.editReply({
                 embeds: [errorEmbed('Error', 'Failed to generate a password. Please try again.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     },

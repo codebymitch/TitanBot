@@ -23,7 +23,7 @@ export default {
       ],
       // Use the custom ActionRow with the defined button
       components: [actionRow],
-      ephemeral: true,
+      flags: ["Ephemeral"],
     });
   },
 };

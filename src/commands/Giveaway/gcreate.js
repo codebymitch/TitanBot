@@ -90,7 +90,7 @@ export default {
                         "This command can only be used in a server.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -106,7 +106,7 @@ export default {
                         "You need the 'Manage Server' permission to start a giveaway.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 

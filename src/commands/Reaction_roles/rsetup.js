@@ -51,7 +51,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: ["Ephemeral"] });
 
             const channel = interaction.options.getChannel('channel');
             const title = interaction.options.getString('title');

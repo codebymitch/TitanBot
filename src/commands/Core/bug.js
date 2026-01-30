@@ -22,7 +22,7 @@ const BUG_REPORT_WEBHOOK_URL =
     ),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: ["Ephemeral"] });
 
     const description = interaction.options.getString("description");
     const screenshot = interaction.options.getAttachment("screenshot");
@@ -61,7 +61,7 @@ const BUG_REPORT_WEBHOOK_URL =
         await interaction.followUp({
           content:
             "⚠️ The attached file is not a valid image. The bug report was sent without the attachment.",
-          ephemeral: true,
+          flags: ["Ephemeral"],
         });
       }
     }
@@ -84,14 +84,14 @@ const BUG_REPORT_WEBHOOK_URL =
       await interaction.followUp({
         content:
           "✅ Thank you for your bug report! It has been submitted to the developers.",
-        ephemeral: true,
+        flags: ["Ephemeral"],
       });
     } catch (error) {
       console.error("Error sending bug report:", error);
       await interaction.followUp({
         content:
           "❌ There was an error submitting your bug report. Please try again later or contact support directly.",
-        ephemeral: true,
+        flags: ["Ephemeral"],
       });
     }
   },

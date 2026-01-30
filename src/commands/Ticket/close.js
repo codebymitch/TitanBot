@@ -17,7 +17,7 @@ export default {
         ),
 
     async execute(interaction, guildConfig, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         const channel = interaction.channel;
         const reason =

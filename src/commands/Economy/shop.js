@@ -90,7 +90,7 @@ export default {
             if (buttonInteraction.user.id !== interaction.user.id) {
                 await buttonInteraction.followUp({
                     content: 'You cannot use these buttons. Run `/shop` to get your own shop view.',
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
                 return;
             }

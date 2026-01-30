@@ -27,7 +27,7 @@ export default {
                         "This command can only be used in a server.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -43,11 +43,11 @@ export default {
                         "You need the 'Manage Server' permission to delete a giveaway.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         const messageId = interaction.options.getString("messageid");
         const giveaways = await getGuildGiveaways(

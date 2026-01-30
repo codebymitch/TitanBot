@@ -31,7 +31,7 @@ export default {
     category: "Moderation",
 
     async execute(interaction, config) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         const targetUser = interaction.options.getUser("user");
         const message = interaction.options.getString("message");

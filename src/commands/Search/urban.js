@@ -21,7 +21,7 @@ export default {
             if (term.length < 2) {
                 return await interaction.reply({
                     embeds: [errorEmbed('Error', 'Please enter a term with at least 2 characters.')],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -30,7 +30,7 @@ export default {
             if (guildConfig?.disabledCommands?.includes('urban')) {
                 return await interaction.reply({
                     embeds: [errorEmbed('Command Disabled', 'The Urban Dictionary command is disabled in this server.')],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -101,7 +101,7 @@ export default {
             
             await interaction.reply({
                 embeds: [errorEmbed('Error', errorMessage)],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     },

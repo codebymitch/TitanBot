@@ -66,7 +66,7 @@ export default {
     category: "Leveling",
     
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
         
         try {
             const subcommand = interaction.options.getSubcommand();

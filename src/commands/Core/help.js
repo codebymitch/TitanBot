@@ -481,7 +481,7 @@ export default {
                         console.log(`[Help Command] Trying last resort with followUp...`);
                         await interaction.followUp({
                             embeds: [closedEmbed],
-                            ephemeral: true,
+                            flags: ["Ephemeral"],
                         });
                         console.log(`[Help Command] FollowUp successful`);
                     } catch (followUpError) {
@@ -583,7 +583,7 @@ export default {
                                     description: "An error occurred while processing your request."
                                 }),
                             ],
-                            ephemeral: true,
+                            flags: ["Ephemeral"],
                         })
                         .catch(console.error);
                 } else {
@@ -595,7 +595,7 @@ export default {
                                     description: "An error occurred while processing your request."
                                 }),
                             ],
-                            ephemeral: true,
+                            flags: ["Ephemeral"],
                         })
                         .catch(console.error);
                 }

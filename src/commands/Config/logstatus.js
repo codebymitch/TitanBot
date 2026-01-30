@@ -15,7 +15,7 @@ export default {
     category: "config",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         if (
             !interaction.member.permissions.has(

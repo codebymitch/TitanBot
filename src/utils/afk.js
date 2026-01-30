@@ -8,6 +8,11 @@ import { getAFKKey as getAFKKeyDb } from './database.js';
  * @returns {Promise<Object|null>} AFK data or null if not found
  */
 export async function getAFKStatus(client, guildId, userId) {
+    if (!client.db) {
+        console.warn('Database not available for getAFKStatus');
+        return null;
+    }
+    
     try {
         const key = getAFKKeyDb(guildId, userId);
         const data = await client.db.get(key);
@@ -27,6 +32,11 @@ export async function getAFKStatus(client, guildId, userId) {
  * @returns {Promise<boolean>} Whether the operation was successful
  */
 export async function setAFKStatus(client, guildId, userId, reason = 'AFK') {
+    if (!client.db) {
+        console.warn('Database not available for setAFKStatus');
+        return false;
+    }
+    
     try {
         const key = getAFKKeyDb(guildId, userId);
         const afkData = {
@@ -51,6 +61,11 @@ export async function setAFKStatus(client, guildId, userId, reason = 'AFK') {
  * @returns {Promise<boolean>} Whether the operation was successful
  */
 export async function removeAFKStatus(client, guildId, userId) {
+    if (!client.db) {
+        console.warn('Database not available for removeAFKStatus');
+        return false;
+    }
+    
     try {
         const key = getAFKKeyDb(guildId, userId);
         await client.db.delete(key);

@@ -507,6 +507,33 @@ export function getWelcomeConfigKey(guildId) {
  * @returns {Promise<Object>} The welcome system configuration
  */
 export async function getWelcomeConfig(client, guildId) {
+    if (!client.db) {
+        console.warn('Database not available for getWelcomeConfig');
+        return {
+            enabled: false,
+            channelId: null,
+            welcomeMessage: "Welcome {user.mention} to {server.name}!",
+            welcomeEmbed: {
+                title: "Welcome to {server.name}!",
+                description: "We're glad to have you here, {user.mention}!",
+                color: getColor('primary'),
+                thumbnail: true,
+                footer: "Enjoy your stay!"
+            },
+            goodbyeEnabled: false,
+            goodbyeChannelId: null,
+            goodbyeMessage: "Goodbye {user.mention}! We'll miss you.",
+            goodbyeEmbed: {
+                title: "Goodbye!",
+                description: "{user.mention} has left the server.",
+                color: getColor('error'),
+                footer: "Come back soon!"
+            },
+            autoRole: null,
+            delay: 1000
+        };
+    }
+    
     const key = getWelcomeConfigKey(guildId);
     try {
         const config = await client.db.get(key, {});
@@ -962,6 +989,20 @@ export function getApplicationKey(guildId, applicationId) {
  * @returns {Promise<Object>} The application settings
  */
 export async function getApplicationSettings(client, guildId) {
+    if (!client.db) {
+        console.warn('Database not available for getApplicationSettings');
+        return {
+            enabled: false,
+            applicationChannelId: null,
+            logChannelId: null,
+            questions: [
+                "Why do you want to join our staff team?",
+                "What experience do you have that would make you a good fit?",
+                "How much time can you dedicate to this role?"
+            ]
+        };
+    }
+    
     const key = getApplicationSettingsKey(guildId);
     try {
         const settings = await client.db.get(key, {});

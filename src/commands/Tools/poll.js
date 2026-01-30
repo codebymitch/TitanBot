@@ -60,7 +60,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: ["Ephemeral"] });
             
             const question = interaction.options.getString('question');
             const isAnonymous = interaction.options.getBoolean('anonymous') || false;
@@ -75,7 +75,7 @@ export default {
             if (options.length < 2) {
                 return interaction.editReply({
                     embeds: [errorEmbed('Error', 'You must provide at least 2 options for the poll.')],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -110,14 +110,14 @@ export default {
             
             await interaction.editReply({
                 content: '✅ Poll created successfully!',
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
             
         } catch (error) {
             console.error('Poll command error:', error);
             await interaction.editReply({
                 embeds: [errorEmbed('Error', 'Failed to create the poll. Please try again.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     },

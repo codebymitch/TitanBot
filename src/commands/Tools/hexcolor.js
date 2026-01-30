@@ -29,7 +29,7 @@ export default {
                 if (!/^[0-9A-Fa-f]{3,6}$/.test(hexColor)) {
                     return interaction.editReply({
                         embeds: [errorEmbed('Error', 'Please provide a valid hex color code (e.g., #FF5733 or FF5733)')],
-                        ephemeral: true
+                        flags: ["Ephemeral"]
                     });
                 }
                 
@@ -77,7 +77,7 @@ export default {
             console.error('Hexcolor command error:', error);
             await interaction.editReply({
                 embeds: [errorEmbed('Error', 'Failed to process the color. Please try again.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     },

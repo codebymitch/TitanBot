@@ -18,7 +18,7 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         const target = interaction.options.getUser("target");
         const guildId = interaction.guildId;

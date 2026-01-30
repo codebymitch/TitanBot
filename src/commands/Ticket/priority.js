@@ -26,7 +26,7 @@ export default {
     category: "Ticket",
 
     async execute(interaction, guildConfig, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         const priorityLevel = interaction.options.getString("level");
 

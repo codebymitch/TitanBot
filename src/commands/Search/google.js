@@ -27,7 +27,7 @@ export default {
             console.error('Error in google command:', error);
             await interaction.reply({ 
                 embeds: [errorEmbed('Error', 'Failed to process your search. Please try again later.')],
-                ephemeral: true 
+                flags: ["Ephemeral"] 
             });
         }
     },

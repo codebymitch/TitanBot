@@ -32,7 +32,7 @@ export default {
             if (!interaction.guild) {
                 return interaction.editReply({
                     embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -72,7 +72,7 @@ export default {
                 
                 return interaction.editReply({
                     embeds: [errorEmbed('No Users Found', errorMessage)],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -191,7 +191,7 @@ export default {
                     console.error('Button interaction error:', error);
                     await i.reply({
                         content: 'An error occurred while selecting another user.',
-                        ephemeral: true
+                        flags: ["Ephemeral"]
                     });
                 }
             });
@@ -209,7 +209,7 @@ export default {
             console.error('RandomUser command error:', error);
             await interaction.editReply({
                 embeds: [errorEmbed('Error', 'Failed to select a random user. Please try again.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     },

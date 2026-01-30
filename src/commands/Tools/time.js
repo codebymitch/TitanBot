@@ -35,7 +35,7 @@ export default {
             } catch (error) {
                 return interaction.editReply({
                     embeds: [errorEmbed('Error', 'Invalid timezone. Please use a valid timezone identifier (e.g., UTC, America/New_York, Europe/London)')],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -55,7 +55,7 @@ export default {
             console.error('Time command error:', error);
             await interaction.editReply({
                 embeds: [errorEmbed('Error', 'Failed to get the current time.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     },

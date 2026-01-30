@@ -21,7 +21,7 @@ export default {
     category: "utility",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ['Ephemeral'] });
 
         const reason = interaction.options.getString("reason") || "AFK";
         const remove = interaction.options.getBoolean("remove") || false;

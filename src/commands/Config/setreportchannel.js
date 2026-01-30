@@ -26,7 +26,7 @@ export default {
      * @param {import('discord.js').Client} client
      */
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true }); // Only staff sees the reply
+        await interaction.deferReply({ flags: ["Ephemeral"] }); // Only staff sees the reply
 
         const channel = interaction.options.getChannel("channel");
         const guildId = interaction.guildId;

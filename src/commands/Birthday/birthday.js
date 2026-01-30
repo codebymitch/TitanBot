@@ -106,7 +106,7 @@ export default {
                         "This command can only be used inside a server.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -129,7 +129,7 @@ export default {
                             "Please enter a valid month name (e.g., January, Jan) or number (1-12).",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -144,7 +144,7 @@ export default {
                             `The month of ${MONTHS[month - 1]} only has ${daysInMonth} days. Please check the day you entered.`,
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -159,7 +159,7 @@ export default {
                             `I have successfully set your birthday to **${day} ${MONTHS[month - 1]}**.`,
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             } catch (error) {
                 console.error(
@@ -173,7 +173,7 @@ export default {
                             "I couldn't save your birthday due to a database error.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
         }
@@ -194,7 +194,7 @@ export default {
                                 "Your birthday has been successfully removed from the server registry.",
                             ),
                         ],
-                        ephemeral: true,
+                        flags: ["Ephemeral"],
                     });
                 } else {
                     await interaction.reply({
@@ -204,7 +204,7 @@ export default {
                                 "You do not have a registered birthday to remove.",
                             ),
                         ],
-                        ephemeral: true,
+                        flags: ["Ephemeral"],
                     });
                 }
             } catch (error) {
@@ -219,7 +219,7 @@ export default {
                             "I couldn't remove your birthday due to a database error.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
         }

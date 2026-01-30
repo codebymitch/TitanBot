@@ -15,7 +15,7 @@ export default {
 
   async execute(interaction, config, client) {
     // Defer reply for potential API latency
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: ["Ephemeral"] });
 
     // Ensure user has permission
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))

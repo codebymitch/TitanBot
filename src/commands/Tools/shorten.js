@@ -23,7 +23,7 @@ export default {
     category: "Tools",
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         const url = interaction.options.getString("url");
         const custom = interaction.options.getString("custom");

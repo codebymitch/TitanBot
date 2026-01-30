@@ -97,7 +97,7 @@ export default {
                                 "The expression contains potentially dangerous code and cannot be evaluated.",
                             ),
                         ],
-                        ephemeral: true,
+                        flags: ["Ephemeral"],
                     });
                 }
             }
@@ -219,7 +219,7 @@ export default {
                             if (userHistory.length === 0) {
                                 await i.followUp({
                                     content: "No calculation history found.",
-                                    ephemeral: true,
+                                    flags: ["Ephemeral"],
                                 });
                                 return;
                             }
@@ -234,7 +234,7 @@ export default {
 
                             await i.followUp({
                                 content: `📜 **Your Calculation History**\n\n${historyText}`,
-                                ephemeral: true,
+                                flags: ["Ephemeral"],
                             });
                             return;
                         }
@@ -288,7 +288,7 @@ export default {
                                     .reply({
                                         content:
                                             "Failed to open calculator. Please try again.",
-                                        ephemeral: true,
+                                        flags: ["Ephemeral"],
                                     })
                                     .catch(console.error);
                             }
@@ -348,7 +348,7 @@ export default {
                             } catch (calcError) {
                                 await modalResponse.followUp({
                                     embeds: [errorEmbed("Calculation Error", "Failed to evaluate the new expression.")],
-                                    ephemeral: true,
+                                    flags: ["Ephemeral"],
                                 });
                             }
                         } catch (error) {
@@ -358,7 +358,7 @@ export default {
                                     .followUp({
                                         content:
                                             "An error occurred while processing your input.",
-                                        ephemeral: true,
+                                        flags: ["Ephemeral"],
                                     })
                                     .catch(console.error);
                             }
@@ -370,7 +370,7 @@ export default {
                                 .followUp({
                                     content:
                                         "An error occurred while processing your request.",
-                                    ephemeral: true,
+                                    flags: ["Ephemeral"],
                                 })
                                 .catch(console.error);
                         }
@@ -450,7 +450,7 @@ export default {
                         "An error occurred while processing your calculation.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
     },

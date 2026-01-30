@@ -40,7 +40,7 @@ export default {
             if (role.position >= guild.members.me.roles.highest.position) {
                 return interaction.reply({
                     content: "❌ I can't assign roles that are higher than my highest role.",
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
 
@@ -51,7 +51,7 @@ export default {
                 if (autoRoles.has(role.id)) {
                     return interaction.reply({
                         content: `❌ The role ${role} is already set to be auto-assigned.`,
-                        ephemeral: true
+                        flags: ["Ephemeral"]
                     });
                 }
 
@@ -65,12 +65,12 @@ export default {
 
                 await interaction.reply({
                     content: `✅ Added ${role} to auto-assigned roles.`,
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.reply({
                     content: '❌ An error occurred while adding the role.',
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
         } 
@@ -85,7 +85,7 @@ export default {
                 if (!autoRoles.has(role.id)) {
                     return interaction.reply({
                         content: `❌ The role ${role} is not set to be auto-assigned.`,
-                        ephemeral: true
+                        flags: ["Ephemeral"]
                     });
                 }
 
@@ -99,12 +99,12 @@ export default {
 
                 await interaction.reply({
                     content: `✅ Removed ${role} from auto-assigned roles.`,
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.reply({
                     content: '❌ An error occurred while removing the role.',
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
         }
@@ -117,7 +117,7 @@ export default {
                 if (autoRoles.length === 0) {
                     return interaction.reply({
                         content: 'ℹ️ No roles are set to be auto-assigned.',
-                        ephemeral: true
+                        flags: ["Ephemeral"]
                     });
                 }
 
@@ -147,7 +147,7 @@ export default {
                 if (validRoles.length === 0) {
                     return interaction.reply({
                         content: 'ℹ️ No valid auto-assigned roles found. Any invalid roles have been removed.',
-                        ephemeral: true
+                        flags: ["Ephemeral"]
                     });
                 }
 
@@ -160,13 +160,13 @@ export default {
 
                 await interaction.reply({
                     embeds: [embed],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
 
             } catch (error) {
                 await interaction.reply({
                     content: '❌ An error occurred while listing auto-assigned roles.',
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
         }

@@ -45,7 +45,7 @@ export default {
                             "The movie/TV show search command is disabled in this server.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -59,7 +59,7 @@ export default {
                             "Movie/TV show search is not properly configured.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -230,14 +230,14 @@ export default {
             await interaction
                 .editReply({
                     embeds: [errorEmbed("Error", errorMessage)],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 })
                 .catch(() => {
                     // If the interaction was already replied to, try a follow-up
                     interaction
                         .followUp({
                             embeds: [errorEmbed("Error", errorMessage)],
-                            ephemeral: true,
+                            flags: ["Ephemeral"],
                         })
                         .catch(console.error);
                 });

@@ -10,7 +10,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: ["Ephemeral"] });
             
             const now = new Date();
             const unixTimestamp = Math.floor(now.getTime() / 1000);
@@ -29,7 +29,7 @@ export default {
             console.error('Unixtime command error:', error);
             await interaction.editReply({
                 content: '❌ Failed to get the current Unix timestamp.',
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     },

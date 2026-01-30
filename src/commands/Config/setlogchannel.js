@@ -33,7 +33,7 @@ export default {
      * @param {import('discord.js').Client} client
      */
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         if (
             !interaction.member.permissions.has(

@@ -128,7 +128,7 @@ export default {
     category: "Fun",
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         const { member, options } = interaction;
         const activity = options.getSubcommand();

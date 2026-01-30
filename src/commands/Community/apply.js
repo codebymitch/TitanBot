@@ -49,7 +49,7 @@ export default {
         if (!interaction.inGuild()) {
             return interaction.reply({
                 embeds: [errorEmbed("This command can only be used in a server.")],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -69,7 +69,7 @@ export default {
                             "Applications are currently disabled in this server.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: ["Ephemeral"],
                 });
             }
 
@@ -86,7 +86,7 @@ export default {
                 embeds: [
                     errorEmbed("An error occurred while processing your request."),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
     }
@@ -108,7 +108,7 @@ export async function handleApplicationModal(interaction) {
     if (!applicationRole) {
         return interaction.reply({
             embeds: [errorEmbed('Application configuration not found.')],
-            ephemeral: true
+            flags: ["Ephemeral"]
         });
     }
     
@@ -117,7 +117,7 @@ export async function handleApplicationModal(interaction) {
     if (!role) {
         return interaction.reply({
             embeds: [errorEmbed('Role not found.')],
-            ephemeral: true
+            flags: ["Ephemeral"]
         });
     }
     
@@ -154,7 +154,7 @@ export async function handleApplicationModal(interaction) {
             `You can check the status with \`/apply status id:${application.id}\``
         );
         
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
         
         // Log the application if log channel is set
         const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
@@ -185,12 +185,12 @@ export async function handleApplicationModal(interaction) {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
                 embeds: [errorEmbed('Failed to submit application. Please try again later.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         } else {
             await interaction.reply({
                 embeds: [errorEmbed('Failed to submit application. Please try again later.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     }
@@ -203,7 +203,7 @@ async function handleList(interaction) {
         if (applicationRoles.length === 0) {
             return interaction.reply({
                 embeds: [errorEmbed("No applications are currently available.")],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
@@ -226,12 +226,12 @@ async function handleList(interaction) {
             text: "Use /apply submit application:<name> to apply for any of these roles."
         });
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
     } catch (error) {
         console.error('Error listing applications:', error);
         return interaction.reply({
             embeds: [errorEmbed('Failed to load applications. Please try again later.')],
-            ephemeral: true
+            flags: ["Ephemeral"]
         });
     }
 }
@@ -256,7 +256,7 @@ async function handleSubmit(interaction, settings) {
                     "Use `/apply list` to see available applications."
                 ),
             ],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     }
 
@@ -275,7 +275,7 @@ async function handleSubmit(interaction, settings) {
                     `You already have a pending application. Please wait for it to be reviewed.`,
                 ),
             ],
-            ephemeral: true,
+            flags: ["Ephemeral"],
         });
     }
 
@@ -284,7 +284,7 @@ async function handleSubmit(interaction, settings) {
     if (!role) {
         return interaction.reply({
             embeds: [errorEmbed('The role for this application no longer exists.')],
-            ephemeral: true
+            flags: ["Ephemeral"]
         });
     }
 
@@ -333,13 +333,13 @@ async function handleStatus(interaction) {
                         "Application not found or you do not have permission to view it.",
                     ),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
         const embed = createEmbed({ title: `Application #${application.id} - ${application.roleName}`, description: `**Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}` });
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
     } else {
         const applications = await getUserApplications(
             interaction.client,
@@ -352,12 +352,12 @@ async function handleStatus(interaction) {
                 embeds: [
                     errorEmbed("You have not submitted any applications yet."),
                 ],
-                ephemeral: true,
+                flags: ["Ephemeral"],
             });
         }
 
         const embed = createEmbed({ title: "Your Applications", description: "Here are your recent applications." });
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
     }
 }

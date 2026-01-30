@@ -80,7 +80,7 @@ export default {
             } catch (error) {
                 await interaction.reply({ 
                     content: '❌ An error occurred while setting up the welcome system.', 
-                    ephemeral: true 
+                    flags: ["Ephemeral"] 
                 });
             }
         } 
@@ -96,12 +96,12 @@ export default {
 
                 await interaction.reply({
                     content: `✅ Welcome messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.reply({ 
                     content: '❌ An error occurred while toggling welcome messages.', 
-                    ephemeral: true 
+                    flags: ["Ephemeral"] 
                 });
             }
         }

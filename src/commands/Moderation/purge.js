@@ -19,7 +19,7 @@ export default {
 
   async execute(interaction, config, client) {
     // Defer the reply ephemeral true initially so we can edit it and then delete it later
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: ["Ephemeral"] });
 
     // Ensure user has permission
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages))
@@ -103,7 +103,7 @@ export default {
             "An unexpected error occurred during message deletion. Note: Messages older than 14 days cannot be bulk deleted.",
           ),
         ],
-        ephemeral: true,
+        flags: ["Ephemeral"],
       });
     }
   },

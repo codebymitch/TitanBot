@@ -12,7 +12,7 @@ export default {
     category: "Utility",
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         try {
             // Fetch the first message in the channel

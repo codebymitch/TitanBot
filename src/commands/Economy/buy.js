@@ -40,7 +40,7 @@ export default {
 
     // Slash command execution
     async execute(interaction, config, client) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: ["Ephemeral"] });
 
         const userId = interaction.user.id;
         const guildId = interaction.guildId;

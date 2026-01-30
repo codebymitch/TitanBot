@@ -54,7 +54,7 @@ export default {
             if (!cleanNumber) {
                 return interaction.editReply({
                     embeds: [errorEmbed('Error', 'Please provide a valid number to convert.')],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -69,7 +69,7 @@ export default {
                         `The input is not a valid ${fromName} number. ` +
                         `Valid characters for ${fromBase} (${fromName}): ${alphabet}`
                     )],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -84,7 +84,7 @@ export default {
             } catch (error) {
                 return interaction.editReply({
                     embeds: [errorEmbed('Conversion Error', 'Failed to parse the input number. It may be too large or invalid.')],
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             }
             
@@ -165,7 +165,7 @@ export default {
             console.error('Baseconvert command error:', error);
             await interaction.editReply({
                 embeds: [errorEmbed('Error', 'An error occurred while converting the number. Please try again.')],
-                ephemeral: true
+                flags: ["Ephemeral"]
             });
         }
     },

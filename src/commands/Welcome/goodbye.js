@@ -78,7 +78,7 @@ export default {
             } catch (error) {
                 await interaction.reply({ 
                     content: '❌ An error occurred while setting up the goodbye system.', 
-                    ephemeral: true 
+                    flags: ["Ephemeral"] 
                 });
             }
         } 
@@ -94,12 +94,12 @@ export default {
 
                 await interaction.reply({
                     content: `✅ Goodbye messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
-                    ephemeral: true
+                    flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.reply({ 
                     content: '❌ An error occurred while toggling goodbye messages.', 
-                    ephemeral: true 
+                    flags: ["Ephemeral"] 
                 });
             }
         }
