@@ -60,6 +60,9 @@ export default {
           } else if (executeString.includes('interaction, client')) {
             // Commands expecting (interaction, client)
             await command.execute(interaction, client);
+          } else if (executeString.includes('interaction, config') || executeString.includes('interaction, guildConfig')) {
+            // Commands expecting (interaction, config) or (interaction, guildConfig)
+            await command.execute(interaction, guildConfig);
           } else {
             // Commands expecting (interaction) only - try with just interaction first
             await command.execute(interaction);
