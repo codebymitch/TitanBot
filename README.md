@@ -1,6 +1,46 @@
 # 🤖 TitanBot - Ultimate Discord Bot
 
-**TitanBot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and Redis for optimal performance.
+**TitanBot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and PostgreSQL for optimal performance and data persistence.
+
+## 📚 Table of Contents
+
+- [🌟 Features Overview](#-features-overview)
+  - [🛡️ Moderation & Administration](#️-moderation--administration)
+  - [💰 Economy System](#-economy-system)
+  - [🎮 Fun & Entertainment](#-fun--entertainment)
+  - [📊 Leveling & XP System](#-leveling--xp-system)
+  - [🎫 Advanced Ticket System](#-advanced-ticket-system)
+  - [🎉 Giveaways & Events](#-giveaways--events)
+  - [🎂 Birthday System](#-birthday-system)
+  - [🔧 Utility Tools](#-utility-tools)
+  - [👋 Welcome System](#-welcome-system)
+  - [🔢 Server Counters](#-server-counters)
+  - [🎭 Reaction Roles](#-reaction-roles)
+- [🚀 Quick Setup](#-quick-setup)
+  - [Prerequisites](#prerequisites)
+  - [Installation Steps](#installation-steps)
+  - [📹 Video Tutorial](#-video-tutorial)
+- [🗄️ Database System](#️-database-system)
+  - [PostgreSQL Features](#postgresql-features)
+  - [Fallback System](#fallback-system)
+  - [Database Migration](#database-migration)
+- [🌐 Support Server](#-support-server)
+- [🏗️ Bot Architecture](#-bot-architecture)
+  - [Technology Stack](#technology-stack)
+  - [Bot Intents](#bot-intents)
+  - [Required Permissions](#required-permissions)
+- [📊 Performance & Monitoring](#-performance--monitoring)
+  - [Built-in Monitoring](#built-in-monitoring)
+  - [Logging System](#logging-system)
+- [🤝 Contributing](#-contributing)
+  - [Development Guidelines](#development-guidelines)
+- [🆕 Recent Updates](#-recent-updates)
+  - [Database Migration](#database-migration-1)
+  - [Ticket System Enhancements](#ticket-system-enhancements)
+  - [New Commands](#new-commands)
+- [📚 Additional Documentation](#-additional-documentation)
+- [📜 License](#-license)
+- [💌 Thank You](#-thank-you)
 
 ## 🌟 Features Overview
 
@@ -11,18 +51,23 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 - Advanced case management and warning system
 - Automated moderation with configurable rules
 - Server lockdown and purge capabilities
+- Mass moderation tools (massban, masskick)
+- User notes and reputation system
+- Advanced ban management with unban support
 
 ### 💰 **Economy System**
 - Full-featured economy with coins, banking, and trading
 - Work, crime, beg, and gambling activities
 - Interactive shop system with customizable items
 - Economy leaderboards and statistics
+- User transaction tracking and history
 
 ### 🎮 **Fun & Entertainment**
 - Interactive games and activities
 - Ship, fight, roll, and other fun commands
 - Mock text, reverse text, and meme generation
 - Wanted poster creation
+- Adult content commands (18+)
 
 ### 📊 **Leveling & XP System**
 - Automatic XP gain for active participation
@@ -30,11 +75,14 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 - Server and user statistics tracking
 - Leaderboards and achievements
 
-### 🎫 **Ticket System**
+### 🎫 **Advanced Ticket System**
 - Advanced ticket management with priorities
 - Custom ticket categories and workflows
 - Automated ticket archiving and logging
 - Support team role management
+- **NEW**: Maximum ticket limits per user
+- **NEW**: DM notifications on ticket closure
+- **NEW**: HTML transcript generation with embed preview
 
 ### 🎉 **Giveaways & Events**
 - Automated giveaway creation and management
@@ -77,7 +125,7 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 
 ### Prerequisites
 - Node.js 18.0.0 or higher
-- Redis server (optional, falls back to memory storage)
+- PostgreSQL server (recommended) or memory storage fallback
 - Discord bot application with proper intents
 
 ### Installation Steps
@@ -99,14 +147,43 @@ TitanBot offers a complete suite of tools for Discord server management and comm
    ```
    Edit `.env` with your configuration:
    ```env
-   TOKEN=your_discord_bot_token
-   CLIENT_ID=your_bot_client_id
-   GUILD_ID=your_server_id (optional for testing)
-   REDIS_URL=redis://localhost:6379 (optional)
-   OWNER_IDS=your_discord_user_id,other_owner_id
+   # Discord Bot Configuration
+   DISCORD_TOKEN=your_discord_bot_token_here
+   CLIENT_ID=your_discord_client_id_here
+   GUILD_ID=your_discord_guild_id_here
+
+   # PostgreSQL Configuration (Recommended)
+   POSTGRES_URL=postgresql://titanbot:yourpassword@localhost:5432/titanbot
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_DB=titanbot
+   POSTGRES_USER=titanbot
+   POSTGRES_PASSWORD=yourpassword
+   POSTGRES_SSL=false
+
+   # Migration Settings
+   AUTO_MIGRATE=false
+
+   # Bot Configuration
+   NODE_ENV=development
+   LOG_LEVEL=info
    ```
 
-4. **Start the Bot**
+4. **Setup PostgreSQL Database** (Optional but recommended)
+   ```bash
+   # Create database and user
+   createdb titanbot
+   createuser titanbot
+   psql -c "ALTER USER titanbot PASSWORD 'yourpassword';"
+   psql -c "GRANT ALL PRIVILEGES ON DATABASE titanbot TO titanbot;"
+   ```
+
+5. **Test Database Connection**
+   ```bash
+   npm run test-postgres
+   ```
+
+6. **Start the Bot**
    ```bash
    npm start
    ```
@@ -117,19 +194,29 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 
 ## 🗄️ Database System
 
-TitanBot uses **Redis** as its primary database with intelligent fallback to memory storage:
+TitanBot uses **PostgreSQL** as its primary database with intelligent fallback to memory storage:
 
-### Redis Features
-- **High Performance**: Blazing fast data operations
-- **Persistence**: Data survives bot restarts
-- **Atomic Operations**: Reliable counter increments/decrements
-- **TTL Support**: Automatic key expiration
+### PostgreSQL Features
+- **ACID Compliance**: Reliable transactions and data integrity
+- **High Performance**: Optimized queries and connection pooling
+- **Persistence**: Data survives bot restarts and crashes
+- **Complex Queries**: Advanced data analysis capabilities
+- **Scalability**: Better performance for large datasets
+- **TTL Support**: Automatic key expiration for temporary data
 - **Connection Management**: Automatic reconnection with exponential backoff
+- **Migration System**: Version-controlled schema updates
 
 ### Fallback System
-- **Memory Storage**: Automatic fallback when Redis is unavailable
-- **Graceful Degradation**: Bot continues functioning without Redis
+- **Memory Storage**: Automatic fallback when PostgreSQL is unavailable
+- **Graceful Degradation**: Bot continues functioning without database
 - **Backward Compatibility**: Maintains existing API structure
+- **Zero Downtime**: Seamless switching between database and memory
+
+### Database Migration
+- **Automatic Migrations**: Built-in schema versioning
+- **Rollback Support**: Safe migration with rollback capability
+- **Data Integrity**: Comprehensive validation and verification
+- **Performance Monitoring**: Migration progress tracking
 
 ## 🌐 Support Server
 
@@ -148,9 +235,10 @@ Need help with TitanBot? Join our support community!
 ### Technology Stack
 - **Discord.js v14** - Modern Discord API wrapper
 - **Node.js 18+** - JavaScript runtime environment
-- **Redis** - High-performance database
+- **PostgreSQL** - High-performance relational database
 - **Express.js** - Web server for health checks
 - **Winston** - Advanced logging system
+- **Node-cron** - Scheduled task management
 
 ### Bot Intents
 TitanBot requires the following Discord intents:
@@ -181,13 +269,15 @@ TitanBot requires the following Discord intents:
 - **Health Checks**: Web server endpoint at `/`
 - **Performance Metrics**: Command execution times
 - **Error Tracking**: Comprehensive error logging
-- **Database Monitoring**: Redis connection status
+- **Database Monitoring**: PostgreSQL connection status and performance
+- **Query Optimization**: Efficient database operations
 
 ### Logging System
 - **Daily Rotation**: Automatic log file rotation
 - **Multiple Levels**: Error, warn, info, debug
 - **Structured Logs**: JSON format for easy parsing
 - **Performance Tracking**: Command and event timing
+- **Database Logs**: Connection and query performance
 
 ## 🤝 Contributing
 
@@ -203,7 +293,36 @@ We welcome contributions to TitanBot! Here's how you can help:
 - Follow existing code style
 - Add proper error handling
 - Include documentation for new features
-- Test with Redis and memory storage
+- Test with PostgreSQL and memory storage
+- Ensure database migrations are properly handled
+
+## 🆕 Recent Updates
+
+### Database Migration
+- **PostgreSQL Integration**: Complete migration from Redis to PostgreSQL
+- **Enhanced Performance**: Better query optimization and indexing
+- **Data Integrity**: ACID compliance and proper relationships
+- **Backup Support**: Standard database backup and restore tools
+
+### Ticket System Enhancements
+- **User Limits**: Configurable maximum tickets per user
+- **DM Notifications**: Automatic DM when tickets are closed
+- **Transcript Improvements**: HTML transcripts with embed preview
+- **Better UX**: Enhanced user feedback and error handling
+
+### New Commands
+- **`/ticketlimits`**: Manage ticket limits and settings
+- **`/ticketlimits view`**: View current ticket configuration
+- **`/ticketlimits set`**: Set maximum tickets per user
+- **`/ticketlimits check`**: Check user's ticket count
+- **`/ticketlimits toggle_dm`**: Toggle DM notifications
+
+## 📚 Additional Documentation
+
+- **[PostgreSQL Setup Guide](README-POSTGRESQL.md)** - Detailed database configuration
+- **[Command Reference](docs/commands.md)** - Complete command documentation
+- **[API Documentation](docs/api.md)** - Bot API and integration guide
+- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
 
 ## 📜 License
 

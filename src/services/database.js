@@ -1,14 +1,10 @@
 import { pgDb } from '../utils/postgresDatabase.js';
-import { redisDb } from '../utils/redisDatabase.js';
 import { logger } from '../utils/logger.js';
 
 // Initialize database
 let db = null;
 let useFallback = false;
 let connectionType = 'none';
-
-// Check if we're in a Replit environment (for backward compatibility)
-const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
 
 // Async database initialization
 async function initializeServicesDatabase() {
@@ -303,7 +299,6 @@ export async function saveWelcomeConfig(client, guildId, config) {
 export default {
   db,
   pgDb,
-  redisDb,
   initializeServicesDatabase,
   getConnectionType: () => connectionType,
   useFallback: () => useFallback

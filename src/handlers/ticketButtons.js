@@ -10,6 +10,24 @@ const createTicketHandler = {
     try {
       const config = await getGuildConfig(client, interaction.guildId);
       const categoryId = config.ticketCategoryId || null;
+      const maxTicketsPerUser = config.maxTicketsPerUser || 3;
+      
+      // Check user's current ticket count
+      const { getUserTicketCount } = await import('../services/ticket.js');
+      const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
+      const remainingTickets = maxTicketsPerUser - currentTicketCount;
+      
+      if (currentTicketCount >= maxTicketsPerUser) {
+        return interaction.reply({
+          embeds: [
+            errorEmbed(
+              '🎫 Ticket Limit Reached',
+              `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets before creating a new one.\n\n**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}`
+            )
+          ],
+          ephemeral: true
+        });
+      }
       
       // Create a modal for ticket reason
       const modal = new ModalBuilder()
@@ -258,10 +276,10 @@ const transcriptTicketHandler = {
 </head>
 <body>
     <div class="header">
-        <h1>� Ticket Transcript</h1>
+        <h1>🎫 Ticket Transcript</h1>
         <p><strong>Channel:</strong> ${interaction.channel.name}</p>
         <p><strong>Created:</strong> <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F></p>
-        <p><strong>Generated:</strong> <t:${Math.floor(Date.now() / 1000)}:F></p>
+        <p><strong>Generated:</strong> 📅 <t:${Math.floor(Date.now() / 1000)}:F></p>
         <p><strong>Messages:</strong> ${sortedMessages.length}</p>
     </div>
 `;
@@ -295,13 +313,46 @@ const transcriptTicketHandler = {
 </body>
 </html>`;
       
-      // Send HTML file as DM
+      // Create embed with HTML content
+      const transcriptEmbed = createEmbed({
+        title: `📜 Ticket Transcript - ${interaction.channel.name}`,
+        description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** 📅 <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}`,
+        color: 0x3498db,
+        footer: { text: `Ticket ID: ${interaction.channel.id}` }
+      });
+      
+      // Add HTML content as embed fields
+      let htmlContent = '';
+      let fieldCount = 0;
+      const maxFields = 20; // Discord embed limit
+      
+      // Split HTML content into manageable chunks
+      const chunkSize = 900; // Leave room for field name and formatting
+      const htmlChunks = [];
+      
+      for (let i = 0; i < htmlTranscript.length; i += chunkSize) {
+        htmlChunks.push(htmlTranscript.substring(i, i + chunkSize));
+      }
+      
+      // Add HTML chunks as code blocks in embed fields
+      for (let i = 0; i < htmlChunks.length && fieldCount < maxFields; i++) {
+        transcriptEmbed.addFields({
+          name: `HTML Transcript Part ${i + 1}`,
+          value: `\`\`\`\n${htmlChunks[i]}\n\`\`\``,
+          inline: false
+        });
+        fieldCount++;
+      }
+      
+      // Send both HTML file and embed
       const { Buffer } = await import('buffer');
       const buffer = Buffer.from(htmlTranscript, 'utf-8');
       
       try {
+        // Send DM with both embed and HTML file
         await interaction.user.send({
           content: `📜 **Ticket Transcript** for \`${interaction.channel.name}\``,
+          embeds: [transcriptEmbed],
           files: [{
             attachment: buffer,
             name: `ticket-transcript-${interaction.channel.name}.html`
@@ -311,7 +362,7 @@ const transcriptTicketHandler = {
         await interaction.editReply({
           embeds: [{
             title: '✅ Transcript Sent',
-            description: 'The ticket transcript has been sent to your DMs as an HTML file.',
+            description: 'The ticket transcript has been sent to your DMs as both an embed and an HTML file.',
             color: 4689679 // 0x2ecc71 in decimal
           }],
           ephemeral: true

@@ -34,10 +34,10 @@ This document outlines the complete migration from Redis to PostgreSQL for the T
 - **Health Monitoring**: Connection status and performance metrics
 
 ### Fallback System
-- **Two-tier Fallback**: PostgreSQL > Memory storage
+- **Single-tier Fallback**: PostgreSQL > Memory storage
 - **Graceful Degradation**: Bot continues functioning if PostgreSQL is unavailable
-- **Backward Compatibility**: Maintains existing Redis API
-- **Automatic Migration**: Built-in data migration from Redis to PostgreSQL
+- **Backward Compatibility**: Maintains existing database API
+- **Automatic Migration**: Built-in data migration from legacy systems
 
 ## Configuration
 
@@ -123,12 +123,6 @@ await db.set('temp', 'data', 3600); // expires in 1 hour
 // Check database connection type
 const connectionType = db.getConnectionType(); // 'postgresql' or 'memory'
 
-// Migrate from Redis to PostgreSQL
-if (connectionType === 'postgresql') {
-    const success = await db.migrateFromRedis();
-    console.log('Migration success:', success);
-}
-
 // Run database migrations
 const migrationSuccess = await db.runMigrations();
 
@@ -158,12 +152,7 @@ POSTGRES_URL=postgresql://titanbot:yourpassword@localhost:5432/titanbot
 npm run test-postgres
 ```
 
-### Step 4: Migrate Data (if coming from Redis)
-```bash
-npm run migrate-redis-to-postgres
-```
-
-### Step 5: Start the Bot
+### Step 4: Start the Bot
 ```bash
 npm start
 ```
@@ -172,15 +161,7 @@ npm start
 
 ### Available NPM Scripts
 - `npm run test-postgres` - Test PostgreSQL connection and operations
-- `npm run migrate-redis-to-postgres` - Migrate data from Redis to PostgreSQL
 - `npm start` - Start the bot with PostgreSQL priority
-
-### Migration Script Features
-- **Progress Tracking**: Real-time migration progress
-- **Data Integrity**: Verification of migrated data
-- **Error Handling**: Comprehensive error reporting
-- **Rollback Support**: Ability to retry failed migrations
-- **Performance Optimization**: Batch processing for large datasets
 
 ## Performance
 
@@ -230,14 +211,13 @@ The system includes automatic health monitoring:
 Key log messages to watch for:
 - `✅ PostgreSQL Database initialized` - Successful connection
 - `Using memory storage as fallback` - PostgreSQL unavailable
-- `Migration completed` - Successful data migration
 - `Health check failed` - Connection issues
 
 ## Backward Compatibility
 
 The migration maintains full backward compatibility:
 - All existing database functions work unchanged
-- Redis API compatibility preserved for memory storage
+- Database API compatibility preserved
 - No breaking changes to the bot's functionality
 - Automatic fallback ensures continuous operation
 

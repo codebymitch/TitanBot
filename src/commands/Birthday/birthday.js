@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { getGuildBirthdays, setBirthday } from '../../utils/database.js';
+import { getGuildBirthdays, setBirthday, deleteBirthday } from '../../utils/database.js';
 
 const MONTHS = [
     "January",

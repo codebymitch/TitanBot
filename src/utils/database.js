@@ -1,5 +1,4 @@
 import { pgDb } from './postgresDatabase.js';
-import { redisDb } from './redisDatabase.js';
 import { MemoryStorage } from './memoryStorage.js';
 import { migrationManager } from './migrations.js';
 import { logger } from './logger.js';
@@ -9,9 +8,6 @@ import { BotConfig } from '../config/bot.js';
 let db = null;
 let useFallback = false;
 let connectionType = 'none';
-
-// Check if we're in a Replit environment (for backward compatibility)
-const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
 
 // Database preference order: PostgreSQL > Memory
 async function initializeDatabaseConnection() {
@@ -121,47 +117,12 @@ class DatabaseWrapper {
         return connectionType;
     }
 
-    async migrateFromRedis() {
+    async migrateFromPostgres() {
         if (connectionType === 'postgresql') {
-            logger.info('Starting migration from Redis to PostgreSQL...');
-            
-            try {
-                // Ensure Redis is connected
-                const redisConnected = await redisDb.connect();
-                if (!redisConnected) {
-                    logger.error('Redis not available for migration');
-                    return false;
-                }
-
-                // Get all Redis keys
-                const allKeys = await redisDb.client.keys('*');
-                logger.info(`Found ${allKeys.length} keys to migrate`);
-
-                let migrated = 0;
-                let failed = 0;
-
-                for (const key of allKeys) {
-                    try {
-                        const value = await redisDb.get(key);
-                        const ttl = await redisDb.ttl(key);
-                        
-                        // Set in PostgreSQL with TTL if applicable
-                        await pgDb.set(key, value, ttl > 0 ? ttl : null);
-                        migrated++;
-                    } catch (error) {
-                        logger.error(`Failed to migrate key ${key}:`, error);
-                        failed++;
-                    }
-                }
-
-                logger.info(`Migration completed: ${migrated} keys migrated, ${failed} failed`);
-                return failed === 0;
-            } catch (error) {
-                logger.error('Migration from Redis failed:', error);
-                return false;
-            }
+            logger.info('PostgreSQL is already the primary database. No migration needed.');
+            return true;
         } else {
-            logger.warn('Not connected to PostgreSQL, cannot migrate from Redis');
+            logger.warn('Not connected to PostgreSQL, cannot migrate.');
             return false;
         }
     }
@@ -334,7 +295,7 @@ export async function setGuildConfig(client, guildId, config) {
 }
 
 // Export database wrapper and utilities
-export { DatabaseWrapper, pgDb, redisDb };
+export { DatabaseWrapper, pgDb };
 
 // Export message helper
 export const getMessage = (key, replacements = {}) => {

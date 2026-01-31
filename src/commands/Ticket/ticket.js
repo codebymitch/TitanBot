@@ -51,6 +51,20 @@ export default {
                         )
                         .addChannelTypes(ChannelType.GuildCategory)
                         .setRequired(false),
+                )
+                .addIntegerOption((option) =>
+                    option
+                        .setName("max_tickets_per_user")
+                        .setDescription("Maximum number of tickets a user can create (default: 3)")
+                        .setMinValue(1)
+                        .setMaxValue(10)
+                        .setRequired(false),
+                )
+                .addBooleanOption((option) =>
+                    option
+                        .setName("dm_on_close")
+                        .setDescription("Send DM to user when their ticket is closed (default: true)")
+                        .setRequired(false),
                 ),
         ),
     category: "ticket",
@@ -82,10 +96,12 @@ export default {
             const buttonLabel =
                 interaction.options.getString("button_label") ||
                 "Create Ticket"; // <-- New
+            const maxTicketsPerUser = interaction.options.getInteger("max_tickets_per_user") || 3;
+            const dmOnClose = interaction.options.getBoolean("dm_on_close") !== false; // Default to true
 
             const setupEmbed = createEmbed({ 
                 title: "🎫 Support Tickets", 
-                description: panelMessage,
+                description: `${panelMessage}\n\n**Max Tickets Per User:** ${maxTicketsPerUser}`,
                 color: "#3498DB"
             });
 
@@ -112,13 +128,14 @@ export default {
                     );
                     // Save the ID of the category channel
                     currentConfig.ticketCategoryId = categoryChannel.id;
-
                     currentConfig.ticketPanelChannelId = panelChannel.id;
+                    currentConfig.maxTicketsPerUser = maxTicketsPerUser;
+                    currentConfig.dmOnClose = dmOnClose;
 
                     // Save the updated configuration to the database
                     await client.db.set(interaction.guildId, currentConfig);
                     console.log(
-                        `[DB] Saved ticketCategoryId and ticketPanelChannelId for guild ${interaction.guildId}`,
+                        `[DB] Saved ticketCategoryId, ticketPanelChannelId, maxTicketsPerUser, and dmOnClose for guild ${interaction.guildId}`,
                     );
                 }
 
@@ -127,7 +144,7 @@ export default {
                     embeds: [
                         successEmbed(
                             "Ticket Panel Set Up",
-                            `The ticket creation panel has been sent to ${panelChannel}. ${categoryChannel ? `New tickets will be created in the **${categoryChannel.name}** category.` : 'New tickets will be created in a new "Tickets" category.'}`,
+                            `The ticket creation panel has been sent to ${panelChannel}. ${categoryChannel ? `New tickets will be created in the **${categoryChannel.name}** category.` : 'New tickets will be created in a new "Tickets" category.'}\n\n**Max Tickets Per User:** ${maxTicketsPerUser}\n**DM on Close:** ${dmOnClose ? 'Enabled' : 'Disabled'}`,
                         ),
                     ],
                 });
@@ -149,6 +166,16 @@ export default {
                             value: categoryChannel
                                 ? categoryChannel.id
                                 : "None specified.",
+                            inline: true,
+                        },
+                        {
+                            name: "Max Tickets Per User",
+                            value: maxTicketsPerUser.toString(),
+                            inline: true,
+                        },
+                        {
+                            name: "DM on Close",
+                            value: dmOnClose ? 'Enabled' : 'Disabled',
                             inline: true,
                         },
                         {

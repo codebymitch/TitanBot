@@ -1,0 +1,189 @@
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { logModerationAction } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
+
+export default {
+    data: new SlashCommandBuilder()
+        .setName("masskick")
+        .setDescription("Kick multiple users from the server at once")
+        .addStringOption(option =>
+            option
+                .setName("users")
+                .setDescription("User IDs or mentions to kick (separated by spaces or commas)")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName("reason")
+                .setDescription("Reason for the mass kick")
+                .setRequired(false)
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
+    category: "moderation",
+
+    async execute(interaction, config, client) {
+        await interaction.deferReply({ flags: ["Ephemeral"] });
+
+        // Permission check
+        if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
+            return interaction.editReply({
+                embeds: [
+                    errorEmbed(
+                        "Permission Denied",
+                        "You do not have permission to kick members."
+                    ),
+                ],
+            });
+        }
+
+        const usersInput = interaction.options.getString("users");
+        const reason = interaction.options.getString("reason") || "Mass kick - No reason provided";
+
+        try {
+            // Parse user IDs from input
+            const userIds = usersInput
+                .replace(/<@!?(\d+)>/g, '$1') // Replace mentions with just IDs
+                .split(/[\s,]+/) // Split by spaces or commas
+                .filter(id => id && /^\d+$/.test(id)) // Filter valid IDs
+                .slice(0, 20); // Limit to 20 users at once
+
+            if (userIds.length === 0) {
+                return interaction.editReply({
+                    embeds: [
+                        errorEmbed(
+                            "Invalid Users",
+                            "Please provide valid user IDs or mentions. Maximum 20 users at once."
+                        ),
+                    ],
+                });
+            }
+
+            // Prevent self-kicking
+            if (userIds.includes(interaction.user.id)) {
+                return interaction.editReply({
+                    embeds: [
+                        errorEmbed(
+                            "Cannot Kick Self",
+                            "You cannot include yourself in a mass kick."
+                        ),
+                    ],
+                });
+            }
+
+            // Prevent bot-kicking
+            if (userIds.includes(client.user.id)) {
+                return interaction.editReply({
+                    embeds: [
+                        errorEmbed(
+                            "Cannot Kick Bot",
+                            "You cannot include the bot in a mass kick."
+                        ),
+                    ],
+                });
+            }
+
+            const results = {
+                successful: [],
+                failed: [],
+                skipped: []
+            };
+
+            // Process each user
+            for (const userId of userIds) {
+                try {
+                    // Try to fetch the guild member
+                    const member = await interaction.guild.members.fetch(userId).catch(() => null);
+                    
+                    if (!member) {
+                        results.failed.push({ userId, reason: "User not in server" });
+                        continue;
+                    }
+
+                    // Check if user can be kicked (hierarchy check)
+                    if (member.roles.highest.position >= interaction.member.roles.highest.position && 
+                        interaction.guild.ownerId !== interaction.user.id) {
+                        results.skipped.push({ 
+                            user: member.user.tag, 
+                            userId, 
+                            reason: "Cannot kick user with equal or higher role" 
+                        });
+                        continue;
+                    }
+
+                    // Kick the user
+                    await member.kick(reason);
+
+                    results.successful.push({
+                        user: member.user.tag,
+                        userId
+                    });
+
+                    // Log the action
+                    await logModerationAction(
+                        client,
+                        interaction.guild,
+                        interaction.user,
+                        member.user,
+                        "MASS_KICK",
+                        reason
+                    );
+
+                } catch (error) {
+                    logger.error(`Failed to kick user ${userId}:`, error);
+                    results.failed.push({ 
+                        userId, 
+                        reason: error.message || "Unknown error" 
+                    });
+                }
+            }
+
+            // Create result embed
+            let description = `**Mass Kick Results:**\n\n`;
+            
+            if (results.successful.length > 0) {
+                description += `✅ **Successfully Kicked (${results.successful.length}):**\n`;
+                results.successful.forEach(result => {
+                    description += `• ${result.user} (${result.userId})\n`;
+                });
+                description += '\n';
+            }
+
+            if (results.skipped.length > 0) {
+                description += `⚠️ **Skipped (${results.skipped.length}):**\n`;
+                results.skipped.forEach(result => {
+                    description += `• ${result.user} - ${result.reason}\n`;
+                });
+                description += '\n';
+            }
+
+            if (results.failed.length > 0) {
+                description += `❌ **Failed (${results.failed.length}):**\n`;
+                results.failed.forEach(result => {
+                    description += `• ${result.userId} - ${result.reason}\n`;
+                });
+            }
+
+            const embed = results.successful.length > 0 ? successEmbed : warningEmbed;
+            
+            return interaction.editReply({
+                embeds: [
+                    embed(
+                        `👢 Mass Kick Completed`,
+                        description
+                    )
+                ]
+            });
+
+        } catch (error) {
+            logger.error("Error in masskick command:", error);
+            return interaction.editReply({
+                embeds: [
+                    errorEmbed(
+                        "System Error",
+                        "An error occurred while processing the mass kick. Please try again later."
+                    ),
+                ],
+            });
+        }
+    }
+};

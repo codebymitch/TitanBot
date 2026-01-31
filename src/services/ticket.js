@@ -20,10 +20,51 @@ const PRIORITY_MAP = {
   urgent: { name: '🔴 URGENT', color: '#e74c3c', emoji: '🔴', label: 'Urgent' }
 };
 
+/**
+ * Count the number of open tickets for a user in a guild
+ */
+async function getUserTicketCount(guildId, userId) {
+  try {
+    // Get all ticket keys for this guild
+    const ticketKeys = await getFromDb(`guild:${guildId}:ticket:*`, {});
+    const allKeys = Object.keys(ticketKeys);
+    
+    let userTicketCount = 0;
+    
+    for (const key of allKeys) {
+      try {
+        const ticketData = await getFromDb(key, null);
+        if (ticketData && ticketData.userId === userId && ticketData.status === 'open') {
+          userTicketCount++;
+        }
+      } catch (error) {
+        // Skip invalid tickets
+        continue;
+      }
+    }
+    
+    return userTicketCount;
+  } catch (error) {
+    logger.error('Error counting user tickets:', error);
+    return 0;
+  }
+}
+
 export async function createTicket(guild, member, categoryId, reason = 'No reason provided', priority = 'none') {
   try {
     const config = await getGuildConfig({}, guild.id);
     const ticketConfig = config.tickets || {};
+    
+    // Check ticket limit
+    const maxTicketsPerUser = config.maxTicketsPerUser || 3;
+    const currentTicketCount = await getUserTicketCount(guild.id, member.id);
+    
+    if (currentTicketCount >= maxTicketsPerUser) {
+      return {
+        success: false,
+        error: `You have reached the maximum number of open tickets (${maxTicketsPerUser}). Please close your existing tickets before creating a new one.`
+      };
+    }
     
     // Get or create ticket category
     let category = categoryId ? 
@@ -179,6 +220,10 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
       return { success: false, error: 'This is not a ticket channel' };
     }
     
+    // Get guild config to check DM setting
+    const config = await getGuildConfig({}, channel.guild.id);
+    const dmOnClose = config.dmOnClose !== false; // Default to true
+    
     // Update ticket data
     ticketData.status = 'closed';
     ticketData.closedBy = closer.id;
@@ -186,6 +231,26 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
     ticketData.closeReason = reason;
     
     await saveTicketData(channel.guild.id, channel.id, ticketData);
+    
+    // Send DM to ticket creator if enabled
+    if (dmOnClose) {
+      try {
+        const ticketCreator = await channel.client.users.fetch(ticketData.userId).catch(() => null);
+        if (ticketCreator) {
+          const dmEmbed = createEmbed({
+            title: '🎫 Your Ticket Has Been Closed',
+            description: `Your ticket **${channel.name}** has been closed.\n\n**Reason:** ${reason}\n**Closed by:** ${closer.tag}\n**Closed at:** <t:${Math.floor(Date.now() / 1000)}:F>\n\nThank you for using our support system! If you have any further questions, feel free to create a new ticket.`,
+            color: '#e74c3c',
+            footer: { text: `Ticket ID: ${ticketData.id}` }
+          });
+          
+          await ticketCreator.send({ embeds: [dmEmbed] });
+        }
+      } catch (dmError) {
+        console.warn(`Could not send DM to ticket creator ${ticketData.userId}:`, dmError.message);
+        // Continue with ticket closure even if DM fails
+      }
+    }
     
     // Update channel permissions
     try {
@@ -243,7 +308,7 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
     // Send close message
     const closeEmbed = createEmbed({
       title: 'Ticket Closed',
-      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}\n\n📋 This channel will be deleted in 5 seconds.`,
+      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}\n\n📋 This channel will be deleted in 5 seconds.${dmOnClose ? '\n\n📩 A DM has been sent to the ticket creator.' : ''}`,
       color: '#e74c3c',
       footer: { text: `Ticket ID: ${ticketData.id}` }
     });
