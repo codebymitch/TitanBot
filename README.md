@@ -11,42 +11,13 @@
 ## 📚 Table of Contents
 
 - [🌟 Features Overview](#-features-overview)
-  - [🛡️ Moderation & Administration](#️-moderation--administration)
-  - [💰 Economy System](#-economy-system)
-  - [🎮 Fun & Entertainment](#-fun--entertainment)
-  - [📊 Leveling & XP System](#-leveling--xp-system)
-  - [🎫 Advanced Ticket System](#-advanced-ticket-system)
-  - [🎉 Giveaways & Events](#-giveaways--events)
-  - [🎂 Birthday System](#-birthday-system)
-  - [🔧 Utility Tools](#-utility-tools)
-  - [👋 Welcome System](#-welcome-system)
-  - [🔢 Server Counters](#-server-counters)
-  - [🎭 Reaction Roles](#-reaction-roles)
 - [🚀 Quick Setup](#-quick-setup)
-  - [Prerequisites](#prerequisites)
   - [Installation Steps](#installation-steps)
   - [📹 Video Tutorial](#-video-tutorial)
 - [🗄️ Database System](#️-database-system)
-  - [PostgreSQL Features](#postgresql-features)
-  - [Fallback System](#fallback-system)
-  - [Database Migration](#database-migration)
 - [🌐 Support Server](#-support-server)
 - [🏗️ Bot Architecture](#-bot-architecture)
-  - [Technology Stack](#technology-stack)
-  - [Bot Intents](#bot-intents)
-  - [Required Permissions](#required-permissions)
-- [📊 Performance & Monitoring](#-performance--monitoring)
-  - [Built-in Monitoring](#built-in-monitoring)
-  - [Logging System](#logging-system)
 - [🤝 Contributing](#-contributing)
-  - [Development Guidelines](#development-guidelines)
-- [🆕 Recent Updates](#-recent-updates)
-  - [Database Migration](#database-migration-1)
-  - [Ticket System Enhancements](#ticket-system-enhancements)
-  - [New Commands](#new-commands)
-- [📚 Additional Documentation](#-additional-documentation)
-- [📜 License](#-license)
-- [💌 Thank You](#-thank-you)
 
 ## 🌟 Features Overview
 
@@ -301,27 +272,6 @@ We welcome contributions to TitanBot! Here's how you can help:
 - Include documentation for new features
 - Test with PostgreSQL and memory storage
 - Ensure database migrations are properly handled
-
-## 🆕 Recent Updates
-
-### Database Migration
-- **PostgreSQL Integration**: Complete migration from Redis to PostgreSQL
-- **Enhanced Performance**: Better query optimization and indexing
-- **Data Integrity**: ACID compliance and proper relationships
-- **Backup Support**: Standard database backup and restore tools
-
-### Ticket System Enhancements
-- **User Limits**: Configurable maximum tickets per user
-- **DM Notifications**: Automatic DM when tickets are closed
-- **Transcript Improvements**: HTML transcripts with embed preview
-- **Better UX**: Enhanced user feedback and error handling
-
-### New Commands
-- **`/ticketlimits`**: Manage ticket limits and settings
-- **`/ticketlimits view`**: View current ticket configuration
-- **`/ticketlimits set`**: Set maximum tickets per user
-- **`/ticketlimits check`**: Check user's ticket count
-- **`/ticketlimits toggle_dm`**: Toggle DM notifications
 
 ## 📚 Additional Documentation
 
