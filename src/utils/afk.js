@@ -83,5 +83,5 @@ export async function removeAFKStatus(client, guildId, userId) {
  * @returns {string} The AFK key
  */
 export function getAFKKey(guildId, userId) {
-    return `afk:${guildId}:${userId}`;
+    return `${guildId}:user:${userId}:afk`;
 }
