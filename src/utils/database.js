@@ -1,37 +1,50 @@
+import { pgDb } from './postgresDatabase.js';
 import { redisDb } from './redisDatabase.js';
 import { MemoryStorage } from './memoryStorage.js';
+import { migrationManager } from './migrations.js';
 import { logger } from './logger.js';
 import { BotConfig } from '../config/bot.js';
 
 // Initialize database connection
 let db = null;
 let useFallback = false;
+let connectionType = 'none';
 
 // Check if we're in a Replit environment (for backward compatibility)
 const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
 
-// Initialize Redis or fallback database
+// Database preference order: PostgreSQL > Memory
 async function initializeDatabaseConnection() {
     try {
-        // Try to connect to Redis first
-        const redisConnected = await redisDb.connect();
-        if (redisConnected) {
-            db = redisDb;
-            logger.info('✅ Redis Database initialized');
+        // Try PostgreSQL first
+        logger.info('Attempting to connect to PostgreSQL...');
+        const pgConnected = await pgDb.connect();
+        if (pgConnected) {
+            db = pgDb;
+            connectionType = 'postgresql';
+            
+            // Run migrations if enabled
+            if (process.env.AUTO_MIGRATE === 'true') {
+                await migrationManager.initialize();
+                await migrationManager.migrate();
+            }
+            
+            logger.info('✅ PostgreSQL Database initialized');
             return;
         }
     } catch (error) {
-        logger.warn('Redis connection failed, using fallback:', error.message);
+        logger.warn('PostgreSQL connection failed, using memory storage:', error.message);
     }
     
     // Fallback to memory storage
     db = new MemoryStorage();
     useFallback = true;
+    connectionType = 'memory';
     logger.info('🔄 Using in-memory storage as fallback');
 }
 
 /**
- * Wrapper class for Database with Redis support and fallback
+ * Wrapper class for Database with PostgreSQL and Memory fallback support
  */
 class DatabaseWrapper {
     constructor() {
@@ -105,10 +118,82 @@ class DatabaseWrapper {
     }
 
     getConnectionType() {
-        if (useFallback) {
-            return 'memory';
+        return connectionType;
+    }
+
+    async migrateFromRedis() {
+        if (connectionType === 'postgresql') {
+            logger.info('Starting migration from Redis to PostgreSQL...');
+            
+            try {
+                // Ensure Redis is connected
+                const redisConnected = await redisDb.connect();
+                if (!redisConnected) {
+                    logger.error('Redis not available for migration');
+                    return false;
+                }
+
+                // Get all Redis keys
+                const allKeys = await redisDb.client.keys('*');
+                logger.info(`Found ${allKeys.length} keys to migrate`);
+
+                let migrated = 0;
+                let failed = 0;
+
+                for (const key of allKeys) {
+                    try {
+                        const value = await redisDb.get(key);
+                        const ttl = await redisDb.ttl(key);
+                        
+                        // Set in PostgreSQL with TTL if applicable
+                        await pgDb.set(key, value, ttl > 0 ? ttl : null);
+                        migrated++;
+                    } catch (error) {
+                        logger.error(`Failed to migrate key ${key}:`, error);
+                        failed++;
+                    }
+                }
+
+                logger.info(`Migration completed: ${migrated} keys migrated, ${failed} failed`);
+                return failed === 0;
+            } catch (error) {
+                logger.error('Migration from Redis failed:', error);
+                return false;
+            }
+        } else {
+            logger.warn('Not connected to PostgreSQL, cannot migrate from Redis');
+            return false;
         }
-        return 'redis';
+    }
+
+    async runMigrations() {
+        if (connectionType === 'postgresql') {
+            try {
+                await migrationManager.initialize();
+                await migrationManager.migrate();
+                return true;
+            } catch (error) {
+                logger.error('Failed to run migrations:', error);
+                return false;
+            }
+        } else {
+            logger.warn('Not connected to PostgreSQL, cannot run migrations');
+            return false;
+        }
+    }
+
+    async getMigrationStatus() {
+        if (connectionType === 'postgresql') {
+            try {
+                await migrationManager.initialize();
+                return await migrationManager.getStatus();
+            } catch (error) {
+                logger.error('Failed to get migration status:', error);
+                return null;
+            }
+        } else {
+            return { message: 'Not connected to PostgreSQL' };
+        }
     }
 }
 
@@ -118,10 +203,10 @@ class DatabaseWrapper {
  */
 export async function initializeDatabase() {
     try {
-        logger.log("Initializing Database (Redis with fallback)...");
+        logger.log("Initializing Database (PostgreSQL > Memory fallback)...");
         const dbWrapper = new DatabaseWrapper();
         await dbWrapper.initialize();
-        logger.log("✅ Database initialized (Redis or memory fallback)");
+        logger.log("✅ Database initialized");
         return { db: dbWrapper };
     } catch (error) {
         logger.error("❌ Database Initialization Error:", error);
@@ -249,7 +334,7 @@ export async function setGuildConfig(client, guildId, config) {
 }
 
 // Export database wrapper and utilities
-export { DatabaseWrapper, redisDb };
+export { DatabaseWrapper, pgDb, redisDb };
 
 // Export message helper
 export const getMessage = (key, replacements = {}) => {

@@ -1,9 +1,11 @@
+import { pgDb } from '../utils/postgresDatabase.js';
 import { redisDb } from '../utils/redisDatabase.js';
 import { logger } from '../utils/logger.js';
 
 // Initialize database
 let db = null;
 let useFallback = false;
+let connectionType = 'none';
 
 // Check if we're in a Replit environment (for backward compatibility)
 const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
@@ -11,15 +13,17 @@ const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || pro
 // Async database initialization
 async function initializeServicesDatabase() {
   try {
-    // Try to connect to Redis first
-    const redisConnected = await redisDb.connect();
-    if (redisConnected) {
-      db = redisDb;
-      logger.info('✅ Redis Database initialized in services');
+    // Try to connect to PostgreSQL first
+    logger.info('Services: Attempting to connect to PostgreSQL...');
+    const pgConnected = await pgDb.connect();
+    if (pgConnected) {
+      db = pgDb;
+      connectionType = 'postgresql';
+      logger.info('✅ Services: PostgreSQL Database initialized');
       return;
     }
   } catch (error) {
-    logger.warn('Redis connection failed in services, using fallback:', error.message);
+    logger.warn('Services: PostgreSQL connection failed, using mock database:', error.message);
   }
   
   // Fallback to mock database for non-Replit environments
@@ -33,7 +37,8 @@ async function initializeServicesDatabase() {
     decrement: async (key, amount = 1) => -amount
   };
   useFallback = true;
-  logger.info('Using mock database in services (fallback)');
+  connectionType = 'memory';
+  logger.info('Services: Using mock database (fallback)');
 }
 
 // Initialize database immediately
@@ -297,7 +302,9 @@ export async function saveWelcomeConfig(client, guildId, config) {
 
 export default {
   db,
+  pgDb,
   redisDb,
   initializeServicesDatabase,
+  getConnectionType: () => connectionType,
   useFallback: () => useFallback
 };

@@ -11,6 +11,8 @@
     "simple-migrate": "node scripts/simple-migrate.js",
     "register-commands": "node scripts/register-commands.js",
     "deploy": "npm run migrate-commands && npm run register-commands",
+    "test-postgres": "node scripts/test-postgres.js",
+    "migrate-redis-to-postgres": "node scripts/migrate-redis-to-postgres.js",
     "railway:start": "NODE_ENV=production node src/app.js"
   },
   "dependencies": {
@@ -27,6 +29,7 @@
     "mongoose": "^9.0.0",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
+    "pg": "^8.11.3",
     "play-dl": "^1.9.7",
     "redis": "^5.10.0",
     "titan-ultimate-bot": "file:",
