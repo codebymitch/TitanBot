@@ -130,6 +130,7 @@ export async function loadCommands(client) {
             }
             
         } catch (error) {
+            console.error(`Error loading command from ${filePath}:`, error);
             logger.error(`Error loading command from ${filePath}:`, error);
         }
     }
@@ -152,6 +153,7 @@ export async function loadCommands(client) {
         }
     }
     
+    console.log(`Successfully loaded ${uniqueCommands.size} unique commands (${client.commands.size} total including aliases) (${commandsWithSubcommands.length} with subcommands, ${totalSubcommands} total subcommands)`);
     logger.info(`Successfully loaded ${uniqueCommands.size} unique commands (${client.commands.size} total including aliases) (${commandsWithSubcommands.length} with subcommands, ${totalSubcommands} total subcommands)`);
     return client.commands;
 }
@@ -187,6 +189,7 @@ export async function registerCommands(client, guildId) {
                     totalSubcommands += subcommands.length;
                     
                     logger.info(`Registering command: ${commandName}`);
+                    console.log(`Registering command: ${commandName}`);
                 } else {
                     logger.debug(`Skipping duplicate command: ${commandName}`);
                 }
