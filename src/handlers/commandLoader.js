@@ -123,10 +123,10 @@ export async function loadCommands(client) {
             // Log command with subcommand details
             const subcommands = getSubcommandInfo(command.data.toJSON());
             
+            logger.info(`Loaded command: ${primaryCommandName} from ${normalizedPath} (category: ${category})`);
+            
             if (subcommands.length > 0) {
-                logger.info(`Loaded command: ${primaryCommandName} with subcommands: ${subcommands.join(', ')}`);
-            } else {
-                logger.debug(`Loaded command: ${primaryCommandName}`);
+                logger.info(`  - Subcommands: ${subcommands.join(', ')}`);
             }
             
         } catch (error) {
@@ -174,6 +174,8 @@ export async function registerCommands(client, guildId) {
             if (command.data && typeof command.data.toJSON === 'function') {
                 const commandName = command.data.name;
                 
+                logger.debug(`Processing command for registration: ${commandName}`);
+                
                 // Only register if we haven't seen this command name before
                 if (!registeredNames.has(commandName)) {
                     registeredNames.add(commandName);
@@ -183,7 +185,13 @@ export async function registerCommands(client, guildId) {
                     // Count subcommands for this command
                     const subcommands = getSubcommandInfo(commandJson);
                     totalSubcommands += subcommands.length;
+                    
+                    logger.info(`Registering command: ${commandName}`);
+                } else {
+                    logger.debug(`Skipping duplicate command: ${commandName}`);
                 }
+            } else {
+                logger.warn(`Command missing data or toJSON method: ${command}`);
             }
         }
         
@@ -193,19 +201,25 @@ export async function registerCommands(client, guildId) {
         if (guildId) {
             // Register commands for a specific guild (faster for development)
             
+            logger.info(`Registering ${totalCommandsWithSubs} commands for guild ${guildId}`);
+            
             // First, clear existing guild commands to prevent duplicates
             const guild = await client.guilds.fetch(guildId);
             const existingCommands = await guild.commands.fetch();
             
+            logger.info(`Found ${existingCommands.size} existing guild commands to clear`);
+            
             if (existingCommands.size > 0) {
                 await guild.commands.set([]);
-                // Wait a moment for Discord to process the clearing
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Wait longer for Discord to process the clearing
+                logger.info('Waiting 5 seconds for Discord to clear existing commands...');
+                await new Promise(resolve => setTimeout(resolve, 5000));
             }
             
             // Now register the new commands
+            logger.info(`Registering ${commands.length} new commands...`);
             await guild.commands.set(commands);
-            logger.info(`Registered ${totalCommandsWithSubs} guild commands`);
+            logger.info(`Successfully registered ${totalCommandsWithSubs} guild commands`);
         } else {
             // Register commands globally
             await client.application.commands.set(commands);
