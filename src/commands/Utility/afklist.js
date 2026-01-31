@@ -14,7 +14,6 @@ export default {
                 .setMaxValue(50)
                 .setRequired(false)
         ),
-    category: "utility",
 
     async execute(interaction, config, client) {
         await interaction.deferReply();

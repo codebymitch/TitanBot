@@ -18,7 +18,6 @@ export default {
                 .setDescription("Remove your AFK status")
                 .setRequired(false)
         ),
-    category: "utility",
 
     async execute(interaction, config, client) {
         await interaction.deferReply({ flags: ['Ephemeral'] });

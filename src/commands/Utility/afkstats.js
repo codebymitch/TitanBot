@@ -17,7 +17,6 @@ export default {
                     { name: "Recent Activity", value: "recent" }
                 )
         ),
-    category: "utility",
 
     async execute(interaction, config, client) {
         await interaction.deferReply();
