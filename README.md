@@ -267,27 +267,6 @@ We welcome contributions to TitanBot! Here's how you can help:
 - Test with PostgreSQL and memory storage
 - Ensure database migrations are properly handled
 
-## 🆕 Recent Updates
-
-### Database Migration
-- **PostgreSQL Integration**: Complete migration from Redis to PostgreSQL
-- **Enhanced Performance**: Better query optimization and indexing
-- **Data Integrity**: ACID compliance and proper relationships
-- **Backup Support**: Standard database backup and restore tools
-
-### Ticket System Enhancements
-- **User Limits**: Configurable maximum tickets per user
-- **DM Notifications**: Automatic DM when tickets are closed
-- **Transcript Improvements**: HTML transcripts with embed preview
-- **Better UX**: Enhanced user feedback and error handling
-
-### New Commands
-- **`/ticketlimits`**: Manage ticket limits and settings
-- **`/ticketlimits view`**: View current ticket configuration
-- **`/ticketlimits set`**: Set maximum tickets per user
-- **`/ticketlimits check`**: Check user's ticket count
-- **`/ticketlimits toggle_dm`**: Toggle DM notifications
-
 ## 📚 Additional Documentation
 
 - **[PostgreSQL Setup Guide](README-POSTGRESQL.md)** - Detailed database configuration
