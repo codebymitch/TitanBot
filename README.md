@@ -2,7 +2,9 @@
 
 **TitanBot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and PostgreSQL for optimal performance and data persistence.
 
-**Technologies:** `Node.js 18+` • `Discord.js v14` • `PostgreSQL 13+`
+![Node.js](https://img.shields.io/node/v/18.0.0)
+![Discord.js](https://img.shields.io/npm/v/discord.js)
+![PostgreSQL](https://img.shields.io/badge/postgresql-13+-blue)
 
 ## 📚 Table of Contents
 
