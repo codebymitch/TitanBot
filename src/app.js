@@ -81,28 +81,38 @@ class TitanBot extends Client {
 
   async start() {
     try {
+      console.log('Starting TitanBot...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      console.log('Initializing database...');
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
+      console.log('Database initialization completed');
       
+      console.log('Starting web server...');
       this.startWebServer();
       
-      logger.info('Starting to load commands...');
+      console.log('Starting to load commands...');
       await loadCommands(this);
-      logger.info(`Command loading completed. Total commands loaded: ${this.commands.size}`);
+      console.log(`Command loading completed. Total commands loaded: ${this.commands.size}`);
       
+      console.log('Loading handlers...');
       await this.loadHandlers();
+      console.log('Handlers loaded');
       
+      console.log('Logging into Discord...');
       await this.login(this.config.bot.token);
+      console.log('Discord login successful');
       
+      console.log('Registering commands...');
       await this.registerCommands();
+      console.log('Commands registered');
       
-      logger.info('Bot is running!');
+      console.log('Bot is running!');
       
       this.setupCronJobs();
     } catch (error) {
-      logger.error('Failed to start bot:', error);
+      console.error('Failed to start bot:', error);
       process.exit(1);
     }
   }
@@ -110,7 +120,7 @@ class TitanBot extends Client {
   startWebServer() {
     const app = express();
     app.get("/", (req, res) => res.send("TitanBot System Online"));
-    app.listen(3000, () => logger.info("Web Server is ready."));
+    app.listen(3000, () => console.log("Web Server is ready."));
   }
 
   setupCronJobs() {
