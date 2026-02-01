@@ -20,80 +20,17 @@
 
 TitanBot offers a complete suite of tools for Discord server management and community engagement:
 
-### 🛡️ **Moderation & Administration**
-- Comprehensive moderation commands (ban, kick, mute, timeout, warn)
-- Advanced case management and warning system
-- Automated moderation with configurable rules
-- Server lockdown and purge capabilities
-- Mass moderation tools (massban, masskick)
-- User notes and reputation system
-- Advanced ban management with unban support
-
-### 💰 **Economy System**
-- Full-featured economy with coins, banking, and trading
-- Work, crime, beg, and gambling activities
-- Interactive shop system with customizable items
-- Economy leaderboards and statistics
-- User transaction tracking and history
-
-### 🎮 **Fun & Entertainment**
-- Interactive games and activities
-- Ship, fight, roll, and other fun commands
-- Mock text, reverse text, and meme generation
-- Wanted poster creation
-- Adult content commands (18+)
-
-### 📊 **Leveling & XP System**
-- Automatic XP gain for active participation
-- Customizable leveling rewards and roles
-- Server and user statistics tracking
-- Leaderboards and achievements
-
-### 🎫 **Advanced Ticket System**
-- Advanced ticket management with priorities
-- Custom ticket categories and workflows
-- Automated ticket archiving and logging
-- Support team role management
-- **NEW**: Maximum ticket limits per user
-- **NEW**: DM notifications on ticket closure
-- **NEW**: HTML transcript generation with embed preview
-
-### 🎉 **Giveaways & Events**
-- Automated giveaway creation and management
-- Customizable duration, winners, and requirements
-- Real-time giveaway tracking and notifications
-- Winner selection and prize distribution
-
-### 🎂 **Birthday System**
-- Automatic birthday celebrations and announcements
-- Custom birthday roles and rewards
-- Birthday calendar and upcoming celebrations
-- Timezone-aware birthday detection
-
-### 🔧 **Utility Tools**
-- AFK system with auto-responses and nickname management
-- Todo lists and task management
-- Weather information and forecasts
-- User and server information displays
-- Advanced search capabilities
-
-### 👋 **Welcome System**
-- Customizable welcome and goodbye messages
-- Auto-role assignment for new members
-- Member milestone celebrations
-- Server growth statistics
-
-### 🔢 **Server Counters**
-- Real-time server statistics display
-- Custom counter creation and management
-- Member, bot, and category-specific counters
-- Automatic counter updates
-
-### 🎭 **Reaction Roles**
-- Self-assignable role system
-- Custom reaction role panels
-- Multiple role categories and groups
-- Easy role management interface
+#### 🛡️ Moderation & Administration
+#### 💰 Economy System
+#### 🎮 Fun & Entertainment
+#### 📊 Leveling & XP System
+#### 🎫 Advanced Ticket System
+#### 🎉 Giveaways & Events
+#### 🎂 Birthday System
+#### 🔧 Utility Tools
+#### 👋 Welcome System
+#### 🔢 Server Counters
+#### 🎭 Reaction Roles
 
 ## 🚀 Quick Setup
 
