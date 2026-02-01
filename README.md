@@ -32,7 +32,11 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 #### 🔢 Server Counters
 #### 🎭 Reaction Roles
 
-## 🚀 Quick Setup
+## 🚀 Quick Setup (recommend)
+
+### 📹 Video Tutorial
+For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
+[**TitanBot Setup Tutorial**](https://www.youtube.com/watch?v=your-tutorial-link)
 
 ### Prerequisites
 - Node.js 18.0.0 or higher
@@ -99,10 +103,6 @@ TitanBot offers a complete suite of tools for Discord server management and comm
    npm start
    ```
 
-### 📹 Video Tutorial
-For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
-[**TitanBot Setup Tutorial**](https://www.youtube.com/watch?v=your-tutorial-link)
-
 ## 🗄️ Database System
 
 TitanBot uses **PostgreSQL** as its primary database with intelligent fallback to memory storage:
@@ -122,24 +122,6 @@ TitanBot uses **PostgreSQL** as its primary database with intelligent fallback t
 - **Graceful Degradation**: Bot continues functioning without database
 - **Backward Compatibility**: Maintains existing API structure
 - **Zero Downtime**: Seamless switching between database and memory
-
-### Database Migration
-- **Automatic Migrations**: Built-in schema versioning
-- **Rollback Support**: Safe migration with rollback capability
-- **Data Integrity**: Comprehensive validation and verification
-- **Performance Monitoring**: Migration progress tracking
-
-## 🌐 Support Server
-
-Need help with TitanBot? Join our support community!
-
-[**Join TitanBot Support Server**](https://discord.gg/your-support-server)
-
-- 🆘 Get help with setup and configuration
-- 💬 Suggest new features and improvements
-- 🐛 Report bugs and issues
-- 📢 Stay updated with latest announcements
-- 🎉 Participate in community events and giveaways
 
 ## 🏗️ Bot Architecture
 
@@ -174,22 +156,6 @@ TitanBot requires the following Discord intents:
 - **Kick Members**
 - **Manage Messages**
 
-## 📊 Performance & Monitoring
-
-### Built-in Monitoring
-- **Health Checks**: Web server endpoint at `/`
-- **Performance Metrics**: Command execution times
-- **Error Tracking**: Comprehensive error logging
-- **Database Monitoring**: PostgreSQL connection status and performance
-- **Query Optimization**: Efficient database operations
-
-### Logging System
-- **Daily Rotation**: Automatic log file rotation
-- **Multiple Levels**: Error, warn, info, debug
-- **Structured Logs**: JSON format for easy parsing
-- **Performance Tracking**: Command and event timing
-- **Database Logs**: Connection and query performance
-
 ## 🤝 Contributing
 
 We welcome contributions to TitanBot! Here's how you can help:
@@ -206,13 +172,6 @@ We welcome contributions to TitanBot! Here's how you can help:
 - Include documentation for new features
 - Test with PostgreSQL and memory storage
 - Ensure database migrations are properly handled
-
-## 📚 Additional Documentation
-
-- **[PostgreSQL Setup Guide](README-POSTGRESQL.md)** - Detailed database configuration
-- **[Command Reference](docs/commands.md)** - Complete command documentation
-- **[API Documentation](docs/api.md)** - Bot API and integration guide
-- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
 
 ## 📜 License
 
