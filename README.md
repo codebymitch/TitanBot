@@ -2,9 +2,8 @@
 
 **TitanBot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and PostgreSQL for optimal performance and data persistence.
 
-![Node.js](https://img.shields.io/node/v/18.0.0)
-![Discord.js](https://img.shields.io/npm/v/discord.js)
-![PostgreSQL](https://img.shields.io/badge/postgresql-13+-blue)
+[![Support Server](https://img.shields.io/badge/-Support%20Server-%235865F2?logo=discord&logoColor=white&style=flat-square&logoWidth=20)](https://discord.gg/YOUR_INVITE)
+[![Discord.js](https://img.shields.io/npm/v/discord.js?style=flat-square&labelColor=%23202225&color=%23202225&logo=npm&logoColor=white&logoWidth=20)](https://www.npmjs.com/package/discord.js)
 
 ## 📚 Table of Contents
 
@@ -21,82 +20,23 @@
 
 TitanBot offers a complete suite of tools for Discord server management and community engagement:
 
-### 🛡️ **Moderation & Administration**
-- Comprehensive moderation commands (ban, kick, mute, timeout, warn)
-- Advanced case management and warning system
-- Automated moderation with configurable rules
-- Server lockdown and purge capabilities
-- Mass moderation tools (massban, masskick)
-- User notes and reputation system
-- Advanced ban management with unban support
+#### 🛡️ Moderation & Administration
+#### 💰 Economy System
+#### 🎮 Fun & Entertainment
+#### 📊 Leveling & XP System
+#### 🎫 Advanced Ticket System
+#### 🎉 Giveaways & Events
+#### 🎂 Birthday System
+#### 🔧 Utility Tools
+#### 👋 Welcome System
+#### 🔢 Server Counters
+#### 🎭 Reaction Roles
 
-### 💰 **Economy System**
-- Full-featured economy with coins, banking, and trading
-- Work, crime, beg, and gambling activities
-- Interactive shop system with customizable items
-- Economy leaderboards and statistics
-- User transaction tracking and history
+## 🚀 Quick Setup (recommend)
 
-### 🎮 **Fun & Entertainment**
-- Interactive games and activities
-- Ship, fight, roll, and other fun commands
-- Mock text, reverse text, and meme generation
-- Wanted poster creation
-- Adult content commands (18+)
-
-### 📊 **Leveling & XP System**
-- Automatic XP gain for active participation
-- Customizable leveling rewards and roles
-- Server and user statistics tracking
-- Leaderboards and achievements
-
-### 🎫 **Advanced Ticket System**
-- Advanced ticket management with priorities
-- Custom ticket categories and workflows
-- Automated ticket archiving and logging
-- Support team role management
-- **NEW**: Maximum ticket limits per user
-- **NEW**: DM notifications on ticket closure
-- **NEW**: HTML transcript generation with embed preview
-
-### 🎉 **Giveaways & Events**
-- Automated giveaway creation and management
-- Customizable duration, winners, and requirements
-- Real-time giveaway tracking and notifications
-- Winner selection and prize distribution
-
-### 🎂 **Birthday System**
-- Automatic birthday celebrations and announcements
-- Custom birthday roles and rewards
-- Birthday calendar and upcoming celebrations
-- Timezone-aware birthday detection
-
-### 🔧 **Utility Tools**
-- AFK system with auto-responses and nickname management
-- Todo lists and task management
-- Weather information and forecasts
-- User and server information displays
-- Advanced search capabilities
-
-### 👋 **Welcome System**
-- Customizable welcome and goodbye messages
-- Auto-role assignment for new members
-- Member milestone celebrations
-- Server growth statistics
-
-### 🔢 **Server Counters**
-- Real-time server statistics display
-- Custom counter creation and management
-- Member, bot, and category-specific counters
-- Automatic counter updates
-
-### 🎭 **Reaction Roles**
-- Self-assignable role system
-- Custom reaction role panels
-- Multiple role categories and groups
-- Easy role management interface
-
-## 🚀 Quick Setup
+### 📹 Video Tutorial
+For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
+[**TitanBot Setup Tutorial**](https://www.youtube.com/watch?v=your-tutorial-link)
 
 ### Prerequisites
 - Node.js 18.0.0 or higher
@@ -163,10 +103,6 @@ TitanBot offers a complete suite of tools for Discord server management and comm
    npm start
    ```
 
-### 📹 Video Tutorial
-For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
-[**TitanBot Setup Tutorial**](https://www.youtube.com/watch?v=your-tutorial-link)
-
 ## 🗄️ Database System
 
 TitanBot uses **PostgreSQL** as its primary database with intelligent fallback to memory storage:
@@ -186,24 +122,6 @@ TitanBot uses **PostgreSQL** as its primary database with intelligent fallback t
 - **Graceful Degradation**: Bot continues functioning without database
 - **Backward Compatibility**: Maintains existing API structure
 - **Zero Downtime**: Seamless switching between database and memory
-
-### Database Migration
-- **Automatic Migrations**: Built-in schema versioning
-- **Rollback Support**: Safe migration with rollback capability
-- **Data Integrity**: Comprehensive validation and verification
-- **Performance Monitoring**: Migration progress tracking
-
-## 🌐 Support Server
-
-Need help with TitanBot? Join our support community!
-
-[**Join TitanBot Support Server**](https://discord.gg/your-support-server)
-
-- 🆘 Get help with setup and configuration
-- 💬 Suggest new features and improvements
-- 🐛 Report bugs and issues
-- 📢 Stay updated with latest announcements
-- 🎉 Participate in community events and giveaways
 
 ## 🏗️ Bot Architecture
 
@@ -238,22 +156,6 @@ TitanBot requires the following Discord intents:
 - **Kick Members**
 - **Manage Messages**
 
-## 📊 Performance & Monitoring
-
-### Built-in Monitoring
-- **Health Checks**: Web server endpoint at `/`
-- **Performance Metrics**: Command execution times
-- **Error Tracking**: Comprehensive error logging
-- **Database Monitoring**: PostgreSQL connection status and performance
-- **Query Optimization**: Efficient database operations
-
-### Logging System
-- **Daily Rotation**: Automatic log file rotation
-- **Multiple Levels**: Error, warn, info, debug
-- **Structured Logs**: JSON format for easy parsing
-- **Performance Tracking**: Command and event timing
-- **Database Logs**: Connection and query performance
-
 ## 🤝 Contributing
 
 We welcome contributions to TitanBot! Here's how you can help:
@@ -270,13 +172,6 @@ We welcome contributions to TitanBot! Here's how you can help:
 - Include documentation for new features
 - Test with PostgreSQL and memory storage
 - Ensure database migrations are properly handled
-
-## 📚 Additional Documentation
-
-- **[PostgreSQL Setup Guide](README-POSTGRESQL.md)** - Detailed database configuration
-- **[Command Reference](docs/commands.md)** - Complete command documentation
-- **[API Documentation](docs/api.md)** - Bot API and integration guide
-- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
 
 ## 📜 License
 
