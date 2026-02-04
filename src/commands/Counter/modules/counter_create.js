@@ -119,15 +119,19 @@ export default {
 
         try {
             // Save the counter to the database
-            counters.push({
+            const counterData = {
                 id: Date.now().toString(),
                 type,
                 channelId: channel.id,
-                channelType: channel.type,
+                channelType: channel.type.toString(), // Convert enum to string
                 guildId: guild.id,
                 createdAt: new Date().toISOString(),
                 createdBy: interaction.user.id,
-            });
+            };
+            
+            console.log('Counter data to save:', JSON.stringify(counterData, null, 2));
+            
+            counters.push(counterData);
 
             const saved = await saveServerCounters(client, guild.id, counters);
 

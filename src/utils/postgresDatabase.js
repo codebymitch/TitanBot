@@ -56,6 +56,25 @@ class PostgreSQLDatabase {
             // Create tables if auto-create is enabled
             if (pgConfig.features.autoCreateTables) {
                 await this.createTables();
+                
+                // Add counters column to guilds table if it doesn't exist
+                try {
+                    const columnCheck = await this.pool.query(`
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'guilds' AND column_name = 'counters'
+                    `);
+                    
+                    if (columnCheck.rows.length === 0) {
+                        await this.pool.query(`
+                            ALTER TABLE ${pgConfig.tables.guilds} 
+                            ADD COLUMN counters JSONB DEFAULT '[]'
+                        `);
+                        logger.info('✅ Added counters column to guilds table');
+                    }
+                } catch (error) {
+                    logger.warn('Could not add counters column to guilds table:', error.message);
+                }
             }
             
             return true;
@@ -83,6 +102,7 @@ class PostgreSQLDatabase {
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.guilds} (
                 id VARCHAR(20) PRIMARY KEY,
                 config JSONB DEFAULT '{}',
+                counters JSONB DEFAULT '[]',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
@@ -523,6 +543,11 @@ class PostgreSQLDatabase {
             }
         }
 
+        // Handle counter keys
+        if (parts[0] === 'counters' && parts[1]) {
+            return { type: 'counters', guildId: parts[1], fullKey: key };
+        }
+
         // Default to temp data for unknown keys
         return { type: 'temp', fullKey: key };
     }
@@ -602,6 +627,13 @@ class PostgreSQLDatabase {
                         [parsedKey.guildId, parsedKey.channelId]
                     );
                     return ticketResult.rows.length > 0 ? ticketResult.rows[0].data : defaultValue;
+                
+                case 'counters':
+                    const counterResult = await this.pool.query(
+                        `SELECT counters FROM ${pgConfig.tables.guilds} WHERE id = $1`,
+                        [parsedKey.guildId]
+                    );
+                    return counterResult.rows.length > 0 ? counterResult.rows[0].counters : defaultValue;
                 
                 default:
                     return defaultValue;
@@ -810,6 +842,48 @@ class PostgreSQLDatabase {
                          ON CONFLICT (channel_id) DO UPDATE SET 
                          data = $3, expires_at = $4, updated_at = CURRENT_TIMESTAMP`,
                         [parsedKey.guildId, parsedKey.channelId, value, ttl ? new Date(Date.now() + ttl * 1000) : null]
+                    );
+                    return true;
+                
+                case 'counters':
+                    // Ensure guild exists before inserting counter data
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
+                    // Check if counters column exists
+                    const columnCheck = await this.pool.query(`
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = '${pgConfig.tables.guilds}' AND column_name = 'counters'
+                    `);
+                    
+                    if (columnCheck.rows.length === 0) {
+                        logger.warn('Counters column does not exist, attempting to add it...');
+                        try {
+                            await this.pool.query(`
+                                ALTER TABLE ${pgConfig.tables.guilds} 
+                                ADD COLUMN counters JSONB DEFAULT '[]'
+                            `);
+                            logger.info('✅ Added counters column to guilds table');
+                        } catch (alterError) {
+                            logger.error('Failed to add counters column:', alterError);
+                            throw new Error(`Counters column missing and could not be created: ${alterError.message}`);
+                        }
+                    }
+                    
+                    console.log('Saving counter data to PostgreSQL:', JSON.stringify(value, null, 2));
+                    console.log('Value type:', typeof value);
+                    console.log('Is value an array?:', Array.isArray(value));
+                    
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, counters, updated_at) 
+                         VALUES ($1, $2, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO UPDATE SET counters = $2, updated_at = CURRENT_TIMESTAMP`,
+                        [parsedKey.guildId, value]
                     );
                     return true;
                 

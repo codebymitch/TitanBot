@@ -34,7 +34,7 @@ export default {
                         .setDescription("Type of channel to create for the counter")
                         .setRequired(true)
                         .addChoices(
-                            { name: "Voice Channel", value: "voice" },
+                            { name: "Voice Channel (recommended)", value: "voice" },
                             { name: "Text Channel", value: "text" },
                         ),
                 ),
