@@ -1,7 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // Migrated from: commands/Leveling/levelset.js
 export default {
@@ -26,7 +27,8 @@ export default {
     category: "Leveling",
     
     async execute(interaction, config, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
+        if (!deferSuccess) return;
         
         try {
             const targetUser = interaction.options.getUser("user");

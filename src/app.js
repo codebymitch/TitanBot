@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { 
     Client, 
     Collection, 
@@ -25,9 +26,9 @@ if (typeof global.ReadableStream === 'undefined') {
 }
 
 import config from './config/index.js';
-import { initializeDatabase, getFromDb, setInDb, deleteFromDb } from './utils/database.js';
+import { initializeDatabase } from './utils/database.js';
+import { getFromDb, setInDb, deleteFromDb } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
-import { getAFKKey } from './utils/afk.js';
 import { giveawayKey, getGuildGiveaways } from './utils/giveaways.js';
 import { handleReactionRoles } from './handlers/reactionRoles.js';
 import { createEmbed, errorEmbed, successEmbed } from './utils/embeds.js';
@@ -81,38 +82,38 @@ class TitanBot extends Client {
 
   async start() {
     try {
-      console.log('Starting TitanBot...');
+      logger.info('Starting TitanBot...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log('Initializing database...');
+      logger.info('Initializing database...');
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
-      console.log('Database initialization completed');
+      logger.info('Database initialization completed');
       
-      console.log('Starting web server...');
+      logger.info('Starting web server...');
       this.startWebServer();
       
-      console.log('Starting to load commands...');
+      logger.info('Starting to load commands...');
       await loadCommands(this);
-      console.log(`Command loading completed. Total commands loaded: ${this.commands.size}`);
+      logger.info(`Command loading completed. Total commands loaded: ${this.commands.size}`);
       
-      console.log('Loading handlers...');
+      logger.info('Loading handlers...');
       await this.loadHandlers();
-      console.log('Handlers loaded');
+      logger.info('Handlers loaded');
       
-      console.log('Logging into Discord...');
+      logger.info('Logging into Discord...');
       await this.login(this.config.bot.token);
-      console.log('Discord login successful');
+      logger.info('Discord login successful');
       
-      console.log('Registering commands...');
+      logger.info('Registering commands...');
       await this.registerCommands();
-      console.log('Commands registered');
+      logger.info('Commands registered');
       
-      console.log('Bot is running!');
+      logger.info('Bot is running!');
       
       this.setupCronJobs();
     } catch (error) {
-      console.error('Failed to start bot:', error);
+      logger.error('Failed to start bot:', error);
       process.exit(1);
     }
   }
@@ -120,7 +121,7 @@ class TitanBot extends Client {
   startWebServer() {
     const app = express();
     app.get("/", (req, res) => res.send("TitanBot System Online"));
-    app.listen(3000, () => console.log("Web Server is ready."));
+    app.listen(3000, () => logger.info("Web Server is ready."));
   }
 
   setupCronJobs() {

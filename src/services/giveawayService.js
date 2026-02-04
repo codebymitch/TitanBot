@@ -1,13 +1,4 @@
-/**
- * Pick random winners from a list of participants
- * @param {Array} participants - Array of participant IDs
- * @param {number} count - Number of winners to pick
- * @returns {Array} Array of winner IDs
- */
-export function pickWinners(participants, count) {
-  const shuffled = [...participants].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
-}
+import { pickWinners } from '../utils/giveaways.js';
 
 /**
  * Check for ended giveaways across all guilds and process them

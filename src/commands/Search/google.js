@@ -22,10 +22,10 @@ export default {
             )
             .setFooter({ text: 'Google Search Results' });
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in google command:', error);
-            await interaction.reply({ 
+            await interaction.editReply({ 
                 embeds: [errorEmbed('Error', 'Failed to process your search. Please try again later.')],
                 flags: ["Ephemeral"] 
             });

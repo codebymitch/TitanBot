@@ -18,8 +18,16 @@ import { getFromDb, setInDb } from './database.js';
  * @param {string} [options.event.color] - Embed color override
  * @returns {Promise<void>}
  */
-export async function logEvent({ client, guild, event }) {
+export async function logEvent({ client, guild, guildId, event }) {
   try {
+    // Allow caller to provide either guild or guildId
+    if (!guild && guildId) {
+      guild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId).catch(() => null);
+    }
+    if (!guild) {
+      logger.warn('logEvent invoked without valid guild or guildId');
+      return;
+    }
     // Get the guild configuration
     const config = await getGuildConfig(client, guild.id);
     if (!config?.logChannelId || !config?.enableLogging) {

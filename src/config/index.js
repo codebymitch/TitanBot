@@ -26,7 +26,7 @@ const config = {
   bot: {
     ...botConfig,
     // Core bot settings
-    token: process.env.TOKEN,
+    token: process.env.DISCORD_TOKEN || process.env.TOKEN,
     clientId: process.env.CLIENT_ID,
     guildId: process.env.GUILD_ID,
 

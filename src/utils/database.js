@@ -4,182 +4,115 @@ import { migrationManager } from './migrations.js';
 import { logger } from './logger.js';
 import { BotConfig } from '../config/bot.js';
 
-// Initialize database connection
-let db = null;
-let useFallback = false;
-let connectionType = 'none';
-
-// Database preference order: PostgreSQL > Memory
-async function initializeDatabaseConnection() {
-    try {
-        // Try PostgreSQL first
-        logger.info('Attempting to connect to PostgreSQL...');
-        const pgConnected = await pgDb.connect();
-        if (pgConnected) {
-            db = pgDb;
-            connectionType = 'postgresql';
-            
-            // Run migrations if enabled
-            if (process.env.AUTO_MIGRATE === 'true') {
-                await migrationManager.initialize();
-                await migrationManager.migrate();
-            }
-            
-            logger.info('✅ PostgreSQL Database initialized');
-            return;
-        }
-    } catch (error) {
-        logger.warn('PostgreSQL connection failed, using memory storage:', error.message);
-    }
-    
-    // Fallback to memory storage
-    db = new MemoryStorage();
-    useFallback = true;
-    connectionType = 'memory';
-    logger.info('🔄 Using in-memory storage as fallback');
-}
-
-/**
- * Wrapper class for Database with PostgreSQL and Memory fallback support
- */
 class DatabaseWrapper {
     constructor() {
         this.initialized = false;
+        this.db = null;
+        this.useFallback = false;
+        this.connectionType = 'none';
     }
 
     async initialize() {
-        if (!this.initialized) {
-            await initializeDatabaseConnection();
-            this.initialized = true;
+        if (this.initialized) {
+            return;
         }
-        return db;
+
+        try {
+            logger.info('Attempting to connect to PostgreSQL...');
+            const pgConnected = await pgDb.connect();
+            if (pgConnected) {
+                this.db = pgDb;
+                this.connectionType = 'postgresql';
+                if (process.env.AUTO_MIGRATE === 'true') {
+                    await migrationManager.initialize();
+                    await migrationManager.migrate();
+                }
+                logger.info('✅ PostgreSQL Database initialized');
+                this.initialized = true;
+                return;
+            }
+        } catch (error) {
+            logger.warn('PostgreSQL connection failed, using memory storage:', error.message);
+        }
+
+        this.db = new MemoryStorage();
+        this.useFallback = true;
+        this.connectionType = 'memory';
+        logger.info('🔄 Using in-memory storage as fallback');
+        this.initialized = true;
     }
 
     async set(key, value, ttl = null) {
-        await this.initialize();
-        return db.set(key, value, ttl);
+        return this.db.set(key, value, ttl);
     }
 
     async get(key, defaultValue = null) {
-        await this.initialize();
-        return db.get(key, defaultValue);
+        return this.db.get(key, defaultValue);
     }
 
     async delete(key) {
-        await this.initialize();
-        return db.delete(key);
+        return this.db.delete(key);
     }
 
     async list(prefix) {
-        await this.initialize();
-        return db.list(prefix);
+        return this.db.list(prefix);
     }
 
     async exists(key) {
-        await this.initialize();
-        if (db.exists) {
-            return db.exists(key);
+        if (this.db.exists) {
+            return this.db.exists(key);
         }
-        // Fallback for memory storage
-        const value = await db.get(key);
+        const value = await this.db.get(key);
         return value !== null;
     }
 
     async increment(key, amount = 1) {
-        await this.initialize();
-        if (db.increment) {
-            return db.increment(key, amount);
+        if (this.db.increment) {
+            return this.db.increment(key, amount);
         }
-        // Fallback for memory storage
-        const current = await db.get(key, 0);
+        const current = await this.db.get(key, 0);
         const newValue = current + amount;
-        await db.set(key, newValue);
+        await this.db.set(key, newValue);
         return newValue;
     }
 
     async decrement(key, amount = 1) {
-        await this.initialize();
-        if (db.decrement) {
-            return db.decrement(key, amount);
+        if (this.db.decrement) {
+            return this.db.decrement(key, amount);
         }
-        // Fallback for memory storage
-        const current = await db.get(key, 0);
+        const current = await this.db.get(key, 0);
         const newValue = current - amount;
-        await db.set(key, newValue);
+        await this.db.set(key, newValue);
         return newValue;
     }
 
     isAvailable() {
-        return db && !useFallback;
+        return this.db && !this.useFallback;
     }
 
     getConnectionType() {
-        return connectionType;
-    }
-
-    async migrateFromPostgres() {
-        if (connectionType === 'postgresql') {
-            logger.info('PostgreSQL is already the primary database. No migration needed.');
-            return true;
-        } else {
-            logger.warn('Not connected to PostgreSQL, cannot migrate.');
-            return false;
-        }
-    }
-
-    async runMigrations() {
-        if (connectionType === 'postgresql') {
-            try {
-                await migrationManager.initialize();
-                await migrationManager.migrate();
-                return true;
-            } catch (error) {
-                logger.error('Failed to run migrations:', error);
-                return false;
-            }
-        } else {
-            logger.warn('Not connected to PostgreSQL, cannot run migrations');
-            return false;
-        }
-    }
-
-    async getMigrationStatus() {
-        if (connectionType === 'postgresql') {
-            try {
-                await migrationManager.initialize();
-                return await migrationManager.getStatus();
-            } catch (error) {
-                logger.error('Failed to get migration status:', error);
-                return null;
-            }
-        } else {
-            return { message: 'Not connected to PostgreSQL' };
-        }
+        return this.connectionType;
     }
 }
 
-/**
- * Initialize the database connection
- * @returns {Promise<Object>} Database instance and helper functions
- */
+// Create and export a single instance of the database
+export const db = new DatabaseWrapper();
+
 export async function initializeDatabase() {
     try {
-        logger.log("Initializing Database (PostgreSQL > Memory fallback)...");
-        const dbWrapper = new DatabaseWrapper();
-        await dbWrapper.initialize();
-        logger.log("✅ Database initialized");
-        return { db: dbWrapper };
+        logger.info("Initializing Database (PostgreSQL > Memory fallback)...");
+        await db.initialize();
+        logger.info("✅ Database initialized");
+        return { db };
     } catch (error) {
         logger.error("❌ Database Initialization Error:", error);
         return { db: null };
     }
 }
 
-// Get a value from the database with a default value if not found
 export async function getFromDb(key, defaultValue = null) {
     try {
-        const dbInstance = new DatabaseWrapper();
-        const value = await dbInstance.get(key);
+        const value = await db.get(key);
         return value === null ? defaultValue : value;
     } catch (error) {
         logger.error(`Error getting value for key ${key}:`, error);
@@ -187,11 +120,9 @@ export async function getFromDb(key, defaultValue = null) {
     }
 }
 
-// Set a value in the database
 export async function setInDb(key, value, ttl = null) {
     try {
-        const dbInstance = new DatabaseWrapper();
-        await dbInstance.set(key, value, ttl);
+        await db.set(key, value, ttl);
         return true;
     } catch (error) {
         logger.error(`Error setting value for key ${key}:`, error);
@@ -199,11 +130,9 @@ export async function setInDb(key, value, ttl = null) {
     }
 }
 
-// Delete a key from the database
 export async function deleteFromDb(key) {
     try {
-        const dbInstance = new DatabaseWrapper();
-        await dbInstance.delete(key);
+        await db.delete(key);
         return true;
     } catch (error) {
         logger.error(`Error deleting key ${key}:`, error);
@@ -412,7 +341,8 @@ export function getMonthName(monthNum) {
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    return months[Math.max(0, Math.min(monthNum - 1, 11))] || 'Unknown';
+    const index = Math.max(0, Math.min(monthNum - 1, 11));
+    return monthNum >= 1 && monthNum <= 12 ? months[index] : 'Invalid Month';
 }
 
 // 🎁 GIVEAWAY FUNCTIONS
@@ -457,16 +387,12 @@ export async function saveGiveaway(client, guildId, giveawayData) {
 
         const key = giveawayKey(guildId);
         const giveaways = await getGuildGiveaways(client, guildId);
-        const existingIndex = giveaways.findIndex(g => g.messageId === giveawayData.messageId);
         
-        if (existingIndex >= 0) {
-            giveaways[existingIndex] = giveawayData;
-        } else {
-            giveaways.push(giveawayData);
-        }
+        // Store as object with messageId as key (consistent with other functions)
+        giveaways[giveawayData.messageId] = giveawayData;
         
         await client.db.set(key, giveaways);
-        return giveawayData;
+        return true;
     } catch (error) {
         console.error('Error saving giveaway:', error);
         return false;
@@ -506,32 +432,6 @@ export function giveawayKey(guildId) {
     return `guild:${guildId}:giveaways`;
 }
 
-/**
- * Get AFK status for a user in a guild
- * @param {Object} client - Discord client with database
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @returns {Promise<Object|null>} AFK data or null if not found
- */
-export async function getAFKStatus(client, guildId, userId) {
-    const key = getAFKKey(guildId, userId);
-    try {
-        return await client.db.get(key, null);
-    } catch (error) {
-        console.error(`Error getting AFK status for user ${userId} in guild ${guildId}:`, error);
-        return null;
-    }
-}
-
-/**
- * Generate a key for AFK data
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @returns {string} The formatted key
- */
-export function getAFKKey(guildId, userId) {
-    return `${guildId}:user:${userId}:afk`;
-}
 
 // ====================
 // WELCOME SYSTEM UTILS
@@ -771,10 +671,12 @@ export async function saveLevelingConfig(client, guildId, config) {
         // Use the database wrapper instead of direct client.db access
         await setInDb(key, config);
         
-        console.log(`💾 Saved leveling config to database (guild: ${guildId})`);
+        if (process.env.NODE_ENV !== 'production') {
+            logger.debug(`💾 Saved leveling config to database (guild: ${guildId})`);
+        }
         return true;
     } catch (error) {
-        console.error(`Error saving leveling config for guild ${guildId}:`, error);
+        logger.error(`Error saving leveling config for guild ${guildId}:`, error);
         return false;
     }
 }
@@ -1174,7 +1076,9 @@ export async function createApplication(client, application) {
         applicationsArray.push(applicationId);
         
         await client.db.set(userKey, applicationsArray);
-        console.log(`Successfully created application ${applicationId} for user ${userId}`);
+        if (process.env.NODE_ENV !== 'production') {
+            logger.debug(`Successfully created application ${applicationId} for user ${userId}`);
+        }
         
         return newApplication;
     } catch (error) {

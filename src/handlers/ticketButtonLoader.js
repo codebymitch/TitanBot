@@ -3,7 +3,10 @@ import createTicketHandler, {
   closeTicketHandler, 
   claimTicketHandler, 
   priorityTicketHandler,
-  transcriptTicketHandler 
+  transcriptTicketHandler,
+  unclaimTicketHandler,
+  reopenTicketHandler,
+  deleteTicketHandler 
 } from './ticketButtons.js';
 import { logger } from '../utils/logger.js';
 
@@ -15,6 +18,9 @@ export default async function loadTicketButtons(client) {
     client.buttons.set('ticket_claim', claimTicketHandler);
     client.buttons.set('ticket_priority', priorityTicketHandler);
     client.buttons.set('ticket_transcript', transcriptTicketHandler);
+    client.buttons.set('ticket_unclaim', unclaimTicketHandler);
+    client.buttons.set('ticket_reopen', reopenTicketHandler);
+    client.buttons.set('ticket_delete', deleteTicketHandler);
     
     // Load modal handlers
     client.modals.set('create_ticket_modal', createTicketModalHandler);

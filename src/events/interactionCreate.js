@@ -4,6 +4,7 @@ import { getGuildConfig } from '../services/guildConfig.js';
 import { errorEmbed } from '../utils/embeds.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationButton, handleApplicationReviewModal } from '../commands/Community/app-admin.js';
+import { InteractionHelper } from '../utils/interactionHelper.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -11,63 +12,63 @@ export default {
     try {
       // Handle chat input commands
       if (interaction.isChatInputCommand()) {
-        logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`);
-        const command = client.commands.get(interaction.commandName);
-
-        if (!command) {
-          logger.error(`No command matching ${interaction.commandName} was found.`);
-          return;
-        }
-
-        // Check if command is disabled for this guild
-        let guildConfig = null;
-        if (interaction.guild) {
-          guildConfig = await getGuildConfig(client, interaction.guild.id);
-          if (guildConfig?.disabledCommands?.[interaction.commandName]) {
-            return interaction.reply({
-              embeds: [
-                errorEmbed(
-                  'This command has been disabled for this server.',
-                  'Command Disabled'
-                )
-              ],
-              flags: [MessageFlags.Ephemeral]
-            });
-          }
-        }
-
         try {
-          // Check command signature and call accordingly
-          const executeString = command.execute.toString();
-          
-          if (executeString.includes('async execute(interaction, config, client)')) {
-            // Commands expecting (interaction, config, client)
-            await command.execute(interaction, guildConfig, client);
-          } else if (executeString.includes('async execute(interaction, guildConfig, client)')) {
-            // Commands expecting (interaction, guildConfig, client)
-            await command.execute(interaction, guildConfig, client);
-          } else if (executeString.includes('interaction, client')) {
-            // Commands expecting (interaction, client)
-            await command.execute(interaction, client);
-          } else if (executeString.includes('interaction, config') || executeString.includes('interaction, guildConfig')) {
-            // Commands expecting (interaction, config) or (interaction, guildConfig)
-            await command.execute(interaction, guildConfig);
-          } else {
-            // Commands expecting (interaction) only - try with just interaction first
-            await command.execute(interaction);
+          // Defer the reply immediately to prevent timeouts
+          const deferSuccess = await InteractionHelper.safeDefer(interaction);
+          if (!deferSuccess) {
+            logger.warn(`Interaction ${interaction.id} defer failed, continuing without defer`);
+            // Proceed without deferring; individual commands and helper functions will
+            // attempt to reply or edit as needed (safeEditReply falls back to reply).
           }
+
+          logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`);
+          const command = client.commands.get(interaction.commandName);
+
+          if (!command) {
+            logger.error(`No command matching ${interaction.commandName} was found.`);
+            await interaction.editReply({ content: 'Sorry, that command does not exist.' });
+            return;
+          }
+
+          // Check if command is disabled for this guild
+          let guildConfig = null;
+          if (interaction.guild) {
+            guildConfig = await getGuildConfig(client, interaction.guild.id);
+            if (guildConfig?.disabledCommands?.[interaction.commandName]) {
+              return interaction.editReply({
+                embeds: [
+                  errorEmbed(
+                    'This command has been disabled for this server.',
+                    'Command Disabled'
+                  )
+                ]
+              });
+            }
+          }
+
+          // Always pass all arguments. The command can choose to use them or not.
+          await command.execute(interaction, guildConfig, client);
         } catch (error) {
           logger.error(`Error executing ${interaction.commandName}`, error);
           
-          const reply = {
-            content: 'There was an error while executing this command!',
-            flags: [MessageFlags.Ephemeral]
-          };
-
+          // Only try to reply if the interaction hasn't been handled yet
           if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(reply);
-          } else {
+            // Interaction was already acknowledged, can't reply again
+            logger.debug(`Interaction ${interaction.id} already acknowledged, skipping error reply`);
+            return;
+          }
+          
+          try {
+            const reply = {
+              content: 'There was an error while executing this command!',
+              flags: [MessageFlags.Ephemeral]
+            };
             await interaction.reply(reply);
+          } catch (replyError) {
+            // If reply fails, try followUp as last resort
+            if (!replyError.message?.includes('already been acknowledged')) {
+              logger.error('Failed to reply to interaction:', replyError);
+            }
           }
         }
       }

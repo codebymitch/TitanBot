@@ -72,12 +72,20 @@ export default {
         .setDescription("Displays a full list of all available bot commands."),
 
     async execute(interaction) {
-        const commandListEmbed = createCommandListEmbed();
+        try {
+            const commandListEmbed = createCommandListEmbed();
 
-        // This command replies ephemerally and does not need buttons.
-        await interaction.reply({
-            embeds: [commandListEmbed],
-            ephemeral: false,
-        });
+            // This command replies ephemerally and does not need buttons.
+            await interaction.editReply({
+                embeds: [commandListEmbed],
+                ephemeral: false,
+            });
+        } catch (error) {
+            console.error('CommandList command error:', error);
+            return interaction.reply({
+                embeds: [createEmbed({ title: 'System Error', description: 'Could not build or display the command list.' })],
+                ephemeral: true,
+            });
+        }
     },
 };

@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // Migrated from: commands/Tools/generatepassword.js
 export default {
@@ -28,19 +29,21 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ flags: ["Ephemeral"] });
-            
-            const length = interaction.options.getInteger('length') || 16;
-            const includeUppercase = interaction.options.getBoolean('uppercase') ?? true;
-            const includeNumbers = interaction.options.getBoolean('numbers') ?? true;
-            const includeSymbols = interaction.options.getBoolean('symbols') ?? true;
-            
-            if (length < 8 || length > 50) {
-                return interaction.editReply({
-                    embeds: [errorEmbed('Error', 'Password length must be between 8 and 50 characters.')],
-                    flags: ["Ephemeral"]
-                });
-            }
+            await InteractionHelper.safeExecute(
+                interaction,
+                async () => {
+                const length = interaction.options.getInteger('length') || 16;
+                const includeUppercase = interaction.options.getBoolean('uppercase') ?? true;
+                const includeNumbers = interaction.options.getBoolean('numbers') ?? true;
+                const includeSymbols = interaction.options.getBoolean('symbols') ?? true;
+                
+                if (length < 8 || length > 50) {
+                    await InteractionHelper.safeEditReply(interaction, {
+                        embeds: [errorEmbed('Error', 'Password length must be between 8 and 50 characters.')],
+                        flags: ["Ephemeral"]
+                    });
+                    return;
+                }
             
             // Character sets
             const lowercase = 'abcdefghijklmnopqrstuvwxyz';
@@ -135,13 +138,18 @@ export default {
                 `**Contains:** ${hasLower ? 'Lowercase' : ''}${hasUpper ? ', Uppercase' : ''}${hasNumber ? ', Numbers' : ''}${hasSymbol ? ', Symbols' : ''}`
             ).setColor(strengthColor);
             
-            await interaction.editReply({ embeds: [embed] });
-            
+            await InteractionHelper.safeEditReply(interaction, { 
+                embeds: [embed],
+                flags: ["Ephemeral"] 
+            });
+                },
+                errorEmbed('Failed to generate password. Please try again later.')
+            );
         } catch (error) {
-            console.error('Generate Password command error:', error);
-            await interaction.editReply({
-                embeds: [errorEmbed('Error', 'Failed to generate a password. Please try again.')],
-                flags: ["Ephemeral"]
+            console.error('GeneratePassword command error:', error);
+            return interaction.reply({
+                embeds: [errorEmbed('System Error', 'Could not generate a password at this time.')],
+                ephemeral: true,
             });
         }
     },

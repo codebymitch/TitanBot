@@ -15,23 +15,28 @@ export default {
     ),
 
   async execute(interaction) {
-    const originalText = interaction.options.getString("text");
-    let mockedText = "";
+    try {
+      const originalText = interaction.options.getString("text");
+      let mockedText = "";
 
-    // Iterate through the string, alternating between lower and upper case
-    for (let i = 0; i < originalText.length; i++) {
-      const char = originalText[i];
-      if (i % 2 === 0) {
-        // Even index -> lower case
-        mockedText += char.toLowerCase();
-      } else {
-        // Odd index -> upper case
-        mockedText += char.toUpperCase();
+      // Iterate through the string, alternating between lower and upper case
+      for (let i = 0; i < originalText.length; i++) {
+        const char = originalText[i];
+        if (i % 2 === 0) {
+          // Even index -> lower case
+          mockedText += char.toLowerCase();
+        } else {
+          // Odd index -> upper case
+          mockedText += char.toUpperCase();
+        }
       }
+
+      const embed = successEmbed("sPoNgEbOb cAsE", `"${mockedText}"`);
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (error) {
+      console.error("Mock command error:", error);
+      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not mock text right now.")] });
     }
-
-    const embed = successEmbed("sPoNgEbOb cAsE", `"${mockedText}"`);
-
-    await interaction.reply({ embeds: [embed] });
   },
 };

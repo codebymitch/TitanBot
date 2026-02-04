@@ -319,6 +319,102 @@ export function formatShopItem(item, index) {
  * Get the shop inventory
  * @returns {Array} The shop items
  */
+/**
+ * Add money to a user's wallet or bank
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {string} userId - The user ID
+ * @param {number} amount - The amount to add
+ * @param {string} [type='wallet'] - Where to add the money ('wallet' or 'bank')
+ * @returns {Promise<{success: boolean, newBalance: number, maxBank?: number}>} Result of the operation
+ */
+export async function addMoney(client, guildId, userId, amount, type = 'wallet') {
+    try {
+        if (amount <= 0) {
+            return { success: false, error: 'Amount must be positive' };
+        }
+
+        const userData = await getEconomyData(client, guildId, userId);
+        
+        if (type === 'bank') {
+            const maxBank = getMaxBankCapacity(userData);
+            if ((userData.bank || 0) + amount > maxBank) {
+                return { 
+                    success: false, 
+                    error: 'Bank capacity exceeded',
+                    current: userData.bank || 0,
+                    max: maxBank
+                };
+            }
+            userData.bank = (userData.bank || 0) + amount;
+        } else {
+            userData.wallet = (userData.wallet || 0) + amount;
+        }
+
+        await setEconomyData(client, guildId, userId, userData);
+        
+        return { 
+            success: true, 
+            newBalance: type === 'bank' ? userData.bank : userData.wallet,
+            ...(type === 'bank' ? { maxBank: getMaxBankCapacity(userData) } : {})
+        };
+    } catch (error) {
+        console.error(`Error adding money to ${type} for user ${userId} in guild ${guildId}:`, error);
+        return { success: false, error: 'An error occurred while processing your request' };
+    }
+}
+
+/**
+ * Remove money from a user's wallet or bank
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {string} userId - The user ID
+ * @param {number} amount - The amount to remove
+ * @param {string} [type='wallet'] - Where to remove the money from ('wallet' or 'bank')
+ * @returns {Promise<{success: boolean, newBalance: number}>} Result of the operation
+ */
+export async function removeMoney(client, guildId, userId, amount, type = 'wallet') {
+    try {
+        if (amount <= 0) {
+            return { success: false, error: 'Amount must be positive' };
+        }
+
+        const userData = await getEconomyData(client, guildId, userId);
+        
+        if (type === 'bank') {
+            if ((userData.bank || 0) < amount) {
+                return { 
+                    success: false, 
+                    error: 'Insufficient funds in bank',
+                    current: userData.bank || 0,
+                    required: amount
+                };
+            }
+            userData.bank = (userData.bank || 0) - amount;
+        } else {
+            if ((userData.wallet || 0) < amount) {
+                return { 
+                    success: false, 
+                    error: 'Insufficient funds in wallet',
+                    current: userData.wallet || 0,
+                    required: amount
+                };
+            }
+            userData.wallet = (userData.wallet || 0) - amount;
+        }
+
+        await setEconomyData(client, guildId, userId, userData);
+        
+        return { 
+            success: true, 
+            newBalance: type === 'bank' ? userData.bank : userData.wallet
+        };
+    } catch (error) {
+        console.error(`Error removing money from ${type} for user ${userId} in guild ${guildId}:`, error);
+        return { success: false, error: 'An error occurred while processing your request' };
+    }
+}
+
 export function getShopInventory() {
     return [
         {

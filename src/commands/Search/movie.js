@@ -38,7 +38,7 @@ export default {
                 interaction.guild?.id,
             );
             if (guildConfig?.disabledCommands?.includes("movie")) {
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Command Disabled",
@@ -52,7 +52,7 @@ export default {
             // Check if API key is available
             if (!TMDB_API_KEY) {
                 console.error("TMDB API key is not configured");
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Configuration Error",
@@ -67,7 +67,6 @@ export default {
             const type = interaction.options.getString("type") || "movie";
 
             // Show typing indicator while searching
-            await interaction.deferReply();
 
             // Search for the movie/TV show
             const searchResponse = await axios.get(

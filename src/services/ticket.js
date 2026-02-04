@@ -10,6 +10,7 @@ import { getGuildConfig } from './guildConfig.js';
 import { getTicketData, saveTicketData, deleteTicketData, getFromDb, setInDb } from './database.js';
 import { logger } from '../utils/logger.js';
 import { createEmbed, errorEmbed } from '../utils/embeds.js';
+import { logTicketEvent } from '../utils/ticketLogging.js';
 
 // Priority mapping
 const PRIORITY_MAP = {
@@ -23,7 +24,7 @@ const PRIORITY_MAP = {
 /**
  * Count the number of open tickets for a user in a guild
  */
-async function getUserTicketCount(guildId, userId) {
+export async function getUserTicketCount(guildId, userId) {
   try {
     // Get all ticket keys for this guild
     const ticketKeys = await getFromDb(`guild:${guildId}:ticket:*`, {});
@@ -202,6 +203,25 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       components: [row] 
     });
     
+    // Log ticket creation
+    await logTicketEvent({
+      client: guild.client,
+      guildId: guild.id,
+      event: {
+        type: 'open',
+        ticketId: channel.id,
+        ticketNumber: ticketNumber,
+        userId: member.id,
+        executorId: member.id,
+        reason: reason,
+        priority: priority || 'none',
+        metadata: {
+          channelId: channel.id,
+          categoryName: category?.name || 'Default'
+        }
+      }
+    });
+    
     return { success: true, channel, ticketData };
     
   } catch (error) {
@@ -221,7 +241,7 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
     }
     
     // Get guild config to check DM setting
-    const config = await getGuildConfig({}, channel.guild.id);
+    const config = await getGuildConfig(channel.client, channel.guild.id);
     const dmOnClose = config.dmOnClose !== false; // Default to true
     
     // Update ticket data
@@ -305,25 +325,56 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
       });
     }
     
-    // Send close message
+    // Remove the ticket creator's access
+    try {
+      const user = await channel.guild.members.fetch(ticketData.userId).catch(() => null);
+      if (user) {
+        await channel.permissionOverwrites.delete(user, 'Ticket closed');
+      }
+    } catch (error) {
+      logger.warn(`Could not remove user ${ticketData.userId} from ticket channel:`, error.message);
+    }
+    
+    // Send close message with control buttons
     const closeEmbed = createEmbed({
       title: 'Ticket Closed',
-      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}\n\n📋 This channel will be deleted in 5 seconds.${dmOnClose ? '\n\n📩 A DM has been sent to the ticket creator.' : ''}`,
+      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}${dmOnClose ? '\n\n📩 A DM has been sent to the ticket creator.' : ''}`,
       color: '#e74c3c',
       footer: { text: `Ticket ID: ${ticketData.id}` }
     });
     
-    await channel.send({ embeds: [closeEmbed] });
+    const controlRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('ticket_reopen')
+        .setLabel('Reopen Ticket')
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('🔓'),
+      new ButtonBuilder()
+        .setCustomId('ticket_delete')
+        .setLabel('Delete Ticket')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🗑️')
+    );
     
-    // Wait 5 seconds before deleting the channel to allow users to see the close message
-    setTimeout(async () => {
-      try {
-        await channel.delete('Ticket closed and archived');
-        logger.info(`Deleted ticket channel ${channel.name} (${channel.id})`);
-      } catch (deleteError) {
-        logger.error(`Failed to delete ticket channel ${channel.id}:`, deleteError);
+    await channel.send({ embeds: [closeEmbed], components: [controlRow] });
+    
+    // Log ticket closure
+    await logTicketEvent({
+      client: channel.client,
+      guildId: channel.guild.id,
+      event: {
+        type: 'close',
+        ticketId: channel.id,
+        ticketNumber: ticketData.id,
+        userId: ticketData.userId,
+        executorId: closer.id,
+        reason: reason,
+        metadata: {
+          dmSent: dmOnClose,
+          closedAt: ticketData.closedAt
+        }
       }
-    }, 5000);
+    });
     
     return { success: true, ticketData };
     
@@ -397,14 +448,38 @@ export async function claimTicket(channel, claimer) {
       });
     }
     
-    // Send claim message
+    // Send claim message with unclaim button
     const claimEmbed = createEmbed({
       title: 'Ticket Claimed',
       description: `🎉 ${claimer} has claimed this ticket!`,
       color: '#2ecc71'
     });
     
-    await channel.send({ embeds: [claimEmbed] });
+    const unclaimRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('ticket_unclaim')
+        .setLabel('Unclaim')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🔓')
+    );
+    
+    await channel.send({ embeds: [claimEmbed], components: [unclaimRow] });
+    
+    // Log ticket claim
+    await logTicketEvent({
+      client: channel.client,
+      guildId: channel.guild.id,
+      event: {
+        type: 'claim',
+        ticketId: channel.id,
+        ticketNumber: ticketData.id,
+        userId: ticketData.userId,
+        executorId: claimer.id,
+        metadata: {
+          claimedAt: ticketData.claimedAt
+        }
+      }
+    });
     
     return { success: true, ticketData };
     
@@ -413,6 +488,286 @@ export async function claimTicket(channel, claimer) {
     return { 
       success: false, 
       error: error.message || 'Failed to claim ticket' 
+    };
+  }
+}
+
+export async function reopenTicket(channel, reopener) {
+  try {
+    const ticketData = await getTicketData(channel.guild.id, channel.id);
+    if (!ticketData) {
+      return { success: false, error: 'This is not a ticket channel' };
+    }
+    
+    if (ticketData.status !== 'closed') {
+      return { 
+        success: false, 
+        error: 'This ticket is not currently closed' 
+      };
+    }
+    
+    // Update ticket data
+    ticketData.status = 'open';
+    ticketData.closedBy = null;
+    ticketData.closedAt = null;
+    ticketData.closeReason = null;
+    
+    await saveTicketData(channel.guild.id, channel.id, ticketData);
+    
+    // Restore the ticket creator's access
+    try {
+      const user = await channel.guild.members.fetch(ticketData.userId).catch(() => null);
+      if (user) {
+        await channel.permissionOverwrites.create(user, {
+          ViewChannel: true,
+          SendMessages: true,
+          ReadMessageHistory: true,
+          AttachFiles: true
+        });
+      }
+    } catch (error) {
+      logger.warn(`Could not restore access for user ${ticketData.userId}:`, error.message);
+    }
+    
+    // Update ticket message
+    const messages = await channel.messages.fetch();
+    const ticketMessage = messages.find(m => 
+      m.embeds.length > 0 && 
+      m.embeds[0].title?.startsWith('Ticket #')
+    );
+    
+    if (ticketMessage) {
+      const embed = ticketMessage.embeds[0];
+      const statusField = embed.fields?.find(f => f.name === 'Status');
+      
+      if (statusField) {
+        statusField.value = '🟢 Open';
+      }
+      
+      // Rebuild the action row with all buttons
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('ticket_close')
+          .setLabel('Close Ticket')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🔒'),
+        new ButtonBuilder()
+          .setCustomId('ticket_claim')
+          .setLabel(ticketData.claimedBy ? 'Claimed' : 'Claim')
+          .setStyle(ticketData.claimedBy ? ButtonStyle.Secondary : ButtonStyle.Primary)
+          .setEmoji(ticketData.claimedBy ? '🙋' : '🔑')
+          .setDisabled(!!ticketData.claimedBy),
+        new ButtonBuilder()
+          .setCustomId('ticket_transcript')
+          .setLabel('Transcript')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('📜')
+      );
+      
+      await ticketMessage.edit({ 
+        embeds: [embed],
+        components: [row] 
+      });
+    }
+    
+    // Send reopen message
+    const reopenEmbed = createEmbed({
+      title: 'Ticket Reopened',
+      description: `🔓 ${reopener} has reopened this ticket!`,
+      color: '#2ecc71'
+    });
+    
+    await channel.send({ embeds: [reopenEmbed] });
+    
+    return { success: true, ticketData };
+    
+  } catch (error) {
+    logger.error('Error reopening ticket:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to reopen ticket' 
+    };
+  }
+}
+
+export async function deleteTicket(channel, deleter) {
+  try {
+    const ticketData = await getTicketData(channel.guild.id, channel.id);
+    if (!ticketData) {
+      return { success: false, error: 'This is not a ticket channel' };
+    }
+    
+    // Send final deletion message
+    const deleteEmbed = createEmbed({
+      title: 'Ticket Deleted',
+      description: `🗑️ This ticket will be permanently deleted in 3 seconds.`,
+      color: '#e74c3c',
+      footer: { text: `Ticket ID: ${ticketData.id}` }
+    });
+    
+    await channel.send({ embeds: [deleteEmbed] });
+    
+    // Log ticket deletion
+    await logTicketEvent({
+      client: channel.client,
+      guildId: channel.guild.id,
+      event: {
+        type: 'delete',
+        ticketId: channel.id,
+        ticketNumber: ticketData.id,
+        userId: ticketData.userId,
+        executorId: deleter.id,
+        metadata: {
+          deletedAt: new Date().toISOString()
+        }
+      }
+    });
+    
+    // Wait 3 seconds then delete the channel
+    setTimeout(async () => {
+      try {
+        await channel.delete('Ticket deleted permanently');
+        logger.info(`Deleted ticket channel ${channel.name} (${channel.id})`);
+      } catch (deleteError) {
+        logger.error(`Failed to delete ticket channel ${channel.id}:`, deleteError);
+      }
+    }, 3000);
+    
+    return { success: true, ticketData };
+    
+  } catch (error) {
+    logger.error('Error deleting ticket:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to delete ticket' 
+    };
+  }
+}
+
+export async function unclaimTicket(channel, unclaimer) {
+  try {
+    const ticketData = await getTicketData(channel.guild.id, channel.id);
+    if (!ticketData) {
+      return { success: false, error: 'This is not a ticket channel' };
+    }
+    
+    if (!ticketData.claimedBy) {
+      return { 
+        success: false, 
+        error: 'This ticket is not currently claimed' 
+      };
+    }
+    
+    // Only allow the claimer or admins to unclaim
+    if (ticketData.claimedBy !== unclaimer.id && !unclaimer.permissions.has(PermissionFlagsBits.ManageChannels)) {
+      return { 
+        success: false, 
+        error: 'You can only unclaim your own tickets or need Manage Channels permission.' 
+      };
+    }
+    
+    // Update ticket data
+    const previousClaimer = ticketData.claimedBy;
+    ticketData.claimedBy = null;
+    ticketData.claimedAt = null;
+    
+    await saveTicketData(channel.guild.id, channel.id, ticketData);
+    
+    // Update ticket message
+    const messages = await channel.messages.fetch();
+    const ticketMessage = messages.find(m => 
+      m.embeds.length > 0 && 
+      m.embeds[0].title?.startsWith('Ticket #')
+    );
+    
+    if (ticketMessage) {
+      const embed = ticketMessage.embeds[0];
+      const claimedField = embed.fields?.find(f => f.name === 'Claimed By');
+      
+      if (claimedField) {
+        claimedField.value = 'Not claimed';
+      }
+      
+      // Rebuild the action row with claim button re-enabled
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('ticket_close')
+          .setLabel('Close Ticket')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🔒'),
+        new ButtonBuilder()
+          .setCustomId('ticket_claim')
+          .setLabel('Claim')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('🙋'),
+        new ButtonBuilder()
+          .setCustomId('ticket_transcript')
+          .setLabel('Transcript')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('📜')
+      );
+      
+      await ticketMessage.edit({ 
+        embeds: [embed],
+        components: [row] 
+      });
+    }
+    
+    // Find and edit the claim embed message to remove the unclaim button
+    const recentMessages = await channel.messages.fetch({ limit: 50 });
+    const claimMessage = recentMessages.find(m => 
+      m.embeds.length > 0 && 
+      m.embeds[0].title === 'Ticket Claimed' &&
+      m.components.length > 0 &&
+      m.components[0].components.some(c => c.customId === 'ticket_unclaim')
+    );
+    
+    if (claimMessage) {
+      // Edit the claim message to remove the unclaim button and show unclaimed status
+      const unclaimEmbed = createEmbed({
+        title: 'Ticket Unclaimed',
+        description: `🔓 ${unclaimer} has unclaimed this ticket!`,
+        color: '#f39c12'
+      });
+      
+      await claimMessage.edit({ 
+        embeds: [unclaimEmbed],
+        components: [] // Remove all components (unclaim button)
+      });
+    } else {
+      // Fallback: send new message if claim message not found
+      const unclaimEmbed = createEmbed({
+        title: 'Ticket Unclaimed',
+        description: `🔓 ${unclaimer} has unclaimed this ticket!`,
+        color: '#f39c12'
+      });
+      
+      await channel.send({ embeds: [unclaimEmbed] });
+    }
+    
+    // Log ticket unclaim
+    await logTicketEvent({
+      client: channel.client,
+      guildId: channel.guild.id,
+      event: {
+        type: 'unclaim',
+        ticketId: channel.id,
+        ticketNumber: ticketData.id,
+        userId: ticketData.userId,
+        executorId: unclaimer.id,
+        metadata: {
+          previousClaimer: previousClaimer
+        }
+      }
+    });
+    
+    return { success: true, ticketData };
+    
+  } catch (error) {
+    logger.error('Error unclaiming ticket:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to unclaim ticket' 
     };
   }
 }
@@ -490,6 +845,24 @@ export async function updateTicketPriority(channel, priority, updater) {
     });
     
     await channel.send({ embeds: [updateEmbed] });
+    
+    // Log priority update
+    await logTicketEvent({
+      client: channel.client,
+      guildId: channel.guild.id,
+      event: {
+        type: 'priority',
+        ticketId: channel.id,
+        ticketNumber: ticketData.id,
+        userId: ticketData.userId,
+        executorId: updater.id,
+        priority: priority,
+        metadata: {
+          previousPriority: ticketData.priority,
+          updatedAt: ticketData.priorityUpdatedAt
+        }
+      }
+    });
     
     return { success: true, ticketData };
     

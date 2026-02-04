@@ -10,21 +10,29 @@ export default {
     .setDescription("Get link to the support server"),
 
   async execute(interaction) {
-    const supportButton = new ButtonBuilder()
-      .setLabel("Join Support Server")
-      .setStyle(ButtonStyle.Link)
-      .setURL(SUPPORT_SERVER_URL);
+    try {
+      const supportButton = new ButtonBuilder()
+        .setLabel("Join Support Server")
+        .setStyle(ButtonStyle.Link)
+        .setURL(SUPPORT_SERVER_URL);
 
-    const actionRow = new ActionRowBuilder().addComponents(supportButton);
+      const actionRow = new ActionRowBuilder().addComponents(supportButton);
 
-    await interaction.reply({
-      embeds: [
-        createEmbed({ title: "🚑 Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!", }),
-      ],
-      // Use the custom ActionRow with the defined button
-      components: [actionRow],
-      flags: ["Ephemeral"],
-    });
+      await interaction.editReply({
+        embeds: [
+          createEmbed({ title: "🚑 Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!" }),
+        ],
+        // Use the custom ActionRow with the defined button
+        components: [actionRow],
+        flags: ["Ephemeral"],
+      });
+    } catch (error) {
+      console.error('Support command error:', error);
+      return interaction.reply({
+        embeds: [createEmbed({ title: 'System Error', description: 'Could not display support information.' })],
+        ephemeral: true,
+      });
+    }
   },
 };
 

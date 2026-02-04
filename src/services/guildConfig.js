@@ -19,6 +19,7 @@ export async function getGuildConfig(client, guildId) {
         welcomeChannel: null,
         welcomeMessage: 'Welcome {user} to {server}!',
         autoRole: null,
+        dmOnClose: true, // Default to true for DM on ticket close
         ...config
     };
 }

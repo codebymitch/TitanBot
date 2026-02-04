@@ -16,11 +16,19 @@ export default {
     ),
 
   async execute(interaction) {
-    const user = interaction.options.getUser("target") || interaction.user;
+    try {
+      const user = interaction.options.getUser("target") || interaction.user;
 
-    const embed = createEmbed({ title: `${user.username}'s Avatar`, description: `[Download Link](${user.displayAvatarURL({ size: 2048, dynamic: true })})` })
-      .setImage(user.displayAvatarURL({ size: 2048, dynamic: true }));
+      const embed = createEmbed({ title: `${user.username}'s Avatar`, description: `[Download Link](${user.displayAvatarURL({ size: 2048, dynamic: true })})` })
+        .setImage(user.displayAvatarURL({ size: 2048, dynamic: true }));
 
-    await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Avatar command error:', error);
+      return interaction.reply({
+        embeds: [createEmbed({ title: 'System Error', description: 'Could not display avatar at this time.' })],
+        ephemeral: true,
+      });
+    }
   },
 };

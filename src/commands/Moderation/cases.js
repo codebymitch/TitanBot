@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuild
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getModerationCases } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -32,8 +33,9 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
-
+        await InteractionHelper.safeExecute(
+            interaction,
+            async () => {
         try {
             const filterType = interaction.options.getString('filter') || 'all';
             const targetUser = interaction.options.getUser('user');
@@ -48,16 +50,10 @@ export default {
             const cases = await getModerationCases(interaction.guild.id, filters);
 
             if (cases.length === 0) {
-                return await interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            'No Cases Found',
-                            targetUser 
-                                ? `No moderation cases found for ${targetUser.tag}`
-                                : `No ${filterType === 'all' ? '' : filterType} cases found in this server.`
-                        )
-                    ]
-                });
+                throw new Error(targetUser 
+                    ? `No moderation cases found for ${targetUser.tag}`
+                    : `No ${filterType === 'all' ? '' : filterType} cases found in this server.`
+                );
             }
 
             const CASES_PER_PAGE = 5;
@@ -167,14 +163,10 @@ export default {
 
         } catch (error) {
             logger.error('Error in cases command:', error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        'Error',
-                        'An error occurred while fetching moderation cases. Please try again later.'
-                    )
-                ]
-            });
+            throw error;
         }
+            },
+            errorEmbed('Error', 'An error occurred while fetching moderation cases. Please try again later.')
+        );
     }
 };

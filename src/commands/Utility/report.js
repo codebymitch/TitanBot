@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // Migrated from: commands/Utility/report.js
 export default {
@@ -30,7 +31,10 @@ export default {
      * @param {import('discord.js').Client} client
      */
     async execute(interaction, config, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] }); // The user's reply is private
+    await InteractionHelper.safeExecute(
+        interaction,
+        async () => {
+        // safeExecute already defers; don't defer again
 
         const targetUser = interaction.options.getUser("user");
         const reason = interaction.options.getString("reason");
@@ -41,7 +45,7 @@ export default {
             const reportChannelId = guildConfig.reportChannelId;
 
             if (!reportChannelId) {
-                return interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Setup Required",
@@ -57,7 +61,7 @@ export default {
 
             if (!reportChannel) {
                 // This error handles cases where the channel ID exists, but the channel was deleted
-                return interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Channel Missing",
@@ -91,14 +95,14 @@ export default {
             });
 
             // 5. Confirmation reply (Ephemeral)
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     createEmbed({ title: "✅ Report Submitted", description: `Your report against **${targetUser.tag}** has been successfully filed and sent to the moderation team. Thank you!`, }),
                 ],
             });
         } catch (error) {
             console.error("Report command error:", error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "System Error",
@@ -107,5 +111,9 @@ export default {
                 ],
             });
         }
-    },
+    
+        },
+        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
+    );
+},
 };

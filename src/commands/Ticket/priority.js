@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { updateTicketPriority } from '../../services/ticket.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logEvent } from '../../utils/moderation.js';
 
 export default {
@@ -26,7 +27,8 @@ export default {
     category: "Ticket",
 
     async execute(interaction, guildConfig, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+        if (!deferSuccess) return;
 
         const priorityLevel = interaction.options.getString("level");
 

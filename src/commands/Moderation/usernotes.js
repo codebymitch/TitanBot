@@ -1,9 +1,27 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
+import { getFromDb, setInDb, deleteFromDb } from '../../utils/database.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-// Simple in-memory storage for user notes (in production, use database)
-const userNotes = new Map();
+/**
+ * Get user notes key for database
+ * @param {string} guildId - Guild ID
+ * @param {string} userId - User ID
+ * @returns {string} Database key
+ */
+function getUserNotesKey(guildId, userId) {
+    return `moderation_user_notes_${guildId}_${userId}`;
+}
+
+/**
+ * Get all user notes for a guild
+ * @param {string} guildId - Guild ID
+ * @returns {string} Database key for guild notes list
+ */
+function getGuildNotesListKey(guildId) {
+    return `moderation_user_notes_list_${guildId}`;
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -82,7 +100,8 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
+        if (!deferSuccess) return;
 
         // Permission check
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
@@ -100,28 +119,20 @@ export default {
         const targetUser = interaction.options.getUser("target");
         const guildId = interaction.guild.id;
 
-        // Initialize user notes if not exists
-        if (!userNotes.has(guildId)) {
-            userNotes.set(guildId, new Map());
-        }
-        const guildNotes = userNotes.get(guildId);
-
-        // Initialize user's notes if not exists
-        if (!guildNotes.has(targetUser.id)) {
-            guildNotes.set(targetUser.id, []);
-        }
-        const notes = guildNotes.get(targetUser.id);
+        // Get user notes from database
+        const notesKey = getUserNotesKey(guildId, targetUser.id);
+        let notes = await getFromDb(notesKey, []);
 
         try {
             switch (subcommand) {
                 case "add":
-                    return await handleAddNote(interaction, targetUser, notes);
+                    return await handleAddNote(interaction, targetUser, notes, notesKey);
                 case "view":
                     return await handleViewNotes(interaction, targetUser, notes);
                 case "remove":
-                    return await handleRemoveNote(interaction, targetUser, notes);
+                    return await handleRemoveNote(interaction, targetUser, notes, notesKey);
                 case "clear":
-                    return await handleClearNotes(interaction, targetUser, notes);
+                    return await handleClearNotes(interaction, targetUser, notes, notesKey);
                 default:
                     return interaction.editReply({
                         embeds: [
@@ -146,7 +157,7 @@ export default {
     }
 };
 
-async function handleAddNote(interaction, targetUser, notes) {
+async function handleAddNote(interaction, targetUser, notes, notesKey) {
     const note = interaction.options.getString("note");
     const type = interaction.options.getString("type") || "neutral";
 
@@ -173,6 +184,9 @@ async function handleAddNote(interaction, targetUser, notes) {
     };
 
     notes.push(noteData);
+
+    // Save to database
+    await setInDb(notesKey, notes);
 
     // Get type emoji and color
     const typeInfo = getNoteTypeInfo(type);
@@ -230,7 +244,7 @@ async function handleViewNotes(interaction, targetUser, notes) {
     });
 }
 
-async function handleRemoveNote(interaction, targetUser, notes) {
+async function handleRemoveNote(interaction, targetUser, notes, notesKey) {
     const index = interaction.options.getInteger("index") - 1; // Convert to 0-based
 
     if (index < 0 || index >= notes.length) {
@@ -247,6 +261,9 @@ async function handleRemoveNote(interaction, targetUser, notes) {
     const removedNote = notes[index];
     notes.splice(index, 1);
 
+    // Save to database
+    await setInDb(notesKey, notes);
+
     const typeInfo = getNoteTypeInfo(removedNote.type);
 
     return interaction.editReply({
@@ -261,7 +278,7 @@ async function handleRemoveNote(interaction, targetUser, notes) {
     });
 }
 
-async function handleClearNotes(interaction, targetUser, notes) {
+async function handleClearNotes(interaction, targetUser, notes, notesKey) {
     const noteCount = notes.length;
     
     if (noteCount === 0) {
@@ -277,6 +294,9 @@ async function handleClearNotes(interaction, targetUser, notes) {
 
     // Clear all notes
     notes.length = 0;
+
+    // Save to database
+    await setInDb(notesKey, notes);
 
     return interaction.editReply({
         embeds: [

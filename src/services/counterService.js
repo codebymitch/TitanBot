@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger.js';
+
 /**
  * Update a specific counter
  * @param {Client} client - Discord client
@@ -9,14 +11,14 @@ export async function updateCounter(client, guild, counter) {
   try {
     // Skip invalid counters
     if (!counter || !counter.type || !counter.channelId) {
-      console.warn('Skipping invalid counter in updateCounter:', counter);
+      logger.warn('Skipping invalid counter in updateCounter:', counter);
       return false;
     }
     
     const { type, channelId } = counter;
     const channel = guild.channels.cache.get(channelId);
     if (!channel) {
-      console.error('Channel not found for counter:', channelId);
+      logger.error('Channel not found for counter:', channelId);
       return false;
     }
 
@@ -24,44 +26,58 @@ export async function updateCounter(client, guild, counter) {
     switch (type) {
       case "members":
         count = guild.memberCount;
-        console.log(`Member count for guild ${guild.id}: ${count}`);
+        if (process.env.NODE_ENV !== 'production') {
+          logger.debug(`Member count for guild ${guild.id}: ${count}`);
+        }
         break;
       case "bots":
         count = guild.members.cache.filter((m) => m.user.bot).size;
-        console.log(`Bot count for guild ${guild.id}: ${count}`);
+        if (process.env.NODE_ENV !== 'production') {
+          logger.debug(`Bot count for guild ${guild.id}: ${count}`);
+        }
         break;
       case "members_only":
         count = guild.members.cache.filter((m) => !m.user.bot).size;
-        console.log(`Human count for guild ${guild.id}: ${count}`);
+        if (process.env.NODE_ENV !== 'production') {
+          logger.debug(`Human count for guild ${guild.id}: ${count}`);
+        }
         break;
       default:
-        console.error('Unknown counter type:', type);
+        logger.error('Unknown counter type:', type);
         return false;
     }
 
     // Get the base name without any existing count
     const baseName = channel.name.replace(/\s*[:]\s*\d+$/, '').trim();
-    console.log(`Base name: "${baseName}", Current name: "${channel.name}"`);
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug(`Base name: "${baseName}", Current name: "${channel.name}"`);
+    }
     
     // Create new name with count
     const newName = `${baseName}: ${count}`;
-    console.log(`New name would be: "${newName}"`);
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug(`New name would be: "${newName}"`);
+    }
     
     // Only update if the name would change
     if (channel.name !== newName) {
       try {
         await channel.setName(newName);
-        console.log(`Updated channel name to: "${newName}"`);
+        if (process.env.NODE_ENV !== 'production') {
+          logger.debug(`Updated channel name to: "${newName}"`);
+        }
       } catch (error) {
-        console.error(`Failed to update channel name for ${channel.id}:`, error);
+        logger.error(`Failed to update channel name for ${channel.id}:`, error);
         return false;
       }
     } else {
-      console.log('Channel name already correct, no update needed');
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Channel name already correct, no update needed');
+      }
     }
     return true;
   } catch (error) {
-    console.error("Error updating counter:", error);
+    logger.error("Error updating counter:", error);
     return false;
   }
 }
@@ -76,7 +92,7 @@ export async function getServerCounters(client, guildId) {
   try {
     // Check if database is available
     if (!client || !client.db) {
-      console.warn('Database not available for getServerCounters');
+      logger.warn('Database not available for getServerCounters');
       return {};
     }
     
@@ -94,7 +110,9 @@ export async function getServerCounters(client, guildId) {
       // Handle case where data is the actual counters object
       counters = Object.values(data);
     } else {
-      console.log('No counter data found, returning empty array');
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('No counter data found, returning empty array');
+      }
       return [];
     }
     
@@ -110,7 +128,7 @@ export async function getServerCounters(client, guildId) {
     
     return validCounters;
   } catch (error) {
-    console.error("Error getting server counters:", error);
+    logger.error("Error getting server counters:", error);
     return [];
   }
 }
@@ -124,12 +142,16 @@ export async function getServerCounters(client, guildId) {
  */
 export async function saveServerCounters(client, guildId, counters) {
   try {
-    console.log(`Saving ${counters.length} counters for guild ${guildId}:`, counters);
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug(`Saving ${counters.length} counters for guild ${guildId}:`, counters);
+    }
     await client.db.set(`counters:${guildId}`, counters);
-    console.log('Counters saved successfully');
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug('Counters saved successfully');
+    }
     return true;
   } catch (error) {
-    console.error("Error saving server counters:", error);
+    logger.error("Error saving server counters:", error);
     return false;
   }
 }

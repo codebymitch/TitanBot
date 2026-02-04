@@ -4,7 +4,13 @@ import { getPromoRow } from '../../utils/components.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { logEvent } from '../../utils/moderation.js';
 
-// Migrated from: commands/Ticket/ticket.js
+// Import ticket limits modules (now removed – view moved to logstatus)
+// import ticketLimitsView from './modules/ticket_limits_view.js';
+import ticketLimitsSet from './modules/ticket_limits_set.js';
+import ticketLimitsCheck from './modules/ticket_limits_check.js';
+import ticketLimitsToggleDM from './modules/ticket_limits_toggle_dm.js';
+
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ticket")
@@ -66,11 +72,48 @@ export default {
                         .setDescription("Send DM to user when their ticket is closed (default: true)")
                         .setRequired(false),
                 ),
+        )
+        .addSubcommandGroup((group) =>
+            group
+                .setName("limits")
+                .setDescription("Manage ticket limits and settings")
+                .addSubcommand((subcommand) =>
+                    subcommand
+                        .setName("set")
+                        .setDescription("Set the maximum number of tickets per user")
+                        .addIntegerOption((option) =>
+                            option
+                                .setName("max_tickets")
+                                .setDescription("Maximum number of tickets a user can create (1-10)")
+                                .setMinValue(1)
+                                .setMaxValue(10)
+                                .setRequired(true)
+                        )
+                )
+                .addSubcommand((subcommand) =>
+                    subcommand
+                        .setName("check")
+                        .setDescription("Check a user's current ticket count")
+                        .addUserOption((option) =>
+                            option
+                                .setName("user")
+                                .setDescription("The user to check")
+                                .setRequired(true)
+                        )
+                )
+                .addSubcommand((subcommand) =>
+                    subcommand
+                        .setName("toggle_dm")
+                        .setDescription("Toggle DM notifications when tickets are closed")
+                )
         ),
     category: "ticket",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+    await InteractionHelper.safeExecute(
+        interaction,
+        async () => {
+        // safeExecute already defers; don't defer again
 
         // --- Permission Check ---
         if (
@@ -78,7 +121,7 @@ export default {
                 PermissionFlagsBits.ManageChannels,
             )
         )
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -87,7 +130,31 @@ export default {
                 ],
             });
 
-        if (interaction.options.getSubcommand() === "setup") {
+        const subcommand = interaction.options.getSubcommand();
+        const subcommandGroup = interaction.options.getSubcommandGroup();
+
+        if (subcommandGroup === "limits") {
+            // Handle limits subcommands (view removed; others remain)
+            switch (subcommand) {
+                case "set":
+                    return ticketLimitsSet.execute(interaction, config, client);
+                case "check":
+                    return ticketLimitsCheck.execute(interaction, config, client);
+                case "toggle_dm":
+                    return ticketLimitsToggleDM.execute(interaction, config, client);
+                default:
+                    return interaction.editReply({
+                        embeds: [
+                            errorEmbed(
+                                "Invalid Subcommand",
+                                "Please select a valid limits subcommand."
+                            ),
+                        ],
+                    });
+            }
+        }
+
+        if (subcommand === "setup") {
             // Retrieve options
             const panelChannel =
                 interaction.options.getChannel("panel_channel");
@@ -101,7 +168,7 @@ export default {
 
             const setupEmbed = createEmbed({ 
                 title: "🎫 Support Tickets", 
-                description: `${panelMessage}\n\n**Max Tickets Per User:** ${maxTicketsPerUser}`,
+                description: panelMessage, // Removed the max tickets text from here
                 color: "#3498DB"
             });
 
@@ -132,15 +199,17 @@ export default {
                     currentConfig.maxTicketsPerUser = maxTicketsPerUser;
                     currentConfig.dmOnClose = dmOnClose;
 
-                    // Save the updated configuration to the database
-                    await client.db.set(interaction.guildId, currentConfig);
+                    // Save the updated configuration to the database using the proper guild config key
+                    const { getGuildConfigKey } = await import('../../utils/database.js');
+                    const configKey = getGuildConfigKey(interaction.guildId);
+                    await client.db.set(configKey, currentConfig);
                     console.log(
                         `[DB] Saved ticketCategoryId, ticketPanelChannelId, maxTicketsPerUser, and dmOnClose for guild ${interaction.guildId}`,
                     );
                 }
 
                 // --- Success Reply ---
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             "Ticket Panel Set Up",
@@ -197,7 +266,7 @@ export default {
                 });
             } catch (error) {
                 console.error("Ticket Setup Error:", error);
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Setup Failed",
@@ -207,5 +276,9 @@ export default {
                 });
             }
         }
-    },
+    
+        },
+        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
+    );
+},
 };

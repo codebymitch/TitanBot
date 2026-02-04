@@ -2,8 +2,6 @@ import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData, saveUserLevelData } from '../utils/database.js';
 import { addXp } from '../services/xpSystem.js';
-import { botConfig } from '../config/bot.js';
-import { handleAFKMentions } from '../handlers/afkHandler.js';
 
 export default {
   name: Events.MessageCreate,
@@ -11,14 +9,6 @@ export default {
     try {
       // Ignore bot messages and DMs
       if (message.author.bot || !message.guild) return;
-
-      // Handle prefix commands
-      if (message.content.startsWith(botConfig.commands.prefix)) {
-        await handlePrefixCommand(message, client);
-      }
-
-      // Handle AFK mentions
-      await handleAFKMentions(message, client);
 
       // Handle leveling (existing functionality)
       await handleLeveling(message, client);
@@ -28,37 +18,6 @@ export default {
     }
   },
 };
-
-// Handle prefix commands
-async function handlePrefixCommand(message, client) {
-  const prefix = botConfig.commands.prefix;
-  const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const commandName = args.shift().toLowerCase();
-
-  // Find the command
-  const command = client.commands.get(commandName);
-  if (!command) return;
-
-  // Check if command supports prefix execution
-  if (!command.executeMessage) return;
-
-  // Check if it's an economy command (only economy commands support prefix)
-  if (command.category !== 'Economy') return;
-
-  try {
-    // Execute the prefix command
-    await command.executeMessage(message, args, client);
-  } catch (error) {
-    logger.error(`Error executing prefix command ${commandName}:`, error);
-    await message.reply({
-      embeds: [{
-        title: 'Command Error',
-        description: 'There was an error executing that command.',
-        color: 0xFF0000
-      }]
-    });
-  }
-}
 
 // Handle leveling (existing functionality)
 async function handleLeveling(message, client) {

@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("massban")
@@ -30,11 +31,14 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+    await InteractionHelper.safeExecute(
+        interaction,
+        async () => {
+        // safeExecute already defers
 
         // Permission check
         if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -57,7 +61,7 @@ export default {
                 .slice(0, 20); // Limit to 20 users at once
 
             if (userIds.length === 0) {
-                return interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Invalid Users",
@@ -69,7 +73,7 @@ export default {
 
             // Prevent self-banning
             if (userIds.includes(interaction.user.id)) {
-                return interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Cannot Ban Self",
@@ -81,7 +85,7 @@ export default {
 
             // Prevent bot-banning
             if (userIds.includes(client.user.id)) {
-                return interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Cannot Ban Bot",
@@ -136,14 +140,22 @@ export default {
                     });
 
                     // Log the action
-                    await logModerationAction(
+                    await logModerationAction({
                         client,
-                        interaction.guild,
-                        interaction.user,
-                        user,
-                        "MASS_BAN",
-                        reason
-                    );
+                        guild: interaction.guild,
+                        event: {
+                            action: "Member Banned",
+                            target: `${user.tag} (${user.id})`,
+                            executor: `${interaction.user.tag} (${interaction.user.id})`,
+                            reason: `${reason} (Mass Ban)`,
+                            metadata: {
+                                userId: user.id,
+                                moderatorId: interaction.user.id,
+                                massBan: true,
+                                permanent: true
+                            }
+                        }
+                    });
 
                 } catch (error) {
                     logger.error(`Failed to ban user ${userId}:`, error);
@@ -182,7 +194,7 @@ export default {
 
             const embed = results.successful.length > 0 ? successEmbed : warningEmbed;
             
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     embed(
                         `🔨 Mass Ban Completed`,
@@ -193,7 +205,7 @@ export default {
 
         } catch (error) {
             logger.error("Error in massban command:", error);
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "System Error",
@@ -202,5 +214,9 @@ export default {
                 ],
             });
         }
-    }
+    
+        },
+        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
+    );
+}
 };

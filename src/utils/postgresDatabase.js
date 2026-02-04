@@ -28,6 +28,9 @@ class PostgreSQLDatabase {
 
     async _establishConnection() {
         try {
+            // Ensure environment variables are loaded
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // Create connection pool
             this.pool = new pg.Pool({
                 host: pgConfig.options.host,
@@ -629,11 +632,27 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'guild_birthdays':
+                    // Ensure guild exists before inserting birthday data
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
                     // Clear existing birthdays for this guild
                     await this.pool.query(`DELETE FROM ${pgConfig.tables.birthdays} WHERE guild_id = $1`, [parsedKey.guildId]);
                     
-                    // Insert new birthdays
+                    // Insert new birthdays with user existence checks
                     for (const [userId, birthday] of Object.entries(value)) {
+                        // Ensure user exists before inserting birthday data
+                        await this.pool.query(
+                            `INSERT INTO ${pgConfig.tables.users} (id, created_at) 
+                             VALUES ($1, CURRENT_TIMESTAMP) 
+                             ON CONFLICT (id) DO NOTHING`,
+                            [userId]
+                        );
+                        
                         await this.pool.query(
                             `INSERT INTO ${pgConfig.tables.birthdays} (guild_id, user_id, month, day) 
                              VALUES ($1, $2, $3, $4)`,
@@ -643,6 +662,14 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'guild_giveaways':
+                    // Ensure guild exists before inserting giveaway data
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
                     // Clear existing giveaways for this guild
                     await this.pool.query(`DELETE FROM ${pgConfig.tables.giveaways} WHERE guild_id = $1`, [parsedKey.guildId]);
                     
@@ -657,6 +684,14 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'welcome_config':
+                    // Ensure guild exists before inserting welcome config
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.welcome_configs} (guild_id, config, updated_at) 
                          VALUES ($1, $2, CURRENT_TIMESTAMP) 
@@ -666,6 +701,14 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'leveling_config':
+                    // Ensure guild exists before inserting leveling config
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.leveling_configs} (guild_id, config, updated_at) 
                          VALUES ($1, $2, CURRENT_TIMESTAMP) 
@@ -675,6 +718,22 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'user_level':
+                    // Ensure guild exists before inserting user level data
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
+                    // Ensure user exists before inserting user level data
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.users} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.userId]
+                    );
+                    
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.user_levels} (guild_id, user_id, xp, level, total_xp, last_message, rank, updated_at) 
                          VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP) 
@@ -685,6 +744,22 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'economy':
+                    // Ensure guild exists before inserting economy data to satisfy foreign key constraint
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
+                    // Ensure user exists before inserting economy data to satisfy foreign key constraint
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.users} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.userId]
+                    );
+                    
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.economy} (guild_id, user_id, balance, bank, data, updated_at) 
                          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) 
@@ -695,6 +770,22 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'afk_status':
+                    // Ensure guild exists before inserting AFK status
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
+                    // Ensure user exists before inserting AFK status
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.users} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.userId]
+                    );
+                    
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.afk_status} (guild_id, user_id, reason, expires_at) 
                          VALUES ($1, $2, $3, $4) 
@@ -705,6 +796,14 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'ticket':
+                    // Ensure guild exists before inserting ticket data
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+                    
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.tickets} (guild_id, channel_id, data, expires_at) 
                          VALUES ($1, $2, $3, $4) 

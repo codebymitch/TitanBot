@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // Migrated from: commands/Reaction_roles/rsetup.js
 export default {
@@ -51,7 +52,8 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ flags: ["Ephemeral"] });
+            const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
+            if (!deferSuccess) return;
 
             const channel = interaction.options.getChannel('channel');
             const title = interaction.options.getString('title');

@@ -1,16 +1,19 @@
 import { getGuildConfig } from './guildConfig.js';
 import { getGuildBirthdays } from '../utils/database.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Check for birthdays across all guilds and send birthday messages
- * @param {Object} client - The Discord client
+ * @param {Object} client - Discord client
  */
 export async function checkBirthdays(client) {
   const today = new Date();
   const currentMonth = today.getUTCMonth() + 1;
   const currentDay = today.getUTCDate();
 
-  console.log(`🎂 Running daily birthday check for UTC: ${currentMonth}/${currentDay}.`);
+  if (process.env.NODE_ENV !== 'production') {
+    logger.debug(`🎂 Running daily birthday check for UTC: ${currentMonth}/${currentDay}.`);
+  }
 
   for (const [guildId, guild] of client.guilds.cache) {
     try {
@@ -18,7 +21,9 @@ export async function checkBirthdays(client) {
       const { birthdayChannelId, birthdayRoleId } = config;
 
       if (!birthdayChannelId || !birthdayRoleId) {
-        console.log(`Skipping birthday check for ${guild.name}: Missing channel or role config.`);
+        if (process.env.NODE_ENV !== 'production') {
+          logger.debug(`Skipping birthday check for ${guild.name}: Missing channel or role config.`);
+        }
         continue;
       }
 
@@ -29,7 +34,7 @@ export async function checkBirthdays(client) {
       const trackingKey = `bday-role-tracking-${guildId}`;
       const trackingData = (await client.db.get(trackingKey)) || {};
       const updatedTrackingData = { ...trackingData };
-
+      
       for (const userId of Object.keys(trackingData)) {
         try {
           const member = await guild.members.fetch(userId).catch(() => null);
@@ -41,7 +46,7 @@ export async function checkBirthdays(client) {
           console.error(`Error removing birthday role from ${userId}:`, error);
         }
       }
-      
+
       if (Object.keys(updatedTrackingData).length !== Object.keys(trackingData).length) {
         await client.db.set(trackingKey, updatedTrackingData);
       }
@@ -49,7 +54,6 @@ export async function checkBirthdays(client) {
       // Check for birthdays today
       const birthdaysKey = `birthdays:${guildId}`;
       const birthdays = (await client.db.get(birthdaysKey)) || {};
-      
       const birthdayMembers = [];
       for (const [userId, userData] of Object.entries(birthdays)) {
         if (userData.month === currentMonth && userData.day === currentDay) {
@@ -81,7 +85,7 @@ export async function checkBirthdays(client) {
         });
       }
     } catch (error) {
-      console.error(`Error processing birthdays for guild ${guildId}:`, error);
+      logger.error(`Error processing birthdays for guild ${guildId}:`, error);
     }
   }
 }

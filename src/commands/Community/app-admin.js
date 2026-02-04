@@ -290,7 +290,7 @@ async function showCurrentSettings(interaction, settings) {
         },
     );
 
-    await interaction.reply({
+    await interaction.editReply({
         embeds: [embed],
         flags: ["Ephemeral"],
     });
@@ -353,13 +353,13 @@ async function handleView(interaction) {
                 .setEmoji("❌"),
         );
 
-        await interaction.reply({
+        await interaction.editReply({
             embeds: [embed],
             components: [row],
             flags: ["Ephemeral"],
         });
     } else {
-        await interaction.reply({
+        await interaction.editReply({
             embeds: [embed],
             flags: ["Ephemeral"],
         });
@@ -468,7 +468,7 @@ async function handleReview(interaction) {
         }
     }
 
-    await interaction.reply({
+    await interaction.editReply({
         embeds: [
             successEmbed(
                 `Application ${status}`,
@@ -561,7 +561,7 @@ async function handleList(interaction) {
         });
     });
 
-    await interaction.reply({
+    await interaction.editReply({
         embeds: [embed],
         flags: ["Ephemeral"],
     });
@@ -810,7 +810,7 @@ export async function handleApplicationButton(interaction) {
         
     } catch (error) {
         console.error('Error handling application button:', error);
-        await interaction.reply({
+        await interaction.editReply({
             embeds: [errorEmbed('An error occurred while processing the application.')],
             flags: ["Ephemeral"]
         });
@@ -901,7 +901,7 @@ export async function handleApplicationReviewModal(interaction) {
             }
         }
         
-        await interaction.reply({
+        await interaction.editReply({
             embeds: [
                 successEmbed(
                     `Application ${status}`,
@@ -913,7 +913,7 @@ export async function handleApplicationReviewModal(interaction) {
         
     } catch (error) {
         console.error('Error processing application review:', error);
-        await interaction.reply({
+        await interaction.editReply({
             embeds: [errorEmbed('An error occurred while processing the application.')],
             flags: ["Ephemeral"]
         });

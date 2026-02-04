@@ -47,6 +47,10 @@ async function getAllFiles(directory, fileList = []) {
         const filePath = path.join(directory, file.name);
         
         if (file.isDirectory()) {
+            // Skip modules directories as they contain subcommand modules
+            if (file.name === 'modules') {
+                continue;
+            }
             await getAllFiles(filePath, fileList);
         } else if (file.name.endsWith('.js')) {
             fileList.push(filePath);
@@ -103,21 +107,6 @@ export async function loadCommands(client) {
                 
                 // Add the command to the collection with the command name as the key
                 client.commands.set(primaryCommandName, command);
-                
-                // Register aliases for prefix commands (economy commands) - but ONLY for prefix commands
-                if (command.aliases && command.category === 'Economy') {
-                    for (const alias of command.aliases) {
-                        // Don't override existing commands with aliases
-                        if (!client.commands.has(alias)) {
-                            client.commands.set(alias, command);
-                        }
-                    }
-                }
-                
-                // Also register by name for prefix commands (economy commands)
-                if (command.name && command.category === 'Economy' && !client.commands.has(command.name)) {
-                    client.commands.set(command.name, command);
-                }
             }
             
             // Log command with subcommand details
@@ -153,8 +142,7 @@ export async function loadCommands(client) {
         }
     }
     
-    console.log(`Successfully loaded ${uniqueCommands.size} unique commands (${client.commands.size} total including aliases) (${commandsWithSubcommands.length} with subcommands, ${totalSubcommands} total subcommands)`);
-    logger.info(`Successfully loaded ${uniqueCommands.size} unique commands (${client.commands.size} total including aliases) (${commandsWithSubcommands.length} with subcommands, ${totalSubcommands} total subcommands)`);
+    logger.info(`Loaded ${uniqueCommands.size} commands`);
     return client.commands;
 }
 
@@ -188,8 +176,9 @@ export async function registerCommands(client, guildId) {
                     const subcommands = getSubcommandInfo(commandJson);
                     totalSubcommands += subcommands.length;
                     
-                    logger.info(`Registering command: ${commandName}`);
-                    console.log(`Registering command: ${commandName}`);
+                    if (process.env.NODE_ENV !== 'production') {
+                        logger.debug(`Registering command: ${commandName}`);
+                    }
                 } else {
                     logger.debug(`Skipping duplicate command: ${commandName}`);
                 }
@@ -204,29 +193,137 @@ export async function registerCommands(client, guildId) {
         if (guildId) {
             // Register commands for a specific guild (faster for development)
             
-            logger.info(`Registering ${totalCommandsWithSubs} commands for guild ${guildId}`);
+            logger.info(`Preparing to register ${totalCommandsWithSubs} commands for guild ${guildId}`);
             
-            // First, clear existing guild commands to prevent duplicates
-            const guild = await client.guilds.fetch(guildId);
-            const existingCommands = await guild.commands.fetch();
+            // First, validate all commands before doing anything
+            logger.info('Validating commands before registration...');
             
-            logger.info(`Found ${existingCommands.size} existing guild commands to clear`);
+            // Debug: Check for long descriptions before registering
+            let validationErrors = [];
+            commands.forEach((cmd, index) => {
+                if (cmd.name && cmd.name.length > 32) {
+                    validationErrors.push(`Command ${cmd.name} has name longer than 32 chars: "${cmd.name}" (${cmd.name.length} chars)`);
+                }
+                if (cmd.description && cmd.description.length > 110) {
+                    validationErrors.push(`Command ${cmd.name} has description longer than 110 chars: "${cmd.description}" (${cmd.description.length} chars)`);
+                }
+                
+                // Check subcommands and options
+                if (cmd.options) {
+                    cmd.options.forEach((option, optIndex) => {
+                        if (option.name && option.name.length > 32) {
+                            validationErrors.push(`Command ${cmd.name} option ${option.name} has name longer than 32 chars: "${option.name}" (${option.name.length} chars)`);
+                        }
+                        if (option.description && option.description.length > 110) {
+                            validationErrors.push(`Command ${cmd.name} option ${option.name} has description longer than 110 chars: "${option.description}" (${option.description.length} chars)`);
+                        }
+                        
+                        // Check choice names
+                        if (option.choices) {
+                            option.choices.forEach((choice, choiceIndex) => {
+                                if (choice.name && choice.name.length > 110) {
+                                    validationErrors.push(`Command ${cmd.name} option ${option.name} choice ${choice.name} has name longer than 110 chars: "${choice.name}" (${choice.name.length} chars)`);
+                                }
+                                if (choice.value && choice.value.length > 100) {
+                                    validationErrors.push(`Command ${cmd.name} option ${option.name} choice ${choice.name} has value longer than 100 chars: "${choice.value}" (${choice.value.length} chars)`);
+                                }
+                            });
+                        }
+                        
+                        // Check subcommand options
+                        if (option.options) {
+                            option.options.forEach((subOption, subOptIndex) => {
+                                if (subOption.name && subOption.name.length > 32) {
+                                    validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} has name longer than 32 chars: "${subOption.name}" (${subOption.name.length} chars)`);
+                                }
+                                if (subOption.description && subOption.description.length > 110) {
+                                    validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} has description longer than 110 chars: "${subOption.description}" (${subOption.description.length} chars)`);
+                                }
+                                
+                                // Check suboption choices
+                                if (subOption.choices) {
+                                    subOption.choices.forEach((choice, choiceIndex) => {
+                                        if (choice.name && choice.name.length > 110) {
+                                            validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} choice ${choice.name} has name longer than 110 chars: "${choice.name}" (${choice.name.length} chars)`);
+                                        }
+                                        if (choice.value && choice.value.length > 100) {
+                                            validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} choice ${choice.name} has value longer than 100 chars: "${choice.value}" (${choice.value.length} chars)`);
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
             
-            if (existingCommands.size > 0) {
-                await guild.commands.set([]);
-                // Wait longer for Discord to process the clearing
-                logger.info('Waiting 5 seconds for Discord to clear existing commands...');
-                await new Promise(resolve => setTimeout(resolve, 5000));
+            // If validation errors exist, log them and don't proceed
+            if (validationErrors.length > 0) {
+                logger.error('Command validation failed. Errors:');
+                validationErrors.forEach(error => logger.error(`  - ${error}`));
+                throw new Error(`Command validation failed with ${validationErrors.length} errors`);
             }
             
-            // Now register the new commands
-            logger.info(`Registering ${commands.length} new commands...`);
-            await guild.commands.set(commands);
-            logger.info(`Successfully registered ${totalCommandsWithSubs} guild commands`);
+            logger.info('Command validation passed');
+            
+            // Get guild reference
+            const guild = await client.guilds.fetch(guildId);
+            
+            // Backup existing commands before clearing
+            const existingCommands = await guild.commands.fetch();
+            logger.info(`Found ${existingCommands.size} existing guild commands`);
+            
+            // Check command count limit (Discord allows max 100)
+            const MAX_COMMANDS = 100;
+            let commandsToRegister = commands;
+            
+            if (commands.length > MAX_COMMANDS) {
+                logger.warn(`Command count (${commands.length}) exceeds Discord limit (${MAX_COMMANDS}), truncating...`);
+                commandsToRegister = commands.slice(0, MAX_COMMANDS);
+                logger.info(`Truncated to ${commandsToRegister.length} commands for registration`);
+            }
+            
+            // Log command details for debugging (only in development)
+            if (process.env.NODE_ENV !== 'production') {
+                logger.info(`Registering ${totalCommandsWithSubs} commands for guild ${guild.name} (${guild.id})`);
+            }
+            
+            try {
+                // Register new commands first, then clear if successful
+                logger.info(`Registering ${commandsToRegister.length} new commands...`);
+                
+                // Use bulk overwrite to replace all commands at once (safer than clear then set)
+                await guild.commands.set(commandsToRegister);
+                
+                logger.info(`Successfully registered ${commandsToRegister.length} guild commands`);
+                
+                // Verify the commands were actually registered
+                const registeredCommands = await guild.commands.fetch();
+                if (registeredCommands.size !== commandsToRegister.length) {
+                    logger.warn(`Warning: Expected ${commandsToRegister.length} commands, but Discord reports ${registeredCommands.size} registered`);
+                } else {
+                    logger.info(`Verification passed: ${registeredCommands.size} commands successfully registered`);
+                }
+                
+            } catch (error) {
+                logger.error('Failed to register commands:', error);
+                
+                // Attempt to restore backup commands if registration failed
+                if (existingCommands.size > 0) {
+                    logger.info('Attempting to restore previous commands due to registration failure...');
+                    try {
+                        await guild.commands.set(existingCommands.map(cmd => cmd));
+                        logger.info('Successfully restored previous commands');
+                    } catch (restoreError) {
+                        logger.error('Failed to restore previous commands:', restoreError);
+                    }
+                }
+                
+                throw error;
+            }
         } else {
-            // Register commands globally
-            await client.application.commands.set(commands);
-            logger.info(`Registered ${totalCommandsWithSubs} global commands`);
+            // Skip global command registration since bot won't be public
+            logger.info('Skipping global command registration - bot is guild-only');
         }
     } catch (error) {
         logger.error('Error registering commands:', error);

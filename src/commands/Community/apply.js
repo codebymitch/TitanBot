@@ -154,7 +154,7 @@ export async function handleApplicationModal(interaction) {
             `You can check the status with \`/apply status id:${application.id}\``
         );
         
-        await interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
+        await interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
         
         // Log the application if log channel is set
         const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
@@ -188,7 +188,7 @@ export async function handleApplicationModal(interaction) {
                 flags: ["Ephemeral"]
             });
         } else {
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [errorEmbed('Failed to submit application. Please try again later.')],
                 flags: ["Ephemeral"]
             });

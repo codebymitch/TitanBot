@@ -74,9 +74,9 @@ export default {
                     embed.setImage(image);
                 }
 
-                await interaction.reply({ embeds: [embed] });
+                await interaction.editReply({ embeds: [embed] });
             } catch (error) {
-                await interaction.reply({ 
+                await interaction.editReply({ 
                     content: '❌ An error occurred while setting up the goodbye system.', 
                     flags: ["Ephemeral"] 
                 });
@@ -92,12 +92,12 @@ export default {
                     goodbyeEnabled: newStatus
                 });
 
-                await interaction.reply({
+                await interaction.editReply({
                     content: `✅ Goodbye messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
-                await interaction.reply({ 
+                await interaction.editReply({ 
                     content: '❌ An error occurred while toggling goodbye messages.', 
                     flags: ["Ephemeral"] 
                 });

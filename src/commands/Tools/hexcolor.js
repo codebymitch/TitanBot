@@ -14,8 +14,6 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply();
-            
             let hexColor = interaction.options.getString('color');
             let isRandom = false;
             

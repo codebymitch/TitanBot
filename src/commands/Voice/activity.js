@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Activity IDs for different Discord Activities
 const ACTIVITIES = {
     'youtube': '880218394199220334',
@@ -11,11 +12,11 @@ const ACTIVITIES = {
     'letter-league': '879863686565621790',
     'spellcast': '852509694341283871',
     'sketch': '902271654783242291',
-    'blazing-8s': '832025144389533716',
-    'putt-party': '945737671223947305',
-    'land-io': '903769130790969345',
+    'blazing8s': '832025144389533716',
+    'puttparty': '945737671223947305',
+    'landio': '903769130790969345',
     'bobble': '947957217959759964',
-    'know-what': '976052223358406656'
+    'knowwhat': '976052223358406656'
 };
 
 // Activity names for display
@@ -27,11 +28,11 @@ const ACTIVITY_NAMES = {
     'letter-league': 'Letter League',
     'spellcast': 'SpellCast',
     'sketch': 'Sketch Heads',
-    'blazing-8s': 'Blazing 8s',
-    'putt-party': 'Putt Party',
-    'land-io': 'Land-io',
+    'blazing8s': 'Blazing 8s',
+    'puttparty': 'Putt Party',
+    'landio': 'Land-io',
     'bobble': 'Bobble League',
-    'know-what': 'Know What I Mean'
+    'knowwhat': 'Know What I Mean'
 };
 
 export default {
@@ -93,21 +94,21 @@ export default {
         // Blazing 8s
         .addSubcommand(subcommand =>
             subcommand
-                .setName('blazing-8s')
+                .setName('blazing8s')
                 .setDescription('Play the card game Blazing 8s')
         )
         
         // Putt Party
         .addSubcommand(subcommand =>
             subcommand
-                .setName('putt-party')
+                .setName('puttparty')
                 .setDescription('Play Putt Party (Mini-golf)')
         )
         
         // Land-io
         .addSubcommand(subcommand =>
             subcommand
-                .setName('land-io')
+                .setName('landio')
                 .setDescription('Play the territory game Land-io')
         )
         
@@ -121,14 +122,16 @@ export default {
         // Know What I Mean
         .addSubcommand(subcommand =>
             subcommand
-                .setName('know-what')
+                .setName('knowwhat')
                 .setDescription('Play Know What I Mean')
         ),
 
     category: "Fun",
 
-    async execute(interaction) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+    async execute(interaction, config, client) {
+    await InteractionHelper.safeExecute(
+        interaction,
+        async () => {
 
         const { member, options } = interaction;
         const activity = options.getSubcommand();
@@ -137,7 +140,7 @@ export default {
 
         // Check if user is in a voice channel
         if (!member.voice.channel) {
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed('You need to be in a voice channel to start an activity!')]
             });
         }
@@ -145,7 +148,7 @@ export default {
         // Check if the bot has permission to create invites
         const permissions = member.voice.channel.permissionsFor(interaction.guild.members.me);
         if (!permissions.has('CreateInstantInvite')) {
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed('I need the `Create Invite` permission to start an activity!')]
             });
         }
@@ -164,7 +167,7 @@ export default {
             );
 
             // Send the invite link
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [successEmbed(
                     `Click the link below to start **${activityName}** in ${member.voice.channel.name}!\n` +
                     `[Join ${activityName} Activity](https://discord.gg/${invite.code})`
@@ -173,9 +176,13 @@ export default {
 
         } catch (error) {
             console.error('Error creating activity invite:', error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed('Failed to create the activity. Please try again later.')]
             });
         }
-    },
+    
+        },
+        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
+    );
+},
 };

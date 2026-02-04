@@ -13,10 +13,10 @@ export function createEmbed({
   timestamp = true,
   url = null
 } = {}) {
-  const embed = new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(description)
-    .setColor(getColor(color));
+  const embed = new EmbedBuilder();
+  if (title) embed.setTitle(title);
+  if (description) embed.setDescription(description);
+  embed.setColor(getColor(color));
 
   if (fields && fields.length > 0) {
     embed.addFields(fields);

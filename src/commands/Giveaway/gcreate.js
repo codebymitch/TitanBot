@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, saveGiveaway } from '../../utils/giveaways.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const parseDuration = (durationString) => {
     // Regex to match formats like "1h", "30m", "5d", "10s"
@@ -82,16 +83,12 @@ export default {
         .setDefaultMemberPermissions(0x0000000000000008n), // Administrator permission
 
     async execute(interaction) {
+        try {
+            await InteractionHelper.safeExecute(
+                interaction,
+                async () => {
         if (!interaction.inGuild()) {
-            return interaction.reply({
-                embeds: [
-                    errorEmbed(
-                        "Command Failed",
-                        "This command can only be used in a server.",
-                    ),
-                ],
-                flags: ["Ephemeral"],
-            });
+            throw new Error("This command can only be used in a server.");
         }
 
         if (
@@ -99,18 +96,8 @@ export default {
                 PermissionsBitField.Flags.ManageGuild,
             )
         ) {
-            return interaction.reply({
-                embeds: [
-                    errorEmbed(
-                        "Permission Denied",
-                        "You need the 'Manage Server' permission to start a giveaway.",
-                    ),
-                ],
-                flags: ["Ephemeral"],
-            });
+            throw new Error("You need the 'Manage Server' permission to start a giveaway.");
         }
-
-        await interaction.deferReply();
 
         const durationString = interaction.options.getString("duration");
         const winnerCount = interaction.options.getInteger("winners");
@@ -120,69 +107,59 @@ export default {
         const durationMs = parseDuration(durationString);
 
         if (durationMs === null) {
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Invalid Duration",
-                        "Please provide a valid duration (e.g., `1h`, `30m`, `5d`, `10s`). Minimum is 10s, maximum is 30d.",
-                    ),
-                ],
-            });
+            throw new Error("Invalid duration format. Use: 1h, 30m, 5d, 10s (min: 10s, max: 30d)");
         }
 
         const endTime = Date.now() + durationMs;
 
-        try {
-            // 1. Send the initial giveaway message
-            const initialGiveawayData = {
-                messageId: "placeholder", // Will be updated after sending the message
-                channelId: targetChannel.id,
-                guildId: interaction.guildId,
-                prize: prize,
-                hostId: interaction.user.id,
-                endTime: endTime,
-                endsAt: endTime, // Store both for consistency
-                winnerCount: winnerCount,
-                // ** 🚩 FIX: Use 'participants' for consistency with the rest of the logic **
-                participants: [],
-                isEnded: false,
-            };
+        // Create giveaway data
+        const initialGiveawayData = {
+            messageId: "placeholder",
+            channelId: targetChannel.id,
+            guildId: interaction.guildId,
+            prize: prize,
+            hostId: interaction.user.id,
+            endTime: endTime,
+            endsAt: endTime,
+            winnerCount: winnerCount,
+            participants: [],
+            isEnded: false,
+        };
 
-            const embed = giveawayEmbed(initialGiveawayData, "active");
-            const row = giveawayButtons(false);
+        // Send giveaway message
+        const embed = giveawayEmbed(initialGiveawayData, "active");
+        const row = giveawayButtons(false);
+        const giveawayMessage = await targetChannel.send({
+            content: "🎉 **NEW GIVEAWAY** 🎉",
+            embeds: [embed],
+            components: [row],
+        });
 
-            const giveawayMessage = await targetChannel.send({
-                content: "🎉 **NEW GIVEAWAY** 🎉",
-                embeds: [embed],
-                components: [row],
-            });
+        // Update message ID and save to database
+        initialGiveawayData.messageId = giveawayMessage.id;
+        await saveGiveaway(
+            interaction.client,
+            interaction.guildId,
+            initialGiveawayData,
+        );
 
-            // 2. Update the message ID and save to database
-            initialGiveawayData.messageId = giveawayMessage.id;
-            await saveGiveaway(
-                interaction.client,
-                interaction.guildId,
-                initialGiveawayData,
+        // Confirm success
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [
+                successEmbed(
+                    "Giveaway Started!",
+                    `A new giveaway for **${prize}** has been started in ${targetChannel} and will end in ${durationString}.`,
+                ),
+            ],
+        });
+                },
+                errorEmbed("Giveaway Failed", "There was an error starting the giveaway. Please check bot permissions and ensure the channel is text-based.")
             );
-
-            // 3. Inform the user the giveaway has started
-            return interaction.editReply({
-                embeds: [
-                    successEmbed(
-                        "Giveaway Started!",
-                        `A new giveaway for **${prize}** has been successfully started in ${targetChannel} and will end in ${durationString}.`,
-                    ),
-                ],
-            });
         } catch (error) {
-            console.error("Error starting giveaway:", error);
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Giveaway Failed",
-                        "There was an error starting the giveaway. Please check bot permissions and ensure the channel is text-based.",
-                    ),
-                ],
+            console.error('Gcreate command error:', error);
+            return interaction.reply({
+                embeds: [errorEmbed('System Error', 'Could not start giveaway at this time.')],
+                ephemeral: true,
             });
         }
     },

@@ -15,16 +15,21 @@ export default {
     ),
 
   async execute(interaction) {
-    const originalText = interaction.options.getString("text");
+    try {
+      const originalText = interaction.options.getString("text");
 
-    // Split the string into an array of characters, reverse the array, and join it back
-    const reversedText = originalText.split("").reverse().join("");
+      // Split the string into an array of characters, reverse the array, and join it back
+      const reversedText = originalText.split("").reverse().join("");
 
-    const embed = successEmbed(
-      "Backwards Text",
-      `Original: **${originalText}**\nReversed: **${reversedText}**`,
-    );
+      const embed = successEmbed(
+        "Backwards Text",
+        `Original: **${originalText}**\nReversed: **${reversedText}**`,
+      );
 
-    await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
+    } catch (error) {
+      console.error("Reverse command error:", error);
+      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not reverse text right now.")] });
+    }
   },
 };

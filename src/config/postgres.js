@@ -21,8 +21,8 @@ export const pgConfig = {
         // Username
         user: process.env.POSTGRES_USER || 'postgres',
         
-        // Password
-        password: process.env.POSTGRES_PASSWORD || '',
+        // Password - ensure it's always a string
+        password: (process.env.POSTGRES_PASSWORD || '').toString(),
         
         // SSL configuration
         ssl: process.env.POSTGRES_SSL === 'true' ? {

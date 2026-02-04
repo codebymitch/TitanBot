@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("masskick")
@@ -22,11 +23,14 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+    await InteractionHelper.safeExecute(
+        interaction,
+        async () => {
+        // safeExecute already defers
 
         // Permission check
         if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -48,7 +52,7 @@ export default {
                 .slice(0, 20); // Limit to 20 users at once
 
             if (userIds.length === 0) {
-                return interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Invalid Users",
@@ -60,7 +64,7 @@ export default {
 
             // Prevent self-kicking
             if (userIds.includes(interaction.user.id)) {
-                return interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Cannot Kick Self",
@@ -72,7 +76,7 @@ export default {
 
             // Prevent bot-kicking
             if (userIds.includes(client.user.id)) {
-                return interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Cannot Kick Bot",
@@ -119,14 +123,21 @@ export default {
                     });
 
                     // Log the action
-                    await logModerationAction(
+                    await logModerationAction({
                         client,
-                        interaction.guild,
-                        interaction.user,
-                        member.user,
-                        "MASS_KICK",
-                        reason
-                    );
+                        guild: interaction.guild,
+                        event: {
+                            action: "Member Kicked",
+                            target: `${member.user.tag} (${member.user.id})`,
+                            executor: `${interaction.user.tag} (${interaction.user.id})`,
+                            reason: `${reason} (Mass Kick)`,
+                            metadata: {
+                                userId: member.user.id,
+                                moderatorId: interaction.user.id,
+                                massKick: true
+                            }
+                        }
+                    });
 
                 } catch (error) {
                     logger.error(`Failed to kick user ${userId}:`, error);
@@ -165,7 +176,7 @@ export default {
 
             const embed = results.successful.length > 0 ? successEmbed : warningEmbed;
             
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     embed(
                         `👢 Mass Kick Completed`,
@@ -176,7 +187,7 @@ export default {
 
         } catch (error) {
             logger.error("Error in masskick command:", error);
-            return interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "System Error",
@@ -185,5 +196,9 @@ export default {
                 ],
             });
         }
-    }
+    
+        },
+        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
+    );
+}
 };

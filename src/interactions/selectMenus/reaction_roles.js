@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 /**
  * Handle reaction role select menu interactions
@@ -8,7 +9,8 @@ import { EmbedBuilder } from 'discord.js';
  */
 export async function execute(interaction, client) {
     try {
-        await interaction.deferReply({ ephemeral: true });
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+        if (!deferSuccess) return;
 
         // Get the reaction role data from database using consistent key format
         const key = `reaction_roles:${interaction.guildId}:${interaction.message.id}`;

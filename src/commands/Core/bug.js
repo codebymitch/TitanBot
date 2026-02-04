@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const BUG_REPORT_WEBHOOK_URL =
   "https://discord.com/api/webhooks/1451105773198508073/g7EQbcGS9lIkmi53LNbbNjMQq4nL9ZJjM5LwAKW6TpirxHzghuxmRKXt6US_II76Kl4L";
@@ -22,7 +23,8 @@ const BUG_REPORT_WEBHOOK_URL =
     ),
 
   async execute(interaction) {
-    await interaction.deferReply({ flags: ["Ephemeral"] });
+    const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
+    if (!deferSuccess) return;
 
     const description = interaction.options.getString("description");
     const screenshot = interaction.options.getAttachment("screenshot");

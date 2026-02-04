@@ -1,7 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners } from '../../utils/giveaways.js';
+import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // Migrated from: commands/Giveaway/gend.js
 export default {
@@ -19,35 +20,60 @@ export default {
         .setDefaultMemberPermissions(0x0000000000000008n), // Administrator permission
 
     async execute(interaction) {
-        if (!interaction.inGuild()) {
-            return interaction.reply({
-                embeds: [
-                    errorEmbed(
-                        "Command Failed",
-                        "This command can only be used in a server.",
-                    ),
-                ],
-                flags: ["Ephemeral"],
-            });
-        }
+        await InteractionHelper.safeExecute(
+            interaction,
+            async () => {
+                // Guild and permission checks
+                if (!interaction.inGuild()) {
+                    throw new Error("This command can only be used in a server.");
+                }
 
-        if (
-            !interaction.member.permissions.has(
-                PermissionsBitField.Flags.ManageGuild,
-            )
-        ) {
-            return interaction.reply({
-                embeds: [
-                    errorEmbed(
-                        "Permission Denied",
-                        "You need the 'Manage Server' permission to end a giveaway.",
-                    ),
-                ],
-                flags: ["Ephemeral"],
-            });
-        }
+                if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+                    throw new Error("You need the 'Manage Server' permission to end a giveaway.");
+                }
 
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+                const messageId = interaction.options.getString("messageid");
+                const giveaways = await getGuildGiveaways(interaction.client, interaction.guildId);
+                const giveaway = giveaways.find(g => g.messageId === messageId);
+
+                if (!giveaway) {
+                    throw new Error("Giveaway not found. Check the message ID.");
+                }
+
+                if (giveaway.isEnded) {
+                    throw new Error("This giveaway has already ended.");
+                }
+
+                // Pick winners and end giveaway
+                giveaway.isEnded = true;
+                await saveGiveaway(interaction.client, interaction.guildId, giveaway);
+
+                const winners = pickWinners(giveaway.participants, giveaway.winnerCount);
+                const winnerText = winners.length > 0 ? winners.map(id => `<@${id}>`).join(", ") : "No participants";
+
+                try {
+                    const channel = await interaction.guild.channels.fetch(giveaway.channelId);
+                    const message = await channel.messages.fetch(messageId);
+                    
+                    const updatedGiveaway = { ...giveaway, isEnded: true };
+                    const embed = giveawayEmbed(updatedGiveaway, "ended");
+                    await message.edit({ embeds: [embed], components: [] });
+                } catch (error) {
+                    // Continue even if message update fails
+                }
+
+                await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        successEmbed(
+                            "Giveaway Ended",
+                            `**Prize:** ${giveaway.prize}\n**Winners:** ${winnerText}`,
+                        ),
+                    ],
+                });
+            },
+            errorEmbed("End Failed", "Could not end giveaway.")
+        );
+    }
 
         const messageId = interaction.options.getString("messageid");
         const giveaways = await getGuildGiveaways(

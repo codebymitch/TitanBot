@@ -31,42 +31,47 @@ export default {
     ),
 
   async execute(interaction) {
-    const name1 = interaction.options.getString("name1").trim();
-    const name2 = interaction.options.getString("name2").trim();
+    try {
+      const name1 = interaction.options.getString("name1").trim();
+      const name2 = interaction.options.getString("name2").trim();
 
-    // Sort names alphabetically to ensure 'ship a b' always returns the same as 'ship b a'
-    const sortedNames = [name1, name2].sort();
+      // Sort names alphabetically to ensure 'ship a b' always returns the same as 'ship b a'
+      const sortedNames = [name1, name2].sort();
 
-    // Create a combined string for a consistent score
-    const combination = sortedNames.join("-").toLowerCase();
+      // Create a combined string for a consistent score
+      const combination = sortedNames.join("-").toLowerCase();
 
-    // Use the hash to generate a percentage between 0 and 100
-    const score = stringToHash(combination) % 101; // 0-100
+      // Use the hash to generate a percentage between 0 and 100
+      const score = stringToHash(combination) % 101; // 0-100
 
-    let description;
-    if (score === 100) {
-      description = "Soulmates! It's destiny, they belong together!";
-    } else if (score >= 80) {
-      description = "A perfect match! Get the wedding bells ready!";
-    } else if (score >= 60) {
-      description = "Solid chemistry. Definitely worth exploring!";
-    } else if (score >= 40) {
-      description = "Just friends status. Maybe with time?";
-    } else if (score >= 20) {
-      description = "It's a struggle. They might need space.";
-    } else {
-      description = "Zero compatibility. Run for the hills!";
+      let description;
+      if (score === 100) {
+        description = "Soulmates! It's destiny, they belong together!";
+      } else if (score >= 80) {
+        description = "A perfect match! Get the wedding bells ready!";
+      } else if (score >= 60) {
+        description = "Solid chemistry. Definitely worth exploring!";
+      } else if (score >= 40) {
+        description = "Just friends status. Maybe with time?";
+      } else if (score >= 20) {
+        description = "It's a struggle. They might need space.";
+      } else {
+        description = "Zero compatibility. Run for the hills!";
+      }
+
+      const progressBar =
+        "█".repeat(Math.floor(score / 10)) +
+        "░".repeat(10 - Math.floor(score / 10));
+
+      const embed = successEmbed(
+        `💖 Ship Score: ${name1} vs ${name2}`,
+        `Compatibility: **${score}%**\n\n\`${progressBar}\`\n\n*${description}*`,
+      );
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (error) {
+      console.error("Ship command error:", error);
+      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not calculate compatibility right now.")] });
     }
-
-    const progressBar =
-      "█".repeat(Math.floor(score / 10)) +
-      "░".repeat(10 - Math.floor(score / 10));
-
-    const embed = successEmbed(
-      `💖 Ship Score: ${name1} vs ${name2}`,
-      `Compatibility: **${score}%**\n\n\`[${progressBar}]\`\n\n*${description}*`,
-    );
-
-    await interaction.reply({ embeds: [embed] });
   },
 };

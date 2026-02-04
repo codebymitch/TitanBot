@@ -2,11 +2,12 @@ import { EmbedBuilder } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from './guildConfig.js';
 import { addXp } from './xpSystem.js';
-import { redisDb } from '../utils/redisDatabase.js';
+import { pgDb } from '../utils/postgresDatabase.js';
 
 // Initialize database connection
 let db = null;
 let useFallback = false;
+let connectionType = 'none';
 
 // Check if we're in a Replit environment (for backward compatibility)
 const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
@@ -14,15 +15,17 @@ const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || pro
 // Async database initialization
 async function initializeLevelingDatabase() {
   try {
-    // Try to connect to Redis first
-    const redisConnected = await redisDb.connect();
-    if (redisConnected) {
-      db = redisDb;
-      logger.info('✅ Redis Database initialized for leveling service');
+    // Try to connect to PostgreSQL first
+    logger.info('Leveling: Attempting to connect to PostgreSQL...');
+    const pgConnected = await pgDb.connect();
+    if (pgConnected) {
+      db = pgDb;
+      connectionType = 'postgresql';
+      logger.info('✅ Leveling: PostgreSQL Database initialized');
       return;
     }
   } catch (error) {
-    logger.warn('Redis connection failed for leveling service, using fallback:', error.message);
+    logger.warn('Leveling: PostgreSQL connection failed, using mock database:', error.message);
   }
   
   // Fallback to mock database for non-Replit environments
@@ -36,7 +39,8 @@ async function initializeLevelingDatabase() {
     decrement: async (key, amount = 1) => -amount
   };
   useFallback = true;
-  logger.info('Using mock database for leveling service (fallback)');
+  connectionType = 'memory';
+  logger.info('Leveling: Using mock database (fallback)');
 }
 
 // Initialize database immediately
@@ -45,6 +49,11 @@ initializeLevelingDatabase();
 // XP required for each level (exponential formula)
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
+
+export function getXpForLevel(level) {
+  // 5 * (level ^ 2) + (50 * level) + 100 - 50
+  return 5 * Math.pow(level, 2) + 50 * level + 50;
+}
 
 export function getLevelFromXp(xp) {
   let level = 0;
@@ -182,7 +191,9 @@ export async function saveLevelingConfig(client, guildId, config) {
   try {
     const guildConfig = await getGuildConfig(client, guildId);
     guildConfig.leveling = config;
-    return await client.db.set(`${guildId}:config`, guildConfig);
+    const { getGuildConfigKey } = await import('../utils/database.js');
+    const configKey = getGuildConfigKey(guildId);
+    return await client.db.set(configKey, guildConfig);
   } catch (error) {
     logger.error('Error saving leveling config:', error);
     throw error;

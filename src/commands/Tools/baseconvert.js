@@ -37,8 +37,6 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply();
-            
             const numberStr = interaction.options.getString('number').trim();
             const fromBase = interaction.options.getString('from');
             const toBase = interaction.options.getString('to');

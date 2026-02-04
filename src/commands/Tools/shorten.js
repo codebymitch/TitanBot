@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Migrated from: commands/Tools/shorten.js
 export default {
     data: new SlashCommandBuilder()
@@ -22,68 +23,55 @@ export default {
         .setDMPermission(false),
     category: "Tools",
 
-    async execute(interaction) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+    async execute(interaction, config, client) {
+        await InteractionHelper.safeExecute(
+            interaction,
+            async () => {
+                const url = interaction.options.getString("url");
+                const custom = interaction.options.getString("custom");
 
-        const url = interaction.options.getString("url");
-        const custom = interaction.options.getString("custom");
-
-        // Basic URL validation
-        try {
-            new URL(url);
-        } catch (e) {
-            return interaction.editReply({
-                embeds: [errorEmbed("Invalid URL", "Please provide a valid URL (include http:// or https://)")],
-            });
-        }
-
-        try {
-            // Build the API URL
-            let apiUrl = `https://is.gd/create.php?format=simple&url=${encodeURIComponent(url)}`;
-            
-            if (custom) {
-                // Basic validation for custom URL
-                if (!/^[a-zA-Z0-9_-]+$/.test(custom)) {
-                    return interaction.editReply({
-                        embeds: [errorEmbed("Invalid Custom URL", "Custom URL can only contain letters, numbers, underscores, and hyphens.")],
-                    });
+                // Validate URL format
+                try {
+                    new URL(url);
+                } catch (e) {
+                    throw new Error("Invalid URL format. Include http:// or https://");
                 }
-                apiUrl += `&shorturl=${encodeURIComponent(custom)}`;
-            }
 
-            const response = await fetch(apiUrl);
-            const shortUrl = await response.text();
+                // Validate custom URL if provided
+                if (custom && !/^[a-zA-Z0-9_-]+$/.test(custom)) {
+                    throw new Error("Custom URL can only contain letters, numbers, underscores, and hyphens.");
+                }
 
-            // Check if the response is a valid URL
-            try {
-                new URL(shortUrl);
-                
-                return interaction.editReply({
+                // Build the API URL
+                let apiUrl = `https://is.gd/create.php?format=simple&url=${encodeURIComponent(url)}`;
+                if (custom) {
+                    apiUrl += `&shorturl=${encodeURIComponent(custom)}`;
+                }
+
+                const response = await fetch(apiUrl);
+                const shortUrl = await response.text();
+
+                // Validate response is a URL
+                try {
+                    new URL(shortUrl);
+                } catch (e) {
+                    // Parse error message from API
+                    if (shortUrl.includes("already exists")) {
+                        throw new Error("That custom URL is already taken. Try a different one.");
+                    } else if (shortUrl.includes("invalid")) {
+                        throw new Error("Invalid URL. Include http:// or https://");
+                    }
+                    throw new Error(`URL shortening failed: ${shortUrl}`);
+                }
+
+                // Send success response
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
-                        successEmbed(
-                            "URL Shortened",
-                            `Here's your shortened URL: ${shortUrl}`
-                        ),
+                        successEmbed("URL Shortened", `Here's your shortened URL: ${shortUrl}`),
                     ],
                 });
-            } catch (e) {
-                // If not a valid URL, it's probably an error message
-                let errorMessage = "Failed to shorten URL. " + shortUrl;
-                if (shortUrl.includes("already exists")) {
-                    errorMessage = "That custom URL is already taken. Please try a different one.";
-                } else if (shortUrl.includes("invalid")) {
-                    errorMessage = "Invalid URL. Please include http:// or https://";
-                }
-                
-                return interaction.editReply({
-                    embeds: [errorEmbed("Error", errorMessage)],
-                });
-            }
-        } catch (error) {
-            console.error("Error in shorten command:", error);
-            return interaction.editReply({
-                embeds: [errorEmbed("Error", "An error occurred while shortening the URL.")],
-            });
-        }
+            },
+            errorEmbed("URL Shortening Failed", "Couldn't shorten that URL. Check the format and try again.")
+        );
     },
 };

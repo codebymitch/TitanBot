@@ -18,7 +18,7 @@ export default {
             
             // Check if the word is too short
             if (word.length < 2) {
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [errorEmbed('Error', 'Please enter a word with at least 2 characters.')],
                     flags: ["Ephemeral"]
                 });
@@ -30,7 +30,7 @@ export default {
             );
             
             if (!response.data || response.data.length === 0) {
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [errorEmbed('Not Found', `No definitions found for "${word}".`)]
                 });
             }
@@ -66,7 +66,7 @@ export default {
             // Add source attribution
             embed.setFooter({ text: 'Powered by Free Dictionary API' });
             
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
             
         } catch (error) {
             console.error('Dictionary lookup error:', error);
@@ -82,7 +82,7 @@ export default {
                 errorMessage += 'The request timed out. Please try again later.';
             }
             
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [errorEmbed('Error', errorMessage)],
                 flags: ["Ephemeral"]
             });

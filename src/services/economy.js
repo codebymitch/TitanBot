@@ -62,6 +62,28 @@ export async function getEconomyData(client, guildId, userId) {
         return data;
     } catch (error) {
         logger.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
+        
+        // Only use fallback if PostgreSQL is completely unavailable
+        if (error.message && (error.message.includes('ECONNREFUSED') || error.message.includes('connection'))) {
+            if (client._economyFallback) {
+                const key = getEconomyKey(guildId, userId);
+                return client._economyFallback.get(key) || {
+                    wallet: 0,
+                    bank: 0,
+                    bankLevel: 1,
+                    lastDaily: 0,
+                    lastWeekly: 0,
+                    lastWork: 0,
+                    lastCrime: 0,
+                    lastRob: 0,
+                    lastDeposit: 0,
+                    lastWithdraw: 0,
+                    inventory: {},
+                    cooldowns: {}
+                };
+            }
+        }
+        
         return {
             wallet: 0,
             bank: 0,
@@ -94,10 +116,23 @@ export async function setEconomyData(client, guildId, userId, newData) {
         const existingData = await getEconomyData(client, guildId, userId);
         const mergedData = { ...existingData, ...newData };
         
+        // Save to primary database (PostgreSQL)
         await setInDb(key, mergedData);
         return true;
     } catch (error) {
         logger.error('Error saving economy data:', error);
+        
+        // Only use fallback if PostgreSQL is completely unavailable
+        if (error.message && (error.message.includes('ECONNREFUSED') || error.message.includes('connection'))) {
+            logger.warn(`PostgreSQL unavailable, using memory fallback for guild ${guildId}`);
+            
+            if (!client._economyFallback) {
+                client._economyFallback = new Map();
+            }
+            client._economyFallback.set(key, mergedData);
+            return true;
+        }
+        
         return false;
     }
 }
@@ -121,17 +156,17 @@ export async function addMoney(client, guildId, userId, amount, type = 'wallet')
         
         if (type === 'bank') {
             const maxBank = getMaxBankCapacity(userData);
-            if (userData.bank + amount > maxBank) {
+            if ((userData.bank || 0) + amount > maxBank) {
                 return { 
                     success: false, 
                     error: 'Bank capacity exceeded',
-                    current: userData.bank,
+                    current: userData.bank || 0,
                     max: maxBank
                 };
             }
-            userData.bank += amount;
+            userData.bank = (userData.bank || 0) + amount;
         } else {
-            userData.wallet += amount;
+            userData.wallet = (userData.wallet || 0) + amount;
         }
 
         await setEconomyData(client, guildId, userId, userData);
@@ -165,25 +200,25 @@ export async function removeMoney(client, guildId, userId, amount, type = 'walle
         const userData = await getEconomyData(client, guildId, userId);
         
         if (type === 'bank') {
-            if (userData.bank < amount) {
+            if ((userData.bank || 0) < amount) {
                 return { 
                     success: false, 
                     error: 'Insufficient funds in bank',
-                    current: userData.bank,
+                    current: userData.bank || 0,
                     required: amount
                 };
             }
-            userData.bank -= amount;
+            userData.bank = (userData.bank || 0) - amount;
         } else {
-            if (userData.wallet < amount) {
+            if ((userData.wallet || 0) < amount) {
                 return { 
                     success: false, 
                     error: 'Insufficient funds in wallet',
-                    current: userData.wallet,
+                    current: userData.wallet || 0,
                     required: amount
                 };
             }
-            userData.wallet -= amount;
+            userData.wallet = (userData.wallet || 0) - amount;
         }
 
         await setEconomyData(client, guildId, userId, userData);

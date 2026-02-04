@@ -434,11 +434,10 @@ export default {
         const { embeds, components, ephemeral } =
             await createCategorySelectMenu();
 
-        // Send initial response
-        const reply = await interaction.reply({
+        // Send initial response using editReply since interaction is deferred in interactionCreate.js
+        const reply = await interaction.editReply({
             embeds,
             components,
-            ephemeral: ephemeral !== false,
         });
 
         // Set up timer for auto-close (2 minutes)

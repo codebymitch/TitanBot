@@ -17,11 +17,11 @@ const logFormat = printf(({ level, message, timestamp, stack }) => {
 
 // Create logger instance
 const logger = createLogger({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
   format: combine(
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     errors({ stack: true }),
-    json()
+    format.json()
   ),
   defaultMeta: { service: 'titan-bot' },
   transports: [
@@ -41,6 +41,23 @@ const logger = createLogger({
       zippedArchive: true,
     }),
   ],
+  // Handle exceptions and rejections
+  exceptionHandlers: [
+    new transports.DailyRotateFile({
+      filename: path.join(__dirname, '../../logs/exceptions-%DATE%.log'),
+      maxSize: '20m',
+      maxFiles: '14d',
+      zippedArchive: true,
+    }),
+  ],
+  rejectionHandlers: [
+    new transports.DailyRotateFile({
+      filename: path.join(__dirname, '../../logs/rejections-%DATE%.log'),
+      maxSize: '20m',
+      maxFiles: '14d',
+      zippedArchive: true,
+    }),
+  ],
 });
 
 // If we're not in production, also log to console with colors
@@ -53,6 +70,17 @@ if (process.env.NODE_ENV !== 'production') {
       logFormat
     ),
     level: 'debug',
+  }));
+} else {
+  // In production, only log warnings and errors to console
+  logger.add(new transports.Console({
+    format: combine(
+      colorize(),
+      timestamp({ format: 'HH:mm:ss' }),
+      errors({ stack: true }),
+      logFormat
+    ),
+    level: 'warn',
   }));
 }
 

@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // Store active countdowns
 const activeCountdowns = new Map();
@@ -47,37 +48,23 @@ export default {
         ),
 
     async execute(interaction) {
-        try {
-            await interaction.deferReply({ flags: ["Ephemeral"] });
+        await InteractionHelper.safeExecute(
+            interaction,
+            async () => {
+                const minutes = interaction.options.getInteger("minutes") || 0;
+                const seconds = interaction.options.getInteger("seconds") || 0;
+                const title = interaction.options.getString("title") || "Countdown Timer";
 
-            const minutes = interaction.options.getInteger("minutes") || 0;
-            const seconds = interaction.options.getInteger("seconds") || 0;
-            const title =
-                interaction.options.getString("title") || "Countdown Timer";
+                const totalSeconds = minutes * 60 + seconds;
 
-            const totalSeconds = minutes * 60 + seconds;
+                // Validate duration
+                if (totalSeconds <= 0) {
+                    throw new Error("Please specify a duration of at least 1 second.");
+                }
 
-            if (totalSeconds <= 0) {
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Error",
-                            "Please specify a duration of at least 1 second.",
-                        ),
-                    ],
-                    flags: ["Ephemeral"],
-                });
-            }
-
-            if (totalSeconds > 86400) {
-                // 24 hours
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Error",
-                            "Countdown cannot be longer than 24 hours.",
-                        ),
-                    ],
+                if (totalSeconds > 86400) {
+                    throw new Error("Countdown cannot be longer than 24 hours.");
+                }
                     flags: ["Ephemeral"],
                 });
             }
@@ -247,7 +234,7 @@ export async function handleCountdownInteraction(interaction) {
     const countdownData = activeCountdowns.get(countdownId);
 
     if (!countdownData) {
-        await interaction.reply({
+        await interaction.editReply({
             content: "This countdown has expired or was cancelled.",
             flags: ["Ephemeral"],
         });
@@ -256,7 +243,7 @@ export async function handleCountdownInteraction(interaction) {
 
     // Check if the user has permission to control the countdown
     if (!interaction.member.permissions.has("MANAGE_MESSAGES")) {
-        await interaction.reply({
+        await interaction.editReply({
             content:
                 'You need the "Manage Messages" permission to control countdowns.',
             flags: ["Ephemeral"],
@@ -280,7 +267,7 @@ export async function handleCountdownInteraction(interaction) {
                     components: [createControlButtons(countdownId, false)],
                 });
 
-                await interaction.reply({
+                await interaction.editReply({
                     content: "▶️ Countdown resumed!",
                     flags: ["Ephemeral"],
                 });
@@ -298,7 +285,7 @@ export async function handleCountdownInteraction(interaction) {
                     components: [createControlButtons(countdownId, true)],
                 });
 
-                await interaction.reply({
+                await interaction.editReply({
                     content: "⏸️ Countdown paused!",
                     flags: ["Ephemeral"],
                 });
@@ -321,7 +308,7 @@ export async function handleCountdownInteraction(interaction) {
 
             cleanupCountdown(countdownId);
 
-            await interaction.reply({
+            await interaction.editReply({
                 content: "❌ Countdown cancelled!",
                 flags: ["Ephemeral"],
             });

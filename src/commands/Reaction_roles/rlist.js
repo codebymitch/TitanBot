@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 // Migrated from: commands/Reaction_roles/rlist.js
 export default {
@@ -12,7 +13,8 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply({ flags: ["Ephemeral"] });
+            const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
+            if (!deferSuccess) return;
 
             // Get all reaction role messages for this guild using the service
             const guildReactionRoles = await getAllReactionRoleMessages(interaction.client, interaction.guildId);

@@ -59,7 +59,6 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply();
 
             const expression = interaction.options.getString("expression");
 

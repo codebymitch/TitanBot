@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { closeTicket } from '../../services/ticket.js';
 import { logEvent } from '../../utils/moderation.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -17,7 +18,8 @@ export default {
         ),
 
     async execute(interaction, guildConfig, client) {
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+        if (!deferSuccess) return;
 
         const channel = interaction.channel;
         const reason =

@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 
 // Open-Meteo APIs (Free and NO API Key Required for non-commercial use)
@@ -19,10 +20,13 @@ export default {
         ),
 
     async execute(interaction) {
-        await interaction.deferReply();
-        const city = interaction.options.getString("city");
+        // Defer early, unless it's already been acknowledged
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) return;
 
         try {
+            const city = interaction.options.getString("city");
+
             // --- Step 1: Get Coordinates (Geocoding) ---
             const geoResponse = await fetch(
                 `${GEOCODING_URL}?name=${encodeURIComponent(city)}`,
@@ -30,7 +34,7 @@ export default {
             const geoData = await geoResponse.json();
 
             if (!geoData.results || geoData.results.length === 0) {
-                return interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "City Not Found",
@@ -38,26 +42,22 @@ export default {
                         ),
                     ],
                 });
+                return;
             }
 
-            // Use the top result's coordinates
-            const location = geoData.results[0];
-            const latitude = location.latitude;
-            const longitude = location.longitude;
-            const cityDisplay = location.name;
-            const country = location.country;
+            const { latitude, longitude, name, country } = geoData.results[0];
+            const cityDisplay = name;
 
-            const weatherParams =
-                "current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m";
-            const weatherUrl = `${WEATHER_URL}?latitude=${latitude}&longitude=${longitude}&${weatherParams}&temperature_unit=celsius&wind_speed_unit=kmh&timezone=auto`;
-
-            const weatherResponse = await fetch(weatherUrl);
+            // --- Step 2: Get Weather Data ---
+            const weatherResponse = await fetch(
+                `${WEATHER_URL}?latitude=${latitude}&longitude=${longitude}&current_weather=true`,
+            );
             const weatherData = await weatherResponse.json();
 
             // Check for API system errors
             if (weatherData.error) {
                 console.error("Open-Meteo API Error:", weatherData.reason);
-                return interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "API Error",
@@ -65,14 +65,15 @@ export default {
                         ),
                     ],
                 });
+                return;
             }
 
-            // Extract values
-            const current = weatherData.current;
-            const temperature = Math.round(current.temperature_2m);
-            const humidity = current.relative_humidity_2m;
-            const windSpeed = Math.round(current.wind_speed_10m);
-            const weatherCode = current.weather_code;
+            // Extract values (Open-Meteo uses current_weather)
+            const current = weatherData.current || weatherData.current_weather || {};
+            const temperature = current.temperature != null ? Math.round(current.temperature) : "N/A";
+            const humidity = current.relativehumidity ?? current.relative_humidity_2m ?? "N/A";
+            const windSpeed = current.windspeed != null ? Math.round(current.windspeed) : "N/A";
+            const weatherCode = current.weathercode ?? current.weather_code ?? null;
 
             // Convert WMO Weather Code to a description and emoji
             const condition = getWeatherDescription(weatherCode);
@@ -100,10 +101,10 @@ export default {
                     text: `Latitude: ${latitude.toFixed(2)} | Longitude: ${longitude.toFixed(2)}`,
                 });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
         } catch (error) {
             console.error("Weather command general error:", error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "System Error",

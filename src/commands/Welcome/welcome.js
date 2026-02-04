@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
@@ -76,9 +76,9 @@ export default {
                     embed.setImage(image);
                 }
 
-                await interaction.reply({ embeds: [embed] });
+                await interaction.editReply({ embeds: [embed] });
             } catch (error) {
-                await interaction.reply({ 
+                await interaction.editReply({ 
                     content: '❌ An error occurred while setting up the welcome system.', 
                     flags: ["Ephemeral"] 
                 });
@@ -94,12 +94,12 @@ export default {
                     enabled: newStatus
                 });
 
-                await interaction.reply({
+                await interaction.editReply({
                     content: `✅ Welcome messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
-                await interaction.reply({ 
+                await interaction.editReply({ 
                     content: '❌ An error occurred while toggling welcome messages.', 
                     flags: ["Ephemeral"] 
                 });

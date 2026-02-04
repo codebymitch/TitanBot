@@ -4,6 +4,7 @@
  */
 
 import { ActivityType } from "discord.js";
+import { logger } from '../utils/logger.js';
 
 // Default bot configuration
 export const botConfig = {
@@ -268,15 +269,18 @@ export function validateConfig(config) {
   const errors = [];
 
   // Debug: Log environment variables (without sensitive data)
-  console.log('Environment variables check:');
-  console.log('TOKEN exists:', !!process.env.TOKEN);
-  console.log('CLIENT_ID exists:', !!process.env.CLIENT_ID);
-  console.log('GUILD_ID exists:', !!process.env.GUILD_ID);
-  console.log('REDIS_URL exists:', !!process.env.REDIS_URL);
-  console.log('NODE_ENV:', process.env.NODE_ENV);
+  if (process.env.NODE_ENV !== 'production') {
+    logger.debug('Environment variables check:');
+    logger.debug('DISCORD_TOKEN exists:', !!process.env.DISCORD_TOKEN);
+    logger.debug('TOKEN exists:', !!process.env.TOKEN);
+    logger.debug('CLIENT_ID exists:', !!process.env.CLIENT_ID);
+    logger.debug('GUILD_ID exists:', !!process.env.GUILD_ID);
+    logger.debug('REDIS_URL exists:', !!process.env.REDIS_URL);
+    logger.debug('NODE_ENV:', process.env.NODE_ENV);
+  }
 
-  if (!process.env.TOKEN) {
-    errors.push("Bot token is required (TOKEN environment variable)");
+  if (!process.env.DISCORD_TOKEN && !process.env.TOKEN) {
+    errors.push("Bot token is required (DISCORD_TOKEN or TOKEN environment variable)");
   }
 
   if (!process.env.CLIENT_ID) {
@@ -302,6 +306,12 @@ export const BotConfig = botConfig;
 
 // Theme helper functions
 export function getColor(path, fallback = "#99AAB5") {
+  // If a numeric color or a hex string is provided directly, return it as-is
+  if (typeof path === "number") return path;
+  if (typeof path === "string" && path.startsWith("#")) {
+    // Convert hex string to integer expected by Discord.js Embed#setColor
+    return parseInt(path.replace("#", ""), 16);
+  }
   return path
     .split(".")
     .reduce(

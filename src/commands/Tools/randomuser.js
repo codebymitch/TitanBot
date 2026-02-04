@@ -26,8 +26,6 @@ export default {
 
     async execute(interaction) {
         try {
-            await interaction.deferReply();
-            
             // Check if the command is used in a server
             if (!interaction.guild) {
                 return interaction.editReply({

@@ -19,7 +19,7 @@ export default {
             
             // Check if the term is too short
             if (term.length < 2) {
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [errorEmbed('Error', 'Please enter a term with at least 2 characters.')],
                     flags: ["Ephemeral"]
                 });
@@ -28,7 +28,7 @@ export default {
             // Check if Urban Dictionary is enabled in the guild config
             const guildConfig = await getGuildConfig(interaction.client, interaction.guild.id);
             if (guildConfig?.disabledCommands?.includes('urban')) {
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [errorEmbed('Command Disabled', 'The Urban Dictionary command is disabled in this server.')],
                     flags: ["Ephemeral"]
                 });
@@ -40,7 +40,7 @@ export default {
             );
             
             if (!response.data?.list?.length) {
-                return await interaction.reply({
+                return await interaction.editReply({
                     embeds: [errorEmbed('Not Found', `No definitions found for "${term}" on Urban Dictionary.`)]
                 });
             }
@@ -87,7 +87,7 @@ export default {
                 iconURL: 'https://i.imgur.com/8aQrX3a.png' 
             });
                 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
             
         } catch (error) {
             console.error('Urban Dictionary error:', error);
@@ -99,7 +99,7 @@ export default {
                 errorMessage = 'Too many requests to Urban Dictionary. Please try again in a few minutes.';
             }
             
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [errorEmbed('Error', errorMessage)],
                 flags: ["Ephemeral"]
             });

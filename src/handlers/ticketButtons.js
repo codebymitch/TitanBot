@@ -1,8 +1,11 @@
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
+import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logEvent } from '../utils/moderation.js';
+import { logTicketEvent } from '../utils/ticketLogging.js';
+import { logger } from '../utils/logger.js';
+import { InteractionHelper } from '../utils/interactionHelper.js';
 
 const createTicketHandler = {
   name: 'create_ticket',
@@ -67,7 +70,8 @@ const createTicketModalHandler = {
   name: 'create_ticket_modal',
   async execute(interaction, client) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      if (!deferSuccess) return;
       
       const reason = interaction.fields.getTextInputValue('reason');
       const config = await getGuildConfig(client, interaction.guildId);
@@ -107,7 +111,8 @@ const closeTicketHandler = {
   name: 'ticket_close',
   async execute(interaction, client) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      if (!deferSuccess) return;
       
       const result = await closeTicket(interaction.channel, interaction.user);
       
@@ -148,7 +153,8 @@ const claimTicketHandler = {
   name: 'ticket_claim',
   async execute(interaction, client) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      if (!deferSuccess) return;
       
       const result = await claimTicket(interaction.channel, interaction.user);
       
@@ -188,7 +194,8 @@ const priorityTicketHandler = {
   name: 'ticket_priority',
   async execute(interaction, client, args) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      if (!deferSuccess) return;
       
       const priority = args[0];
       const result = await updateTicketPriority(interaction.channel, priority, interaction.user);
@@ -218,11 +225,14 @@ const transcriptTicketHandler = {
   name: 'ticket_transcript',
   async execute(interaction, client) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      if (!deferSuccess) return;
       
       // Get all messages in the channel, excluding system messages
       const messages = await interaction.channel.messages.fetch({ limit: 100 });
-      console.log('Total messages fetched:', messages?.size || 0);
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Total messages fetched:', messages?.size || 0);
+      }
       
       if (!messages || messages.size === 0) {
         await interaction.editReply({
@@ -240,15 +250,21 @@ const transcriptTicketHandler = {
         const isUserMessage = m.type === 0; // Default message type
         
         if (!hasAuthor) {
-          console.log('Filtering message without author:', m.id, m.type);
+          if (process.env.NODE_ENV !== 'production') {
+            logger.debug('Filtering message without author:', m.id, m.type);
+          }
         } else if (!hasTag) {
-          console.log('Message author exists but no tag:', m.id, m.author);
+          if (process.env.NODE_ENV !== 'production') {
+            logger.debug('Message author exists but no tag:', m.id, m.author);
+          }
         }
         
         return hasAuthor && hasTag && isUserMessage;
       });
       
-      console.log('Filtered user messages:', userMessages?.length || 0);
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug('Filtered user messages:', userMessages?.length || 0);
+      }
       const sortedMessages = userMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
       
       if (!sortedMessages || sortedMessages.length === 0) {
@@ -285,7 +301,9 @@ const transcriptTicketHandler = {
 `;
       
       for (const message of sortedMessages) {
-        console.log('Processing message:', message.id, 'Author exists:', !!message.author, 'Attachments exist:', !!message.attachments);
+        if (process.env.NODE_ENV !== 'production') {
+          logger.debug('Processing message:', message.id, 'Author exists:', !!message.author, 'Attachments exist:', !!message.attachments);
+        }
         
         const timestamp = `<t:${Math.floor(message.createdTimestamp / 1000)}:t>`;
         const author = message.author?.tag || message.author?.username || 'Unknown User';
@@ -313,36 +331,13 @@ const transcriptTicketHandler = {
 </body>
 </html>`;
       
-      // Create embed with HTML content
+      // Create embed with transcript details (no HTML content in fields)
       const transcriptEmbed = createEmbed({
         title: `📜 Ticket Transcript - ${interaction.channel.name}`,
-        description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** 📅 <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}`,
+        description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** 📅 <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}\n\n📎 The complete HTML transcript has been attached as a file.`,
         color: 0x3498db,
         footer: { text: `Ticket ID: ${interaction.channel.id}` }
       });
-      
-      // Add HTML content as embed fields
-      let htmlContent = '';
-      let fieldCount = 0;
-      const maxFields = 20; // Discord embed limit
-      
-      // Split HTML content into manageable chunks
-      const chunkSize = 900; // Leave room for field name and formatting
-      const htmlChunks = [];
-      
-      for (let i = 0; i < htmlTranscript.length; i += chunkSize) {
-        htmlChunks.push(htmlTranscript.substring(i, i + chunkSize));
-      }
-      
-      // Add HTML chunks as code blocks in embed fields
-      for (let i = 0; i < htmlChunks.length && fieldCount < maxFields; i++) {
-        transcriptEmbed.addFields({
-          name: `HTML Transcript Part ${i + 1}`,
-          value: `\`\`\`\n${htmlChunks[i]}\n\`\`\``,
-          inline: false
-        });
-        fieldCount++;
-      }
       
       // Send both HTML file and embed
       const { Buffer } = await import('buffer');
@@ -367,6 +362,27 @@ const transcriptTicketHandler = {
           }],
           ephemeral: true
         });
+        
+        // Log transcript creation
+        await logTicketEvent({
+          client: interaction.client,
+          guildId: interaction.guildId,
+          event: {
+            type: 'transcript',
+            ticketId: interaction.channel.id,
+            ticketNumber: interaction.channel.name.replace(/[^0-9]/g, ''),
+            userId: interaction.user.id,
+            executorId: interaction.user.id,
+            metadata: {
+              messageCount: sortedMessages.length,
+              sentToDM: true,
+              transcriptSize: htmlTranscript.length
+            },
+            attachments: [
+              new AttachmentBuilder(buffer, { name: `ticket-transcript-${interaction.channel.name}.html` })
+            ]
+          }
+        });
       } catch (dmError) {
         console.error('Could not DM user:', dmError);
         await interaction.editReply({
@@ -385,11 +401,140 @@ const transcriptTicketHandler = {
   }
 };
 
+const unclaimTicketHandler = {
+  name: 'ticket_unclaim',
+  async execute(interaction, client) {
+    try {
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      if (!deferSuccess) return;
+      
+      const { unclaimTicket } = await import('../services/ticket.js');
+      const result = await unclaimTicket(interaction.channel, interaction.member);
+      
+      if (result.success) {
+        await interaction.editReply({
+          embeds: [successEmbed('Ticket Unclaimed', 'You have successfully unclaimed this ticket!')],
+          ephemeral: true
+        });
+        
+        // Log the event
+        await logEvent({
+          client,
+          guildId: interaction.guildId,
+          event: {
+            action: 'Ticket Unclaimed',
+            target: interaction.channel.toString(),
+            executor: interaction.user.toString()
+          }
+        });
+      } else {
+        await interaction.editReply({
+          embeds: [errorEmbed('Error', result.error || 'Failed to unclaim ticket.')],
+          ephemeral: true
+        });
+      }
+    } catch (error) {
+      console.error('Error unclaiming ticket:', error);
+      await interaction.editReply({
+        embeds: [errorEmbed('Error', 'An error occurred while unclaiming the ticket.')],
+        ephemeral: true
+      });
+    }
+  }
+};
+
+const reopenTicketHandler = {
+  name: 'ticket_reopen',
+  async execute(interaction, client) {
+    try {
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      if (!deferSuccess) return;
+      
+      const { reopenTicket } = await import('../services/ticket.js');
+      const result = await reopenTicket(interaction.channel, interaction.member);
+      
+      if (result.success) {
+        await interaction.editReply({
+          embeds: [successEmbed('Ticket Reopened', 'You have successfully reopened this ticket!')],
+          ephemeral: true
+        });
+        
+        // Log the event
+        await logEvent({
+          client,
+          guildId: interaction.guildId,
+          event: {
+            action: 'Ticket Reopened',
+            target: interaction.channel.toString(),
+            executor: interaction.user.toString()
+          }
+        });
+      } else {
+        await interaction.editReply({
+          embeds: [errorEmbed('Error', result.error || 'Failed to reopen ticket.')],
+          ephemeral: true
+        });
+      }
+    } catch (error) {
+      console.error('Error reopening ticket:', error);
+      await interaction.editReply({
+        embeds: [errorEmbed('Error', 'An error occurred while reopening the ticket.')],
+        ephemeral: true
+      });
+    }
+  }
+};
+
+const deleteTicketHandler = {
+  name: 'ticket_delete',
+  async execute(interaction, client) {
+    try {
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      if (!deferSuccess) return;
+      
+      const { deleteTicket } = await import('../services/ticket.js');
+      const result = await deleteTicket(interaction.channel, interaction.member);
+      
+      if (result.success) {
+        await interaction.editReply({
+          embeds: [successEmbed('Ticket Deleted', 'This ticket will be permanently deleted in 3 seconds.')],
+          ephemeral: true
+        });
+        
+        // Log the event
+        await logEvent({
+          client,
+          guildId: interaction.guildId,
+          event: {
+            action: 'Ticket Deleted',
+            target: interaction.channel.toString(),
+            executor: interaction.user.toString()
+          }
+        });
+      } else {
+        await interaction.editReply({
+          embeds: [errorEmbed('Error', result.error || 'Failed to delete ticket.')],
+          ephemeral: true
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting ticket:', error);
+      await interaction.editReply({
+        embeds: [errorEmbed('Error', 'An error occurred while deleting the ticket.')],
+        ephemeral: true
+      });
+    }
+  }
+};
+
 export default createTicketHandler;
 export { 
   createTicketModalHandler, 
   closeTicketHandler, 
   claimTicketHandler, 
   priorityTicketHandler,
-  transcriptTicketHandler 
+  transcriptTicketHandler,
+  unclaimTicketHandler,
+  reopenTicketHandler,
+  deleteTicketHandler 
 };

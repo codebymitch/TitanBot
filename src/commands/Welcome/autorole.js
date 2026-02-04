@@ -63,12 +63,12 @@ export default {
                     roleIds: Array.from(autoRoles)
                 });
 
-                await interaction.reply({
+                await interaction.editReply({
                     content: `✅ Added ${role} to auto-assigned roles.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
-                await interaction.reply({
+                await interaction.editReply({
                     content: '❌ An error occurred while adding the role.',
                     flags: ["Ephemeral"]
                 });
@@ -97,12 +97,12 @@ export default {
                     roleIds: Array.from(autoRoles)
                 });
 
-                await interaction.reply({
+                await interaction.editReply({
                     content: `✅ Removed ${role} from auto-assigned roles.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
-                await interaction.reply({
+                await interaction.editReply({
                     content: '❌ An error occurred while removing the role.',
                     flags: ["Ephemeral"]
                 });
@@ -158,13 +158,13 @@ export default {
                     .setDescription(validRoles.map(r => `• ${r}`).join('\n'))
                     .setFooter({ text: `Total: ${validRoles.length} role(s)` });
 
-                await interaction.reply({
+                await interaction.editReply({
                     embeds: [embed],
                     flags: ["Ephemeral"]
                 });
 
             } catch (error) {
-                await interaction.reply({
+                await interaction.editReply({
                     content: '❌ An error occurred while listing auto-assigned roles.',
                     flags: ["Ephemeral"]
                 });
