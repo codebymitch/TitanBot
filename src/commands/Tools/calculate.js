@@ -58,7 +58,7 @@ export default {
         ),
 
     async execute(interaction) {
-        try {
+try {
 
             const expression = interaction.options.getString("expression");
 
@@ -66,7 +66,7 @@ export default {
             if (
                 !/^[0-9+\-*/.()^%! ,<>=&|~?:\[\]{}a-z√π∞°]+$/i.test(expression)
             ) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Invalid Expression",

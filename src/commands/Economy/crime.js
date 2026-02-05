@@ -36,7 +36,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        const userId = interaction.user.id;
+const userId = interaction.user.id;
         const guildId = interaction.guildId;
         const now = Date.now();
 
@@ -48,7 +48,7 @@ export default {
             // Check if user is in jail
             if (isJailed) {
                 const timeLeft = Math.ceil((userData.jailedUntil - now) / (1000 * 60));
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Jail Time",

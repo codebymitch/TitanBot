@@ -1,8 +1,6 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Store active countdowns
 const activeCountdowns = new Map();
 
@@ -48,25 +46,20 @@ export default {
         ),
 
     async execute(interaction) {
-        await InteractionHelper.safeExecute(
-            interaction,
-            async () => {
-                const minutes = interaction.options.getInteger("minutes") || 0;
-                const seconds = interaction.options.getInteger("seconds") || 0;
-                const title = interaction.options.getString("title") || "Countdown Timer";
+        try {
+            const minutes = interaction.options.getInteger("minutes") || 0;
+            const seconds = interaction.options.getInteger("seconds") || 0;
+            const title = interaction.options.getString("title") || "Countdown Timer";
 
-                const totalSeconds = minutes * 60 + seconds;
+            const totalSeconds = minutes * 60 + seconds;
 
-                // Validate duration
-                if (totalSeconds <= 0) {
-                    throw new Error("Please specify a duration of at least 1 second.");
-                }
+            // Validate duration
+            if (totalSeconds <= 0) {
+                throw new Error("Please specify a duration of at least 1 second.");
+            }
 
-                if (totalSeconds > 86400) {
-                    throw new Error("Countdown cannot be longer than 24 hours.");
-                }
-                    flags: ["Ephemeral"],
-                });
+            if (totalSeconds > 86400) {
+                throw new Error("Countdown cannot be longer than 24 hours.");
             }
 
             const endTime = Date.now() + totalSeconds * 1000;
@@ -207,20 +200,21 @@ export default {
                 cleanupCountdown(countdownId);
             });
 
-            await interaction.editReply({
+            await interaction.reply({
                 content: "✅ Countdown started!",
-                flags: ["Ephemeral"],
+                ephemeral: true,
             });
         } catch (error) {
             console.error("Countdown command error:", error);
-            await interaction.editReply({
+            const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
+            await interaction[replyMethod]({
                 embeds: [
                     errorEmbed(
                         "Error",
                         "Failed to start the countdown. Please try again.",
                     ),
                 ],
-                flags: ["Ephemeral"],
+                ephemeral: true,
             });
         }
     },

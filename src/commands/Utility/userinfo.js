@@ -1,8 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 export default {
     data: new SlashCommandBuilder()
     .setName("userinfo")
@@ -60,9 +58,9 @@ export default {
       console.error('UserInfo command error:', error);
       const errEmbed = createEmbed({ title: 'System Error', description: 'Could not retrieve user information.' });
       if (interaction.deferred || interaction.replied) {
-        await InteractionHelper.safeEditReply(interaction, { embeds: [errEmbed] });
+        await interaction.editReply({ embeds: [errEmbed] });
       } else {
-        await InteractionHelper.safeReply(interaction, { embeds: [errEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errEmbed], ephemeral: true });
       }
       return;
     }

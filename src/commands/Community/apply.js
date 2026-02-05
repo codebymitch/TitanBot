@@ -52,8 +52,7 @@ export default {
                 flags: ["Ephemeral"],
             });
         }
-
-        const { options, guild, member } = interaction;
+const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
 
         try {
@@ -63,7 +62,7 @@ export default {
                 guild.id,
             );
             if (!settings.enabled) {
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Applications are currently disabled in this server.",
@@ -82,7 +81,7 @@ export default {
             }
         } catch (error) {
             console.error("Error in apply command:", error);
-            interaction.reply({
+            interaction.editReply({
                 embeds: [
                     errorEmbed("An error occurred while processing your request."),
                 ],
@@ -106,7 +105,7 @@ export async function handleApplicationModal(interaction) {
     const applicationRole = applicationRoles.find(appRole => appRole.roleId === roleId);
     
     if (!applicationRole) {
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [errorEmbed('Application configuration not found.')],
             flags: ["Ephemeral"]
         });
@@ -115,7 +114,7 @@ export async function handleApplicationModal(interaction) {
     const role = interaction.guild.roles.cache.get(roleId);
     
     if (!role) {
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [errorEmbed('Role not found.')],
             flags: ["Ephemeral"]
         });
@@ -201,7 +200,7 @@ async function handleList(interaction) {
         const applicationRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
         
         if (applicationRoles.length === 0) {
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [errorEmbed("No applications are currently available.")],
                 flags: ["Ephemeral"],
             });
@@ -226,10 +225,10 @@ async function handleList(interaction) {
             text: "Use /apply submit application:<name> to apply for any of these roles."
         });
 
-        return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
+        return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
     } catch (error) {
         console.error('Error listing applications:', error);
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [errorEmbed('Failed to load applications. Please try again later.')],
             flags: ["Ephemeral"]
         });
@@ -249,7 +248,7 @@ async function handleSubmit(interaction, settings) {
     );
 
     if (!applicationRole) {
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [
                 errorEmbed(
                     "Application not found.",
@@ -269,7 +268,7 @@ async function handleSubmit(interaction, settings) {
     const pendingApp = userApps.find((app) => app.status === "pending");
 
     if (pendingApp) {
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [
                 errorEmbed(
                     `You already have a pending application. Please wait for it to be reviewed.`,
@@ -282,7 +281,7 @@ async function handleSubmit(interaction, settings) {
     // Get the role object
     const role = interaction.guild.roles.cache.get(applicationRole.roleId);
     if (!role) {
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [errorEmbed('The role for this application no longer exists.')],
             flags: ["Ephemeral"]
         });
@@ -327,7 +326,7 @@ async function handleStatus(interaction) {
         );
 
         if (!application || application.userId !== interaction.user.id) {
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "Application not found or you do not have permission to view it.",
@@ -339,7 +338,7 @@ async function handleStatus(interaction) {
 
         const embed = createEmbed({ title: `Application #${application.id} - ${application.roleName}`, description: `**Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}` });
 
-        return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
+        return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
     } else {
         const applications = await getUserApplications(
             interaction.client,
@@ -348,7 +347,7 @@ async function handleStatus(interaction) {
         );
 
         if (applications.length === 0) {
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [
                     errorEmbed("You have not submitted any applications yet."),
                 ],
@@ -358,6 +357,6 @@ async function handleStatus(interaction) {
 
         const embed = createEmbed({ title: "Your Applications", description: "Here are your recent applications." });
 
-        return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
+        return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
     }
 }

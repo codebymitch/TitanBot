@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getFromDb, setInDb } from '../../services/database.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Helper function to generate a unique ID for shared lists
 function generateShareId() {
     return Math.random().toString(36).substring(2, 9);
@@ -118,10 +116,7 @@ export default {
     category: "Utility",
 
     async execute(interaction, config, client) {
-        await InteractionHelper.safeExecute(
-            interaction,
-            async () => {
-                const userId = interaction.user.id;
+        const userId = interaction.user.id;
                 const subcommand = interaction.options.getSubcommand();
                 const shareSubcommand = interaction.options.getSubcommandGroup() === 'share' ? interaction.options.getSubcommand() : null;
 
@@ -176,7 +171,7 @@ export default {
                             await setInDb(`user_shared_lists_${userId}`, sharedListsArray);
                         }
                         
-                        return await InteractionHelper.safeEditReply(interaction, {
+                        return await interaction.editReply({
                             embeds: [
                                 successEmbed(
                                     "Shared List Created",
@@ -193,14 +188,14 @@ export default {
                         
                         const listData = await getOrCreateSharedList(listId);
                         if (!listData) {
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "Shared list not found.")]
                             });
                         }
                         
                         // Check if user is the creator or has permission
                         if (listData.creatorId !== userId) {
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "Only the list creator can add members.")]
                             });
                         }
@@ -219,7 +214,7 @@ export default {
                                 await setInDb(`user_shared_lists_${memberToAdd.id}`, memberListsArray);
                             }
                             
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                 embeds: [
                                     successEmbed("Member Added", 
                                         `Added ${memberToAdd.username} to the shared list "${listData.name}"`
@@ -227,7 +222,7 @@ export default {
                                 ]
                             });
                         } else {
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "User is already a member of this list.")]
                             });
                         }
@@ -238,14 +233,14 @@ export default {
                         const listData = await getOrCreateSharedList(listId);
                         
                         if (!listData) {
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "Shared list not found.")]
                             });
                         }
                         
                         // Check if user is a member
                         if (!listData.members.includes(userId)) {
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "You don't have access to this list.")]
                             });
                         }
@@ -260,7 +255,7 @@ export default {
                             const owner = interaction.guild.members.cache.get(listData.creatorId);
                             const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
                             
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                     embeds: [
                                         successEmbed(
                                             `📋 **${listData.name}**\n\n` +
@@ -307,7 +302,7 @@ export default {
                             `👥 **Members:** ${memberList}\n\n` +
                             `**Tasks:**\n${taskList}`;
 
-                        return await InteractionHelper.safeEditReply(interaction, {
+                        return await interaction.editReply({
                             embeds: [
                                 successEmbed(fullListDisplay, `Shared List (ID: \`${listId}\`)`)
                             ],
@@ -333,14 +328,14 @@ export default {
                         const listData = await getOrCreateSharedList(listId);
                         
                         if (!listData) {
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "Shared list not found.")]
                             });
                         }
                         
                         // Check if user is a member
                         if (!listData.members.includes(userId)) {
-                            return await InteractionHelper.safeEditReply(interaction, {
+                            return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "You don't have access to this list.")]
                             });
                         }
@@ -357,7 +352,7 @@ export default {
                         listData.tasks.push(newTask);
                         await setInDb(`shared_todo_${listId}`, listData);
                         
-                        return await InteractionHelper.safeEditReply(interaction, {
+                        return await interaction.editReply({
                             embeds: [
                                 successEmbed("Task Added", `Added "${taskText}" to the shared list "${listData.name}"`)
                             ]
@@ -393,7 +388,7 @@ export default {
                     userData.tasks.push(newTask);
                     await setInDb(dbKey, userData);
                     
-                    return await InteractionHelper.safeEditReply(interaction, {
+                    return await interaction.editReply({
                         embeds: [
                             successEmbed(
                                 "Task Added",
@@ -405,7 +400,7 @@ export default {
 
                 case 'list': {
                     if (userData.tasks.length === 0) {
-                        return await InteractionHelper.safeEditReply(interaction, {
+                        return await interaction.editReply({
                             embeds: [successEmbed("Your to-do list is empty!", "Your To-Do List")],
                         });
                     }
@@ -417,7 +412,7 @@ export default {
                         )
                         .join('\n');
 
-                    return await InteractionHelper.safeEditReply(interaction, {
+                    return await interaction.editReply({
                         embeds: [
                             successEmbed(taskList, "Your To-Do List")
                         ],
@@ -429,7 +424,7 @@ export default {
                     const task = userData.tasks.find(t => t.id === taskNumber);
                     
                     if (!task) {
-                        return await InteractionHelper.safeEditReply(interaction, {
+                        return await interaction.editReply({
                             embeds: [errorEmbed("Error", "Task not found.")],
                         });
                     }
@@ -437,7 +432,7 @@ export default {
                     task.completed = true;
                     await setInDb(`todo_${userId}`, userData);
                     
-                    return await InteractionHelper.safeEditReply(interaction, {
+                    return await interaction.editReply({
                         embeds: [
                             successEmbed("Task Completed", `Marked "${task.text}" as complete!`)
                         ],
@@ -449,7 +444,7 @@ export default {
                     const taskIndex = userData.tasks.findIndex(t => t.id === taskNumber);
                     
                     if (taskIndex === -1) {
-                        return await InteractionHelper.safeEditReply(interaction, {
+                        return await interaction.editReply({
                             embeds: [errorEmbed("Error", "Task not found.")],
                         });
                     }
@@ -457,7 +452,7 @@ export default {
                     const [removedTask] = userData.tasks.splice(taskIndex, 1);
                     await setInDb(`todo_${userId}`, userData);
                     
-                    return await InteractionHelper.safeEditReply(interaction, {
+                    return await interaction.editReply({
                         embeds: [
                             successEmbed("Task Removed", `Removed "${removedTask.text}" from your to-do list.`)
                         ],
@@ -465,18 +460,15 @@ export default {
                 }
 
                 default:
-                    return await InteractionHelper.safeEditReply(interaction, {
+                    return await interaction.editReply({
                         embeds: [errorEmbed("Error", "Invalid subcommand.")],
                     });
             }
         } catch (error) {
             console.error("Error in todo command:", error);
-            await InteractionHelper.safeEditReply(interaction, {
+            await interaction.editReply({
                 embeds: [errorEmbed("Error", "An error occurred while processing your request.")],
             });
         }
-            },
-            errorEmbed("Failed to process todo command. Please try again later.")
-        );
     },
 };

@@ -9,7 +9,7 @@ export default {
     .setDescription("Get the link to add this bot to your server"),
 
   async execute(interaction) {
-    try {
+try {
       // The bot's client ID is retrieved from the application object,
       // which ensures it works correctly for any user who hosts the bot.
       const clientId = interaction.client.application.id;
@@ -26,10 +26,10 @@ export default {
 
       const actionRow = new ActionRowBuilder().addComponents(inviteButton);
 
-      await interaction.editReply({ embeds: [embed], components: [actionRow] });
+      await interaction.reply({ embeds: [embed], components: [actionRow] });
     } catch (error) {
       console.error('Invite command error:', error);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not build the invite link.' })],
         ephemeral: true,
       });

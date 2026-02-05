@@ -1,13 +1,9 @@
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildBirthdays, getMonthName } from '../../../utils/database.js';
-import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 export default {
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ['Ephemeral'] });
-        if (!deferSuccess) return;
-
-        try {
+try {
             const targetUser = interaction.options.getUser("user") || interaction.user;
             const userId = targetUser.id;
             const guildId = interaction.guildId;
@@ -16,7 +12,7 @@ export default {
             const birthdayData = birthdays[userId];
 
             if (!birthdayData) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [errorEmbed(
                         "No Birthday Found",
                         targetUser.id === interaction.user.id 

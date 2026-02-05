@@ -31,7 +31,7 @@ export default {
     ),
 
   async execute(interaction) {
-    try {
+try {
       const name1 = interaction.options.getString("name1").trim();
       const name2 = interaction.options.getString("name2").trim();
 

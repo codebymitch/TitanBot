@@ -25,8 +25,7 @@ export default {
     
     // Slash command execution
     async execute(interaction, config, client) {
-
-        const guildId = interaction.guildId;
+const guildId = interaction.guildId;
         const sortBy = interaction.options.getString("sort_by") || "net_worth";
 
         try {

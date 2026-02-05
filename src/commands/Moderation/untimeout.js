@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Moderation/untimeout.js
 export default {
     data: new SlashCommandBuilder()
@@ -20,10 +18,7 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            await InteractionHelper.safeExecute(
-                interaction,
-                async () => {
-                // Permission check
+            // Permission check
                 if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
                     throw new Error("You need the `Moderate Members` permission to remove a timeout.");
                 }
@@ -65,22 +60,16 @@ export default {
                 });
 
                 // Send success response
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         successEmbed(
                             `🔓 **Removed timeout** from ${targetUser.tag}`,
                         ),
                     ],
                 });
-                },
-                errorEmbed("Timeout Error", "Could not remove timeout. Check my role permissions and try again.")
-            );
         } catch (error) {
-            console.error('Untimeout command error:', error);
-            return interaction.reply({
-                embeds: [errorEmbed('System Error', 'Could not remove timeout at this time.')],
-                ephemeral: true,
-            });
+            logger.error('Untimeout command error:', error);
+            throw error;
         }
-    },
+    }
 };

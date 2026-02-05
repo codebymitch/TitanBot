@@ -25,14 +25,14 @@ export default {
                 const firstMessage = messages.first();
                 
                 if (!firstMessage) {
-                    return await InteractionHelper.safeEditReply(interaction, {
+                    return await interaction.editReply({
                         embeds: [successEmbed("First Message", "No messages found in this channel!")],
                     });
                 }
                 
                 const messageLink = `https://discord.com/channels/${interaction.guildId}/${interaction.channelId}/${firstMessage.id}`;
                 
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         successEmbed(
                             "First Message in #" + interaction.channel.name,
@@ -43,7 +43,7 @@ export default {
                 
             } catch (error) {
                 console.error("Error in firstmsg command:", error);
-                return await InteractionHelper.safeEditReply(interaction, {
+                return await interaction.editReply({
                     embeds: [errorEmbed("Error", "Failed to fetch the first message.")],
                 });
             }
@@ -55,7 +55,7 @@ export default {
                 await commandBody();
             } catch (error) {
                 console.error('FirstMsg execution error when interaction already acknowledged:', error);
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [errorEmbed('System Error', 'Could not complete the command.')],
                 });
             }

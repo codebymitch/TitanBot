@@ -1,13 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
-import { InteractionHelper } from '../../../utils/interactionHelper.js';
-
 export default {
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] }); // Only staff sees the reply
-        if (!deferSuccess) return;
-
         const channel = interaction.options.getChannel("channel");
         const guildId = interaction.guildId;
 
@@ -21,7 +16,7 @@ export default {
             // 3. Save the updated configuration
             await setGuildConfig(client, guildId, guildConfig);
 
-            await interaction.editReply({
+            await interaction.reply({
                 embeds: [
                     successEmbed(
                         "✅ Report Channel Set!",

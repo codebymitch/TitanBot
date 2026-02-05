@@ -1,8 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Tools/time.js
 export default {
     data: new SlashCommandBuilder()
@@ -14,10 +12,7 @@ export default {
                 .setRequired(false)),
 
     async execute(interaction) {
-        await InteractionHelper.safeExecute(
-            interaction,
-            async () => {
-                try {
+        try {
                     const timezone = interaction.options.getString('timezone') || 'UTC';
                     
                     // Validate timezone
@@ -35,9 +30,9 @@ export default {
                             timeZoneName: 'short'
                         });
                     } catch (error) {
-                        await InteractionHelper.safeEditReply(interaction, {
+                        await interaction.reply({
                             embeds: [errorEmbed('Error', 'Invalid timezone. Please use a valid timezone identifier (e.g., UTC, America/New_York, Europe/London)')],
-                            flags: ["Ephemeral"]
+                            ephemeral: true
                         });
                         return;
                     }
@@ -52,16 +47,14 @@ export default {
                         `**ISO String:** \`${now.toISOString()}\``
                     );
                     
-                    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-                } catch (error) {
-                    console.error('Time command error:', error);
-                    await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Error', 'Failed to get the current time.')],
-                        flags: ["Ephemeral"]
-                    });
-                }
-            },
-            errorEmbed('Failed to get time. Please try again later.')
-        );
+                    await interaction.reply({ embeds: [embed], ephemeral: true });
+        } catch (error) {
+            console.error('Time command error:', error);
+            const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
+            await interaction[replyMethod]({
+                embeds: [errorEmbed('Error', 'Failed to get the current time.')],
+                ephemeral: true
+            });
+        }
     },
 };

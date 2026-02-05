@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("massban")
@@ -31,14 +30,9 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-    await InteractionHelper.safeExecute(
-        interaction,
-        async () => {
-        // safeExecute already defers
-
-        // Permission check
+    // Permission check
         if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -61,7 +55,7 @@ export default {
                 .slice(0, 20); // Limit to 20 users at once
 
             if (userIds.length === 0) {
-                return await InteractionHelper.safeEditReply(interaction, {
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Invalid Users",
@@ -73,7 +67,7 @@ export default {
 
             // Prevent self-banning
             if (userIds.includes(interaction.user.id)) {
-                return await InteractionHelper.safeEditReply(interaction, {
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Cannot Ban Self",
@@ -85,7 +79,7 @@ export default {
 
             // Prevent bot-banning
             if (userIds.includes(client.user.id)) {
-                return await InteractionHelper.safeEditReply(interaction, {
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Cannot Ban Bot",
@@ -194,7 +188,7 @@ export default {
 
             const embed = results.successful.length > 0 ? successEmbed : warningEmbed;
             
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     embed(
                         `🔨 Mass Ban Completed`,
@@ -205,7 +199,7 @@ export default {
 
         } catch (error) {
             logger.error("Error in massban command:", error);
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "System Error",
@@ -214,9 +208,5 @@ export default {
                 ],
             });
         }
-    
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-}
+    }
 };

@@ -2,8 +2,6 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, getLevelingConfig, getXpForLevel } from '../../utils/database.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Leveling/rank.js
 export default {
     data: new SlashCommandBuilder()
@@ -19,10 +17,7 @@ export default {
     category: "Leveling",
 
     async execute(interaction, config, client) {
-        await InteractionHelper.safeExecute(
-            interaction,
-            async () => {
-                const targetUser = interaction.options.getUser("user") || interaction.user;
+        const targetUser = interaction.options.getUser("user") || interaction.user;
                 const member = await interaction.guild.members
                     .fetch(targetUser.id)
                     .catch(() => null);
@@ -77,7 +72,7 @@ export default {
                     .setColor("#3498db")
                     .setTimestamp();
 
-                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+                await interaction.editReply({ embeds: [embed]
             },
             errorEmbed("Rank Error", "Could not fetch rank information. Try again later.")
         );

@@ -9,7 +9,7 @@ export default {
         .setDescription('View the economy shop'),
 
     async execute(interaction, config, client) {
-        const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 5;
         const totalPages = Math.ceil(shopItems.length / ITEMS_PER_PAGE);
         let currentPage = 1;
 

@@ -3,8 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Moderation/warn.js
 export default {
     data: new SlashCommandBuilder()
@@ -27,10 +25,7 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            await InteractionHelper.safeExecute(
-                interaction,
-                async () => {
-                // Permission check
+            // Permission check
                 if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
                     throw new Error("You need the `Moderate Members` permission to issue warnings.");
                 }
@@ -80,7 +75,7 @@ export default {
                 });
 
                 // Send success response
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         successEmbed(
                             `⚠️ **Warned** ${target.tag}`,
@@ -88,16 +83,9 @@ export default {
                         ),
                     ],
                 });
-                },
-                },
-                errorEmbed("Warning Failed", "Could not issue warning. Database error occurred.")
-            );
         } catch (error) {
-            console.error('Warn command error:', error);
-            return interaction.reply({
-                embeds: [errorEmbed('System Error', 'Could not issue warning at this time.')],
-                ephemeral: true,
-            });
+            logger.error('Warn command error:', error);
+            throw error;
         }
-    },
+    }
 };

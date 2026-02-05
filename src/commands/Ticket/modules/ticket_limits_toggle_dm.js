@@ -1,45 +1,35 @@
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
+import { getGuildConfig } from '../../../services/guildConfig.js';
+import { getGuildConfigKey } from '../../../utils/database.js';
 
 export default {
     async execute(interaction, config, client) {
-        const guildId = interaction.guildId;
-        
+        const guildId = interaction.guild.id;
+
         try {
             // Get current config
-            const { getGuildConfig } = await import('../../../services/guildConfig.js');
-            const currentConfig = await getGuildConfig(client, guildId);
-            const currentDMSetting = currentConfig.dmOnClose !== false; // Default to true
-            const newDMSetting = !currentDMSetting;
+            const guildConfig = await getGuildConfig(client, guildId);
             
-            // Update the configuration
-            currentConfig.dmOnClose = newDMSetting;
-            
-            // Save the updated configuration using the proper guild config key
-            const { getGuildConfigKey } = await import('../../../utils/database.js');
-            const configKey = getGuildConfigKey(guildId);
-            await client.db.set(configKey, currentConfig);
-            console.log(`[DB] Updated dmOnClose to ${newDMSetting} for guild ${guildId}`);
+            // Toggle DM setting
+            const currentSetting = guildConfig.dmOnClose !== false; // Default to true
+            guildConfig.dmOnClose = !currentSetting;
 
-            return interaction.editReply({
-                embeds: [
-                    successEmbed(
-                        "🎫 DM Setting Updated",
-                        `DM notifications on ticket close have been **${newDMSetting ? 'ENABLED' : 'DISABLED'}**.\n\n` +
-                        `**Updated by:** ${interaction.user.tag}\n` +
-                        `**Previous setting:** ${currentDMSetting ? 'Enabled' : 'Disabled'}`
-                    )
-                ]
-            });
+            // Save to database
+            const configKey = getGuildConfigKey(guildId);
+            await client.db.set(configKey, guildConfig);
+
+            const embed = successEmbed(
+                '✅ DM Notification Setting Updated',
+                `DM notifications when tickets are closed: **${guildConfig.dmOnClose ? 'Enabled' : 'Disabled'}**\n\n` +
+                (guildConfig.dmOnClose 
+                    ? '📬 Users will receive a DM when their ticket is closed.' 
+                    : '📭 Users will NOT receive a DM when their ticket is closed.')
+            );
+
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-            console.error("Error in ticket limits toggle dm:", error);
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "An error occurred while updating DM settings."
-                    )
-                ]
-            });
+            console.error('Error toggling DM setting:', error);
+            throw new Error('Failed to toggle DM setting. Please try again.');
         }
     }
 };

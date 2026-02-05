@@ -1,9 +1,46 @@
 import { logger } from './logger.js';
+import { MessageFlags } from 'discord.js';
 
 /**
  * Helper class for handling Discord interactions with proper error handling
  */
 export class InteractionHelper {
+    /**
+     * Check if interaction is still valid (not expired)
+     * @param {Interaction} interaction - Discord interaction
+     * @returns {boolean} - Whether interaction is still valid
+     */
+    static isInteractionValid(interaction) {
+        if (!interaction || !interaction.id) return false;
+        
+        // Check if interaction has expired (15 minutes)
+        if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Ensure interaction is in a state that can be replied to
+     * @param {Interaction} interaction - Discord interaction
+     * @param {Object} deferOptions - Options for deferReply if needed
+     * @returns {Promise<boolean>} - Whether interaction is ready for replies
+     */
+    static async ensureReady(interaction, deferOptions = { flags: MessageFlags.Ephemeral }) {
+        if (!this.isInteractionValid(interaction)) {
+            return false;
+        }
+
+        // If already replied or deferred, we're ready
+        if (interaction.replied || interaction.deferred) {
+            return true;
+        }
+
+        // Otherwise, defer the interaction
+        return await this.safeDefer(interaction, deferOptions);
+    }
+
     /**
      * Safely defer a reply with error handling
      * @param {Interaction} interaction - Discord interaction
@@ -14,12 +51,11 @@ export class InteractionHelper {
         try {
             // If already acknowledged, nothing to defer — proceed
             if (interaction.deferred || interaction.replied) {
-                logger.warn(`Interaction ${interaction.id} already acknowledged, skipping defer`);
                 return true;
             }
 
             // Check if interaction has expired before attempting to defer
-            if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
+            if (!this.isInteractionValid(interaction)) {
                 logger.warn(`Interaction ${interaction.id} has expired before defer, ignoring`);
                 return false;
             }
@@ -51,9 +87,15 @@ export class InteractionHelper {
     static async safeEditReply(interaction, options) {
         try {
             // Check if interaction has expired before attempting to edit
-            if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
+            if (!this.isInteractionValid(interaction)) {
                 logger.warn(`Interaction ${interaction.id} has expired before edit, ignoring`);
                 return false;
+            }
+            
+            // If interaction hasn't been replied to, try to reply instead
+            if (!interaction.replied && !interaction.deferred) {
+                logger.warn(`Interaction ${interaction.id} not deferred, attempting reply instead of edit`);
+                return await this.safeReply(interaction, options);
             }
             
             await interaction.editReply(options);
@@ -67,6 +109,11 @@ export class InteractionHelper {
             if (error.code === 40060) { // Interaction has already been acknowledged
                 logger.warn(`Interaction ${interaction.id} already acknowledged during edit:`, error.message);
                 return false;
+            }
+            // If interaction hasn't been replied to, try to reply instead of edit
+            if (error.name === 'InteractionNotReplied' || error.message.includes('not been sent or deferred')) {
+                logger.warn(`Interaction ${interaction.id} not replied, attempting reply instead of edit:`, error.message);
+                return await this.safeReply(interaction, options);
             }
             logger.error('Failed to edit reply:', error);
             return false;
@@ -82,7 +129,7 @@ export class InteractionHelper {
     static async safeReply(interaction, options) {
         try {
             // Check if interaction has expired before attempting to reply
-            if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
+            if (!this.isInteractionValid(interaction)) {
                 logger.warn(`Interaction ${interaction.id} has expired before reply, ignoring`);
                 return false;
             }
@@ -108,29 +155,34 @@ export class InteractionHelper {
      * Safely handle command execution with comprehensive error handling
      * @param {Interaction} interaction - Discord interaction
      * @param {Function} commandFunction - The command function to execute
-     * @param {Object} errorEmbed - Error embed to use for failures
+     * @param {Object|string} errorEmbed - Error embed to use for failures
+     * @param {Object} options - Additional options (autoDefer, deferOptions)
      * @returns {Promise<void>}
      */
-    static async safeExecute(interaction, commandFunction, errorEmbed) {
+    static async safeExecute(interaction, commandFunction, errorEmbed, options = {}) {
+        const { autoDefer = true, deferOptions = { flags: MessageFlags.Ephemeral } } = options;
+        
         // Check if interaction has expired
-        if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
+        if (!this.isInteractionValid(interaction)) {
             logger.warn(`Interaction ${interaction.id} has expired, ignoring`);
             return;
         }
 
-        // Try to defer the reply with a shorter timeout
-        const deferStartTime = Date.now();
-        const deferSuccess = await this.safeDefer(interaction);
-        
-        // If defer took too long, the interaction might be close to expiring
-        if (Date.now() - deferStartTime > 3000) { // 3 second threshold
-            logger.warn(`Interaction ${interaction.id} defer took too long (${Date.now() - deferStartTime}ms), command may expire`);
-        }
-        
-        if (!deferSuccess) {
-            // If defer failed due to expiration, don't execute the command
-            logger.warn(`Interaction ${interaction.id} defer failed, skipping command execution`);
-            return;
+        // Auto-defer if enabled and interaction is not already acknowledged
+        if (autoDefer && !interaction.replied && !interaction.deferred) {
+            const deferStartTime = Date.now();
+            const deferSuccess = await this.safeDefer(interaction, deferOptions);
+            
+            // If defer took too long, the interaction might be close to expiring
+            if (Date.now() - deferStartTime > 3000) { // 3 second threshold
+                logger.warn(`Interaction ${interaction.id} defer took too long (${Date.now() - deferStartTime}ms), command may expire`);
+            }
+            
+            if (!deferSuccess) {
+                // If defer failed due to expiration, don't execute the command
+                logger.warn(`Interaction ${interaction.id} defer failed, skipping command execution`);
+                return;
+            }
         }
 
         try {
@@ -139,10 +191,47 @@ export class InteractionHelper {
         } catch (error) {
             logger.error('Error executing command:', error);
             
+            // Prepare error response
+            let errorResponse;
+            if (typeof errorEmbed === 'string') {
+                // If errorEmbed is a string, create an error embed with it
+                const { errorEmbed: createErrorEmbed } = await import('./embeds.js');
+                errorResponse = { embeds: [createErrorEmbed(errorEmbed, error)] };
+            } else if (errorEmbed && typeof errorEmbed === 'object') {
+                // If errorEmbed is already an embed object, use it directly
+                errorResponse = { embeds: [errorEmbed] };
+            } else {
+                // Fallback to a basic error message
+                const { errorEmbed: createErrorEmbed } = await import('./embeds.js');
+                errorResponse = { embeds: [createErrorEmbed('Command execution failed.', error)] };
+            }
+            
             // Try to send error response
-            await this.safeEditReply(interaction, {
-                embeds: [errorEmbed]
-            });
+            const editSuccess = await this.safeEditReply(interaction, errorResponse);
+            if (!editSuccess) {
+                logger.warn(`Failed to send error response for interaction ${interaction.id}, interaction may have expired`);
+            }
+        }
+    }
+
+    /**
+     * Universal reply method that handles all interaction states
+     * @param {Interaction} interaction - Discord interaction
+     * @param {Object} options - Reply options
+     * @returns {Promise<boolean>} - Whether reply was successful
+     */
+    static async universalReply(interaction, options) {
+        // Ensure interaction is ready for replies
+        const isReady = await this.ensureReady(interaction, options.flags ? { flags: options.flags } : {});
+        if (!isReady) {
+            return false;
+        }
+
+        // Use appropriate reply method based on interaction state
+        if (interaction.deferred) {
+            return await this.safeEditReply(interaction, options);
+        } else {
+            return await this.safeReply(interaction, options);
         }
     }
 }

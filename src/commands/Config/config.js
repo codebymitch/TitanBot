@@ -155,6 +155,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
+// Check permissions before deferring
         if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
             return interaction.reply({
                 embeds: [
@@ -193,7 +194,7 @@ export default {
                 }
             }
 
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [
                     errorEmbed("Error", "Unknown subcommand or subcommand group."),
                 ],
@@ -201,7 +202,9 @@ export default {
             });
         } catch (error) {
             console.error("Config command error:", error);
-            return interaction.reply({
+            
+            // Handle based on interaction state
+            const errorMessage = {
                 embeds: [
                     errorEmbed(
                         "Configuration Failed",
@@ -209,7 +212,13 @@ export default {
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,
-            });
+            };
+            
+            if (interaction.deferred || interaction.replied) {
+                return interaction.editReply(errorMessage);
+            } else {
+                return interaction.editReply(errorMessage);
+            }
         }
     },
 };

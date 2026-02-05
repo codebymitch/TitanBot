@@ -23,7 +23,7 @@ export default {
         .setDescription('Go mining to earn money'),
 
     async execute(interaction, config, client) {
-        const userId = interaction.user.id;
+const userId = interaction.user.id;
         const guildId = interaction.guildId;
         const now = Date.now();
 
@@ -40,7 +40,7 @@ export default {
                     (remaining % (1000 * 60 * 60)) / (1000 * 60),
                 );
 
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Mining Cooldown Active",

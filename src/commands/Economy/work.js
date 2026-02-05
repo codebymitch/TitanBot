@@ -25,7 +25,7 @@ export default {
         .setDescription('Work to earn some money'),
 
     async execute(interaction, config, client) {
-        try {
+try {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
             const now = Date.now();
@@ -34,7 +34,7 @@ export default {
             
             // Ensure userData exists and has proper structure
             if (!userData) {
-                await interaction.editReply({
+                await interaction.reply({
                     embeds: [errorEmbed("Error", "Failed to load your economy data. Please try again later.")],
                 });
                 return;

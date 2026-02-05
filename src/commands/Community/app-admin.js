@@ -156,8 +156,7 @@ export default {
                 flags: ["Ephemeral"],
             });
         }
-
-        const { options, guild, member } = interaction;
+const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
 
         // Check permissions
@@ -170,7 +169,7 @@ export default {
                 ));
 
         if (!isManager) {
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "You do not have permission to manage applications.",
@@ -196,7 +195,7 @@ export default {
             }
         } catch (error) {
             console.error("Error in app-admin command:", error);
-            interaction.reply({
+            interaction.editReply({
                 embeds: [
                     errorEmbed("An error occurred while processing your request."),
                 ],
@@ -215,7 +214,7 @@ async function handleSetup(interaction, settings) {
 
     if (logChannel) {
         if (!logChannel.isTextBased()) {
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [errorEmbed("The log channel must be a text channel.")],
                 flags: ["Ephemeral"],
             });
@@ -305,7 +304,7 @@ async function handleView(interaction) {
     );
 
     if (!application) {
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [errorEmbed("Application not found.")],
             flags: ["Ephemeral"],
         });
@@ -378,14 +377,14 @@ async function handleReview(interaction) {
         appId,
     );
     if (!application) {
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [errorEmbed("Application not found.")],
             flags: ["Ephemeral"],
         });
     }
 
     if (application.status !== "pending") {
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [
                 errorEmbed("This application has already been processed."),
             ],
@@ -521,9 +520,9 @@ async function handleList(interaction) {
                 text: "Users can apply with /apply submit or see available roles with /apply list"
             });
 
-            return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
+            return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
         } else {
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "No applications found and no application roles configured.\n" +
@@ -656,7 +655,7 @@ async function handleRoles(interaction) {
 
         if (action === "list") {
             if (currentRoles.length === 0) {
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [errorEmbed("No application roles have been configured.")],
                     flags: ["Ephemeral"],
                 });
@@ -676,12 +675,12 @@ async function handleRoles(interaction) {
                 });
             });
 
-            return interaction.reply({ embeds: [embed], flags: ["Ephemeral"] });
+            return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
         }
 
         if (action === "add") {
             if (!role) {
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [errorEmbed("You must specify a role to add.")],
                     flags: ["Ephemeral"],
                 });
@@ -691,7 +690,7 @@ async function handleRoles(interaction) {
             
             // Check if role already exists
             if (currentRoles.some(appRole => appRole.roleId === role.id)) {
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [errorEmbed("This role is already configured for applications.")],
                     flags: ["Ephemeral"],
                 });
@@ -705,7 +704,7 @@ async function handleRoles(interaction) {
 
             await saveApplicationRoles(interaction.client, interaction.guild.id, currentRoles);
 
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [successEmbed(
                     "Role Added",
                     `**${customName}** has been added to the application system.\nUsers can now apply for this role using \`/apply submit\`.`
@@ -716,7 +715,7 @@ async function handleRoles(interaction) {
 
         if (action === "remove") {
             if (!role) {
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [errorEmbed("You must specify a role to remove.")],
                     flags: ["Ephemeral"],
                 });
@@ -725,7 +724,7 @@ async function handleRoles(interaction) {
             // Check if role exists
             const roleIndex = currentRoles.findIndex(appRole => appRole.roleId === role.id);
             if (roleIndex === -1) {
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [errorEmbed("This role is not configured for applications.")],
                     flags: ["Ephemeral"],
                 });
@@ -735,7 +734,7 @@ async function handleRoles(interaction) {
             const removedRole = currentRoles.splice(roleIndex, 1)[0];
             await saveApplicationRoles(interaction.client, interaction.guild.id, currentRoles);
 
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [successEmbed(
                     "Role Removed",
                     `**${removedRole.name}** has been removed from the application system.`
@@ -745,7 +744,7 @@ async function handleRoles(interaction) {
         }
     } catch (error) {
         console.error("Error handling roles command:", error);
-        return interaction.reply({
+        return interaction.editReply({
             embeds: [errorEmbed("An error occurred while managing application roles.")],
             flags: ["Ephemeral"],
         });

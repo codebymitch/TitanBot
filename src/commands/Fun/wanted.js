@@ -21,7 +21,7 @@ export default {
         .setMaxLength(100),
     ),
   async execute(interaction) {
-    try {
+try {
       const targetUser = interaction.options.getUser("user");
       const crime =
         interaction.options.getString("crime") || "Too adorable for this server.";

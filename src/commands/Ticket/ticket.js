@@ -10,7 +10,6 @@ import ticketLimitsSet from './modules/ticket_limits_set.js';
 import ticketLimitsCheck from './modules/ticket_limits_check.js';
 import ticketLimitsToggleDM from './modules/ticket_limits_toggle_dm.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ticket")
@@ -110,10 +109,7 @@ export default {
     category: "ticket",
 
     async execute(interaction, config, client) {
-    await InteractionHelper.safeExecute(
-        interaction,
-        async () => {
-        // safeExecute already defers; don't defer again
+    // safeExecute already defers; don't defer again
 
         // --- Permission Check ---
         if (
@@ -121,7 +117,7 @@ export default {
                 PermissionFlagsBits.ManageChannels,
             )
         )
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -209,7 +205,7 @@ export default {
                 }
 
                 // --- Success Reply ---
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         successEmbed(
                             "Ticket Panel Set Up",
@@ -266,7 +262,7 @@ export default {
                 });
             } catch (error) {
                 console.error("Ticket Setup Error:", error);
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Setup Failed",
@@ -276,9 +272,5 @@ export default {
                 });
             }
         }
-    
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-},
+    }
 };

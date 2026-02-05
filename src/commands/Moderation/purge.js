@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Migrated from: commands/Moderation/purge.js
 export default {
     data: new SlashCommandBuilder()
@@ -19,14 +18,11 @@ export default {
   category: "moderation",
 
   async execute(interaction, config, client) {
-    await InteractionHelper.safeExecute(
-      interaction,
-      async () => {
     // safeExecute already defers; don't defer again
 
     // Ensure user has permission
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages))
-      return await InteractionHelper.safeEditReply(interaction, {
+      return await interaction.editReply({
         embeds: [
           errorEmbed(
             "Permission Denied",
@@ -39,7 +35,7 @@ export default {
     const channel = interaction.channel;
 
     if (amount < 1 || amount > 100)
-      return await InteractionHelper.safeEditReply(interaction, {
+      return await interaction.editReply({
         embeds: [
           errorEmbed(
             "Invalid Amount",
@@ -89,7 +85,7 @@ export default {
       // ---------------------------
 
       // Send ephemeral success message
-      await InteractionHelper.safeEditReply(interaction, {
+      await interaction.editReply({
         embeds: [
           successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
         ],
@@ -100,7 +96,7 @@ export default {
       setTimeout(() => interaction.deleteReply().catch(() => {}), 3000);
     } catch (error) {
       console.error("Purge Error:", error);
-      await InteractionHelper.safeEditReply(interaction, {
+      await interaction.editReply({
         embeds: [
           errorEmbed(
             "An unexpected error occurred during message deletion. Note: Messages older than 14 days cannot be bulk deleted.",
@@ -109,9 +105,5 @@ export default {
         flags: ["Ephemeral"],
       });
     }
-  
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-},
+  }
 };

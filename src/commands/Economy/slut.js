@@ -51,7 +51,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        const userId = interaction.user.id;
+const userId = interaction.user.id;
         const guildId = interaction.guildId;
         const now = Date.now();
 
@@ -62,7 +62,7 @@ export default {
             // Check cooldown
             if (now - lastSlut < SLUT_COOLDOWN) {
                 const remainingTime = Math.ceil((SLUT_COOLDOWN - (now - lastSlut)) / 60000);
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         warningEmbed(
                             "⏰ Cooldown Active",

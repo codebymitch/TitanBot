@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Migrated from: commands/Moderation/unlock.js
 export default {
     data: new SlashCommandBuilder()
@@ -15,10 +14,7 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-    await InteractionHelper.safeExecute(
-        interaction,
-        async () => {
-        // safeExecute already defers; don't defer again
+    // safeExecute already defers; don't defer again
 
         // Ensure user has permission
         if (
@@ -26,7 +22,7 @@ export default {
                 PermissionFlagsBits.ManageChannels,
             )
         )
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -49,7 +45,7 @@ export default {
                 currentPermissions.has(PermissionFlagsBits.SendMessages) ===
                     null
             ) {
-                return await InteractionHelper.safeEditReply(interaction, {
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Channel Already Unlocked",
@@ -103,7 +99,7 @@ export default {
             });
             // ---------------------------
 
-            await InteractionHelper.safeEditReply(interaction, {
+            await interaction.editReply({
                 embeds: [
                     successEmbed(
                         `🔓 **Channel Unlocked**`,
@@ -113,7 +109,7 @@ export default {
             });
         } catch (error) {
             console.error("Unlock Error:", error);
-            await InteractionHelper.safeEditReply(interaction, {
+            await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "An unexpected error occurred while trying to unlock the channel. Check my permissions (I need 'Manage Channels').",
@@ -121,9 +117,5 @@ export default {
                 ],
             });
         }
-    
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-},
+    }
 };

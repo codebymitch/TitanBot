@@ -3,8 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { claimTicket } from '../../services/ticket.js';
 import { logEvent } from '../../utils/moderation.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 export default {
     data: new SlashCommandBuilder()
         .setName("claim")
@@ -13,17 +11,14 @@ export default {
         .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
 
     async execute(interaction, guildConfig, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
-        if (!deferSuccess) return;
-
-        const channel = interaction.channel;
+const channel = interaction.channel;
 
         try {
             // Use the new ticket system to claim the ticket
             const result = await claimTicket(channel, interaction.user);
             
             if (!result.success) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Not a Ticket Channel",

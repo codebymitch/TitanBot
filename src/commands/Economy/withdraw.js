@@ -16,7 +16,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        const userId = interaction.user.id;
+const userId = interaction.user.id;
         const guildId = interaction.guildId;
         const amountInput = interaction.options.getInteger("amount");
 
@@ -25,7 +25,7 @@ export default {
             let withdrawAmount = amountInput;
 
             if (withdrawAmount <= 0) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Invalid Amount",

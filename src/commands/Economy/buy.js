@@ -28,7 +28,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        const userId = interaction.user.id;
+const userId = interaction.user.id;
         const guildId = interaction.guildId;
         // Ensure the command ID is passed to lowercase for lookup
         const itemId = interaction.options.getString("item_id").toLowerCase();
@@ -38,7 +38,7 @@ export default {
 
         // --- VALIDATION: Item Exists ---
         if (!item) {
-            return interaction.editReply({
+            return interaction.reply({
                 embeds: [
                     errorEmbed(
                         "Item Not Found",

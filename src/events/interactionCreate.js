@@ -4,7 +4,6 @@ import { getGuildConfig } from '../services/guildConfig.js';
 import { errorEmbed } from '../utils/embeds.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationButton, handleApplicationReviewModal } from '../commands/Community/app-admin.js';
-import { InteractionHelper } from '../utils/interactionHelper.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -13,62 +12,58 @@ export default {
       // Handle chat input commands
       if (interaction.isChatInputCommand()) {
         try {
-          // Defer the reply immediately to prevent timeouts
-          const deferSuccess = await InteractionHelper.safeDefer(interaction);
-          if (!deferSuccess) {
-            logger.warn(`Interaction ${interaction.id} defer failed, continuing without defer`);
-            // Proceed without deferring; individual commands and helper functions will
-            // attempt to reply or edit as needed (safeEditReply falls back to reply).
-          }
-
           logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`);
           const command = client.commands.get(interaction.commandName);
 
           if (!command) {
             logger.error(`No command matching ${interaction.commandName} was found.`);
-            await interaction.editReply({ content: 'Sorry, that command does not exist.' });
+            try {
+              await interaction.reply({ 
+                content: 'Sorry, that command does not exist.',
+                flags: MessageFlags.Ephemeral
+              });
+            } catch (error) {
+              logger.error('Failed to reply to unknown command:', error);
+            }
             return;
           }
+          
+          // Note: Each command is now responsible for its own deferring
+          // No global deferring here to avoid conflicts
 
           // Check if command is disabled for this guild
           let guildConfig = null;
           if (interaction.guild) {
             guildConfig = await getGuildConfig(client, interaction.guild.id);
             if (guildConfig?.disabledCommands?.[interaction.commandName]) {
-              return interaction.editReply({
+              await interaction.reply({
                 embeds: [
                   errorEmbed(
                     'This command has been disabled for this server.',
                     'Command Disabled'
                   )
-                ]
+                ],
+                flags: MessageFlags.Ephemeral
               });
+              return;
             }
           }
 
-          // Always pass all arguments. The command can choose to use them or not.
+          // Execute the command
           await command.execute(interaction, guildConfig, client);
         } catch (error) {
           logger.error(`Error executing ${interaction.commandName}`, error);
           
-          // Only try to reply if the interaction hasn't been handled yet
-          if (interaction.replied || interaction.deferred) {
-            // Interaction was already acknowledged, can't reply again
-            logger.debug(`Interaction ${interaction.id} already acknowledged, skipping error reply`);
-            return;
-          }
+          const errorMessage = {
+            embeds: [errorEmbed('Command Error', 'There was an error while executing this command!')],
+            flags: MessageFlags.Ephemeral
+          };
           
-          try {
-            const reply = {
-              content: 'There was an error while executing this command!',
-              flags: [MessageFlags.Ephemeral]
-            };
-            await interaction.reply(reply);
-          } catch (replyError) {
-            // If reply fails, try followUp as last resort
-            if (!replyError.message?.includes('already been acknowledged')) {
-              logger.error('Failed to reply to interaction:', replyError);
-            }
+          // Handle based on interaction state
+          if (interaction.deferred || interaction.replied) {
+            await interaction.editReply(errorMessage);
+          } else {
+            await interaction.reply(errorMessage);
           }
         }
       }

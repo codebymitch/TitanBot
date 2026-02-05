@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Migrated from: commands/Moderation/dm.js
 export default {
     data: new SlashCommandBuilder()
@@ -32,11 +31,7 @@ export default {
     category: "Moderation",
 
     async execute(interaction, config, client) {
-    await InteractionHelper.safeExecute(
-        interaction,
-        async () => {  // safeExecute already defers
-
-        const targetUser = interaction.options.getUser("user");
+    const targetUser = interaction.options.getUser("user");
         const message = interaction.options.getString("message");
         const anonymous = interaction.options.getBoolean("anonymous") || false;
 
@@ -73,7 +68,7 @@ export default {
                 }
             });
 
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     successEmbed(
                         "DM Sent",
@@ -85,22 +80,18 @@ export default {
             console.error("Error in dm command:", error);
             
             if (error.code === 50007) { // Cannot send messages to this user
-                return await InteractionHelper.safeEditReply(interaction, {
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed("Error", `Could not send a DM to ${targetUser.tag}. They may have DMs disabled.`),
                     ],
                 });
             }
             
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     errorEmbed("Error", `Failed to send DM: ${error.message}`),
                 ],
             });
         }
-    
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-},
+    }
 };

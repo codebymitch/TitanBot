@@ -61,7 +61,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        try {
+try {
             const subcommand = interaction.options.getSubcommand();
             
             switch (subcommand) {
@@ -77,15 +77,24 @@ export default {
                     return nextBirthdays.execute(interaction, config, client);
                 default:
                     return interaction.reply({
-                        embeds: [errorEmbed('Error', 'Unknown subcommand')]
+                        embeds: [errorEmbed('Error', 'Unknown subcommand')],
+                        ephemeral: true
                     });
             }
         } catch (error) {
             console.error('Birthday command error:', error);
-            return interaction.reply({
+            
+            const errorMessage = {
                 embeds: [errorEmbed('System Error', 'Could not process birthday command at this time.')],
                 ephemeral: true
-            });
+            };
+            
+            // Handle based on interaction state
+            if (interaction.deferred || interaction.replied) {
+                return interaction.editReply(errorMessage);
+            } else {
+                return interaction.editReply(errorMessage);
+            }
         }
     }
 };

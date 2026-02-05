@@ -19,13 +19,13 @@ export default {
     .setDescription("Shares a random, interesting fact."),
 
   async execute(interaction) {
-    try {
+try {
       // Get a random fact from the array
       const randomFact = facts[Math.floor(Math.random() * facts.length)];
 
       const embed = successEmbed("🧠 Did You Know?", `💡 **${randomFact}**`);
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     } catch (error) {
       console.error("Fact command error:", error);
       await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not fetch a fact right now.")] });

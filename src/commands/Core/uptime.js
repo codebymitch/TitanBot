@@ -9,7 +9,7 @@ export default {
     .setDescription("Check how long the bot has been online"),
 
   async execute(interaction) {
-    try {
+try {
       let totalSeconds = interaction.client.uptime / 1000;
       let days = Math.floor(totalSeconds / 86400);
       totalSeconds %= 86400;
@@ -20,12 +20,12 @@ export default {
 
       const uptimeStr = `${days}d, ${hours}h, ${minutes}m, ${seconds}s`;
 
-      await interaction.editReply({
+      await interaction.reply({
         embeds: [createEmbed({ title: "⏱️ System Uptime", description: `**${uptimeStr}**` })],
       });
     } catch (error) {
       console.error('Uptime command error:', error);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not compute uptime.' })],
         ephemeral: true,
       });

@@ -17,12 +17,12 @@ export default {
     ),
 
   async execute(interaction) {
-    try {
+try {
       const challenger = interaction.user;
       const opponent = interaction.options.getUser("opponent");
 
       if (challenger.id === opponent.id) {
-        return interaction.editReply({
+        return interaction.reply({
           content: `⚔️ **${challenger.username}** can't fight themselves! That's a draw before it even starts.`,
         });
       }

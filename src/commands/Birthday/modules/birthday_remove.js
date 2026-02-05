@@ -1,20 +1,16 @@
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { deleteBirthday } from '../../../utils/database.js';
-import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 export default {
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ['Ephemeral'] });
-        if (!deferSuccess) return;
-
-        try {
+try {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
             const success = await deleteBirthday(client, guildId, userId);
 
             if (success) {
-                await interaction.editReply({
+                await interaction.reply({
                     embeds: [successEmbed(
                         "Birthday Removed 🗑️",
                         "Your birthday has been successfully removed from the server."

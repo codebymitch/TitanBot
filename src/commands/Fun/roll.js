@@ -15,7 +15,7 @@ export default {
     ),
 
   async execute(interaction) {
-    try {
+try {
       const notation = interaction.options
         .getString("notation")
         .toLowerCase()
@@ -25,7 +25,7 @@ export default {
       const match = notation.match(/^(\d*)d(\d+)([\+\-]\d+)?$/);
 
       if (!match) {
-        return interaction.editReply({
+        return interaction.reply({
           embeds: [
             errorEmbed("Invalid notation. Use format like `1d20` or `3d6+5`."),
           ],

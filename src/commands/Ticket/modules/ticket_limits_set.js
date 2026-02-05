@@ -1,45 +1,33 @@
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
+import { getGuildConfig } from '../../../services/guildConfig.js';
+import { getGuildConfigKey } from '../../../utils/database.js';
 
 export default {
     async execute(interaction, config, client) {
-        const guildId = interaction.guildId;
-        const newMaxTickets = interaction.options.getInteger("max_tickets");
-        
+        const maxTickets = interaction.options.getInteger('max_tickets');
+        const guildId = interaction.guild.id;
+
         try {
             // Get current config
-            const { getGuildConfig } = await import('../../../services/guildConfig.js');
-            const currentConfig = await getGuildConfig(client, guildId);
-            const previousLimit = currentConfig.maxTicketsPerUser || 3;
+            const guildConfig = await getGuildConfig(client, guildId);
             
-            // Update the configuration
-            currentConfig.maxTicketsPerUser = newMaxTickets;
-            
-            // Save the updated configuration using the proper guild config key
-            const { getGuildConfigKey } = await import('../../../utils/database.js');
-            const configKey = getGuildConfigKey(guildId);
-            await client.db.set(configKey, currentConfig);
-            console.log(`[DB] Updated maxTicketsPerUser to ${newMaxTickets} for guild ${guildId}`);
+            // Update max tickets
+            guildConfig.maxTicketsPerUser = maxTickets;
 
-            return interaction.editReply({
-                embeds: [
-                    successEmbed(
-                        "🎫 Ticket Limit Updated",
-                        `Maximum tickets per user has been set to **${newMaxTickets}**.\n\n` +
-                        `**Updated by:** ${interaction.user.tag}\n` +
-                        `**Previous limit:** ${previousLimit}`
-                    )
-                ]
-            });
+            // Save to database
+            const configKey = getGuildConfigKey(guildId);
+            await client.db.set(configKey, guildConfig);
+
+            const embed = successEmbed(
+                '✅ Ticket Limit Updated',
+                `Maximum tickets per user has been set to **${maxTickets}**.\n\n` +
+                `Users will now be limited to ${maxTickets} open ticket${maxTickets !== 1 ? 's' : ''} at a time.`
+            );
+
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-            console.error("Error in ticket limits set:", error);
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "An error occurred while updating ticket limits."
-                    )
-                ]
-            });
+            console.error('Error setting ticket limits:', error);
+            throw new Error('Failed to update ticket limits. Please try again.');
         }
     }
 };

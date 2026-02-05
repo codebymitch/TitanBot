@@ -1,13 +1,9 @@
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildBirthdays, setBirthday, deleteBirthday, getMonthName } from '../../../utils/database.js';
-import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 export default {
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ['Ephemeral'] });
-        if (!deferSuccess) return;
-
-        try {
+try {
             const month = interaction.options.getInteger("month");
             const day = interaction.options.getInteger("day");
             const userId = interaction.user.id;
@@ -18,7 +14,7 @@ export default {
             const date = new Date(currentYear, month - 1, day);
             
             if (isNaN(date.getTime()) || date.getMonth() !== month - 1 || date.getDate() !== day) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [errorEmbed("Invalid Date", "Please enter a valid date (e.g., February 29th only exists in leap years).")]
                 });
             }

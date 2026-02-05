@@ -1,8 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Reaction_roles/rsetup.js
 export default {
     data: new SlashCommandBuilder()
@@ -52,10 +50,7 @@ export default {
 
     async execute(interaction) {
         try {
-            const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-            if (!deferSuccess) return;
-
-            const channel = interaction.options.getChannel('channel');
+const channel = interaction.options.getChannel('channel');
             const title = interaction.options.getString('title');
             const description = interaction.options.getString('description');
             
@@ -66,7 +61,7 @@ export default {
                 if (role) {
                     // Check if the bot has permission to manage this role
                     if (role.position >= interaction.guild.members.me.roles.highest.position) {
-                        return interaction.editReply({
+                        return interaction.reply({
                             embeds: [errorEmbed('Error', `I don't have permission to manage the role ${role.name}. Please move my role higher in the role hierarchy.`)]
                         });
                     }

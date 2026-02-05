@@ -12,7 +12,7 @@ export default {
                 .setDescription('What would you like to search for?')
                 .setRequired(true)),
     async execute(interaction) {
-        try {
+try {
             const query = interaction.options.getString('query');
             const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
             
@@ -22,7 +22,7 @@ export default {
             )
             .setFooter({ text: 'Google Search Results' });
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed] });
         } catch (error) {
             console.error('Error in google command:', error);
             await interaction.editReply({ 

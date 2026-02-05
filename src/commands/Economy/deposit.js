@@ -15,7 +15,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        const userId = interaction.user.id;
+const userId = interaction.user.id;
         const guildId = interaction.guildId;
         // CHANGED to getString since the option type is now string
         const amountInput = interaction.options.getString("amount");

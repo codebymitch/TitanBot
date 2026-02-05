@@ -3,13 +3,12 @@ import { getGuildBirthdays, getMonthName } from '../../../utils/database.js';
 
 export default {
     async execute(interaction, config, client) {
-
-        try {
+try {
             const guildId = interaction.guildId;
             const birthdays = await getGuildBirthdays(client, guildId);
 
             if (!birthdays || Object.keys(birthdays).length === 0) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [errorEmbed("No Birthdays", "No birthdays have been set in this server yet.")]
                 });
             }

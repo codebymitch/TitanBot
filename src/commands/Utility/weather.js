@@ -1,9 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
-
 // Open-Meteo APIs (Free and NO API Key Required for non-commercial use)
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
@@ -21,10 +18,7 @@ export default {
 
     async execute(interaction) {
         // Defer early, unless it's already been acknowledged
-        const deferSuccess = await InteractionHelper.safeDefer(interaction);
-        if (!deferSuccess) return;
-
-        try {
+try {
             const city = interaction.options.getString("city");
 
             // --- Step 1: Get Coordinates (Geocoding) ---
@@ -34,7 +28,7 @@ export default {
             const geoData = await geoResponse.json();
 
             if (!geoData.results || geoData.results.length === 0) {
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "City Not Found",
@@ -57,7 +51,7 @@ export default {
             // Check for API system errors
             if (weatherData.error) {
                 console.error("Open-Meteo API Error:", weatherData.reason);
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "API Error",
@@ -101,10 +95,10 @@ export default {
                     text: `Latitude: ${latitude.toFixed(2)} | Longitude: ${longitude.toFixed(2)}`,
                 });
 
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error("Weather command general error:", error);
-            await InteractionHelper.safeEditReply(interaction, {
+            await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "System Error",

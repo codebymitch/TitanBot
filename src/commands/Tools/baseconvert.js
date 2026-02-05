@@ -36,7 +36,7 @@ export default {
                 .addChoices(...BASE_NAMES)),
 
     async execute(interaction) {
-        try {
+try {
             const numberStr = interaction.options.getString('number').trim();
             const fromBase = interaction.options.getString('from');
             const toBase = interaction.options.getString('to');
@@ -50,7 +50,7 @@ export default {
             
             // Validate input
             if (!cleanNumber) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [errorEmbed('Error', 'Please provide a valid number to convert.')],
                     flags: ["Ephemeral"]
                 });

@@ -19,7 +19,7 @@ export default {
         .setDescription('Beg for a small amount of money'),
 
     async execute(interaction, config, client) {
-        try {
+try {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
@@ -37,7 +37,7 @@ export default {
                 let timeMessage =
                     minutes > 0 ? `${minutes} minute(s)` : `${seconds} second(s)`;
 
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Slow Down!",

@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Migrated from: commands/Moderation/lock.js
 export default {
     data: new SlashCommandBuilder()
@@ -15,14 +14,11 @@ export default {
   category: "moderation",
 
   async execute(interaction, config, client) {
-  await InteractionHelper.safeExecute(
-    interaction,
-    async () => {
   // safeExecute already defers; don't defer again
 
     // Ensure user has permission
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
-      return await InteractionHelper.safeEditReply(interaction, {
+      return await interaction.editReply({
         embeds: [
           errorEmbed(
             "Permission Denied",
@@ -39,7 +35,7 @@ export default {
       const currentPermissions = channel.permissionsFor(everyoneRole);
       // Check if SendMessages is explicitly denied or implicitly denied
       if (currentPermissions.has(PermissionFlagsBits.SendMessages) === false) {
-        return await InteractionHelper.safeEditReply(interaction, {
+        return await interaction.editReply({
           embeds: [
             errorEmbed(
               "Channel Already Locked",
@@ -87,7 +83,7 @@ export default {
       });
       // ---------------------------
 
-      await InteractionHelper.safeEditReply(interaction, {
+      await interaction.editReply({
         embeds: [
           successEmbed(
             `🔒 **Channel Locked**`,
@@ -97,7 +93,7 @@ export default {
       });
     } catch (error) {
       console.error("Lock Error:", error);
-      await InteractionHelper.safeEditReply(interaction, {
+      await interaction.editReply({
         embeds: [
           errorEmbed(
             "An unexpected error occurred while trying to lock the channel. Check my permissions (I need 'Manage Channels').",
@@ -105,9 +101,5 @@ export default {
         ],
       });
     }
-  
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-},
+  }
 };

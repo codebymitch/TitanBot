@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 export default {
     data: new SlashCommandBuilder()
         .setName("unban")
@@ -24,10 +22,7 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            await InteractionHelper.safeExecute(
-                interaction,
-                async () => {
-                // Permission check
+            // Permission check
                 if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
                     throw new Error("You do not have permission to unban members.");
                 }
@@ -63,7 +58,7 @@ export default {
                 });
 
                 // Send success response
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         successEmbed(
                             "✅ User Unbanned",
@@ -71,15 +66,9 @@ export default {
                         )
                     ]
                 });
-                },
-                errorEmbed("Unban Error", "An error occurred while trying to unban the user.")
-            );
         } catch (error) {
-            console.error('Unban command error:', error);
-            return interaction.reply({
-                embeds: [errorEmbed('System Error', 'Could not unban user at this time.')],
-                ephemeral: true,
-            });
+            logger.error('Unban command error:', error);
+            throw error;
         }
     }
 };

@@ -15,7 +15,7 @@ export default {
         .setDescription('Claim your daily cash reward'),
 
     async execute(interaction, config, client) {
-        // Use ephemeral: false for the daily command since it's typically public
+// Use ephemeral: false for the daily command since it's typically public
 
         const userId = interaction.user.id;
         const guildId = interaction.guildId;
@@ -28,7 +28,7 @@ export default {
             // --- 1. Cooldown Check ---
             if (now < lastDaily + DAILY_COOLDOWN) {
                 const timeRemaining = lastDaily + DAILY_COOLDOWN - now;
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "⏳ Cooldown Active",

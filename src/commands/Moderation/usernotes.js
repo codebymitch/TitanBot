@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { getFromDb, setInDb, deleteFromDb } from '../../utils/database.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 /**
  * Get user notes key for database
  * @param {string} guildId - Guild ID
@@ -100,12 +98,9 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-        if (!deferSuccess) return;
-
-        // Permission check
+// Permission check
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
-            return interaction.editReply({
+            return interaction.reply({
                 embeds: [
                     errorEmbed(
                         "Permission Denied",

@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getGuildGiveaways, deleteGiveaway } from '../../utils/giveaways.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Giveaway/gdelete.js
 export default {
     data: new SlashCommandBuilder()
@@ -20,65 +18,31 @@ export default {
         .setDefaultMemberPermissions(0x0000000000000008n), // Administrator permission
 
     async execute(interaction) {
-        await InteractionHelper.safeExecute(
-            interaction,
-            async () => {
-                // Guild and permission checks
-                if (!interaction.inGuild()) {
-                    throw new Error("This command can only be used in a server.");
-                }
-
-                if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-                    throw new Error("You need the 'Manage Server' permission to delete a giveaway.");
-                }
-
-                const messageId = interaction.options.getString("messageid");
-                const giveaways = await getGuildGiveaways(interaction.client, interaction.guildId);
-                const giveaway = giveaways.find(g => g.messageId === messageId);
-
-                if (!giveaway) {
-                    throw new Error("Giveaway not found. Check the message ID.");
-                }
-
-                // Delete from database
-                await deleteGiveaway(interaction.client, interaction.guildId, messageId);
-
-                // Try to delete the message
-                try {
-                    const channel = await interaction.guild.channels.fetch(giveaway.channelId);
-                    const message = await channel.messages.fetch(messageId);
-                    await message.delete();
-                } catch (error) {
-                    // Message might already be deleted
-                }
-
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed("Giveaway Deleted", "The giveaway has been removed.")],
-                });
-            },
-            errorEmbed("Delete Failed", "Could not delete giveaway.")
-        );
-    }
-
-        const messageId = interaction.options.getString("messageid");
-        const giveaways = await getGuildGiveaways(
-            interaction.client,
-            interaction.guildId,
-        );
-        const giveaway = giveaways[messageId];
-
-        if (!giveaway) {
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Giveaway Not Found",
-                        "No giveaway was found with that message ID.",
-                    ),
-                ],
-            });
-        }
-
         try {
+            if (!interaction.inGuild()) {
+                throw new Error("This command can only be used in a server.");
+            }
+
+            if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+                throw new Error("You need the 'Manage Server' permission to delete a giveaway.");
+            }
+
+            const messageId = interaction.options.getString("messageid");
+            const giveaways = await getGuildGiveaways(interaction.client, interaction.guildId);
+            const giveaway = giveaways.find(g => g.messageId === messageId);
+
+            if (!giveaway) {
+                return interaction.reply({
+                    embeds: [
+                        errorEmbed(
+                            "Giveaway Not Found",
+                            "No giveaway was found with that message ID.",
+                        ),
+                    ],
+                    ephemeral: true,
+                });
+            }
+
             let deletedMessage = false;
             let channelName = "Unknown Channel";
 
@@ -109,23 +73,26 @@ export default {
                 ? `and the message was deleted from #${channelName}`
                 : `but the message was already deleted or the channel was inaccessible.`;
 
-            return interaction.editReply({
+            return interaction.reply({
                 embeds: [
                     successEmbed(
                         "Giveaway Deleted",
                         `Successfully deleted the giveaway for **${giveaway.prize}** ${statusMsg}. No winner was picked.`,
                     ),
                 ],
+                ephemeral: true,
             });
         } catch (error) {
             console.error("Error deleting giveaway:", error);
-            return interaction.editReply({
+            const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
+            return interaction[replyMethod]({
                 embeds: [
                     errorEmbed(
                         "Deletion Failed",
                         "An error occurred while trying to delete the giveaway. Check bot permissions.",
                     ),
                 ],
+                ephemeral: true,
             });
         }
     },

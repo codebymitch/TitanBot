@@ -30,7 +30,7 @@ export default {
                 .setDescription('List all auto-assigned roles')),
 
     async execute(interaction) {
-        const { options, guild, client } = interaction;
+const { options, guild, client } = interaction;
         const subcommand = options.getSubcommand();
 
         if (subcommand === 'add') {
@@ -49,7 +49,7 @@ export default {
                 const autoRoles = new Set(config.roleIds || []);
                 
                 if (autoRoles.has(role.id)) {
-                    return interaction.reply({
+                    return interaction.editReply({
                         content: `❌ The role ${role} is already set to be auto-assigned.`,
                         flags: ["Ephemeral"]
                     });
@@ -83,7 +83,7 @@ export default {
                 const autoRoles = new Set(config.roleIds || []);
                 
                 if (!autoRoles.has(role.id)) {
-                    return interaction.reply({
+                    return interaction.editReply({
                         content: `❌ The role ${role} is not set to be auto-assigned.`,
                         flags: ["Ephemeral"]
                     });
@@ -115,7 +115,7 @@ export default {
                 const autoRoles = Array.isArray(config.roleIds) ? config.roleIds : [];
 
                 if (autoRoles.length === 0) {
-                    return interaction.reply({
+                    return interaction.editReply({
                         content: 'ℹ️ No roles are set to be auto-assigned.',
                         flags: ["Ephemeral"]
                     });
@@ -145,7 +145,7 @@ export default {
                 }
 
                 if (validRoles.length === 0) {
-                    return interaction.reply({
+                    return interaction.editReply({
                         content: 'ℹ️ No valid auto-assigned roles found. Any invalid roles have been removed.',
                         flags: ["Ephemeral"]
                     });

@@ -1599,6 +1599,286 @@ export async function getModlogEntries(client, guildId, filters = {}) {
     }
 }
 
+// ====================
+// JOIN TO CREATE SYSTEM UTILS
+// ====================
+
+/**
+ * Get the Join to Create configuration key for a guild
+ * @param {string} guildId - The guild ID
+ * @returns {string} The Join to Create config key
+ */
+export function getJoinToCreateConfigKey(guildId) {
+    return `guild:${guildId}:jointocreate`;
+}
+
+/**
+ * Get the Join to Create temporary channels key for a guild
+ * @param {string} guildId - The guild ID
+ * @returns {string} The temporary channels key
+ */
+export function getJoinToCreateChannelsKey(guildId) {
+    return `guild:${guildId}:jointocreate:channels`;
+}
+
+/**
+ * Get Join to Create configuration for a guild
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @returns {Promise<Object>} The Join to Create configuration
+ */
+export async function getJoinToCreateConfig(client, guildId) {
+    if (!client.db) {
+        console.warn('Database not available for getJoinToCreateConfig');
+        return {
+            enabled: false,
+            triggerChannels: [],
+            categoryId: null,
+            channelNameTemplate: "{username}'s Room",
+            userLimit: 0,
+            bitrate: 64000,
+            temporaryChannels: {}
+        };
+    }
+    
+    const key = getJoinToCreateConfigKey(guildId);
+    try {
+        const config = await client.db.get(key, {});
+        const unwrapped = unwrapReplitData(config);
+        
+        // Ensure all required fields exist with defaults
+        return {
+            enabled: unwrapped.enabled || false,
+            triggerChannels: unwrapped.triggerChannels || [],
+            categoryId: unwrapped.categoryId || null,
+            channelNameTemplate: unwrapped.channelNameTemplate || "{username}'s Room",
+            userLimit: unwrapped.userLimit || 0,
+            bitrate: unwrapped.bitrate || 64000,
+            temporaryChannels: unwrapped.temporaryChannels || {},
+            ...unwrapped
+        };
+    } catch (error) {
+        console.error(`Error getting Join to Create config for guild ${guildId}:`, error);
+        return {
+            enabled: false,
+            triggerChannels: [],
+            categoryId: null,
+            channelNameTemplate: "{username}'s Room",
+            userLimit: 0,
+            bitrate: 64000,
+            temporaryChannels: {}
+        };
+    }
+}
+
+/**
+ * Save Join to Create configuration for a guild
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {Object} config - The configuration to save
+ * @returns {Promise<boolean>} Whether the operation was successful
+ */
+export async function saveJoinToCreateConfig(client, guildId, config) {
+    const key = getJoinToCreateConfigKey(guildId);
+    try {
+        // Get existing config to merge with new values
+        const existingConfig = await getJoinToCreateConfig(client, guildId);
+        const mergedConfig = { ...existingConfig, ...config };
+        
+        // Save the merged config
+        await client.db.set(key, mergedConfig);
+        return true;
+    } catch (error) {
+        console.error(`Error saving Join to Create config for guild ${guildId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Update specific fields in the Join to Create config
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {Object} updates - The fields to update
+ * @returns {Promise<Object>} The updated config
+ */
+export async function updateJoinToCreateConfig(client, guildId, updates) {
+    try {
+        const currentConfig = await getJoinToCreateConfig(client, guildId);
+        const updatedConfig = { ...currentConfig, ...updates };
+        
+        await saveJoinToCreateConfig(client, guildId, updatedConfig);
+        return updatedConfig;
+    } catch (error) {
+        console.error(`Error updating Join to Create config for guild ${guildId}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Add a trigger channel to the Join to Create system
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {string} channelId - The trigger channel ID
+ * @param {Object} options - Channel-specific options
+ * @returns {Promise<boolean>} Whether the operation was successful
+ */
+export async function addJoinToCreateTrigger(client, guildId, channelId, options = {}) {
+    try {
+        const config = await getJoinToCreateConfig(client, guildId);
+        
+        // Check if channel already exists
+        if (config.triggerChannels.includes(channelId)) {
+            return false;
+        }
+        
+        config.triggerChannels.push(channelId);
+        config.enabled = config.triggerChannels.length > 0;
+        
+        // Store channel-specific options if provided
+        if (Object.keys(options).length > 0) {
+            if (!config.channelOptions) {
+                config.channelOptions = {};
+            }
+            config.channelOptions[channelId] = {
+                nameTemplate: options.nameTemplate || config.channelNameTemplate,
+                userLimit: options.userLimit || config.userLimit,
+                bitrate: options.bitrate || config.bitrate
+            };
+        }
+        
+        return await saveJoinToCreateConfig(client, guildId, config);
+    } catch (error) {
+        console.error(`Error adding Join to Create trigger for guild ${guildId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Remove a trigger channel from the Join to Create system
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {string} channelId - The trigger channel ID
+ * @returns {Promise<boolean>} Whether the operation was successful
+ */
+export async function removeJoinToCreateTrigger(client, guildId, channelId) {
+    try {
+        const config = await getJoinToCreateConfig(client, guildId);
+        
+        const index = config.triggerChannels.indexOf(channelId);
+        if (index === -1) {
+            return false;
+        }
+        
+        config.triggerChannels.splice(index, 1);
+        config.enabled = config.triggerChannels.length > 0;
+        
+        // Remove channel-specific options
+        if (config.channelOptions && config.channelOptions[channelId]) {
+            delete config.channelOptions[channelId];
+        }
+        
+        return await saveJoinToCreateConfig(client, guildId, config);
+    } catch (error) {
+        console.error(`Error removing Join to Create trigger for guild ${guildId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Register a temporary channel in the system
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {string} channelId - The temporary channel ID
+ * @param {string} ownerId - The owner user ID
+ * @param {string} triggerChannelId - The trigger channel that created this
+ * @returns {Promise<boolean>} Whether the operation was successful
+ */
+export async function registerTemporaryChannel(client, guildId, channelId, ownerId, triggerChannelId) {
+    try {
+        const config = await getJoinToCreateConfig(client, guildId);
+        
+        config.temporaryChannels[channelId] = {
+            ownerId,
+            triggerChannelId,
+            createdAt: Date.now()
+        };
+        
+        return await saveJoinToCreateConfig(client, guildId, config);
+    } catch (error) {
+        console.error(`Error registering temporary channel for guild ${guildId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Unregister a temporary channel from the system
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {string} channelId - The temporary channel ID
+ * @returns {Promise<boolean>} Whether the operation was successful
+ */
+export async function unregisterTemporaryChannel(client, guildId, channelId) {
+    try {
+        const config = await getJoinToCreateConfig(client, guildId);
+        
+        if (config.temporaryChannels[channelId]) {
+            delete config.temporaryChannels[channelId];
+            return await saveJoinToCreateConfig(client, guildId, config);
+        }
+        
+        return false;
+    } catch (error) {
+        console.error(`Error unregistering temporary channel for guild ${guildId}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Get a temporary channel's information
+ * @param {Object} client - The Discord client
+ * @param {string} guildId - The guild ID
+ * @param {string} channelId - The temporary channel ID
+ * @returns {Promise<Object|null>} The temporary channel info or null if not found
+ */
+export async function getTemporaryChannelInfo(client, guildId, channelId) {
+    try {
+        const config = await getJoinToCreateConfig(client, guildId);
+        return config.temporaryChannels[channelId] || null;
+    } catch (error) {
+        console.error(`Error getting temporary channel info for guild ${guildId}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Format channel name with template variables
+ * @param {string} template - The name template
+ * @param {Object} variables - The variables to replace
+ * @returns {string} The formatted channel name
+ */
+export function formatChannelName(template, variables) {
+    let formatted = template;
+    
+    // Replace common variables
+    const replacements = {
+        '{username}': variables.username || 'User',
+        '{user_tag}': variables.userTag || 'User#0000',
+        '{display_name}': variables.displayName || 'User',
+        '{guild_name}': variables.guildName || 'Server',
+        '{channel_name}': variables.channelName || 'Voice Channel'
+    };
+    
+    for (const [placeholder, value] of Object.entries(replacements)) {
+        formatted = formatted.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+    }
+    
+    // Discord channel name restrictions
+    formatted = formatted.replace(/[^\w\s-]/g, '').trim();
+    formatted = formatted.substring(0, 100); // Discord channel name limit
+    
+    return formatted || 'Voice Channel';
+}
+
 /**
  * Generate a unique case ID
  * @returns {string} A unique case ID

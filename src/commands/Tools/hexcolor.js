@@ -13,7 +13,7 @@ export default {
                 .setRequired(false)),
 
     async execute(interaction) {
-        try {
+try {
             let hexColor = interaction.options.getString('color');
             let isRandom = false;
             

@@ -1,16 +1,12 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
-import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 export default {
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-        if (!deferSuccess) return;
-
-        // Permission check (redundant due to setDefaultMemberPermissions, but good practice)
+// Permission check (redundant due to setDefaultMemberPermissions, but good practice)
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-            return interaction.editReply({
+            return interaction.reply({
                 embeds: [
                     errorEmbed(
                         "Permission Denied",

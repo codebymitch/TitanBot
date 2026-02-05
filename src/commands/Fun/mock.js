@@ -15,7 +15,7 @@ export default {
     ),
 
   async execute(interaction) {
-    try {
+try {
       const originalText = interaction.options.getString("text");
       let mockedText = "";
 

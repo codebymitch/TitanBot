@@ -14,12 +14,12 @@ export default {
                 .setRequired(true)),
     
     async execute(interaction) {
-        try {
+try {
             const term = interaction.options.getString('term');
             
             // Check if the term is too short
             if (term.length < 2) {
-                return await interaction.editReply({
+                return await interaction.reply({
                     embeds: [errorEmbed('Error', 'Please enter a term with at least 2 characters.')],
                     flags: ["Ephemeral"]
                 });

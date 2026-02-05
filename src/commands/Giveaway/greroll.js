@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Giveaway/greroll.js
 export default {
     data: new SlashCommandBuilder()
@@ -45,9 +43,6 @@ export default {
                 flags: ["Ephemeral"],
             });
         }
-
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-        if (!deferSuccess) return;
 
         const messageId = interaction.options.getString("messageid");
         const giveaways = await getGuildGiveaways(

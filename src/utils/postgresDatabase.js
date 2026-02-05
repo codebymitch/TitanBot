@@ -879,12 +879,35 @@ class PostgreSQLDatabase {
                     console.log('Value type:', typeof value);
                     console.log('Is value an array?:', Array.isArray(value));
                     
-                    await this.pool.query(
-                        `INSERT INTO ${pgConfig.tables.guilds} (id, counters, updated_at) 
-                         VALUES ($1, $2, CURRENT_TIMESTAMP) 
-                         ON CONFLICT (id) DO UPDATE SET counters = $2, updated_at = CURRENT_TIMESTAMP`,
-                        [parsedKey.guildId, value]
-                    );
+                    try {
+                        await this.pool.query(
+                            `INSERT INTO ${pgConfig.tables.guilds} (id, counters, updated_at) 
+                             VALUES ($1, $2, CURRENT_TIMESTAMP) 
+                             ON CONFLICT (id) DO UPDATE SET counters = $2, updated_at = CURRENT_TIMESTAMP`,
+                            [parsedKey.guildId, value]
+                        );
+                    } catch (queryError) {
+                        console.error('PostgreSQL query error details:', queryError);
+                        console.error('Error message:', queryError.message);
+                        console.error('Error detail:', queryError.detail);
+                        console.error('Error hint:', queryError.hint);
+                        
+                        // Try to save as a stringified JSON as fallback
+                        try {
+                            const jsonString = JSON.stringify(value);
+                            console.log('Attempting to save as stringified JSON:', jsonString);
+                            await this.pool.query(
+                                `INSERT INTO ${pgConfig.tables.guilds} (id, counters, updated_at) 
+                                 VALUES ($1, $2::jsonb, CURRENT_TIMESTAMP) 
+                                 ON CONFLICT (id) DO UPDATE SET counters = $2::jsonb, updated_at = CURRENT_TIMESTAMP`,
+                                [parsedKey.guildId, jsonString]
+                            );
+                            console.log('Successfully saved as stringified JSON');
+                        } catch (fallbackError) {
+                            console.error('Fallback approach also failed:', fallbackError);
+                            throw queryError;
+                        }
+                    }
                     return true;
                 
                 default:

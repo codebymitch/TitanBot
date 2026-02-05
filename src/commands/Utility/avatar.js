@@ -16,16 +16,16 @@ export default {
     ),
 
   async execute(interaction) {
-    try {
+try {
       const user = interaction.options.getUser("target") || interaction.user;
 
       const embed = createEmbed({ title: `${user.username}'s Avatar`, description: `[Download Link](${user.displayAvatarURL({ size: 2048, dynamic: true })})` })
         .setImage(user.displayAvatarURL({ size: 2048, dynamic: true }));
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     } catch (error) {
       console.error('Avatar command error:', error);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not display avatar at this time.' })],
         ephemeral: true,
       });

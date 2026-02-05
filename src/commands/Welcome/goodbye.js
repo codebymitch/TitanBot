@@ -31,7 +31,7 @@ export default {
                 .setDescription('Enable or disable goodbye messages')),
 
     async execute(interaction) {
-        const { options, guild, client } = interaction;
+const { options, guild, client } = interaction;
         const subcommand = options.getSubcommand();
 
         if (subcommand === 'setup') {

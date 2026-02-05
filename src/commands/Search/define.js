@@ -13,12 +13,12 @@ export default {
                 .setDescription('The word to look up')
                 .setRequired(true)),
     async execute(interaction) {
-        try {
+try {
             const word = interaction.options.getString('word');
             
             // Check if the word is too short
             if (word.length < 2) {
-                return await interaction.editReply({
+                return await interaction.reply({
                     embeds: [errorEmbed('Error', 'Please enter a word with at least 2 characters.')],
                     flags: ["Ephemeral"]
                 });

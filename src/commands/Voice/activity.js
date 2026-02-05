@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Activity IDs for different Discord Activities
 const ACTIVITIES = {
     'youtube': '880218394199220334',
@@ -129,18 +128,14 @@ export default {
     category: "Fun",
 
     async execute(interaction, config, client) {
-    await InteractionHelper.safeExecute(
-        interaction,
-        async () => {
-
-        const { member, options } = interaction;
+    const { member, options } = interaction;
         const activity = options.getSubcommand();
         const activityId = ACTIVITIES[activity];
         const activityName = ACTIVITY_NAMES[activity] || activity;
 
         // Check if user is in a voice channel
         if (!member.voice.channel) {
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [errorEmbed('You need to be in a voice channel to start an activity!')]
             });
         }
@@ -148,7 +143,7 @@ export default {
         // Check if the bot has permission to create invites
         const permissions = member.voice.channel.permissionsFor(interaction.guild.members.me);
         if (!permissions.has('CreateInstantInvite')) {
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [errorEmbed('I need the `Create Invite` permission to start an activity!')]
             });
         }
@@ -167,7 +162,7 @@ export default {
             );
 
             // Send the invite link
-            await InteractionHelper.safeEditReply(interaction, {
+            await interaction.editReply({
                 embeds: [successEmbed(
                     `Click the link below to start **${activityName}** in ${member.voice.channel.name}!\n` +
                     `[Join ${activityName} Activity](https://discord.gg/${invite.code})`
@@ -176,13 +171,9 @@ export default {
 
         } catch (error) {
             console.error('Error creating activity invite:', error);
-            await InteractionHelper.safeEditReply(interaction, {
+            await interaction.editReply({
                 embeds: [errorEmbed('Failed to create the activity. Please try again later.')]
             });
         }
-    
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-},
+    },
 };

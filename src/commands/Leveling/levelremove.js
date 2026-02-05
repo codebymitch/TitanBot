@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
 
 // Migrated from: commands/Leveling/levelremove.js
@@ -27,10 +26,7 @@ export default {
     category: "Leveling",
     
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-        if (!deferSuccess) return;
-        
-        try {
+try {
             const targetUser = interaction.options.getUser("user");
             const levelsToRemove = interaction.options.getInteger("levels");
             const userData = await getUserLevelData(client, interaction.guildId, targetUser.id);
@@ -40,7 +36,7 @@ export default {
             
             // If we're already at level 0, don't make any changes
             if (userData.level === 0) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [createEmbed({ title: "Level Remove", description: `${targetUser.tag} is already at level 0.` })]
                 });
             }

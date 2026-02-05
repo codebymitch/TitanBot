@@ -3,15 +3,11 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 import { logEvent } from '../../../utils/moderation.js';
 import { validateLogChannel } from '../../../utils/ticketLogging.js';
-import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 export default {
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-        if (!deferSuccess) return;
-
-        if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return interaction.editReply({
+if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return interaction.reply({
                 embeds: [
                     errorEmbed(
                         "Permission Denied",

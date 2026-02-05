@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getLevelingConfig, saveLevelingConfig } from '../../utils/database.js';
 
 // Migrated from: commands/Leveling/levelconfig.js
@@ -67,10 +66,7 @@ export default {
     category: "Leveling",
     
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-        if (!deferSuccess) return;
-        
-        try {
+try {
             const subcommand = interaction.options.getSubcommand();
             const levelingConfig = await getLevelingConfig(client, interaction.guildId);
             
@@ -81,7 +77,7 @@ export default {
                     
                     await saveLevelingConfig(client, interaction.guildId, levelingConfig);
                     
-                    await interaction.editReply({
+                    await interaction.reply({
                         embeds: [createEmbed({ title: "Leveling System Updated", description: `The leveling system has been ${enabled ? "enabled" : "disabled"}.` })]
                     });
                     break;

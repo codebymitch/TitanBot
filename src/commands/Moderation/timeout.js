@@ -5,7 +5,6 @@ import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Duration choices for Discord's UI
 const durationChoices = [
     { name: "5 minutes", value: 5 },
@@ -42,18 +41,13 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-    await InteractionHelper.safeExecute(
-        interaction,
-        async () => {
-        // safeExecute already defers
-
-        // Permission Check
+    // Permission Check
         if (
             !interaction.member.permissions.has(
                 PermissionFlagsBits.ModerateMembers,
             )
         )
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -70,17 +64,17 @@ export default {
 
         // Prevent self/bot moderation
         if (targetUser.id === interaction.user.id) {
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [errorEmbed("You cannot timeout yourself.")],
             });
         }
         if (targetUser.id === client.user.id) {
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [errorEmbed("You cannot timeout the bot.")],
             });
         }
         if (!member) {
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "Target Not Found",
@@ -92,7 +86,7 @@ export default {
 
         // Hierarchy Check (If the target is higher than the moderator or the bot)
         if (!member.moderatable)
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "Cannot Timeout",
@@ -131,7 +125,7 @@ export default {
                 }
             });
 
-            await InteractionHelper.safeEditReply(interaction, {
+            await interaction.editReply({
                 embeds: [
                     successEmbed(
                         `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
@@ -141,7 +135,7 @@ export default {
             });
         } catch (error) {
             logger.error("Timeout Error:", error);
-            await InteractionHelper.safeEditReply(interaction, {
+            await interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "An unexpected error occurred during the timeout action. Please check my role permissions.",
@@ -149,9 +143,5 @@ export default {
                 ],
             });
         }
-    
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-},
+    }
 };

@@ -4,7 +4,6 @@ import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Migrated from: commands/Moderation/kick.js
 export default {
     data: new SlashCommandBuilder()
@@ -23,14 +22,9 @@ export default {
   category: "moderation",
 
   async execute(interaction, config, client) {
-    await InteractionHelper.safeExecute(
-        interaction,
-        async () => {
-      // safeExecute already defers
-
     // Permission check (redundant, but safe)
     if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers))
-      return await InteractionHelper.safeEditReply(interaction, {
+      return await interaction.editReply({
         embeds: [
           errorEmbed(
             "Permission Denied",
@@ -47,18 +41,18 @@ export default {
 
     // Prevent self/bot kicking
     if (targetUser.id === interaction.user.id) {
-      return await InteractionHelper.safeEditReply(interaction, {
+      return await interaction.editReply({
         embeds: [errorEmbed("You cannot kick yourself.")],
       });
     }
     if (targetUser.id === client.user.id) {
-      return await InteractionHelper.safeEditReply(interaction, {
+      return await interaction.editReply({
         embeds: [errorEmbed("You cannot kick the bot.")],
       });
     }
 
     if (!member) {
-      return await InteractionHelper.safeEditReply(interaction, {
+      return await interaction.editReply({
         embeds: [
           errorEmbed(
             "Target Not Found",
@@ -74,7 +68,7 @@ export default {
         interaction.member.roles.highest.position <=
         member.roles.highest.position
       ) {
-        return await InteractionHelper.safeEditReply(interaction, {
+        return await interaction.editReply({
           embeds: [
             errorEmbed(
               "Cannot Kick",
@@ -87,7 +81,7 @@ export default {
       // 2. Bot Hierarchy Check: Can the bot kick the target?
       // member.kickable checks if the bot has the permission AND hierarchy
       if (!member.kickable) {
-        return await InteractionHelper.safeEditReply(interaction, {
+        return await interaction.editReply({
           embeds: [
             errorEmbed(
               "Bot Hierarchy Error",
@@ -115,7 +109,7 @@ export default {
         }
       });
 
-      await InteractionHelper.safeEditReply(interaction, {
+      await interaction.editReply({
         embeds: [
           successEmbed(
             `👢 **Kicked** ${targetUser.tag}\n**Reason:** ${reason}`,
@@ -124,7 +118,7 @@ export default {
       });
     } catch (error) {
       logger.error("Kick Error:", error);
-      await InteractionHelper.safeEditReply(interaction, {
+      await interaction.editReply({
         embeds: [
           errorEmbed(
             "An unexpected error occurred while trying to kick the user.",
@@ -132,9 +126,5 @@ export default {
         ],
       });
     }
-  
-        },
-        { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-    );
-},
+  }
 };

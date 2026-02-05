@@ -4,7 +4,7 @@ import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js
 
 export default {
     async execute(interaction, config, client) {
-        try {
+try {
             const channel = interaction.options.getChannel("channel");
             const guildId = interaction.guildId;
 
@@ -30,7 +30,7 @@ export default {
                 guildConfig.birthdayChannelId = null;
                 await setGuildConfig(client, guildId, guildConfig);
 
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [
                         successEmbed(
                             "🎂 Birthday Announcements Disabled",
@@ -42,7 +42,7 @@ export default {
             }
         } catch (error) {
             console.error("config_birthday_toggle error:", error);
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [
                     errorEmbed(
                         "Configuration Error",

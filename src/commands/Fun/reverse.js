@@ -15,7 +15,7 @@ export default {
     ),
 
   async execute(interaction) {
-    try {
+try {
       const originalText = interaction.options.getString("text");
 
       // Split the string into an array of characters, reverse the array, and join it back
@@ -26,7 +26,7 @@ export default {
         `Original: **${originalText}**\nReversed: **${reversedText}**`,
       );
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     } catch (error) {
       console.error("Reverse command error:", error);
       await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not reverse text right now.")] });

@@ -2,8 +2,6 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getLeaderboard, getLevelingConfig, getXpForLevel } from '../../utils/database.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Leveling/leaderboard.js
 export default {
     data: new SlashCommandBuilder()
@@ -13,10 +11,7 @@ export default {
     category: "Leveling",
 
     async execute(interaction, config, client) {
-        await InteractionHelper.safeExecute(
-            interaction,
-            async () => {
-                const leaderboard = await getLeaderboard(client, interaction.guildId, 10);
+        const leaderboard = await getLeaderboard(client, interaction.guildId, 10);
                 const levelingConfig = await getLevelingConfig(client, interaction.guildId);
 
                 if (!levelingConfig?.enabled) {
@@ -58,9 +53,6 @@ export default {
                     value: leaderboardText.join("\n"),
                 });
 
-                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-            },
-            errorEmbed("Leaderboard Error", "Could not fetch leaderboard. Try again later.")
-        );
+                await interaction.editReply({ embeds: [embed] });
     },
 };

@@ -8,7 +8,7 @@ export default {
         .setDescription("Checks the bot's latency and API speed"),
 
     async execute(interaction) {
-        try {
+try {
             // Note: the global interaction handler (`interactionCreate`) already calls
             // `interaction.deferReply()` for all chat input commands.
             // Once an interaction has been deferred, we must use `editReply`/`followUp`
@@ -16,7 +16,7 @@ export default {
             // "The reply to this interaction has already been sent or deferred."
 
             // First update the deferred reply with a "Pinging..." message and get the message
-            const reply = await interaction.editReply({
+            const reply = await interaction.reply({
                 content: "Pinging...",
             });
 
@@ -36,7 +36,7 @@ export default {
             });
         } catch (error) {
             console.error('Ping command error:', error);
-            return interaction.reply({
+            return interaction.editReply({
                 embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.' })],
                 ephemeral: true,
             });

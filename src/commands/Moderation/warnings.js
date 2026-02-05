@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Moderation/warnings.js
 export default {
     data: new SlashCommandBuilder()
@@ -20,10 +18,7 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            await InteractionHelper.safeExecute(
-                interaction,
-                async () => {
-                const target = interaction.options.getUser("target");
+            const target = interaction.options.getUser("target");
                 const guildId = interaction.guildId;
 
                 // Get warnings from database
@@ -35,7 +30,7 @@ export default {
 
                 // If no warnings, send info message
                 if (totalWarns === 0) {
-                    await InteractionHelper.safeEditReply(interaction, {
+                    await interaction.editReply({
                         embeds: [
                             createEmbed({ 
                                 title: `Warnings: ${target.tag}`, 
@@ -84,16 +79,10 @@ export default {
                 });
 
                 // Send the warnings embed
-                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-                },
-                errorEmbed("Warnings Error", "Could not retrieve warnings. Database error occurred.")
-            );
+                await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-            console.error('Warnings command error:', error);
-            return interaction.reply({
-                embeds: [errorEmbed('System Error', 'Could not retrieve warnings at this time.')],
-                ephemeral: true,
-            });
+            logger.error('Warnings command error:', error);
+            throw error;
         }
-    },
+    }
 };

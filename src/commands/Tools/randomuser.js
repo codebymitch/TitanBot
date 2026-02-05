@@ -25,10 +25,10 @@ export default {
                 .setRequired(false)),
 
     async execute(interaction) {
-        try {
+try {
             // Check if the command is used in a server
             if (!interaction.guild) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
                     flags: ["Ephemeral"]
                 });

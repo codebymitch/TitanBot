@@ -3,8 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { closeTicket } from '../../services/ticket.js';
 import { logEvent } from '../../utils/moderation.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 export default {
     data: new SlashCommandBuilder()
         .setName("close")
@@ -18,10 +16,7 @@ export default {
         ),
 
     async execute(interaction, guildConfig, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
-        if (!deferSuccess) return;
-
-        const channel = interaction.channel;
+const channel = interaction.channel;
         const reason =
             interaction.options?.getString("reason") ||
             "Closed via command without a specific reason.";
@@ -31,7 +26,7 @@ export default {
             const result = await closeTicket(channel, interaction.user, reason);
             
             if (!result.success) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Not a Ticket Channel",

@@ -430,12 +430,12 @@ export default {
         .setDescription("Displays the help menu with all available commands"),
 
     async execute(interaction, client) {
-        // Create initial category selection menu
+// Create initial category selection menu
         const { embeds, components, ephemeral } =
             await createCategorySelectMenu();
 
         // Send initial response using editReply since interaction is deferred in interactionCreate.js
-        const reply = await interaction.editReply({
+        const reply = await interaction.reply({
             embeds,
             components,
         });

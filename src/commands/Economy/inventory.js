@@ -12,7 +12,7 @@ export default {
         .setDescription('View your economy inventory'),
 
     async execute(interaction, config, client) {
-        const userId = interaction.user.id;
+const userId = interaction.user.id;
         const guildId = interaction.guildId;
 
         try {

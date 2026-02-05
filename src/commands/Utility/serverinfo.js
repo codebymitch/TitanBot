@@ -9,7 +9,7 @@ export default {
     .setDescription("Get detailed information about the server"),
 
   async execute(interaction) {
-    try {
+try {
       const guild = interaction.guild;
       const owner = await guild.fetchOwner();
 
@@ -41,7 +41,7 @@ export default {
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error('ServerInfo command error:', error);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not retrieve server information.' })],
         ephemeral: true,
       });

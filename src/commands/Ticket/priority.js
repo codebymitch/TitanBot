@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { updateTicketPriority } from '../../services/ticket.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logEvent } from '../../utils/moderation.js';
 
 export default {
@@ -27,17 +26,14 @@ export default {
     category: "Ticket",
 
     async execute(interaction, guildConfig, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
-        if (!deferSuccess) return;
-
-        const priorityLevel = interaction.options.getString("level");
+const priorityLevel = interaction.options.getString("level");
 
         try {
             // Use the new ticket system to update priority
             const result = await updateTicketPriority(interaction.channel, priorityLevel, interaction.user);
             
             if (!result.success) {
-                return interaction.editReply({
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Not a Ticket Channel",

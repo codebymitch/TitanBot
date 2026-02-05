@@ -31,14 +31,14 @@ export default {
                 .setRequired(false),
         ),
     async execute(interaction) {
-        try {
+try {
             // Check if movie search is enabled in the guild config
             const guildConfig = await getGuildConfig(
                 interaction.client,
                 interaction.guild?.id,
             );
             if (guildConfig?.disabledCommands?.includes("movie")) {
-                return await interaction.editReply({
+                return await interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Command Disabled",

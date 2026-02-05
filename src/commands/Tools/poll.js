@@ -1,8 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 const EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 const MAX_OPTIONS = 10;
 // Migrated from: commands/Tools/poll.js
@@ -61,10 +59,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await InteractionHelper.safeExecute(
-                interaction,
-                async () => {
-                const question = interaction.options.getString('question');
+            const question = interaction.options.getString('question');
                 const isAnonymous = interaction.options.getBoolean('anonymous') || false;
                 
                 // Get all provided options
@@ -109,13 +104,10 @@ export default {
                 }
                 
                 // Confirm success
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.reply({
                     content: '✅ Poll created successfully!',
-                    flags: ["Ephemeral"]
+                    ephemeral: true
                 });
-                },
-                errorEmbed("Poll Failed", "Could not create the poll. Check permissions and try again.")
-            );
         } catch (error) {
             console.error('Poll command error:', error);
             return interaction.reply({

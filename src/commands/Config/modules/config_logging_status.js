@@ -2,16 +2,12 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, EmbedBui
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getLevelingConfig, getWelcomeConfig, getApplicationSettings, getModlogSettings } from '../../../utils/database.js';
-import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 export default {
     async execute(interaction, config, client) {
         try {
-            const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-            if (!deferSuccess) return;
-
-            if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-                return interaction.editReply({
+if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+                return interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Permission Denied",

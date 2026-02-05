@@ -1,8 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Tools/generatepassword.js
 export default {
     data: new SlashCommandBuilder()
@@ -29,18 +27,15 @@ export default {
 
     async execute(interaction) {
         try {
-            await InteractionHelper.safeExecute(
-                interaction,
-                async () => {
-                const length = interaction.options.getInteger('length') || 16;
+            const length = interaction.options.getInteger('length') || 16;
                 const includeUppercase = interaction.options.getBoolean('uppercase') ?? true;
                 const includeNumbers = interaction.options.getBoolean('numbers') ?? true;
                 const includeSymbols = interaction.options.getBoolean('symbols') ?? true;
                 
                 if (length < 8 || length > 50) {
-                    await InteractionHelper.safeEditReply(interaction, {
+                    await interaction.reply({
                         embeds: [errorEmbed('Error', 'Password length must be between 8 and 50 characters.')],
-                        flags: ["Ephemeral"]
+                        ephemeral: true
                     });
                     return;
                 }
@@ -138,13 +133,10 @@ export default {
                 `**Contains:** ${hasLower ? 'Lowercase' : ''}${hasUpper ? ', Uppercase' : ''}${hasNumber ? ', Numbers' : ''}${hasSymbol ? ', Symbols' : ''}`
             ).setColor(strengthColor);
             
-            await InteractionHelper.safeEditReply(interaction, { 
+            await interaction.reply({ 
                 embeds: [embed],
-                flags: ["Ephemeral"] 
+                ephemeral: true
             });
-                },
-                errorEmbed('Failed to generate password. Please try again later.')
-            );
         } catch (error) {
             console.error('GeneratePassword command error:', error);
             return interaction.reply({

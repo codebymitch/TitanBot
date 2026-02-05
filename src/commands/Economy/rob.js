@@ -22,14 +22,14 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        const robberId = interaction.user.id;
+const robberId = interaction.user.id;
         const victimUser = interaction.options.getUser("user");
         const guildId = interaction.guildId;
         const now = Date.now();
 
         // --- 1. Initial Checks ---
         if (robberId === victimUser.id) {
-            return interaction.editReply({
+            return interaction.reply({
                 embeds: [
                     errorEmbed("Robbery Failed", "You cannot rob yourself."),
                 ],

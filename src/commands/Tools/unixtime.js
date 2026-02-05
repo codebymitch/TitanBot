@@ -1,8 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Tools/unixtime.js
 export default {
     data: new SlashCommandBuilder()
@@ -11,10 +9,7 @@ export default {
 
     async execute(interaction) {
         try {
-            await InteractionHelper.safeExecute(
-                interaction,
-                async () => {
-                const now = new Date();
+            const now = new Date();
                 const unixTimestamp = Math.floor(now.getTime() / 1000);
                 
                 const embed = successEmbed(
@@ -25,10 +20,9 @@ export default {
                     `**ISO String:** ${now.toISOString()}`
                 );
                 
-                await InteractionHelper.safeEditReply(interaction, { 
+                await interaction.editReply({ 
                     embeds: [embed],
-                    flags: ["Ephemeral"] 
-                });
+                    flags: ["Ephemeral"]
                 },
                 errorEmbed('Failed to get Unix timestamp. Please try again later.')
             );

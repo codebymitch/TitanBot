@@ -1,45 +1,38 @@
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
+import { getGuildConfig } from '../../../services/guildConfig.js';
 
 export default {
     async execute(interaction, config, client) {
-        const guildId = interaction.guildId;
-        const targetUser = interaction.options.getUser("user");
-        
+        const user = interaction.options.getUser('user');
+        const guildId = interaction.guild.id;
+
         try {
-            // Get guild config for max tickets
-            const { getGuildConfig } = await import('../../../services/guildConfig.js');
+            // Get guild config
             const guildConfig = await getGuildConfig(client, guildId);
-            const maxTicketsPerUser = guildConfig.maxTicketsPerUser || 3;
-            
-            // Get user's current ticket count
-            const { getUserTicketCount } = await import('../../../services/ticket.js');
-            const currentTicketCount = await getUserTicketCount(guildId, targetUser.id);
-            const remainingTickets = maxTicketsPerUser - currentTicketCount;
+            const maxTickets = guildConfig.maxTicketsPerUser || 3;
 
-            const status = currentTicketCount >= maxTicketsPerUser ? "🔴 Limit Reached" : 
-                           currentTicketCount >= maxTicketsPerUser * 0.8 ? "🟡 Near Limit" : "🟢 Available";
+            // Count user's open tickets
+            const ticketChannels = interaction.guild.channels.cache.filter(
+                channel => channel.name.startsWith('ticket-') && 
+                channel.topic && 
+                channel.topic.includes(user.id)
+            );
 
-            return interaction.editReply({
-                embeds: [
-                    infoEmbed(
-                        `🎫 ${targetUser.tag}'s Ticket Status`,
-                        `**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}\n` +
-                        `**Remaining Tickets:** ${remainingTickets}\n` +
-                        `**Status:** ${status}\n\n` +
-                        `**User ID:** ${targetUser.id}`
-                    )
-                ]
-            });
+            const openTicketCount = ticketChannels.size;
+
+            const embed = infoEmbed(
+                `🎫 Ticket Limit Check: ${user.tag}`,
+                `**Open Tickets:** ${openTicketCount}/${maxTickets}\n` +
+                `**Remaining:** ${Math.max(0, maxTickets - openTicketCount)}\n\n` +
+                (openTicketCount >= maxTickets 
+                    ? '⚠️ This user has reached their ticket limit.' 
+                    : '✅ This user can create more tickets.')
+            );
+
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-            console.error("Error in ticket limits check:", error);
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "An error occurred while checking user's ticket status."
-                    )
-                ]
-            });
+            console.error('Error checking ticket limits:', error);
+            throw new Error('Failed to check ticket limits. Please try again.');
         }
     }
 };

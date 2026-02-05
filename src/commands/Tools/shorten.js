@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 // Migrated from: commands/Tools/shorten.js
 export default {
     data: new SlashCommandBuilder()
@@ -24,10 +23,7 @@ export default {
     category: "Tools",
 
     async execute(interaction, config, client) {
-        await InteractionHelper.safeExecute(
-            interaction,
-            async () => {
-                const url = interaction.options.getString("url");
+        const url = interaction.options.getString("url");
                 const custom = interaction.options.getString("custom");
 
                 // Validate URL format
@@ -65,11 +61,10 @@ export default {
                 }
 
                 // Send success response
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         successEmbed("URL Shortened", `Here's your shortened URL: ${shortUrl}`),
                     ],
-                });
             },
             errorEmbed("URL Shortening Failed", "Couldn't shorten that URL. Check the format and try again.")
         );

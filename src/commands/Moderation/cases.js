@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuild
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getModerationCases } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 export default {
     data: new SlashCommandBuilder()
         .setName('cases')
@@ -33,9 +31,6 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        await InteractionHelper.safeExecute(
-            interaction,
-            async () => {
         try {
             const filterType = interaction.options.getString('filter') || 'all';
             const targetUser = interaction.options.getUser('user');
@@ -165,8 +160,5 @@ export default {
             logger.error('Error in cases command:', error);
             throw error;
         }
-            },
-            errorEmbed('Error', 'An error occurred while fetching moderation cases. Please try again later.')
-        );
     }
 };

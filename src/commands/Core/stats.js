@@ -9,7 +9,7 @@ export default {
     .setDescription("View bot statistics"),
 
   async execute(interaction) {
-    try {
+try {
       const totalGuilds = interaction.client.guilds.cache.size;
       const totalMembers = interaction.client.guilds.cache.reduce(
         (acc, guild) => acc + guild.memberCount,
@@ -32,7 +32,7 @@ export default {
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error('Stats command error:', error);
-      return interaction.reply({
+      return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not fetch system statistics.' })],
         ephemeral: true,
       });

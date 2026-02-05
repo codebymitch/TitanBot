@@ -2,8 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 // Migrated from: commands/Leveling/leveladd.js
 export default {
     data: new SlashCommandBuilder()
@@ -28,10 +26,7 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            await InteractionHelper.safeExecute(
-                interaction,
-                async () => {
-                const targetUser = interaction.options.getUser("user");
+            const targetUser = interaction.options.getUser("user");
                 const levelsToAdd = interaction.options.getInteger("levels");
                 
                 const userData = await getUserLevelData(
@@ -59,11 +54,10 @@ export default {
                     userData,
                 );
 
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [
                         successEmbed("Levels Added", `Successfully added ${levelsToAdd} levels to ${targetUser.tag}.`),
                     ],
-                });
                 },
                 errorEmbed("Level Add Failed", "Could not add levels to that user.")
             );

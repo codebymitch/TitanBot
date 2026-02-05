@@ -22,13 +22,13 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        const senderId = interaction.user.id;
+const senderId = interaction.user.id;
         const receiver = interaction.options.getUser("user");
         const amount = interaction.options.getInteger("amount");
         const guildId = interaction.guildId;
 
         if (receiver.bot) {
-            return interaction.editReply({
+            return interaction.reply({
                 embeds: [errorEmbed("Payment Failed", "You cannot pay a bot.")],
             });
         }

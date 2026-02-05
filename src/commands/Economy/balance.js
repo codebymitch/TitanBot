@@ -15,12 +15,12 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        try {
+try {
             const targetUser = interaction.options.getUser("user") || interaction.user;
             const guildId = interaction.guildId;
 
             if (targetUser.bot) {
-                await interaction.editReply({
+                await interaction.reply({
                     embeds: [
                         errorEmbed(
                             "Balance Check Failed",
