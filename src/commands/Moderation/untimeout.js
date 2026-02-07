@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
-// Migrated from: commands/Moderation/untimeout.js
 export default {
     data: new SlashCommandBuilder()
         .setName("untimeout")
@@ -13,12 +12,11 @@ export default {
                 .setDescription("User to untimeout")
                 .setRequired(true),
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers), // Requires Moderate Members permission
+.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     category: "moderation",
 
     async execute(interaction, config, client) {
         try {
-            // Permission check
                 if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
                     throw new Error("You need the `Moderate Members` permission to remove a timeout.");
                 }
@@ -26,25 +24,20 @@ export default {
                 const targetUser = interaction.options.getUser("target");
                 const member = interaction.options.getMember("target");
 
-                // Target validation
                 if (!member) {
                     throw new Error("The target user is not currently in this server.");
                 }
 
-                // Hierarchy check
                 if (!member.moderatable) {
                     throw new Error("I cannot modify this user. They might have a higher role than me or you.");
                 }
 
-                // Check if user is actually timed out
                 if (!member.isCommunicationDisabled()) {
                     throw new Error(`${targetUser.tag} is not currently timed out.`);
                 }
 
-                // Remove the timeout
                 await member.timeout(null, "Timeout removed by moderator");
 
-                // Log the action
                 await logEvent({
                     client,
                     guild: interaction.guild,
@@ -59,7 +52,6 @@ export default {
                     }
                 });
 
-                // Send success response
                 await interaction.editReply({
                     embeds: [
                         successEmbed(

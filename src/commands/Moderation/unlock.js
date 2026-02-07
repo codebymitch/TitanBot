@@ -3,20 +3,17 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 
-// Migrated from: commands/Moderation/unlock.js
 export default {
     data: new SlashCommandBuilder()
         .setName("unlock")
         .setDescription(
             "Unlocks the current channel (allows @everyone to send messages again).",
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels), // Requires Manage Channels permission
+.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
     category: "moderation",
 
     async execute(interaction, config, client) {
-    // safeExecute already defers; don't defer again
 
-        // Ensure user has permission
         if (
             !interaction.member.permissions.has(
                 PermissionFlagsBits.ManageChannels,
@@ -35,10 +32,7 @@ export default {
         const everyoneRole = interaction.guild.roles.everyone;
 
         try {
-            // Check if the channel is already unlocked (optional but good UX)
             const currentPermissions = channel.permissionsFor(everyoneRole);
-            // Check if SendMessages is explicitly allowed or neutral (which is treated as allowed if no deny is present)
-            // It's "locked" if SendMessages is explicitly denied.
             if (
                 currentPermissions.has(PermissionFlagsBits.SendMessages) ===
                     true ||
@@ -55,22 +49,20 @@ export default {
                 });
             }
 
-            // Unlock the channel: Explicitly set the SendMessages permission for @everyone to true (neutralizes the lock)
             await channel.permissionOverwrites.edit(
                 everyoneRole,
                 { SendMessages: true },
                 {
                     type: 0,
                     reason: `Channel unlocked by ${interaction.user.tag}`,
-                }, // type 0 is the default role type
+},
             );
 
-            // --- LOGGING THE ACTION ---
             const unlockEmbed = createEmbed(
                 "🔓 Channel Unlocked (Action Log)",
                 `${channel} has been unlocked by ${interaction.user}.`,
             )
-                .setColor("#2ECC71") // Green for Reverting Restriction
+.setColor("#2ECC71")
                 .addFields(
                     {
                         name: "Channel",
@@ -97,7 +89,6 @@ export default {
                     }
                 }
             });
-            // ---------------------------
 
             await interaction.editReply({
                 embeds: [

@@ -15,7 +15,6 @@ const BASE_ALPHABETS = {
 
 const BASE_NAMES = Object.entries(BASE_ALPHABETS).map(([key, { name }]) => ({ name: `${key} (${name})`, value: key }));
 
-// Migrated from: commands/Tools/baseconvert.js
 export default {
     data: new SlashCommandBuilder()
         .setName('baseconvert')
@@ -43,12 +42,10 @@ try {
             
             const { base: fromBaseValue, prefix: fromPrefix, name: fromName } = BASE_ALPHABETS[fromBase];
             
-            // Remove prefix if present
             const cleanNumber = fromPrefix && numberStr.startsWith(fromPrefix) 
                 ? numberStr.slice(fromPrefix.length) 
                 : numberStr;
             
-            // Validate input
             if (!cleanNumber) {
                 return interaction.reply({
                     embeds: [errorEmbed('Error', 'Please provide a valid number to convert.')],
@@ -56,7 +53,6 @@ try {
                 });
             }
             
-            // Check if the number is valid for the source base
             const alphabet = BASE_ALPHABETS[fromBase].alphabet;
             const regex = new RegExp(`^[${alphabet}]+$`, 'i');
             
@@ -71,7 +67,6 @@ try {
                 });
             }
             
-            // Convert to decimal first
             let decimalValue;
             try {
                 if (fromBase === 'B64') {
@@ -86,14 +81,12 @@ try {
                 });
             }
             
-            // If a specific target base is provided
             if (toBase) {
                 const { base: toBaseValue, prefix: toPrefix, name: toName } = BASE_ALPHABETS[toBase];
                 let result;
                 
                 try {
                     if (toBase === 'B64') {
-                        // For Base64, we need to convert the decimal back to bytes first
                         const bytes = [];
                         let n = decimalValue;
                         while (n > 0n) {
@@ -122,18 +115,15 @@ try {
                 }
                 
             } else {
-                // Show all conversions
                 let description = `**Input (${fromName}):** \`${fromPrefix}${cleanNumber}\`\n`;
                 description += `**Decimal:** \`${decimalValue.toLocaleString()}\`\n\n`;
                 
-                // Convert to all other bases
                 for (const [baseKey, { base, prefix, name }] of Object.entries(BASE_ALPHABETS)) {
                     if (baseKey === fromBase) continue;
                     
                     try {
                         let value;
                         if (baseKey === 'B64') {
-                            // For Base64, we need to convert the decimal back to bytes first
                             const bytes = [];
                             let n = decimalValue;
                             while (n > 0n) {

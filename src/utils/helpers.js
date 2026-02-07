@@ -53,7 +53,6 @@ export function getColor(path, fallback = "#000000") {
 export function getMessage(key, replacements = {}) {
     let message = BotConfig.messages[key] || key;
 
-    // Replace placeholders like {key} with their values
     for (const [k, v] of Object.entries(replacements)) {
         message = message.replace(new RegExp(`\\{${k}\\}`, "g"), v);
     }
@@ -83,5 +82,4 @@ export function formatDuration(ms) {
     return parts.join(" ");
 }
 
-// Export the priority map as a constant
 export const PRIORITY_MAP = getPriorityMap();

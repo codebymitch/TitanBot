@@ -4,7 +4,6 @@ import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-// Migrated from: commands/Moderation/ban.js
 export default {
     data: new SlashCommandBuilder()
         .setName("ban")
@@ -18,14 +17,11 @@ export default {
         .addStringOption((option) =>
             option.setName("reason").setDescription("Reason for the ban"),
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers), // Added default permission requirement
+.setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
     category: "moderation",
 
-    // Added client argument for logEvent
     async execute(interaction, config, client) {
         try {
-            // Defer since this involves API calls and database operations
-            // Permission check
             if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
                 throw new Error("You do not have permission to ban members.");
             }
@@ -33,7 +29,6 @@ export default {
             const user = interaction.options.getUser("target");
             const reason = interaction.options.getString("reason") || "No reason provided";
 
-            // Prevent banning the user or the bot
             if (user.id === interaction.user.id) {
                 throw new Error("You cannot ban yourself.");
             }
@@ -41,12 +36,10 @@ export default {
                 throw new Error("You cannot ban the bot.");
             }
 
-            // Fetch target member to check hierarchy
             const targetMember = await interaction.guild.members
                 .fetch(user.id)
                 .catch(() => null);
 
-            // Hierarchy check
             if (targetMember && interaction.member.roles.highest.position <= targetMember.roles.highest.position) {
                 throw new Error("You cannot ban a user with an equal or higher role than you.");
             }
@@ -54,10 +47,8 @@ export default {
                 throw new Error("I cannot ban a user with an equal or higher role than me.");
             }
 
-            // Execute ban
             await interaction.guild.members.ban(user, { reason });
 
-            // Log the action
             await logModerationAction({
                 client,
                 guild: interaction.guild,
@@ -74,7 +65,6 @@ export default {
                 }
             });
 
-            // Send success response
             await InteractionHelper.universalReply(interaction, {
                 embeds: [
                     successEmbed(

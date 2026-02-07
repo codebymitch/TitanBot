@@ -17,12 +17,12 @@ function getSubcommandInfo(commandData) {
     
     if (commandData.options) {
         for (const option of commandData.options) {
-            if (option.type === 1) { // SUB_COMMAND type
+if (option.type === 1) {
                 subcommands.push(option.name);
-            } else if (option.type === 2) { // SUB_COMMAND_GROUP type
+} else if (option.type === 2) {
                 if (option.options) {
                     for (const subOption of option.options) {
-                        if (subOption.type === 1) { // SUB_COMMAND type within group
+if (subOption.type === 1) {
                             subcommands.push(`${option.name}/${subOption.name}`);
                         }
                     }
@@ -47,7 +47,6 @@ async function getAllFiles(directory, fileList = []) {
         const filePath = path.join(directory, file.name);
         
         if (file.isDirectory()) {
-            // Skip modules directories as they contain subcommand modules
             if (file.name === 'modules') {
                 continue;
             }
@@ -72,20 +71,16 @@ export async function loadCommands(client) {
     
     logger.info(`Found ${commandFiles.length} command files to load`);
     
-    // Track unique command data names to prevent actual duplicates
     const uniqueCommandNames = new Set();
     
     for (const filePath of commandFiles) {
         try {
-            // Convert Windows paths to forward slashes for consistency
             const normalizedPath = filePath.replace(/\\/g, '/');
             
-            // Get the command name from the file path
             const commandName = path.basename(filePath, '.js');
             const commandDir = path.dirname(filePath);
             const category = path.basename(commandDir);
             
-            // Import the command module
             const commandModule = await import(`file://${filePath}`);
             const command = commandModule.default || commandModule;
             
@@ -94,22 +89,17 @@ export async function loadCommands(client) {
                 continue;
             }
             
-            // Add category and file path to command for reference
             command.category = category;
             command.filePath = normalizedPath;
             
-            // Get the primary command name from the command data
             const primaryCommandName = command.data.name;
             
-            // Only add the command if we haven't seen this command name before (prevent duplicates)
             if (!uniqueCommandNames.has(primaryCommandName)) {
                 uniqueCommandNames.add(primaryCommandName);
                 
-                // Add the command to the collection with the command name as the key
                 client.commands.set(primaryCommandName, command);
             }
             
-            // Log command with subcommand details
             const subcommands = getSubcommandInfo(command.data.toJSON());
             
             logger.info(`Loaded command: ${primaryCommandName} from ${normalizedPath} (category: ${category})`);
@@ -124,7 +114,6 @@ export async function loadCommands(client) {
         }
     }
     
-    // Log summary of commands with subcommands
     const commandsWithSubcommands = Array.from(client.commands.values()).filter(cmd => {
         const subcommands = getSubcommandInfo(cmd.data.toJSON());
         return subcommands.length > 0;
@@ -134,7 +123,6 @@ export async function loadCommands(client) {
         return total + getSubcommandInfo(cmd.data.toJSON()).length;
     }, 0);
     
-    // Calculate total unique commands (excluding aliases)
     const uniqueCommands = new Set();
     for (const [name, command] of client.commands.entries()) {
         if (command.data && command.data.name) {
@@ -156,23 +144,19 @@ export async function registerCommands(client, guildId) {
     try {
         const commands = [];
         let totalSubcommands = 0;
-        const registeredNames = new Set(); // Track unique command names
+const registeredNames = new Set();
         
-        // Convert commands to JSON for registration
         for (const command of client.commands.values()) {
-            // Skip duplicates (only register by command name, not aliases)
             if (command.data && typeof command.data.toJSON === 'function') {
                 const commandName = command.data.name;
                 
                 logger.debug(`Processing command for registration: ${commandName}`);
                 
-                // Only register if we haven't seen this command name before
                 if (!registeredNames.has(commandName)) {
                     registeredNames.add(commandName);
                     const commandJson = command.data.toJSON();
                     commands.push(commandJson);
                     
-                    // Count subcommands for this command
                     const subcommands = getSubcommandInfo(commandJson);
                     totalSubcommands += subcommands.length;
                     
@@ -187,18 +171,14 @@ export async function registerCommands(client, guildId) {
             }
         }
         
-        // Calculate total commands including subcommands
         const totalCommandsWithSubs = commands.length + totalSubcommands;
         
         if (guildId) {
-            // Register commands for a specific guild (faster for development)
             
             logger.info(`Preparing to register ${totalCommandsWithSubs} commands for guild ${guildId}`);
             
-            // First, validate all commands before doing anything
             logger.info('Validating commands before registration...');
             
-            // Debug: Check for long descriptions before registering
             let validationErrors = [];
             commands.forEach((cmd, index) => {
                 if (cmd.name && cmd.name.length > 32) {
@@ -208,7 +188,6 @@ export async function registerCommands(client, guildId) {
                     validationErrors.push(`Command ${cmd.name} has description longer than 110 chars: "${cmd.description}" (${cmd.description.length} chars)`);
                 }
                 
-                // Check subcommands and options
                 if (cmd.options) {
                     cmd.options.forEach((option, optIndex) => {
                         if (option.name && option.name.length > 32) {
@@ -218,7 +197,6 @@ export async function registerCommands(client, guildId) {
                             validationErrors.push(`Command ${cmd.name} option ${option.name} has description longer than 110 chars: "${option.description}" (${option.description.length} chars)`);
                         }
                         
-                        // Check choice names
                         if (option.choices) {
                             option.choices.forEach((choice, choiceIndex) => {
                                 if (choice.name && choice.name.length > 110) {
@@ -230,7 +208,6 @@ export async function registerCommands(client, guildId) {
                             });
                         }
                         
-                        // Check subcommand options
                         if (option.options) {
                             option.options.forEach((subOption, subOptIndex) => {
                                 if (subOption.name && subOption.name.length > 32) {
@@ -240,7 +217,6 @@ export async function registerCommands(client, guildId) {
                                     validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} has description longer than 110 chars: "${subOption.description}" (${subOption.description.length} chars)`);
                                 }
                                 
-                                // Check suboption choices
                                 if (subOption.choices) {
                                     subOption.choices.forEach((choice, choiceIndex) => {
                                         if (choice.name && choice.name.length > 110) {
@@ -257,7 +233,6 @@ export async function registerCommands(client, guildId) {
                 }
             });
             
-            // If validation errors exist, log them and don't proceed
             if (validationErrors.length > 0) {
                 logger.error('Command validation failed. Errors:');
                 validationErrors.forEach(error => logger.error(`  - ${error}`));
@@ -266,14 +241,11 @@ export async function registerCommands(client, guildId) {
             
             logger.info('Command validation passed');
             
-            // Get guild reference
             const guild = await client.guilds.fetch(guildId);
             
-            // Backup existing commands before clearing
             const existingCommands = await guild.commands.fetch();
             logger.info(`Found ${existingCommands.size} existing guild commands`);
             
-            // Check command count limit (Discord allows max 100)
             const MAX_COMMANDS = 100;
             let commandsToRegister = commands;
             
@@ -283,21 +255,17 @@ export async function registerCommands(client, guildId) {
                 logger.info(`Truncated to ${commandsToRegister.length} commands for registration`);
             }
             
-            // Log command details for debugging (only in development)
             if (process.env.NODE_ENV !== 'production') {
                 logger.info(`Registering ${totalCommandsWithSubs} commands for guild ${guild.name} (${guild.id})`);
             }
             
             try {
-                // Register new commands first, then clear if successful
                 logger.info(`Registering ${commandsToRegister.length} new commands...`);
                 
-                // Use bulk overwrite to replace all commands at once (safer than clear then set)
                 await guild.commands.set(commandsToRegister);
                 
                 logger.info(`Successfully registered ${commandsToRegister.length} guild commands`);
                 
-                // Verify the commands were actually registered
                 const registeredCommands = await guild.commands.fetch();
                 if (registeredCommands.size !== commandsToRegister.length) {
                     logger.warn(`Warning: Expected ${commandsToRegister.length} commands, but Discord reports ${registeredCommands.size} registered`);
@@ -308,7 +276,6 @@ export async function registerCommands(client, guildId) {
             } catch (error) {
                 logger.error('Failed to register commands:', error);
                 
-                // Attempt to restore backup commands if registration failed
                 if (existingCommands.size > 0) {
                     logger.info('Attempting to restore previous commands due to registration failure...');
                     try {
@@ -322,7 +289,6 @@ export async function registerCommands(client, guildId) {
                 throw error;
             }
         } else {
-            // Skip global command registration since bot won't be public
             logger.info('Skipping global command registration - bot is guild-only');
         }
     } catch (error) {
@@ -345,14 +311,11 @@ export async function reloadCommand(client, commandName) {
     }
     
     try {
-        // Delete the cached module
         const commandPath = path.resolve(command.filePath);
         delete require.cache[require.resolve(commandPath)];
         
-        // Re-import the command
         const newCommand = (await import(`file://${commandPath}`)).default;
         
-        // Update the command in the collection
         client.commands.set(commandName, newCommand);
         
         logger.info(`Reloaded command: ${commandName}`);

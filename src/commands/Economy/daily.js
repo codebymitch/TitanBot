@@ -5,9 +5,9 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { formatDuration } from '../../utils/helpers.js';
 
-const DAILY_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
 const DAILY_AMOUNT = 1000;
-const PREMIUM_BONUS_PERCENTAGE = 0.1; // 10% bonus
+const PREMIUM_BONUS_PERCENTAGE = 0.1;
 
 export default {
     data: new SlashCommandBuilder()
@@ -15,40 +15,43 @@ export default {
         .setDescription('Claim your daily cash reward'),
 
     async execute(interaction, config, client) {
-// Use ephemeral: false for the daily command since it's typically public
-
-        const userId = interaction.user.id;
-        const guildId = interaction.guildId;
-        const now = Date.now();
-
         try {
+            await interaction.deferReply();
+            
+            const userId = interaction.user.id;
+            const guildId = interaction.guildId;
+            const now = Date.now();
+
             const userData = await getEconomyData(client, guildId, userId);
+            
+            if (!userData) {
+                return await interaction.editReply({
+                    embeds: [errorEmbed(
+                        "❌ Data Error",
+                        "Failed to load your economy data. Please try again later."
+                    )]
+                });
+            }
+            
             const lastDaily = userData.lastDaily || 0;
 
-            // --- 1. Cooldown Check ---
             if (now < lastDaily + DAILY_COOLDOWN) {
                 const timeRemaining = lastDaily + DAILY_COOLDOWN - now;
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            "⏳ Cooldown Active",
-                            `You can claim your daily reward again in **${formatDuration(timeRemaining)}**.`,
-                        ),
-                    ],
+                return await interaction.editReply({
+                    embeds: [errorEmbed(
+                        "⏱️ Slow Down!",
+                        `You need to wait before claiming daily again. Try again in ${formatDuration(timeRemaining)}.`
+                    )]
                 });
             }
 
-            // --- GET GUILD CONFIG & ROLE ID ---
             const guildConfig = await getGuildConfig(client, guildId);
             const PREMIUM_ROLE_ID = guildConfig.premiumRoleId;
-            // ---------------------------------
 
-            // --- 2. Calculate Reward & Bonus ---
             let earned = DAILY_AMOUNT;
             let bonusMessage = "";
             let hasPremiumRole = false;
 
-            // Check for Premium Role if it has been configured
             if (
                 PREMIUM_ROLE_ID &&
                 interaction.member &&
@@ -62,16 +65,14 @@ export default {
                 hasPremiumRole = true;
             }
 
-            // --- 3. Update Data ---
             userData.wallet = (userData.wallet || 0) + earned;
-            userData.lastDaily = now; // Update the cooldown timestamp
+userData.lastDaily = now;
 
             await setEconomyData(client, guildId, userId, userData);
 
-            // --- 4. Prepare Response ---
             const embed = successEmbed(
-                "✅ Daily Reward Claimed!",
-                `You have claimed your daily **$${earned.toLocaleString()}**!${bonusMessage}`,
+                "✅ Daily Claimed!",
+                `You have claimed your daily **$${earned.toLocaleString()}**!${bonusMessage}`
             )
                 .addFields({
                     name: "New Cash Balance",
@@ -86,16 +87,17 @@ export default {
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-            console.error("Daily command execution error:", error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "An unexpected error occurred while claiming your reward. Check the console for details.",
-                    ),
-                ],
-            });
+            console.error('Daily command error:', error);
+            try {
+                await interaction.editReply({
+                    embeds: [errorEmbed(
+                        "❌ Error",
+                        "Something went wrong while claiming daily. Please try again."
+                    )]
+                });
+            } catch (replyError) {
+                console.error('Failed to send error response:', replyError);
+            }
         }
     },
 };
-

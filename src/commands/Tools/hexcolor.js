@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Tools/hexcolor.js
 export default {
     data: new SlashCommandBuilder()
         .setName('hexcolor')
@@ -17,12 +16,10 @@ try {
             let hexColor = interaction.options.getString('color');
             let isRandom = false;
             
-            // If no color provided, generate a random one
             if (!hexColor) {
                 isRandom = true;
                 hexColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
             } else {
-                // Clean and validate the provided color
                 hexColor = hexColor.replace('#', '');
                 if (!/^[0-9A-Fa-f]{3,6}$/.test(hexColor)) {
                     return interaction.editReply({
@@ -31,7 +28,6 @@ try {
                     });
                 }
                 
-                // Convert 3-digit hex to 6-digit
                 if (hexColor.length === 3) {
                     hexColor = hexColor.split('').map(c => c + c).join('');
                 }
@@ -39,22 +35,17 @@ try {
                 hexColor = '#' + hexColor.toUpperCase();
             }
             
-            // Convert hex to RGB
             const r = parseInt(hexColor.slice(1, 3), 16);
             const g = parseInt(hexColor.slice(3, 5), 16);
             const b = parseInt(hexColor.slice(5, 7), 16);
             
-            // Calculate brightness (for text color)
             const brightness = (r * 299 + g * 587 + b * 114) / 1000;
             const textColor = brightness > 128 ? '#000000' : '#FFFFFF';
             
-            // Create a color preview image URL
             const colorPreviewUrl = `https://dummyimage.com/200x100/${hexColor.replace('#', '')}/${textColor.replace('#', '')}?text=${encodeURIComponent(hexColor)}`;
             
-            // Get color name if possible (using a simple mapping)
             const colorName = getColorName(hexColor);
             
-            // Create the embed
             const embed = successEmbed(
                 '🎨 Color Information',
                 `**Hex:** \`${hexColor}\`\n` +
@@ -81,14 +72,13 @@ try {
     },
 };
 
-// Helper function to convert RGB to HSL
 function rgbToHsl(r, g, b) {
     r /= 255, g /= 255, b /= 255;
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
     let h, s, l = (max + min) / 2;
 
     if (max === min) {
-        h = s = 0; // achromatic
+h = s = 0;
     } else {
         const d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
@@ -103,7 +93,6 @@ function rgbToHsl(r, g, b) {
     return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
 }
 
-// Simple color name mapping
 function getColorName(hex) {
     const colors = {
         '#FF0000': 'Red',
@@ -128,12 +117,10 @@ function getColorName(hex) {
         '#E6E6FA': 'Lavender'
     };
     
-    // If exact match found
     if (colors[hex.toUpperCase()]) {
         return colors[hex.toUpperCase()];
     }
     
-    // Try to find the closest color
     const hexValue = parseInt(hex.replace('#', ''), 16);
     let closestColor = '';
     let minDistance = Infinity;

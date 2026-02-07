@@ -100,7 +100,6 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
             { name: 'Winners', value: winners.length > 0 ? winners.map(id => `<@${id}>`).join(', ') : 'No winners' }
         );
     } else {
-        // Use Discord's timestamp format for local time display
         const endTime = giveaway.endsAt || giveaway.endTime;
         embed.addFields(
             { name: 'Ends at', value: `<t:${Math.floor(endTime / 1000)}:R>` }

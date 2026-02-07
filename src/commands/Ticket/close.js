@@ -22,7 +22,6 @@ const channel = interaction.channel;
             "Closed via command without a specific reason.";
 
         try {
-            // Use the new ticket system to close the ticket
             const result = await closeTicket(channel, interaction.user, reason);
             
             if (!result.success) {
@@ -45,7 +44,6 @@ const channel = interaction.channel;
                 ],
             });
 
-            // Log the event
             const logEmbed = createEmbed({
                 title: "🔒 Ticket Closed (Audit Log)",
                 description: `${channel} was closed by ${interaction.user}.`,

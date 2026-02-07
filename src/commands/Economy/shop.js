@@ -70,7 +70,7 @@ const ITEMS_PER_PAGE = 5;
 
         const collector = message.createMessageComponentCollector({
             componentType: ComponentType.Button,
-            time: 60000 // 60 seconds
+time: 60000
         });
 
         collector.on('collect', async (buttonInteraction) => {
@@ -107,7 +107,6 @@ const ITEMS_PER_PAGE = 5;
                     components: [disabledRow]
                 });
             } catch (error) {
-                // Message might have been deleted
             }
         });
     },

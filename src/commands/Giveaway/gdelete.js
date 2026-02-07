@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getGuildGiveaways, deleteGiveaway } from '../../utils/giveaways.js';
-// Migrated from: commands/Giveaway/gdelete.js
 export default {
     data: new SlashCommandBuilder()
         .setName("gdelete")
@@ -15,7 +14,7 @@ export default {
                 .setDescription("The message ID of the giveaway to delete.")
                 .setRequired(true),
         )
-        .setDefaultMemberPermissions(0x0000000000000008n), // Administrator permission
+.setDefaultMemberPermissions(0x0000000000000008n),
 
     async execute(interaction) {
         try {
@@ -46,7 +45,6 @@ export default {
             let deletedMessage = false;
             let channelName = "Unknown Channel";
 
-            // 1. Locate and delete the message
             const channel = await interaction.client.channels
                 .fetch(giveaway.channelId)
                 .catch(() => null);
@@ -61,14 +59,12 @@ export default {
                 }
             }
 
-            // 2. Delete the database entry
             await deleteGiveaway(
                 interaction.client,
                 interaction.guildId,
                 messageId,
             );
 
-            // 3. Send confirmation
             const statusMsg = deletedMessage
                 ? `and the message was deleted from #${channelName}`
                 : `but the message was already deleted or the channel was inaccessible.`;

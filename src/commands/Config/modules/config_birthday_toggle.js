@@ -8,11 +8,9 @@ try {
             const channel = interaction.options.getChannel("channel");
             const guildId = interaction.guildId;
 
-            // Get current guild config
             let guildConfig = await getGuildConfig(client, guildId);
 
             if (channel) {
-                // Enable birthday announcements
                 guildConfig.birthdayChannelId = channel.id;
                 await setGuildConfig(client, guildId, guildConfig);
 
@@ -26,7 +24,6 @@ try {
                     flags: MessageFlags.Ephemeral,
                 });
             } else {
-                // Disable birthday announcements
                 guildConfig.birthdayChannelId = null;
                 await setGuildConfig(client, guildId, guildConfig);
 

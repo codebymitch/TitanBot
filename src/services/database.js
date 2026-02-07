@@ -2,15 +2,12 @@ import 'dotenv/config';
 import { pgDb } from '../utils/postgresDatabase.js';
 import { logger } from '../utils/logger.js';
 
-// Initialize database
 let db = null;
 let useFallback = false;
 let connectionType = 'none';
 
-// Async database initialization
 async function initializeServicesDatabase() {
   try {
-    // Try to connect to PostgreSQL first
     logger.info('Services: Attempting to connect to PostgreSQL...');
     const pgConnected = await pgDb.connect();
     if (pgConnected) {
@@ -23,7 +20,6 @@ async function initializeServicesDatabase() {
     logger.warn('Services: PostgreSQL connection failed, using mock database:', error.message);
   }
   
-  // Fallback to mock database for non-Replit environments
   db = {
     get: async (key, defaultValue = null) => defaultValue,
     set: async (key, value, ttl = null) => true,
@@ -38,10 +34,8 @@ async function initializeServicesDatabase() {
   logger.info('Services: Using mock database (fallback)');
 }
 
-// Initialize database immediately
 initializeServicesDatabase();
 
-// --- DATABASE KEY GENERATORS ---
 
 export function getGuildConfigKey(guildId) {
   return `guild:${guildId}:config`;
@@ -97,26 +91,20 @@ export function getFakeAccountKey(guildId, userId) {
   return `guild:${guildId}:fake_account:${userId}`;
 }
 
-// --- DATABASE OPERATIONS ---
 
-// Initialize database connection
 export async function initializeDatabase() {
   await initializeServicesDatabase();
   logger.info('Services database initialized');
   return db;
 }
 
-// Helper function to extract actual data from Replit database response
 function extractData(replitResponse) {
-  // Handle the nested response structure from @replit/database
   if (replitResponse && typeof replitResponse === 'object') {
-    // Keep digging down until we find the actual data or hit a non-object
     let current = replitResponse;
     while (current && typeof current === 'object' && 'ok' in current && 'value' in current) {
       current = current.value;
     }
     
-    // If we still have a response object with tasks array, extract that
     if (current && typeof current === 'object' && 'tasks' in current) {
       return current;
     }
@@ -126,7 +114,6 @@ function extractData(replitResponse) {
   return replitResponse;
 }
 
-// Get a value from the database with a default value if not found
 export async function getFromDb(key, defaultValue = null) {
   try {
     if (!db) {
@@ -144,7 +131,6 @@ export async function getFromDb(key, defaultValue = null) {
   }
 }
 
-// Set a value in the database
 export async function setInDb(key, value, ttl = null) {
   try {
     if (!db) {
@@ -152,7 +138,6 @@ export async function setInDb(key, value, ttl = null) {
     }
     await db.set(key, value, ttl);
     
-    // Verify by reading it back
     const verifyValue = await db.get(key);
     const extractedVerifyValue = extractData(verifyValue);
     
@@ -163,7 +148,6 @@ export async function setInDb(key, value, ttl = null) {
   }
 }
 
-// Delete a key from the database
 export async function deleteFromDb(key) {
   try {
     if (!db) {
@@ -177,7 +161,6 @@ export async function deleteFromDb(key) {
   }
 }
 
-// --- GUILD CONFIG FUNCTIONS ---
 
 export async function setGuildConfig(client, guildId, newData) {
   try {
@@ -193,7 +176,6 @@ export async function setGuildConfig(client, guildId, newData) {
   }
 }
 
-// --- TICKET FUNCTIONS ---
 
 export async function getTicketData(guildId, channelId) {
   if (!db) {
@@ -219,7 +201,6 @@ export async function deleteTicketData(guildId, channelId) {
   await db.delete(key);
 }
 
-// --- GIVEAWAY FUNCTIONS ---
 
 export async function getGuildGiveaways(client, guildId) {
   if (!db) {
@@ -263,7 +244,6 @@ export async function deleteGiveaway(client, guildId, messageId) {
   return false;
 }
 
-// --- WELCOME SYSTEM ---
 
 export async function getWelcomeConfig(client, guildId) {
   if (!db) {

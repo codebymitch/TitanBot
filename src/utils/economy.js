@@ -1,7 +1,6 @@
 import { getColor } from './database.js';
 import { BotConfig } from '../config/bot.js';
 
-// Base economy configuration
 const ECONOMY_CONFIG = BotConfig.economy || {};
 const BASE_BANK_CAPACITY = ECONOMY_CONFIG.baseBankCapacity || 10000;
 const BANK_CAPACITY_PER_LEVEL = ECONOMY_CONFIG.bankCapacityPerLevel || 5000;
@@ -9,10 +8,10 @@ const DAILY_AMOUNT = ECONOMY_CONFIG.dailyAmount || 100;
 const WORK_MIN = ECONOMY_CONFIG.workMin || 10;
 const WORK_MAX = ECONOMY_CONFIG.workMax || 100;
 const COOLDOWNS = ECONOMY_CONFIG.cooldowns || {
-    daily: 24 * 60 * 60 * 1000, // 24 hours
-    work: 60 * 60 * 1000, // 1 hour
-    crime: 2 * 60 * 60 * 1000, // 2 hours
-    rob: 4 * 60 * 60 * 1000, // 4 hours
+daily: 24 * 60 * 60 * 1000,
+work: 60 * 60 * 1000,
+crime: 2 * 60 * 60 * 1000,
+rob: 4 * 60 * 60 * 1000,
 };
 
 /**
@@ -62,7 +61,6 @@ export async function getEconomyData(client, guildId, userId) {
         const key = getEconomyKey(guildId, userId);
         const data = await client.db.get(key, {});
         
-        // Default values
         return {
             wallet: data.wallet || 0,
             bank: data.bank || 0,
@@ -144,7 +142,6 @@ export async function updateBalance(client, guildId, userId, options = {}) {
     if (options.xp !== undefined) {
         data.xp = Math.max(0, (data.xp || 0) + options.xp);
         
-        // Level up logic
         const xpNeeded = Math.floor(5 * Math.pow(data.level || 1, 2) + 50 * (data.level || 1) + 100);
         if (data.xp >= xpNeeded) {
             data.xp -= xpNeeded;
@@ -229,7 +226,6 @@ export function getWorkReward() {
  */
 export function getCrimeOutcome() {
     const outcomes = [
-        // Success
         {
             success: true,
             amount: Math.floor(Math.random() * 200) + 50,
@@ -245,7 +241,6 @@ export function getCrimeOutcome() {
             amount: Math.floor(Math.random() * 150) + 30,
             message: 'You hacked into a bank account and transferred {amount} to yourself!' 
         },
-        // Failure
         {
             success: false,
             fine: Math.floor(Math.random() * 100) + 50,
@@ -280,11 +275,11 @@ export function getRobOutcome(targetBalance) {
         };
     }
     
-    const success = Math.random() > 0.4; // 60% chance of success
+const success = Math.random() > 0.4;
     
     if (success) {
         const amount = Math.min(
-            Math.floor(Math.random() * (targetBalance * 0.3)) + 1, // Up to 30% of target's wallet
+Math.floor(Math.random() * (targetBalance * 0.3)) + 1,
             targetBalance
         );
         

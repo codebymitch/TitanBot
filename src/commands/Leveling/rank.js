@@ -2,7 +2,6 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, getLevelingConfig, getXpForLevel } from '../../utils/database.js';
-// Migrated from: commands/Leveling/rank.js
 export default {
     data: new SlashCommandBuilder()
         .setName("rank")

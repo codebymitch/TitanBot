@@ -7,14 +7,11 @@ export default {
         const guildId = interaction.guild.id;
 
         try {
-            // Get current config
             const guildConfig = await getGuildConfig(client, guildId);
             
-            // Toggle DM setting
-            const currentSetting = guildConfig.dmOnClose !== false; // Default to true
+const currentSetting = guildConfig.dmOnClose !== false;
             guildConfig.dmOnClose = !currentSetting;
 
-            // Save to database
             const configKey = getGuildConfigKey(guildId);
             await client.db.set(configKey, guildConfig);
 

@@ -12,7 +12,7 @@ export const giveawayJoinHandler = {
       if (!giveaway) {
         return interaction.reply({
           embeds: [errorEmbed('Error', 'This giveaway is no longer active.')],
-          flags: 64 // Ephemeral flag
+flags: 64
         });
       }
 
@@ -27,7 +27,7 @@ export const giveawayJoinHandler = {
       if (endedByTime || endedByFlag) {
         return interaction.reply({
           embeds: [errorEmbed('Error', 'This giveaway has already ended.')],
-          flags: 64 // Ephemeral flag
+flags: 64
         });
       }
 
@@ -37,7 +37,7 @@ export const giveawayJoinHandler = {
       if (participants.includes(userId)) {
         return interaction.reply({
           embeds: [errorEmbed('Already Entered', 'You have already entered this giveaway!')],
-          flags: 64 // Ephemeral flag
+flags: 64
         });
       }
 
@@ -56,13 +56,13 @@ export const giveawayJoinHandler = {
 
       await interaction.reply({
         embeds: [successEmbed('Success!', 'You have entered the giveaway! 🎉')],
-        flags: 64 // Ephemeral flag
+flags: 64
       });
 
     } catch (error) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'Failed to join the giveaway. Please try again.')],
-        flags: 64 // Ephemeral flag
+flags: 64
       });
     }
   }
@@ -78,14 +78,14 @@ export const giveawayEndHandler = {
       if (!giveaway) {
         return interaction.reply({
           embeds: [errorEmbed('Error', 'This giveaway is no longer active.')],
-          flags: 64 // Ephemeral flag
+flags: 64
         });
       }
 
       if (giveaway.ended || giveaway.isEnded || isGiveawayEnded(giveaway)) {
         return interaction.reply({
           embeds: [errorEmbed('Error', 'This giveaway has already ended.')],
-          flags: 64 // Ephemeral flag
+flags: 64
         });
       }
 
@@ -110,13 +110,13 @@ export const giveawayEndHandler = {
 
       await interaction.reply({
         embeds: [successEmbed('Giveaway Ended', `The giveaway has been ended and ${winners.length} winner(s) have been selected!`)],
-        flags: 64 // Ephemeral flag
+flags: 64
       });
 
     } catch (error) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'Failed to end the giveaway. Please try again.')],
-        flags: 64 // Ephemeral flag
+flags: 64
       });
     }
   }
@@ -132,14 +132,14 @@ export const giveawayRerollHandler = {
       if (!giveaway) {
         return interaction.reply({
           embeds: [errorEmbed('Error', 'This giveaway is no longer active.')],
-          flags: 64 // Ephemeral flag
+flags: 64
         });
       }
 
       if (!giveaway.ended && !giveaway.isEnded) {
         return interaction.reply({
           embeds: [errorEmbed('Error', 'This giveaway has not ended yet.')],
-          flags: 64 // Ephemeral flag
+flags: 64
         });
       }
 
@@ -162,13 +162,13 @@ export const giveawayRerollHandler = {
 
       await interaction.reply({
         embeds: [successEmbed('Giveaway Rerolled', `New winner(s) have been selected!`)],
-        flags: 64 // Ephemeral flag
+flags: 64
       });
 
     } catch (error) {
       await interaction.reply({
         embeds: [errorEmbed('Error', 'Failed to reroll the giveaway. Please try again.')],
-        flags: 64 // Ephemeral flag
+flags: 64
       });
     }
   }

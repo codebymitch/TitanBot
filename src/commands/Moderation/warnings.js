@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
-// Migrated from: commands/Moderation/warnings.js
 export default {
     data: new SlashCommandBuilder()
         .setName("warnings")
@@ -21,14 +20,12 @@ export default {
             const target = interaction.options.getUser("target");
                 const guildId = interaction.guildId;
 
-                // Get warnings from database
                 const warningsKey = `warnings-${guildId}-${target.id}`;
                 const userWarns = await client.db.get(warningsKey);
                 const warningsArray = Array.isArray(userWarns) ? userWarns : [];
                 const validWarnings = warningsArray.filter((w) => w && typeof w === 'object' && w.reason && w.moderatorId && w.date);
                 const totalWarns = validWarnings.length;
 
-                // If no warnings, send info message
                 if (totalWarns === 0) {
                     await interaction.editReply({
                         embeds: [
@@ -41,7 +38,6 @@ export default {
                     return;
                 }
 
-                // Build warnings embed
                 const embed = createEmbed({ 
                     title: `Warnings: ${target.tag}`, 
                     description: `Total Warnings: **${totalWarns}**` 
@@ -60,7 +56,6 @@ export default {
 
                 embed.addFields(warningFields);
 
-                // Log the action
                 await logEvent({
                     client,
                     guild: interaction.guild,
@@ -78,7 +73,6 @@ export default {
                     }
                 });
 
-                // Send the warnings embed
                 await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             logger.error('Warnings command error:', error);

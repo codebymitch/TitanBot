@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
-// Migrated from: commands/Reaction_roles/rlist.js
 export default {
     data: new SlashCommandBuilder()
         .setName('rlist')
@@ -11,7 +10,6 @@ export default {
 
     async execute(interaction) {
         try {
-// Get all reaction role messages for this guild using the service
             const guildReactionRoles = await getAllReactionRoleMessages(interaction.client, interaction.guildId);
 
             if (guildReactionRoles.length === 0) {

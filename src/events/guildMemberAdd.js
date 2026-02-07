@@ -11,17 +11,13 @@ export default {
     try {
         const { guild, user } = member;
         
-        // Get guild configuration
         const config = await getGuildConfig(member.client, guild.id);
         
-        // Get welcome configuration
         const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
         
-        // If welcome messages are enabled and a channel is set
         if (welcomeConfig?.enabled && welcomeConfig.channelId) {
             const channel = guild.channels.cache.get(welcomeConfig.channelId);
             if (channel) {
-                // Replace placeholders in the welcome message
                 let welcomeMessage = welcomeConfig.welcomeMessage || 'Welcome {user} to {server}!';
                 welcomeMessage = welcomeMessage
                     .replace(/{user}/g, user.toString())
@@ -29,17 +25,15 @@ export default {
                     .replace(/{server}/g, guild.name)
                     .replace(/{membercount}/g, guild.memberCount);
                 
-                // Create welcome message content (for ping only, no message text)
                 let messageContent = '';
                 if (welcomeConfig.welcomePing) {
                     messageContent = user.toString();
                 }
                 
-                // Create welcome embed with custom message
                 const embed = new EmbedBuilder()
-                    .setColor(0x00ff00) // Green color for welcome
+.setColor(0x00ff00)
                     .setTitle('🎉 Welcome!')
-                    .setDescription(welcomeMessage) // Use custom message here
+.setDescription(welcomeMessage)
                     .setThumbnail(user.displayAvatarURL())
                     .addFields(
                         { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
@@ -48,7 +42,6 @@ export default {
                     .setTimestamp()
                     .setFooter({ text: `Welcome to ${guild.name}!` });
                 
-                // Add image if configured
                 if (welcomeConfig.welcomeImage) {
                     embed.setImage(welcomeConfig.welcomeImage);
                 }
@@ -60,9 +53,7 @@ export default {
             }
         }
         
-        // Handle auto-roles if configured
         if (welcomeConfig?.roleIds && welcomeConfig.roleIds.length > 0) {
-            // Add delay if configured
             const delay = welcomeConfig.autoRoleDelay || 0;
             
             if (delay > 0) {
@@ -75,7 +66,6 @@ export default {
                     }
                 }, delay * 1000);
             } else {
-                // Add roles immediately
                 for (const roleId of welcomeConfig.roleIds) {
                     const role = guild.roles.cache.get(roleId);
                     if (role) {
@@ -85,8 +75,70 @@ export default {
             }
         }
         
+        if (config?.verification?.enabled) {
+            await handleVerification(member, guild, config.verification, member.client);
+        }
+        
     } catch (error) {
         console.error('Error in guildMemberAdd event:', error);
     }
   }
 };
+
+async function handleVerification(member, guild, verificationConfig, client) {
+    try {
+        if (!verificationConfig.autoVerify?.enabled) {
+            return;
+        }
+
+        let shouldVerify = false;
+        const autoVerify = verificationConfig.autoVerify;
+
+        switch (autoVerify.criteria) {
+            case "account_age":
+                const accountAge = Date.now() - member.user.createdTimestamp;
+                const requiredAge = autoVerify.accountAgeDays * 24 * 60 * 60 * 1000;
+                shouldVerify = accountAge >= requiredAge;
+                break;
+            
+            case "server_size":
+                shouldVerify = guild.memberCount < 1000;
+                break;
+            
+            case "none":
+                shouldVerify = true;
+                break;
+        }
+
+        if (shouldVerify) {
+            const verifiedRole = guild.roles.cache.get(verificationConfig.roleId);
+            
+            if (verifiedRole && guild.members.me.permissions.has("ManageRoles")) {
+                const botRole = guild.members.me.roles.highest;
+                if (verifiedRole.position < botRole.position) {
+                    await member.roles.add(verifiedRole.id, "Auto-verified on join");
+                    console.log(`✅ Auto-verified ${member.user.tag} (${member.id}) in ${guild.name}`);
+                    
+                    try {
+                        await member.send({
+                            embeds: [{
+                                title: "🎉 Welcome to the Server!",
+                                description: `You have been automatically verified in **${guild.name}**! You now have access to all server channels and features.`,
+                                color: 0x00FF00
+                            }]
+                        });
+                    } catch (error) {
+                        console.log(`Could not send auto-verification DM to ${member.user.tag}: ${error.message}`);
+                    }
+                } else {
+                    console.warn(`Cannot auto-verify ${member.user.tag}: Verified role is higher than bot's highest role`);
+                }
+            } else {
+                console.warn(`Cannot auto-verify ${member.user.tag}: Missing verified role or ManageRoles permission`);
+            }
+        }
+
+    } catch (error) {
+        console.error(`Error in auto-verification for ${member.user.tag}:`, error);
+    }
+}

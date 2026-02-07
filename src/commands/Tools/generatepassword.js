@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-// Migrated from: commands/Tools/generatepassword.js
 export default {
     data: new SlashCommandBuilder()
         .setName('generatepassword')
@@ -40,19 +39,16 @@ export default {
                     return;
                 }
             
-            // Character sets
             const lowercase = 'abcdefghijklmnopqrstuvwxyz';
             const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             const numbers = '0123456789';
             const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
             
-            // Build the character pool based on options
             let chars = lowercase;
             if (includeUppercase) chars += uppercase;
             if (includeNumbers) chars += numbers;
             if (includeSymbols) chars += symbols;
             
-            // Generate password
             let password = '';
             const randomValues = new Uint32Array(length);
             crypto.getRandomValues(randomValues);
@@ -62,7 +58,6 @@ export default {
                 password += chars[randomIndex];
             }
             
-            // Ensure at least one character from each selected set is included
             if (includeUppercase && !/[A-Z]/.test(password)) {
                 const randomIndex = Math.floor(Math.random() * length);
                 const randomUpper = uppercase[Math.floor(Math.random() * uppercase.length)];
@@ -81,10 +76,9 @@ export default {
                 password = password.substring(0, randomIndex) + randomSymbol + password.substring(randomIndex + 1);
             }
             
-            // Calculate password strength
             let strength = 'Weak';
             let strengthEmoji = '🔴';
-            let strengthColor = 0xff0000; // Red
+let strengthColor = 0xff0000;
             
             const hasLower = /[a-z]/.test(password);
             const hasUpper = /[A-Z]/.test(password);
@@ -109,22 +103,21 @@ export default {
             if (score > 80) {
                 strength = 'Very Strong';
                 strengthEmoji = '🟢';
-                strengthColor = 0x00ff00; // Green
+strengthColor = 0x00ff00;
             } else if (score > 60) {
                 strength = 'Strong';
                 strengthEmoji = '🟢';
-                strengthColor = 0x00aa00; // Dark Green
+strengthColor = 0x00aa00;
             } else if (score > 40) {
                 strength = 'Good';
                 strengthEmoji = '🟡';
-                strengthColor = 0xffff00; // Yellow
+strengthColor = 0xffff00;
             } else if (score > 20) {
                 strength = 'Weak';
                 strengthEmoji = '🟠';
-                strengthColor = 0xffa500; // Orange
+strengthColor = 0xffa500;
             }
             
-            // Create the embed
             const embed = successEmbed(
                 '🔑 Generated Password',
                 `**Password:** ||\`${password}\`||\n` +

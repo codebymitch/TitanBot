@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-// Migrated from: commands/Reaction_roles/rdelete.js
 export default {
     data: new SlashCommandBuilder()
         .setName('rdelete')
@@ -20,7 +19,6 @@ const messageId = interaction.options.getString('message_id');
             
             const reactionRoleData = await interaction.client.db.get(key);
             
-            // Handle database response format
             let actualData;
             if (reactionRoleData && reactionRoleData.ok && reactionRoleData.value) {
                 actualData = reactionRoleData.value;
@@ -36,18 +34,13 @@ const messageId = interaction.options.getString('message_id');
                 });
             }
 
-            // Delete the message if possible
             try {
-                // Try to get the channel - multiple methods
                 let channel;
                 try {
-                    // Method 1: Direct fetch
                     channel = await interaction.guild.channels.fetch(actualData.channelId);
                 } catch (channelError) {
-                    // Method 2: Try from cache first
                     channel = interaction.guild.channels.cache.get(actualData.channelId);
                     
-                    // Method 3: Try using the client's channel cache
                     if (!channel) {
                         channel = interaction.client.channels.cache.get(actualData.channelId);
                     }
@@ -61,10 +54,8 @@ const messageId = interaction.options.getString('message_id');
                 }
             } catch (error) {
                 console.error('Error deleting message:', error);
-                // Continue even if message deletion fails
             }
 
-            // Remove from database
             try {
                 await interaction.client.db.delete(key);
             } catch (dbError) {

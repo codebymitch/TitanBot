@@ -10,13 +10,10 @@ export default {
     try {
         const { guild, user } = member;
         
-        // Get guild configuration
         const config = await getGuildConfig(member.client, guild.id);
         
-        // Get welcome configuration (includes goodbye messages)
         const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
         
-        // Check if goodbye messages are enabled
         if (welcomeConfig?.goodbyeEnabled && welcomeConfig?.goodbyeChannelId) {
             const channel = guild.channels.cache.get(welcomeConfig.goodbyeChannelId);
             if (channel) {
@@ -28,10 +25,9 @@ export default {
                     .replace(/{server}/g, guild.name)
                     .replace(/{membercount}/g, guild.memberCount);
                 
-                // Always use embed with custom message
                 const embed = new EmbedBuilder()
                     .setTitle(welcomeConfig.leaveEmbed?.title || '👋 Goodbye')
-                    .setDescription(goodbyeMessage) // Use custom message
+.setDescription(goodbyeMessage)
                     .setColor(welcomeConfig.leaveEmbed?.color || 0xff0000)
                     .setThumbnail(user.displayAvatarURL())
                     .addFields(
@@ -41,7 +37,6 @@ export default {
                     .setTimestamp()
                     .setFooter({ text: `Goodbye from ${guild.name}!` });
                 
-                // Add image if configured in leaveEmbed
                 if (welcomeConfig.leaveEmbed?.image) {
                     embed.setImage(welcomeConfig.leaveEmbed.image.url);
                 }
@@ -50,7 +45,6 @@ export default {
             }
         }
         
-        // Log to moderation log channel if configured
         if (config?.logChannelId) {
             const logChannel = guild.channels.cache.get(config.logChannelId);
             if (logChannel) {

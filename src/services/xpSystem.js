@@ -7,30 +7,24 @@ export async function addXp(client, guild, member, xpToAdd) {
   try {
     const config = await getLevelingConfig(client, guild.id);
     
-    // Check if leveling is enabled
     if (!config.enabled) {
       return { success: false, reason: 'Leveling is disabled in this server' };
     }
     
-    // Get current level data
     const levelData = await getUserLevelData(client, guild.id, member.id);
     
-    // Add XP
     levelData.xp += xpToAdd;
     levelData.totalXp += xpToAdd;
     levelData.lastMessage = Date.now();
     
-    // Check for level up using the correct formula
     const xpNeededForNextLevel = getXpForLevel(levelData.level + 1);
     let didLevelUp = false;
     
     if (levelData.xp >= xpNeededForNextLevel) {
-      // Level up!
       levelData.level += 1;
       levelData.xp = levelData.xp - xpNeededForNextLevel;
       didLevelUp = true;
       
-      // Handle role rewards
       if (config.roleRewards && config.roleRewards[levelData.level]) {
         const roleId = config.roleRewards[levelData.level];
         const role = guild.roles.cache.get(roleId);
@@ -45,7 +39,6 @@ export async function addXp(client, guild, member, xpToAdd) {
         }
       }
       
-      // Send level up message
       const levelUpChannel = config.levelUpChannel ? 
         guild.channels.cache.get(config.levelUpChannel) : 
         guild.systemChannel;
@@ -65,7 +58,6 @@ export async function addXp(client, guild, member, xpToAdd) {
       }
     }
     
-    // Save updated data
     await saveUserLevelData(client, guild.id, member.id, levelData);
     
     return {

@@ -27,10 +27,8 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
         const entityId = interaction.options.getString("id");
         const guildId = interaction.guildId;
 
-        // Use the current config (which is guaranteed to have logIgnore)
         const currentConfig = config;
 
-        // Determine which array to modify
         let targetArray;
         let entityName = "";
         let entityType = "";
@@ -108,7 +106,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 { name: "Entity Type", value: entityType, inline: true },
             );
 
-            // Log the filter change
             await logEvent({
                 client,
                 guild: interaction.guild,

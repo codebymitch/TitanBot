@@ -11,7 +11,6 @@ export default {
         const guildId = interaction.guild.id;
 
         try {
-            // Create the trigger channel with a static name
             const triggerChannel = await interaction.guild.channels.create({
                 name: 'Join to Create',
                 type: ChannelType.GuildVoice,
@@ -26,7 +25,6 @@ export default {
                 ],
             });
 
-            // Add to database with the template for temporary channels
             await addJoinToCreateTrigger(client, guildId, triggerChannel.id, {
                 nameTemplate: nameTemplate,
                 userLimit: userLimit,
@@ -45,25 +43,20 @@ export default {
                 '✅ Join to Create Setup Complete'
             );
 
-            // Try to respond to the interaction, handling any state issues
             try {
-                // If already deferred, use editReply
                 if (interaction.deferred) {
                     await interaction.editReply({ embeds: [embed] });
                 } else {
-                    // Otherwise use reply
                     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
                 }
             } catch (responseError) {
                 console.error('Error responding to interaction:', responseError);
                 
-                // Last resort fallback
                 try {
                     if (!interaction.replied) {
                         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
                     }
                 } catch (e) {
-                    // At this point we've tried everything
                     console.error('All response attempts failed:', e);
                 }
             }

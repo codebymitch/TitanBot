@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 
-// Import all birthday command functions
 import birthdaySet from './modules/birthday_set.js';
 import birthdayInfo from './modules/birthday_info.js';
 import birthdayList from './modules/birthday_list.js';
@@ -89,7 +88,6 @@ try {
                 ephemeral: true
             };
             
-            // Handle based on interaction state
             if (interaction.deferred || interaction.replied) {
                 return interaction.editReply(errorMessage);
             } else {

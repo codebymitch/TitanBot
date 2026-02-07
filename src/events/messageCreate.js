@@ -7,10 +7,8 @@ export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
-      // Ignore bot messages and DMs
       if (message.author.bot || !message.guild) return;
 
-      // Handle leveling (existing functionality)
       await handleLeveling(message, client);
 
     } catch (error) {
@@ -19,48 +17,37 @@ export default {
   },
 };
 
-// Handle leveling (existing functionality)
 async function handleLeveling(message, client) {
-  // Get leveling configuration
   const levelingConfig = await getLevelingConfig(client, message.guild.id);
   
-  // Check if leveling is enabled
   if (!levelingConfig?.enabled) return;
 
-  // Check if channel is ignored
   if (levelingConfig.ignoredChannels?.includes(message.channel.id)) return;
 
-  // Check if user has ignored roles
   if (levelingConfig.ignoredRoles?.length > 0) {
     const member = await message.guild.members.fetch(message.author.id).catch(() => null);
     if (member && member.roles.cache.some(role => levelingConfig.ignoredRoles.includes(role.id))) return;
   }
 
-  // Check if user is blacklisted
   if (levelingConfig.blacklistedUsers?.includes(message.author.id)) return;
 
-  // Get user's current level data
   const userData = await getUserLevelData(client, message.guild.id, message.author.id);
   
-  // Check cooldown (in seconds)
   const cooldownTime = levelingConfig.xpCooldown || 60;
   const now = Date.now();
   const timeSinceLastMessage = now - (userData.lastMessage || 0);
   
   if (timeSinceLastMessage < cooldownTime * 1000) return;
 
-  // Calculate XP to give (random between min and max)
   const minXP = levelingConfig.xpPerMessage?.min || 15;
   const maxXP = levelingConfig.xpPerMessage?.max || 25;
   const xpToGive = Math.floor(Math.random() * (maxXP - minXP + 1)) + minXP;
 
-  // Apply XP multiplier if any
   let finalXP = xpToGive;
   if (levelingConfig.xpMultiplier && levelingConfig.xpMultiplier > 1) {
     finalXP = Math.floor(finalXP * levelingConfig.xpMultiplier);
   }
 
-  // Add XP to user
   const result = await addXp(client, message.guild, message.member, finalXP);
   
   if (result.success && result.leveledUp) {

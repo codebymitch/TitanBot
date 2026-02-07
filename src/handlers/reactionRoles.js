@@ -11,39 +11,31 @@ import { errorEmbed } from '../utils/embeds.js';
  */
 async function handleReactionAdd(client, reaction, user) {
     try {
-        // If the reaction is from a bot or in a DM, ignore it
         if (user.bot || !reaction.message.guild) return;
 
-        // Get the message ID and guild ID
         const { message } = reaction;
         const { guild } = message;
         const emoji = reaction.emoji.id || reaction.emoji.name;
 
-        // Get the reaction role message from the database
         const reactionRoleMessage = await getReactionRoleMessage(
             client,
             guild.id,
             message.id
         );
 
-        // If there's no reaction role message for this message, ignore it
         if (!reactionRoleMessage) return;
 
-        // Find the role ID for this emoji
         const roleId = reactionRoleMessage.roles[emoji];
         if (!roleId) return;
 
-        // Get the member and role
         const member = await guild.members.fetch(user.id);
         const role = guild.roles.cache.get(roleId);
 
-        // If the role doesn't exist, remove the reaction role
         if (!role) {
             await removeReactionRole(client, guild.id, message.id, emoji);
             return;
         }
 
-        // Add the role to the member
         await member.roles.add(role);
 
     } catch (error) {
@@ -60,39 +52,31 @@ async function handleReactionAdd(client, reaction, user) {
  */
 async function handleReactionRemove(client, reaction, user) {
     try {
-        // If the reaction is from a bot or in a DM, ignore it
         if (user.bot || !reaction.message.guild) return;
 
-        // Get the message ID and guild ID
         const { message } = reaction;
         const { guild } = message;
         const emoji = reaction.emoji.id || reaction.emoji.name;
 
-        // Get the reaction role message from the database
         const reactionRoleMessage = await getReactionRoleMessage(
             client,
             guild.id,
             message.id
         );
 
-        // If there's no reaction role message for this message, ignore it
         if (!reactionRoleMessage) return;
 
-        // Find the role ID for this emoji
         const roleId = reactionRoleMessage.roles[emoji];
         if (!roleId) return;
 
-        // Get the member and role
         const member = await guild.members.fetch(user.id);
         const role = guild.roles.cache.get(roleId);
 
-        // If the role doesn't exist, remove the reaction role
         if (!role) {
             await removeReactionRole(client, guild.id, message.id, emoji);
             return;
         }
 
-        // Remove the role from the member
         await member.roles.remove(role);
 
     } catch (error) {
@@ -111,12 +95,10 @@ export async function handleReactionRoles(interaction) {
 
         const { commandName, options, guild, member } = interaction;
 
-        // Handle reaction role creation
         if (commandName === 'reactionrole') {
             const subcommand = options.getSubcommand();
             
             if (subcommand === 'create') {
-                // Check if the user has the required permissions
                 if (!member.permissions.has('MANAGE_ROLES')) {
                     await interaction.reply({
                         embeds: [errorEmbed('You need the `Manage Roles` permission to use this command.')],
@@ -129,14 +111,12 @@ export async function handleReactionRoles(interaction) {
                 const emoji = options.getString('emoji');
                 const role = options.getRole('role');
 
-                // Validate the emoji
                 let emojiId = emoji;
                 const emojiMatch = emoji.match(/<a?:\w+:(\d+)>/);
                 if (emojiMatch) {
                     emojiId = emojiMatch[1];
                 }
 
-                // Add the reaction role
                 await addReactionRole(
                     interaction.client,
                     guild.id,
@@ -145,7 +125,6 @@ export async function handleReactionRoles(interaction) {
                     role.id
                 );
 
-                // Add the reaction to the message
                 try {
                     const channel = interaction.channel;
                     const message = await channel.messages.fetch(messageId);

@@ -10,16 +10,15 @@ import { BotConfig } from '../config/bot.js';
 export async function getGuildConfig(client, guildId) {
     const config = await getGuildConfigDb(client, guildId);
     
-    // Apply default values
     return {
         prefix: BotConfig.prefix,
         modRole: null,
         adminRole: null,
-        logChannelId: null, // Changed from modLogChannel for consistency
+logChannelId: null,
         welcomeChannel: null,
         welcomeMessage: 'Welcome {user} to {server}!',
         autoRole: null,
-        dmOnClose: true, // Default to true for DM on ticket close
+dmOnClose: true,
         ...config
     };
 }

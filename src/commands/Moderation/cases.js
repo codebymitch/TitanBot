@@ -115,7 +115,7 @@ export default {
 
             const collector = message.createMessageComponentCollector({
                 componentType: ComponentType.Button,
-                time: 120000 // 2 minutes
+time: 120000
             });
 
             collector.on('collect', async (buttonInteraction) => {
@@ -152,7 +152,6 @@ export default {
                         components: [disabledRow]
                     });
                 } catch (error) {
-                    // Message might have been deleted
                 }
             });
 

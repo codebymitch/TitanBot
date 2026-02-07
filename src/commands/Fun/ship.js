@@ -7,12 +7,11 @@ function stringToHash(str) {
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32bit integer
+hash |= 0;
   }
   return Math.abs(hash);
 }
 
-// Migrated from: commands/Fun/ship.js
 export default {
     data: new SlashCommandBuilder()
     .setName("ship")
@@ -35,14 +34,11 @@ try {
       const name1 = interaction.options.getString("name1").trim();
       const name2 = interaction.options.getString("name2").trim();
 
-      // Sort names alphabetically to ensure 'ship a b' always returns the same as 'ship b a'
       const sortedNames = [name1, name2].sort();
 
-      // Create a combined string for a consistent score
       const combination = sortedNames.join("-").toLowerCase();
 
-      // Use the hash to generate a percentage between 0 and 100
-      const score = stringToHash(combination) % 101; // 0-100
+const score = stringToHash(combination) % 101;
 
       let description;
       if (score === 100) {

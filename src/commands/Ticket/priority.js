@@ -29,7 +29,6 @@ export default {
 const priorityLevel = interaction.options.getString("level");
 
         try {
-            // Use the new ticket system to update priority
             const result = await updateTicketPriority(interaction.channel, priorityLevel, interaction.user);
             
             if (!result.success) {
@@ -52,7 +51,6 @@ const priorityLevel = interaction.options.getString("level");
                 ],
             });
 
-            // Log the event
             const logEmbed = createEmbed({
                 title: "📊 Priority Updated (Audit Log)",
                 description: `${interaction.user} updated ticket priority to **${priorityLevel.toUpperCase()}**.`,

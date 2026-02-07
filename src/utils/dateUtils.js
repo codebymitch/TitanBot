@@ -18,6 +18,5 @@ export function getMonthName(monthNum) {
         "Nov",
         "Dec",
     ];
-    // Month numbers are 1-based, array indices are 0-based
     return months[monthNum - 1] || "Invalid Month";
 }

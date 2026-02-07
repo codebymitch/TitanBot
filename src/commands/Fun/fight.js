@@ -2,9 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Utility to generate a random number within a range
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-// Migrated from: commands/Fun/fight.js
 export default {
     data: new SlashCommandBuilder()
     .setName("fight")
@@ -27,18 +25,16 @@ try {
         });
       }
 
-      // Simulate a fight with random winner and text log
       const winner = rand(0, 1) === 0 ? challenger : opponent;
       const loser = winner.id === challenger.id ? opponent : challenger;
-      const rounds = rand(3, 7); // A random number of rounds
-      const damage = rand(10, 50); // A random damage number
+const rounds = rand(3, 7);
+const damage = rand(10, 50);
 
       const log = [];
       log.push(
         `💥 **${challenger.username}** challenges **${opponent.username}** to a duel! (Best of ${rounds} rounds)`,
       );
 
-      // Add some random combat log lines
       for (let i = 1; i <= rounds; i++) {
         const attacker = rand(0, 1) === 0 ? challenger : opponent;
         const target = attacker.id === challenger.id ? opponent : challenger;
@@ -53,7 +49,6 @@ try {
         );
       }
 
-      // Final outcome
       const outcomeText = log.join("\n");
 
       const embed = successEmbed(

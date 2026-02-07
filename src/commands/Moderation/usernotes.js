@@ -98,7 +98,6 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-// Permission check
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
             return interaction.reply({
                 embeds: [
@@ -114,22 +113,35 @@ export default {
         const targetUser = interaction.options.getUser("target");
         const guildId = interaction.guild.id;
 
-        // Get user notes from database
-        const notesKey = getUserNotesKey(guildId, targetUser.id);
-        let notes = await getFromDb(notesKey, []);
+        if (subcommand !== "view" && subcommand !== "remove" && subcommand !== "clear" && subcommand !== "add") {
+            return interaction.reply({
+                embeds: [
+                    errorEmbed(
+                        "Invalid Subcommand",
+                        "Please select a valid subcommand."
+                    ),
+                ],
+            });
+        }
+
+        let notes = [];
+        if (targetUser) {
+            const notesKey = getUserNotesKey(guildId, targetUser.id);
+            notes = await getFromDb(notesKey, []);
+        }
 
         try {
             switch (subcommand) {
                 case "add":
-                    return await handleAddNote(interaction, targetUser, notes, notesKey);
+                    return await handleAddNote(interaction, targetUser, notes, guildId);
                 case "view":
                     return await handleViewNotes(interaction, targetUser, notes);
                 case "remove":
-                    return await handleRemoveNote(interaction, targetUser, notes, notesKey);
+                    return await handleRemoveNote(interaction, targetUser, notes, guildId);
                 case "clear":
-                    return await handleClearNotes(interaction, targetUser, notes, notesKey);
+                    return await handleClearNotes(interaction, targetUser, notes, guildId);
                 default:
-                    return interaction.editReply({
+                    return interaction.reply({
                         embeds: [
                             errorEmbed(
                                 "Invalid Subcommand",
@@ -140,25 +152,25 @@ export default {
             }
         } catch (error) {
             logger.error(`Error in usernotes command (${subcommand}):`, error);
-            return interaction.editReply({
+            return interaction.reply({
                 embeds: [
                     errorEmbed(
                         "System Error",
                         "An error occurred while processing your request. Please try again later."
                     ),
                 ],
+                ephemeral: true
             });
         }
     }
 };
 
-async function handleAddNote(interaction, targetUser, notes, notesKey) {
+async function handleAddNote(interaction, targetUser, notes, guildId) {
     const note = interaction.options.getString("note");
     const type = interaction.options.getString("type") || "neutral";
 
-    // Limit note length
     if (note.length > 1000) {
-        return interaction.editReply({
+        return interaction.reply({
             embeds: [
                 errorEmbed(
                     "Note Too Long",
@@ -168,7 +180,6 @@ async function handleAddNote(interaction, targetUser, notes, notesKey) {
         });
     }
 
-    // Add note
     const noteData = {
         id: Date.now(),
         content: note,
@@ -180,13 +191,12 @@ async function handleAddNote(interaction, targetUser, notes, notesKey) {
 
     notes.push(noteData);
 
-    // Save to database
+    const notesKey = getUserNotesKey(guildId, targetUser.id);
     await setInDb(notesKey, notes);
 
-    // Get type emoji and color
     const typeInfo = getNoteTypeInfo(type);
 
-    return interaction.editReply({
+    return interaction.reply({
         embeds: [
             successEmbed(
                 `${typeInfo.emoji} Note Added`,
@@ -201,7 +211,7 @@ async function handleAddNote(interaction, targetUser, notes, notesKey) {
 
 async function handleViewNotes(interaction, targetUser, notes) {
     if (notes.length === 0) {
-        return interaction.editReply({
+        return interaction.reply({
             embeds: [
                 infoEmbed(
                     "📝 No Notes",
@@ -211,7 +221,6 @@ async function handleViewNotes(interaction, targetUser, notes) {
         });
     }
 
-    // Sort notes by timestamp (newest first)
     const sortedNotes = [...notes].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     let description = `**Notes for ${targetUser.tag} (${targetUser.id}):**\n\n`;
@@ -224,12 +233,11 @@ async function handleViewNotes(interaction, targetUser, notes) {
         description += `*Added by ${note.author}*\n\n`;
     });
 
-    // Check if description is too long
     if (description.length > 4000) {
         description = description.substring(0, 3900) + "\n... *(truncated)*";
     }
 
-    return interaction.editReply({
+    return interaction.reply({
         embeds: [
             infoEmbed(
                 `📝 User Notes (${notes.length})`,
@@ -239,11 +247,11 @@ async function handleViewNotes(interaction, targetUser, notes) {
     });
 }
 
-async function handleRemoveNote(interaction, targetUser, notes, notesKey) {
-    const index = interaction.options.getInteger("index") - 1; // Convert to 0-based
+async function handleRemoveNote(interaction, targetUser, notes, guildId) {
+const index = interaction.options.getInteger("index") - 1;
 
     if (index < 0 || index >= notes.length) {
-        return interaction.editReply({
+        return interaction.reply({
             embeds: [
                 errorEmbed(
                     "Invalid Index",
@@ -256,12 +264,12 @@ async function handleRemoveNote(interaction, targetUser, notes, notesKey) {
     const removedNote = notes[index];
     notes.splice(index, 1);
 
-    // Save to database
+    const notesKey = getUserNotesKey(guildId, targetUser.id);
     await setInDb(notesKey, notes);
 
     const typeInfo = getNoteTypeInfo(removedNote.type);
 
-    return interaction.editReply({
+    return interaction.reply({
         embeds: [
             successEmbed(
                 `${typeInfo.emoji} Note Removed`,
@@ -273,11 +281,11 @@ async function handleRemoveNote(interaction, targetUser, notes, notesKey) {
     });
 }
 
-async function handleClearNotes(interaction, targetUser, notes, notesKey) {
+async function handleClearNotes(interaction, targetUser, notes, guildId) {
     const noteCount = notes.length;
     
     if (noteCount === 0) {
-        return interaction.editReply({
+        return interaction.reply({
             embeds: [
                 infoEmbed(
                     "No Notes to Clear",
@@ -287,13 +295,12 @@ async function handleClearNotes(interaction, targetUser, notes, notesKey) {
         });
     }
 
-    // Clear all notes
     notes.length = 0;
 
-    // Save to database
+    const notesKey = getUserNotesKey(guildId, targetUser.id);
     await setInDb(notesKey, notes);
 
-    return interaction.editReply({
+    return interaction.reply({
         embeds: [
             successEmbed(
                 "🗑️ Notes Cleared",

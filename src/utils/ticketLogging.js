@@ -29,10 +29,8 @@ export async function logTicketEvent({ client, guildId, event }) {
 
     const config = await getGuildConfig(client, guildId);
     
-    // Get the appropriate channel based on event type
     const logChannelId = getLogChannelForEventType(config, event.type);
     if (!logChannelId) {
-      // Logging is disabled for this event type
       return;
     }
 
@@ -42,20 +40,16 @@ export async function logTicketEvent({ client, guildId, event }) {
       return;
     }
 
-    // Check bot permissions
     const permissions = channel.permissionsFor(guild.members.me);
     if (!permissions.has(['SendMessages', 'EmbedLinks'])) {
       logger.warn(`Missing permissions in ticket log channel: ${logChannelId}`);
       return;
     }
 
-    // Create the log embed
     const embed = await createTicketLogEmbed(guild, event);
     
-    // Prepare message options
     const messageOptions = { embeds: [embed] };
     
-    // Add attachments if provided (for transcripts)
     if (event.attachments && event.attachments.length > 0) {
       messageOptions.files = event.attachments;
     }
@@ -105,38 +99,32 @@ function getLogChannelForEventType(config, eventType) {
 async function createTicketLogEmbed(guild, event) {
   const embed = new EmbedBuilder();
   
-  // Set color based on event type
   const eventColors = {
-    open: 0x2ecc71,      // Green
-    close: 0xe74c3c,     // Red
-    delete: 0x8b0000,    // Dark Red
-    claim: 0x3498db,     // Blue
-    unclaim: 0xf39c12,   // Orange
-    priority: 0x9b59b6,  // Purple
-    transcript: 0x1abc9c // Teal
+open: 0x2ecc71,
+close: 0xe74c3c,
+delete: 0x8b0000,
+claim: 0x3498db,
+unclaim: 0xf39c12,
+priority: 0x9b59b6,
+transcript: 0x1abc9c
   };
   
   embed.setColor(eventColors[event.type] || 0x95a5a6);
   
-  // Set title and description based on event type
   const eventInfo = getEventDisplayInfo(event);
   embed.setTitle(eventInfo.title);
   embed.setDescription(eventInfo.description);
   
-  // Add timestamp
   embed.setTimestamp();
   
-  // Add footer with ticket ID if available
   if (event.ticketId || event.ticketNumber) {
     embed.setFooter({ 
       text: `Ticket ID: ${event.ticketNumber || event.ticketId || 'Unknown'}` 
     });
   }
   
-  // Build fields
   const fields = [];
   
-  // Add user information
   if (event.userId) {
     try {
       const user = await guild.client.users.fetch(event.userId).catch(() => null);
@@ -156,7 +144,6 @@ async function createTicketLogEmbed(guild, event) {
     }
   }
   
-  // Add executor information
   if (event.executorId) {
     try {
       const executor = await guild.client.users.fetch(event.executorId).catch(() => null);
@@ -176,7 +163,6 @@ async function createTicketLogEmbed(guild, event) {
     }
   }
   
-  // Add reason if provided
   if (event.reason) {
     fields.push({
       name: '📝 Reason',
@@ -185,7 +171,6 @@ async function createTicketLogEmbed(guild, event) {
     });
   }
   
-  // Add priority if provided
   if (event.priority) {
     const priorityEmojis = {
       none: '⚪',
@@ -202,7 +187,6 @@ async function createTicketLogEmbed(guild, event) {
     });
   }
   
-  // Add metadata if provided
   if (event.metadata) {
     Object.entries(event.metadata).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {

@@ -2,12 +2,10 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getFromDb, setInDb } from '../../services/database.js';
-// Helper function to generate a unique ID for shared lists
 function generateShareId() {
     return Math.random().toString(36).substring(2, 9);
 }
 
-// Migrated from: commands/Utility/todo.js
 export default {
     data: new SlashCommandBuilder()
         .setName("todo")
@@ -120,7 +118,6 @@ export default {
                 const subcommand = interaction.options.getSubcommand();
                 const shareSubcommand = interaction.options.getSubcommandGroup() === 'share' ? interaction.options.getSubcommand() : null;
 
-        // Helper function to get or create shared list
         async function getOrCreateSharedList(listId, creatorId = null, listName = null) {
             const listKey = `shared_todo_${listId}`;
             let listData = await getFromDb(listKey, null);
@@ -142,7 +139,6 @@ export default {
                 }
             }
             
-            // Ensure listData has the required structure if it exists
             if (listData) {
                 if (!Array.isArray(listData.tasks)) listData.tasks = [];
                 if (!listData.nextId) listData.nextId = 1;
@@ -153,7 +149,6 @@ export default {
         }
 
         try {
-            // For share subcommands, handle them separately
             if (shareSubcommand) {
                 switch (shareSubcommand) {
                     case 'create': {
@@ -162,9 +157,7 @@ export default {
                         
                         await getOrCreateSharedList(listId, userId, listName);
                         
-                        // Add this list to user's shared lists
                         const userSharedLists = await getFromDb(`user_shared_lists_${userId}`, []);
-                        // Ensure it's an array
                         const sharedListsArray = Array.isArray(userSharedLists) ? userSharedLists : [];
                         if (!sharedListsArray.includes(listId)) {
                             sharedListsArray.push(listId);
@@ -193,21 +186,17 @@ export default {
                             });
                         }
                         
-                        // Check if user is the creator or has permission
                         if (listData.creatorId !== userId) {
                             return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "Only the list creator can add members.")]
                             });
                         }
                         
-                        // Add member if not already added
                         if (!listData.members.includes(memberToAdd.id)) {
                             listData.members.push(memberToAdd.id);
                             await setInDb(`shared_todo_${listId}`, listData);
                             
-                            // Add list to member's shared lists
                             const memberLists = await getFromDb(`user_shared_lists_${memberToAdd.id}`, []);
-                            // Ensure it's an array
                             const memberListsArray = Array.isArray(memberLists) ? memberLists : [];
                             if (!memberListsArray.includes(listId)) {
                                 memberListsArray.push(listId);
@@ -238,7 +227,6 @@ export default {
                             });
                         }
                         
-                        // Check if user is a member
                         if (!listData.members.includes(userId)) {
                             return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "You don't have access to this list.")]
@@ -246,7 +234,6 @@ export default {
                         }
                         
                         if (listData.tasks.length === 0) {
-                            // Show list info even when empty
                             const memberList = listData.members.map(memberId => {
                                 const member = interaction.guild.members.cache.get(memberId);
                                 return member ? member.user.username : `<@${memberId}>`;
@@ -288,7 +275,6 @@ export default {
                             )
                             .join('\n');
 
-                        // Show list info with tasks
                         const memberList = listData.members.map(memberId => {
                             const member = interaction.guild.members.cache.get(memberId);
                             return member ? member.user.username : `<@${memberId}>`;
@@ -333,14 +319,12 @@ export default {
                             });
                         }
                         
-                        // Check if user is a member
                         if (!listData.members.includes(userId)) {
                             return await interaction.editReply({
                                 embeds: [errorEmbed("Error", "You don't have access to this list.")]
                             });
                         }
                         
-                        // Add the task
                         const newTask = {
                             id: listData.nextId++,
                             text: taskText,
@@ -362,7 +346,6 @@ export default {
                 return;
             }
 
-            // Handle regular todo commands
             const dbKey = `todo_${userId}`;
             
             const userData = await getFromDb(dbKey, {
@@ -370,7 +353,6 @@ export default {
                 nextId: 1
             });
             
-            // Ensure userData has the required structure
             if (!userData.tasks) userData.tasks = [];
             if (!userData.nextId) userData.nextId = 1;
 

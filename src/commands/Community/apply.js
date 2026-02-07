@@ -10,7 +10,6 @@ import {
     updateApplication
 } from '../../utils/database.js';
 
-// Migrated from: commands/Community/apply.js
 export default {
     data: new SlashCommandBuilder()
         .setName("apply")
@@ -56,7 +55,6 @@ const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
 
         try {
-            // Check if applications are enabled
             const settings = await getApplicationSettings(
                 interaction.client,
                 guild.id,
@@ -91,7 +89,6 @@ const { options, guild, member } = interaction;
     }
 };
 
-// Handle modal submissions for applications
 export async function handleApplicationModal(interaction) {
     if (!interaction.isModalSubmit()) return;
     
@@ -100,7 +97,6 @@ export async function handleApplicationModal(interaction) {
     
     const roleId = customId.split('_')[2];
     
-    // Get application roles to find the application name
     const applicationRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
     const applicationRole = applicationRoles.find(appRole => appRole.roleId === roleId);
     
@@ -120,7 +116,6 @@ export async function handleApplicationModal(interaction) {
         });
     }
     
-    // Get answers from modal
     const answers = [];
     const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
     const questions = settings.questions || ["Why do you want this role?", "What is your experience?"];
@@ -133,7 +128,6 @@ export async function handleApplicationModal(interaction) {
         });
     }
     
-    // Create the application
     try {
         const application = await createApplication(interaction.client, {
             guildId: interaction.guild.id,
@@ -145,7 +139,6 @@ export async function handleApplicationModal(interaction) {
             answers: answers
         });
         
-        // Send confirmation
         const embed = successEmbed(
             'Application Submitted',
             `Your application for **${applicationRole.name}** has been submitted successfully!\n\n` +
@@ -155,7 +148,6 @@ export async function handleApplicationModal(interaction) {
         
         await interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
         
-        // Log the application if log channel is set
         const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
         if (settings.logChannelId) {
             const logChannel = interaction.guild.channels.cache.get(settings.logChannelId);
@@ -171,7 +163,6 @@ export async function handleApplicationModal(interaction) {
                 
                 const logMessage = await logChannel.send({ embeds: [logEmbed] });
                 
-                // Update application with log message info
                 await updateApplication(interaction.client, interaction.guild.id, application.id, {
                     logMessageId: logMessage.id,
                     logChannelId: settings.logChannelId
@@ -239,10 +230,8 @@ async function handleSubmit(interaction, settings) {
     const applicationName = interaction.options.getString("application");
     const member = interaction.member;
 
-    // Get configured application roles
     const applicationRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
     
-    // Find the application role
     const applicationRole = applicationRoles.find(appRole => 
         appRole.name.toLowerCase() === applicationName.toLowerCase()
     );
@@ -259,7 +248,6 @@ async function handleSubmit(interaction, settings) {
         });
     }
 
-    // Check if user has any pending applications
     const userApps = await getUserApplications(
         interaction.client,
         interaction.guild.id,
@@ -278,7 +266,6 @@ async function handleSubmit(interaction, settings) {
         });
     }
 
-    // Get the role object
     const role = interaction.guild.roles.cache.get(applicationRole.roleId);
     if (!role) {
         return interaction.editReply({
@@ -287,12 +274,10 @@ async function handleSubmit(interaction, settings) {
         });
     }
 
-    // Create and show the application modal
     const modal = new ModalBuilder()
         .setCustomId(`app_modal_${applicationRole.roleId}`)
         .setTitle(`Application for ${applicationRole.name}`);
 
-    // Add text inputs for each question
     const questions =
         settings.questions || ["Why do you want this role?", "What is your experience?"];
 

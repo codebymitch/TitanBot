@@ -2,8 +2,8 @@
 
 **TitanBot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and PostgreSQL for optimal performance and data persistence.
 
-[![Support Server](https://img.shields.io/badge/-Support%20Server-%235865F2?logo=discord&logoColor=white&style=flat-square&logoWidth=20)](https://discord.gg/YOUR_INVITE)
-[![Discord.js](https://img.shields.io/npm/v/discord.js?style=flat-square&labelColor=%23202225&color=%23202225&logo=npm&logoColor=white&logoWidth=20)](https://www.npmjs.com/package/discord.js)
+[![Support Server](https:
+[![Discord.js](https:
 
 ## 📚 Table of Contents
 
@@ -36,7 +36,7 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 
 ### 📹 Video Tutorial
 For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
-[**TitanBot Setup Tutorial**](https://www.youtube.com/watch?v=your-tutorial-link)
+[**TitanBot Setup Tutorial**](https:
 
 ### Prerequisites
 - Node.js 18.0.0 or higher
@@ -47,7 +47,7 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-username/TitanBot-redis.git
+git clone https:
    cd TitanBot-redis
    ```
 
@@ -68,7 +68,7 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
    GUILD_ID=your_discord_guild_id_here
 
    # PostgreSQL Configuration (Recommended)
-   POSTGRES_URL=postgresql://titanbot:yourpassword@localhost:5432/titanbot
+POSTGRES_URL=postgresql:
    POSTGRES_HOST=localhost
    POSTGRES_PORT=5432
    POSTGRES_DB=titanbot

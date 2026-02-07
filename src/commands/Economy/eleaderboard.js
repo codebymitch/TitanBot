@@ -5,7 +5,6 @@ import { getEconomyKey } from '../../services/database.js';
 import { botConfig } from '../../config/bot.js';
 
 export default {
-    // Slash command data
     data: new SlashCommandBuilder()
         .setName("eleaderboard")
         .setDescription("View the server's top 10 richest users.")
@@ -23,19 +22,15 @@ export default {
         .setDMPermission(false),
     
     
-    // Slash command execution
     async execute(interaction, config, client) {
 const guildId = interaction.guildId;
         const sortBy = interaction.options.getString("sort_by") || "net_worth";
 
         try {
-            // Replit DB prefix search to get all economy keys for this guild
             const prefix = `guild:${guildId}:economy:`;
 
-            // NOTE: We use client.db.list(prefix) to access the Database list method.
             let allKeys = await client.db.list(prefix);
 
-            // 🌟 FIX: Ensure allKeys is an array before iterating 🌟
             if (!Array.isArray(allKeys)) {
                 allKeys = [];
             }
@@ -53,10 +48,8 @@ const guildId = interaction.guildId;
 
             let allUserData = [];
 
-            // Fetch data for all users
             for (const key of allKeys) {
                 const userId = key.replace(prefix, "");
-                // Use client.db.get() which includes the default value handling and unwrap
                 const userData = await client.db.get(key);
 
                 if (userData) {
@@ -69,15 +62,13 @@ const guildId = interaction.guildId;
                 }
             }
 
-            // Sort data
             allUserData.sort((a, b) => {
                 if (sortBy === "net_worth") return b.net_worth - a.net_worth;
                 if (sortBy === "cash") return b.cash - a.cash;
                 if (sortBy === "bank") return b.bank - a.bank;
-                return b.net_worth - a.net_worth; // Default
+return b.net_worth - a.net_worth;
             });
 
-            // Get top 10
             const topUsers = allUserData.slice(0, 10);
             const userRank =
                 allUserData.findIndex((u) => u.userId === interaction.user.id) +

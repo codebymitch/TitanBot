@@ -4,8 +4,6 @@ import { getPromoRow } from '../../utils/components.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { logEvent } from '../../utils/moderation.js';
 
-// Import ticket limits modules (now removed – view moved to logstatus)
-// import ticketLimitsView from './modules/ticket_limits_view.js';
 import ticketLimitsSet from './modules/ticket_limits_set.js';
 import ticketLimitsCheck from './modules/ticket_limits_check.js';
 import ticketLimitsToggleDM from './modules/ticket_limits_toggle_dm.js';
@@ -23,7 +21,7 @@ export default {
                 )
                 .addChannelOption((option) =>
                     option
-                        .setName("panel_channel") // Option for the panel location
+.setName("panel_channel")
                         .setDescription(
                             "The channel where the ticket panel will be sent.",
                         )
@@ -47,7 +45,6 @@ export default {
                         )
                         .setRequired(false),
                 )
-                // Existing Category Option
                 .addChannelOption((option) =>
                     option
                         .setName("category")
@@ -55,6 +52,23 @@ export default {
                             "The category where new tickets will be created (optional).",
                         )
                         .addChannelTypes(ChannelType.GuildCategory)
+                        .setRequired(false),
+                )
+                .addChannelOption((option) =>
+                    option
+                        .setName("closed_category")
+                        .setDescription(
+                            "The category where closed tickets will be moved (optional).",
+                        )
+                        .addChannelTypes(ChannelType.GuildCategory)
+                        .setRequired(false),
+                )
+                .addRoleOption((option) =>
+                    option
+                        .setName("staff_role")
+                        .setDescription(
+                            "The role that can access tickets (optional).",
+                        )
                         .setRequired(false),
                 )
                 .addIntegerOption((option) =>
@@ -109,9 +123,7 @@ export default {
     category: "ticket",
 
     async execute(interaction, config, client) {
-    // safeExecute already defers; don't defer again
 
-        // --- Permission Check ---
         if (
             !interaction.member.permissions.has(
                 PermissionFlagsBits.ManageChannels,
@@ -130,7 +142,6 @@ export default {
         const subcommandGroup = interaction.options.getSubcommandGroup();
 
         if (subcommandGroup === "limits") {
-            // Handle limits subcommands (view removed; others remain)
             switch (subcommand) {
                 case "set":
                     return ticketLimitsSet.execute(interaction, config, client);
@@ -151,70 +162,85 @@ export default {
         }
 
         if (subcommand === "setup") {
-            // Retrieve options
             const panelChannel =
                 interaction.options.getChannel("panel_channel");
             const categoryChannel = interaction.options.getChannel("category");
-            const panelMessage = interaction.options.getString("panel_message") || "Click the button below to create a support ticket."; // <-- New
+            const closedCategoryChannel = interaction.options.getChannel("closed_category");
+            const staffRole = interaction.options.getRole("staff_role");
+const panelMessage = interaction.options.getString("panel_message") || "Click the button below to create a support ticket.";
             const buttonLabel =
                 interaction.options.getString("button_label") ||
-                "Create Ticket"; // <-- New
+"Create Ticket";
             const maxTicketsPerUser = interaction.options.getInteger("max_tickets_per_user") || 3;
-            const dmOnClose = interaction.options.getBoolean("dm_on_close") !== false; // Default to true
+const dmOnClose = interaction.options.getBoolean("dm_on_close") !== false;
 
             const setupEmbed = createEmbed({ 
                 title: "🎫 Support Tickets", 
-                description: panelMessage, // Removed the max tickets text from here
+description: panelMessage,
                 color: "#3498DB"
             });
 
             const ticketButton = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId("create_ticket")
-                    .setLabel(buttonLabel) // Use the user-provided label
+.setLabel(buttonLabel)
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji("📩"),
             );
 
             try {
-                // Send the panel to the specified channel
                 await panelChannel.send({
                     embeds: [setupEmbed],
                     components: [ticketButton],
                 });
 
-                // --- Configuration Saving ---
-                if (categoryChannel && client.db && interaction.guildId) {
+                if (client.db && interaction.guildId) {
                     const currentConfig = await getGuildConfig(
                         client,
                         interaction.guildId,
                     );
-                    // Save the ID of the category channel
-                    currentConfig.ticketCategoryId = categoryChannel.id;
+                    currentConfig.ticketCategoryId = categoryChannel ? categoryChannel.id : null;
+                    currentConfig.ticketClosedCategoryId = closedCategoryChannel ? closedCategoryChannel.id : null;
+                    currentConfig.ticketStaffRoleId = staffRole ? staffRole.id : null;
                     currentConfig.ticketPanelChannelId = panelChannel.id;
                     currentConfig.maxTicketsPerUser = maxTicketsPerUser;
                     currentConfig.dmOnClose = dmOnClose;
 
-                    // Save the updated configuration to the database using the proper guild config key
                     const { getGuildConfigKey } = await import('../../utils/database.js');
                     const configKey = getGuildConfigKey(interaction.guildId);
                     await client.db.set(configKey, currentConfig);
                     console.log(
-                        `[DB] Saved ticketCategoryId, ticketPanelChannelId, maxTicketsPerUser, and dmOnClose for guild ${interaction.guildId}`,
+                        `[DB] Saved ticketCategoryId, ticketClosedCategoryId, ticketStaffRoleId, ticketPanelChannelId, maxTicketsPerUser, and dmOnClose for guild ${interaction.guildId}`,
                     );
                 }
 
-                // --- Success Reply ---
+                let successMessage = `The ticket creation panel has been sent to ${panelChannel}. `;
+                
+                if (categoryChannel) {
+                    successMessage += `New tickets will be created in the **${categoryChannel.name}** category. `;
+                } else {
+                    successMessage += 'New tickets will be created in a new "Tickets" category. ';
+                }
+                
+                if (closedCategoryChannel) {
+                    successMessage += `Closed tickets will be moved to **${closedCategoryChannel.name}**. `;
+                }
+                
+                if (staffRole) {
+                    successMessage += `**${staffRole.name}** role will have access to tickets. `;
+                }
+                
+                successMessage += `\n\n**Max Tickets Per User:** ${maxTicketsPerUser}\n**DM on Close:** ${dmOnClose ? 'Enabled' : 'Disabled'}`;
+
                 await interaction.editReply({
                     embeds: [
                         successEmbed(
                             "Ticket Panel Set Up",
-                            `The ticket creation panel has been sent to ${panelChannel}. ${categoryChannel ? `New tickets will be created in the **${categoryChannel.name}** category.` : 'New tickets will be created in a new "Tickets" category.'}\n\n**Max Tickets Per User:** ${maxTicketsPerUser}\n**DM on Close:** ${dmOnClose ? 'Enabled' : 'Disabled'}`,
+                            successMessage,
                         ),
                     ],
                 });
 
-                // --- Logging ---
                 const logEmbed = createEmbed({
                     title: "🔧 Ticket System Setup (Configuration Log)",
                     description: `The ticket panel was set up in ${panelChannel} by ${interaction.user}.`,
@@ -227,9 +253,23 @@ export default {
                             inline: true,
                         },
                         {
-                            name: "Category ID Stored",
+                            name: "Ticket Category",
                             value: categoryChannel
-                                ? categoryChannel.id
+                                ? categoryChannel.toString()
+                                : "None specified.",
+                            inline: true,
+                        },
+                        {
+                            name: "Closed Category",
+                            value: closedCategoryChannel
+                                ? closedCategoryChannel.toString()
+                                : "None specified.",
+                            inline: true,
+                        },
+                        {
+                            name: "Staff Role",
+                            value: staffRole
+                                ? staffRole.toString()
                                 : "None specified.",
                             inline: true,
                         },

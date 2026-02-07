@@ -15,7 +15,6 @@ const createTicketHandler = {
       const categoryId = config.ticketCategoryId || null;
       const maxTicketsPerUser = config.maxTicketsPerUser || 3;
       
-      // Check user's current ticket count
       const { getUserTicketCount } = await import('../services/ticket.js');
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
       const remainingTickets = maxTicketsPerUser - currentTicketCount;
@@ -32,7 +31,6 @@ const createTicketHandler = {
         });
       }
       
-      // Create a modal for ticket reason
       const modal = new ModalBuilder()
         .setCustomId('create_ticket_modal')
         .setTitle('Create a Ticket');
@@ -122,7 +120,6 @@ const closeTicketHandler = {
           ephemeral: true
         });
         
-        // Log the event
         await logEvent({
           client,
           guildId: interaction.guildId,
@@ -164,7 +161,6 @@ const claimTicketHandler = {
           ephemeral: true
         });
         
-        // Log the event
         await logEvent({
           client,
           guildId: interaction.guildId,
@@ -228,7 +224,6 @@ const transcriptTicketHandler = {
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
       if (!deferSuccess) return;
       
-      // Get all messages in the channel, excluding system messages
       const messages = await interaction.channel.messages.fetch({ limit: 100 });
       if (process.env.NODE_ENV !== 'production') {
         logger.debug('Total messages fetched:', messages?.size || 0);
@@ -242,12 +237,11 @@ const transcriptTicketHandler = {
         return;
       }
       
-      // Convert Collection to Array and filter properly
       const messagesArray = Array.from(messages.values());
       const userMessages = messagesArray.filter(m => {
         const hasAuthor = m.author && typeof m.author === 'object';
         const hasTag = hasAuthor && m.author.tag;
-        const isUserMessage = m.type === 0; // Default message type
+const isUserMessage = m.type === 0;
         
         if (!hasAuthor) {
           if (process.env.NODE_ENV !== 'production') {
@@ -275,7 +269,6 @@ const transcriptTicketHandler = {
         return;
       }
       
-      // Create HTML transcript content
       let htmlTranscript = `<!DOCTYPE html>
 <html>
 <head>
@@ -315,7 +308,6 @@ const transcriptTicketHandler = {
         <div class="author">${author}</div>
         <div class="content">${content.replace(/\n/g, '<br>')}</div>`;
         
-        // Add attachment info if any
         if (message.attachments && message.attachments.size > 0) {
           htmlTranscript += `
         <div class="attachments">
@@ -331,7 +323,6 @@ const transcriptTicketHandler = {
 </body>
 </html>`;
       
-      // Create embed with transcript details (no HTML content in fields)
       const transcriptEmbed = createEmbed({
         title: `📜 Ticket Transcript - ${interaction.channel.name}`,
         description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** 📅 <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}\n\n📎 The complete HTML transcript has been attached as a file.`,
@@ -339,12 +330,10 @@ const transcriptTicketHandler = {
         footer: { text: `Ticket ID: ${interaction.channel.id}` }
       });
       
-      // Send both HTML file and embed
       const { Buffer } = await import('buffer');
       const buffer = Buffer.from(htmlTranscript, 'utf-8');
       
       try {
-        // Send DM with both embed and HTML file
         await interaction.user.send({
           content: `📜 **Ticket Transcript** for \`${interaction.channel.name}\``,
           embeds: [transcriptEmbed],
@@ -358,12 +347,11 @@ const transcriptTicketHandler = {
           embeds: [{
             title: '✅ Transcript Sent',
             description: 'The ticket transcript has been sent to your DMs as both an embed and an HTML file.',
-            color: 4689679 // 0x2ecc71 in decimal
+color: 4689679
           }],
           ephemeral: true
         });
         
-        // Log transcript creation
         await logTicketEvent({
           client: interaction.client,
           guildId: interaction.guildId,
@@ -417,7 +405,6 @@ const unclaimTicketHandler = {
           ephemeral: true
         });
         
-        // Log the event
         await logEvent({
           client,
           guildId: interaction.guildId,
@@ -459,7 +446,6 @@ const reopenTicketHandler = {
           ephemeral: true
         });
         
-        // Log the event
         await logEvent({
           client,
           guildId: interaction.guildId,
@@ -501,7 +487,6 @@ const deleteTicketHandler = {
           ephemeral: true
         });
         
-        // Log the event
         await logEvent({
           client,
           guildId: interaction.guildId,

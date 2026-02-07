@@ -20,7 +20,6 @@ import { getFromDb, setInDb } from './database.js';
  */
 export async function logEvent({ client, guild, guildId, event }) {
   try {
-    // Allow caller to provide either guild or guildId
     if (!guild && guildId) {
       guild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId).catch(() => null);
     }
@@ -28,7 +27,6 @@ export async function logEvent({ client, guild, guildId, event }) {
       logger.warn('logEvent invoked without valid guild or guildId');
       return;
     }
-    // Get the guild configuration
     const config = await getGuildConfig(client, guild.id);
     if (!config?.logChannelId || !config?.enableLogging) {
       logger.debug(`Logging disabled or no log channel configured for guild ${guild.id}`);
@@ -41,7 +39,6 @@ export async function logEvent({ client, guild, guildId, event }) {
       return;
     }
 
-    // Define action colors and icons
     const actionStyles = {
       'Member Banned': { color: '#721919', icon: '🔨' },
       'Member Kicked': { color: '#FFA500', icon: '👢' },
@@ -60,7 +57,6 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     const style = actionStyles[event.action] || { color: '#0099ff', icon: '🔨' };
 
-    // Create comprehensive embed
     const embed = new EmbedBuilder()
       .setColor(event.color || style.color)
       .setTitle(`${style.icon} ${event.action}`)
@@ -74,7 +70,6 @@ export async function logEvent({ client, guild, guildId, event }) {
         iconURL: guild.iconURL()
       });
 
-    // Add reason if provided
     if (event.reason) {
       embed.addFields({
         name: "Reason",
@@ -83,7 +78,6 @@ export async function logEvent({ client, guild, guildId, event }) {
       });
     }
 
-    // Add duration if provided
     if (event.duration) {
       embed.addFields({
         name: "Duration",
@@ -92,7 +86,6 @@ export async function logEvent({ client, guild, guildId, event }) {
       });
     }
 
-    // Add metadata if provided
     if (event.metadata) {
       Object.entries(event.metadata).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -105,7 +98,6 @@ export async function logEvent({ client, guild, guildId, event }) {
       });
     }
 
-    // Add case ID if available
     if (event.caseId) {
       embed.addFields({
         name: "Case ID",
@@ -114,10 +106,8 @@ export async function logEvent({ client, guild, guildId, event }) {
       });
     }
 
-    // Send the log message
     await logChannel.send({ embeds: [embed] });
     
-    // Log to system logger for audit trail
     logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id}`);
     
   } catch (error) {
@@ -140,7 +130,7 @@ export async function generateCaseId(client, guildId) {
     return nextCase;
   } catch (error) {
     logger.error("Error generating case ID:", error);
-    return Date.now(); // Fallback to timestamp
+return Date.now();
   }
 }
 
@@ -161,15 +151,12 @@ export async function storeModerationCase({ guildId, caseId, caseData }) {
       caseId
     };
     
-    // Store individual case
     await setInDb(caseKey, caseDataWithTimestamp);
     
-    // Update case list for this guild
     const caseListKey = `moderation_cases_list_${guildId}`;
     const caseList = await getFromDb(caseListKey, []);
     caseList.push(caseDataWithTimestamp);
     
-    // Keep only last 1000 cases in the list to prevent memory issues
     if (caseList.length > 1000) {
       caseList.splice(0, caseList.length - 1000);
     }
@@ -192,11 +179,8 @@ export async function getModerationCases(guildId, filters = {}) {
   try {
     const { userId, moderatorId, action, limit = 50, offset = 0 } = filters;
     
-    // Get all case keys for this guild
     const allCases = [];
     
-    // For now, we'll implement a simple version. In a production environment,
-    // you might want to use a more efficient database query system
     const caseListKey = `moderation_cases_list_${guildId}`;
     const caseList = await getFromDb(caseListKey, []);
     
@@ -214,7 +198,6 @@ export async function getModerationCases(guildId, filters = {}) {
       filteredCases = filteredCases.filter(case_ => case_.action === action);
     }
     
-    // Sort by creation date (newest first)
     filteredCases.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     return filteredCases.slice(offset, offset + limit);
@@ -232,7 +215,6 @@ export async function getModerationCases(guildId, filters = {}) {
 export async function logModerationAction({ client, guild, event }) {
   const caseId = await generateCaseId(client, guild.id);
   
-  // Store case in database
   await storeModerationCase({
     guildId: guild.id,
     caseId,
@@ -248,7 +230,6 @@ export async function logModerationAction({ client, guild, event }) {
     }
   });
   
-  // Log to channel
   await logEvent({
     client,
     guild,

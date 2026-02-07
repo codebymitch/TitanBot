@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-// Migrated from: commands/Tools/time.js
 export default {
     data: new SlashCommandBuilder()
         .setName('time')
@@ -15,7 +14,6 @@ export default {
         try {
                     const timezone = interaction.options.getString('timezone') || 'UTC';
                     
-                    // Validate timezone
                     let timeString;
                     try {
                         timeString = new Date().toLocaleString('en-US', {

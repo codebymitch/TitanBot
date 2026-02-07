@@ -4,7 +4,6 @@ import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 
-// Migrated from: commands/Moderation/kick.js
 export default {
     data: new SlashCommandBuilder()
     .setName("kick")
@@ -18,11 +17,10 @@ export default {
     .addStringOption((option) =>
       option.setName("reason").setDescription("Reason for the kick"),
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers), // Requires Kick Members permission
+.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
   category: "moderation",
 
   async execute(interaction, config, client) {
-    // Permission check (redundant, but safe)
     if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers))
       return await interaction.editReply({
         embeds: [
@@ -34,12 +32,10 @@ export default {
       });
 
     const targetUser = interaction.options.getUser("target");
-    // Get the GuildMember object (required for kicking and hierarchy checks)
     const member = interaction.options.getMember("target");
     const reason =
       interaction.options.getString("reason") || "No reason provided";
 
-    // Prevent self/bot kicking
     if (targetUser.id === interaction.user.id) {
       return await interaction.editReply({
         embeds: [errorEmbed("You cannot kick yourself.")],
@@ -63,7 +59,6 @@ export default {
     }
 
     try {
-      // 1. Moderator Hierarchy Check: Can the moderator kick the target?
         if (
         interaction.member.roles.highest.position <=
         member.roles.highest.position
@@ -78,8 +73,6 @@ export default {
         });
       }
 
-      // 2. Bot Hierarchy Check: Can the bot kick the target?
-      // member.kickable checks if the bot has the permission AND hierarchy
       if (!member.kickable) {
         return await interaction.editReply({
           embeds: [
@@ -93,7 +86,6 @@ export default {
 
       await member.kick(reason);
 
-      // Log the moderation action with enhanced system
       const caseId = await logModerationAction({
         client,
         guild: interaction.guild,

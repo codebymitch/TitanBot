@@ -15,7 +15,6 @@ try {
 
             const embed = createEmbed("🎂 Server Birthdays", `Found ${Object.keys(birthdays).length} birthdays in ${interaction.guild.name}`);
 
-            // Sort birthdays by month and day
             const sortedBirthdays = Object.entries(birthdays)
                 .map(([userId, data]) => ({
                     userId,

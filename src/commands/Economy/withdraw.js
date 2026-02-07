@@ -2,6 +2,8 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { MessageTemplates } from '../../utils/messageTemplates.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -16,23 +18,33 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-const userId = interaction.user.id;
-        const guildId = interaction.guildId;
-        const amountInput = interaction.options.getInteger("amount");
+        return withErrorHandling(async () => {
+            await interaction.deferReply();
+            
+            const userId = interaction.user.id;
+            const guildId = interaction.guildId;
+            const amountInput = interaction.options.getInteger("amount");
 
-        try {
             const userData = await getEconomyData(client, guildId, userId);
+            
+            if (!userData) {
+                throw createError(
+                    "Failed to load economy data",
+                    ErrorTypes.DATABASE,
+                    "Failed to load your economy data. Please try again later.",
+                    { userId, guildId }
+                );
+            }
+
             let withdrawAmount = amountInput;
 
             if (withdrawAmount <= 0) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            "Invalid Amount",
-                            "You must withdraw a positive amount.",
-                        ),
-                    ],
-                });
+                throw createError(
+                    "Invalid withdrawal amount",
+                    ErrorTypes.VALIDATION,
+                    "You must withdraw a positive amount.",
+                    { amount: withdrawAmount, userId }
+                );
             }
 
             if (withdrawAmount > userData.bank) {
@@ -40,50 +52,37 @@ const userId = interaction.user.id;
             }
 
             if (withdrawAmount === 0) {
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Withdrawal Failed",
-                            "Your bank account is empty.",
-                        ),
-                    ],
-                });
+                throw createError(
+                    "Empty bank account",
+                    ErrorTypes.VALIDATION,
+                    "Your bank account is empty.",
+                    { userId, bankBalance: userData.bank }
+                );
             }
 
-            // Perform transaction
             userData.wallet += withdrawAmount;
             userData.bank -= withdrawAmount;
 
             await setEconomyData(client, guildId, userId, userData);
 
-            const embed = successEmbed(
-                "💰 Withdrawal Successful",
-                `You successfully withdrew **$${withdrawAmount.toLocaleString()}** from your bank.`,
-            ).addFields(
-                {
-                    name: "💵 New Cash Balance",
-                    value: `$${userData.wallet.toLocaleString()}`,
-                    inline: true,
-                },
-                {
-                    name: "🏦 New Bank Balance",
-                    value: `$${userData.bank.toLocaleString()}`,
-                    inline: true,
-                },
-            );
+            const embed = MessageTemplates.SUCCESS.DATA_UPDATED(
+                "withdrawal",
+                `You successfully withdrew **$${withdrawAmount.toLocaleString()}** from your bank.`
+            )
+                .addFields(
+                    {
+                        name: "💵 New Cash Balance",
+                        value: `$${userData.wallet.toLocaleString()}`,
+                        inline: true,
+                    },
+                    {
+                        name: "🏦 New Bank Balance",
+                        value: `$${userData.bank.toLocaleString()}`,
+                        inline: true,
+                    },
+                );
 
             await interaction.editReply({ embeds: [embed] });
-        } catch (error) {
-            console.error("Withdraw command error:", error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "Could not process your withdrawal.",
-                    ),
-                ],
-            });
-        }
+        }, { command: 'withdraw' });
     },
 };
-

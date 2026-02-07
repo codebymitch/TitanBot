@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Core/uptime.js
 export default {
     data: new SlashCommandBuilder()
     .setName("uptime")

@@ -2,7 +2,6 @@ import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } fro
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Tools/randomuser.js
 export default {
     data: new SlashCommandBuilder()
         .setName('randomuser')
@@ -26,7 +25,6 @@ export default {
 
     async execute(interaction) {
 try {
-            // Check if the command is used in a server
             if (!interaction.guild) {
                 return interaction.reply({
                     embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
@@ -34,35 +32,27 @@ try {
                 });
             }
             
-            // Get options
             const role = interaction.options.getRole('role');
             const includeBots = interaction.options.getBoolean('bots') || false;
             const onlineOnly = interaction.options.getBoolean('online') || false;
             const shouldMention = interaction.options.getBoolean('mention') || false;
             
-            // Use existing cache instead of fetching all members to avoid rate limiting
             let members = interaction.guild.members.cache.filter(member => {
-                // Skip bots unless explicitly included
                 if (member.user.bot && !includeBots) return false;
                 
-                // Skip offline users if onlineOnly is true
                 if (onlineOnly && member.presence?.status === 'offline') return false;
                 
-                // Check role if specified
                 if (role && !member.roles.cache.has(role.id)) return false;
                 
                 return true;
             });
             
-            // Convert to array and filter out the bot itself if needed
             let memberArray = Array.from(members.values());
             
-            // Remove the bot itself from the selection if includeBots is false
             if (!includeBots) {
                 memberArray = memberArray.filter(member => !member.user.bot);
             }
             
-            // Check if we have any members to choose from
             if (memberArray.length === 0) {
                 let errorMessage = 'No users found matching the criteria.';
                 if (role) errorMessage += ` No users have the ${role.name} role.`;
@@ -74,20 +64,17 @@ try {
                 });
             }
             
-            // Select a random member
             const randomIndex = Math.floor(Math.random() * memberArray.length);
             const selectedMember = memberArray[randomIndex];
             
-            // Get user information
             const user = selectedMember.user;
             const joinDate = selectedMember.joinedAt;
             const roles = selectedMember.roles.cache
-                .filter(role => role.id !== interaction.guild.id) // Remove @everyone role
+.filter(role => role.id !== interaction.guild.id)
                 .sort((a, b) => b.position - a.position)
                 .map(role => role.toString())
-                .slice(0, 10); // Limit to 10 roles to avoid embed field limits
+.slice(0, 10);
             
-            // Create the embed with limited information for privacy
             const embed = successEmbed(
                 '🎲 Random User Selected',
                 shouldMention ? `${selectedMember}` : `**${user.username}**`
@@ -100,7 +87,6 @@ try {
             )
             .setColor(selectedMember.displayHexColor || '#3498db');
             
-            // Add a button to pick another user
             const row = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
@@ -109,7 +95,6 @@ try {
                         .setStyle(ButtonStyle.Primary)
                 );
             
-            // Send the response
             const response = await interaction.editReply({
                 content: shouldMention ? `${selectedMember}, you've been chosen!` : null,
                 embeds: [embed],
@@ -117,21 +102,16 @@ try {
                 allowedMentions: { users: shouldMention ? [user.id] : [] }
             });
             
-            // Set up a collector for the button
             const filter = (i) => i.customId === `randomuser_${interaction.user.id}_again` && i.user.id === interaction.user.id;
-            const collector = response.createMessageComponentCollector({ filter, time: 300000 }); // 5 minutes
+const collector = response.createMessageComponentCollector({ filter, time: 300000 });
             
             collector.on('collect', async (i) => {
                 try {
-                    // Select a new random user
                     let newMembers = interaction.guild.members.cache.filter(member => {
-                        // Skip bots unless explicitly included
                         if (member.user.bot && !includeBots) return false;
                         
-                        // Skip offline users if onlineOnly is true
                         if (onlineOnly && member.presence?.status === 'offline') return false;
                         
-                        // Check role if specified
                         if (role && !member.roles.cache.has(role.id)) return false;
                         
                         return true;
@@ -139,7 +119,6 @@ try {
                     
                     let newMemberArray = Array.from(newMembers.values());
                     
-                    // Remove the bot itself from the selection if includeBots is false
                     if (!includeBots) {
                         newMemberArray = newMemberArray.filter(member => !member.user.bot);
                     }
@@ -152,19 +131,16 @@ try {
                         return;
                     }
                     
-                    // Select a new random member
                     const newRandomIndex = Math.floor(Math.random() * newMemberArray.length);
                     const newSelectedMember = newMemberArray[newRandomIndex];
                     const newUser = newSelectedMember.user;
                     
-                    // Get new roles
                     const newRoles = newSelectedMember.roles.cache
                         .filter(r => r.id !== interaction.guild.id)
                         .sort((a, b) => b.position - a.position)
                         .map(r => r.toString())
                         .slice(0, 10);
                     
-                    // Create new embed
                     const newEmbed = successEmbed(
                         '🎲 Random User Selected',
                         shouldMention ? `${newSelectedMember}` : `**${newUser.username}**`
@@ -177,7 +153,6 @@ try {
                     )
                     .setColor(newSelectedMember.displayHexColor || '#3498db');
                     
-                    // Update the message
                     await i.update({
                         content: shouldMention ? `${newSelectedMember}, you've been chosen!` : null,
                         embeds: [newEmbed],
@@ -195,7 +170,6 @@ try {
             });
             
             collector.on('end', () => {
-                // Disable the button when the collector ends
                 const disabledRow = ActionRowBuilder.from(row).setComponents(
                     ButtonBuilder.from(row.components[0]).setDisabled(true)
                 );

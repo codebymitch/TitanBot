@@ -9,7 +9,6 @@ import { logger } from '../utils/logger.js';
  */
 export async function updateCounter(client, guild, counter) {
   try {
-    // Skip invalid counters
     if (!counter || !counter.type || !counter.channelId) {
       logger.warn('Skipping invalid counter in updateCounter:', counter);
       return false;
@@ -47,19 +46,16 @@ export async function updateCounter(client, guild, counter) {
         return false;
     }
 
-    // Get the base name without any existing count
     const baseName = channel.name.replace(/\s*[:]\s*\d+$/, '').trim();
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`Base name: "${baseName}", Current name: "${channel.name}"`);
     }
     
-    // Create new name with count
     const newName = `${baseName}: ${count}`;
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`New name would be: "${newName}"`);
     }
     
-    // Only update if the name would change
     if (channel.name !== newName) {
       try {
         await channel.setName(newName);
@@ -90,7 +86,6 @@ export async function updateCounter(client, guild, counter) {
  */
 export async function getServerCounters(client, guildId) {
   try {
-    // Check if database is available
     if (!client || !client.db) {
       logger.warn('Database not available for getServerCounters');
       return [];
@@ -98,16 +93,13 @@ export async function getServerCounters(client, guildId) {
     
     const data = await client.db.get(`counters:${guildId}`);
     
-    // Handle various data formats and filter out invalid entries
     let counters = [];
     
-    // Check if data has the Replit database response format { ok: true, value: [...] }
     if (data && typeof data === 'object' && data.ok && Array.isArray(data.value)) {
       counters = data.value;
     } else if (Array.isArray(data)) {
       counters = data;
     } else if (data && typeof data === 'object' && !data.ok) {
-      // Handle case where data is the actual counters object
       counters = Object.values(data);
     } else {
       if (process.env.NODE_ENV !== 'production') {
@@ -117,7 +109,6 @@ export async function getServerCounters(client, guildId) {
     }
     
     
-    // Filter out invalid entries
     const validCounters = counters.filter(counter => 
       counter && 
       typeof counter === 'object' &&
@@ -142,6 +133,11 @@ export async function getServerCounters(client, guildId) {
  */
 export async function saveServerCounters(client, guildId, counters) {
   try {
+    if (!client || !client.db) {
+      logger.warn('Database not available for saveServerCounters');
+      return false;
+    }
+    
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`Saving ${counters.length} counters for guild ${guildId}:`, counters);
     }

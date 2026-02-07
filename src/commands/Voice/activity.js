@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Activity IDs for different Discord Activities
 const ACTIVITIES = {
     'youtube': '880218394199220334',
     'poker': '755827207812677713',
@@ -18,7 +17,6 @@ const ACTIVITIES = {
     'knowwhat': '976052223358406656'
 };
 
-// Activity names for display
 const ACTIVITY_NAMES = {
     'youtube': 'YouTube Together',
     'poker': 'Poker Night',
@@ -41,84 +39,72 @@ export default {
         .setDMPermission(false)
         .setDefaultMemberPermissions(PermissionFlagsBits.Connect)
         
-        // YouTube Together
         .addSubcommand(subcommand =>
             subcommand
                 .setName('youtube')
                 .setDescription('Watch YouTube videos together in a voice channel')
         )
         
-        // Poker Night
         .addSubcommand(subcommand =>
             subcommand
                 .setName('poker')
                 .setDescription('Play Poker Night with friends')
         )
         
-        // Chess in the Park
         .addSubcommand(subcommand =>
             subcommand
                 .setName('chess')
                 .setDescription('Play Chess in the Park')
         )
         
-        // Checkers in the Park
         .addSubcommand(subcommand =>
             subcommand
                 .setName('checkers')
                 .setDescription('Play Checkers in the Park')
         )
         
-        // Letter League
         .addSubcommand(subcommand =>
             subcommand
                 .setName('letter-league')
                 .setDescription('Play the word-based game Letter League')
         )
         
-        // SpellCast
         .addSubcommand(subcommand =>
             subcommand
                 .setName('spellcast')
                 .setDescription('Play the magical word game SpellCast')
         )
         
-        // Sketch Heads
         .addSubcommand(subcommand =>
             subcommand
                 .setName('sketch')
                 .setDescription('Play Sketch Heads (Pictionary style)')
         )
         
-        // Blazing 8s
         .addSubcommand(subcommand =>
             subcommand
                 .setName('blazing8s')
                 .setDescription('Play the card game Blazing 8s')
         )
         
-        // Putt Party
         .addSubcommand(subcommand =>
             subcommand
                 .setName('puttparty')
                 .setDescription('Play Putt Party (Mini-golf)')
         )
         
-        // Land-io
         .addSubcommand(subcommand =>
             subcommand
                 .setName('landio')
                 .setDescription('Play the territory game Land-io')
         )
         
-        // Bobble League
         .addSubcommand(subcommand =>
             subcommand
                 .setName('bobble')
                 .setDescription('Play Bobble League')
         )
         
-        // Know What I Mean
         .addSubcommand(subcommand =>
             subcommand
                 .setName('knowwhat')
@@ -133,14 +119,12 @@ export default {
         const activityId = ACTIVITIES[activity];
         const activityName = ACTIVITY_NAMES[activity] || activity;
 
-        // Check if user is in a voice channel
         if (!member.voice.channel) {
             return await interaction.editReply({
                 embeds: [errorEmbed('You need to be in a voice channel to start an activity!')]
             });
         }
 
-        // Check if the bot has permission to create invites
         const permissions = member.voice.channel.permissionsFor(interaction.guild.members.me);
         if (!permissions.has('CreateInstantInvite')) {
             return await interaction.editReply({
@@ -149,19 +133,17 @@ export default {
         }
 
         try {
-            // Create the activity invite link
             const invite = await interaction.client.rest.post(
                 `/channels/${member.voice.channel.id}/invites`,
                 {
                     body: {
-                        max_age: 86400, // 24 hours
-                        target_type: 2, // Activity invite
+max_age: 86400,
+target_type: 2,
                         target_application_id: activityId,
                     },
                 }
             );
 
-            // Send the invite link
             await interaction.editReply({
                 embeds: [successEmbed(
                     `Click the link below to start **${activityName}** in ${member.voice.channel.name}!\n` +

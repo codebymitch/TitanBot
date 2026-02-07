@@ -12,7 +12,6 @@ import { logger } from '../utils/logger.js';
 
 export default async function loadTicketButtons(client) {
   try {
-    // Load ticket button handlers
     client.buttons.set('create_ticket', createTicketHandler);
     client.buttons.set('ticket_close', closeTicketHandler);
     client.buttons.set('ticket_claim', claimTicketHandler);
@@ -22,7 +21,6 @@ export default async function loadTicketButtons(client) {
     client.buttons.set('ticket_reopen', reopenTicketHandler);
     client.buttons.set('ticket_delete', deleteTicketHandler);
     
-    // Load modal handlers
     client.modals.set('create_ticket_modal', createTicketModalHandler);
     
     logger.info('Ticket button handlers loaded');

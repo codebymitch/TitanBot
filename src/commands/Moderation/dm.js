@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 
-// Migrated from: commands/Moderation/dm.js
 export default {
     data: new SlashCommandBuilder()
         .setName("dm")
@@ -36,7 +35,6 @@ export default {
         const anonymous = interaction.options.getBoolean("anonymous") || false;
 
         try {
-            // Try to send the DM
             const dmChannel = await targetUser.createDM();
             
             await dmChannel.send({
@@ -50,7 +48,6 @@ export default {
                 ]
             });
 
-            // Log the action using the proper logging system
             await logEvent({
                 client: interaction.client,
                 guild: interaction.guild,
@@ -79,7 +76,7 @@ export default {
         } catch (error) {
             console.error("Error in dm command:", error);
             
-            if (error.code === 50007) { // Cannot send messages to this user
+if (error.code === 50007) {
                 return await interaction.editReply({
                     embeds: [
                         errorEmbed("Error", `Could not send a DM to ${targetUser.tag}. They may have DMs disabled.`),

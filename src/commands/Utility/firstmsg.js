@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-// Migrated from: commands/Utility/firstmsg.js
 export default {
     data: new SlashCommandBuilder()
         .setName("firstmsg")
@@ -15,7 +14,6 @@ export default {
     async execute(interaction, config, client) {
         const commandBody = async () => {
             try {
-                // Fetch the first message in the channel
                 const messages = await interaction.channel.messages.fetch({
                     limit: 1,
                     after: '1',
@@ -49,7 +47,6 @@ export default {
             }
         };
 
-        // If the interaction is already deferred or replied, avoid deferring again
         if (interaction.deferred || interaction.replied) {
             try {
                 await commandBody();
@@ -62,7 +59,6 @@ export default {
             return;
         }
 
-        // Otherwise use the safeExecute helper which will defer the reply
         await InteractionHelper.safeExecute(
             interaction,
             commandBody,

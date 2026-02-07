@@ -7,7 +7,7 @@ TitanBot is distributed as open-source software for self-hosting. We (the mainta
 
 ## Reporting a Vulnerability (preferred)
 - Preferred channel: Open a private GitHub Security Advisory for this repository (recommended).
-- If you cannot use GitHub Advisories, open a ticket: https://discord.gg/8kJBYhTGW9.
+- If you cannot use GitHub Advisories, open a ticket: https:
 - Do NOT open a public issue with exploit details.
 
 If you found a problem in your self-hosted instance that appears to be due to misconfiguration, please contact the instance operator/host first. If you believe the issue is caused by a vulnerability in TitanBot code, follow the reporting steps above and indicate whether the report comes from a self-hosted deployment.
@@ -71,6 +71,6 @@ If you operate a self-hosted TitanBot instance and suffer a security incident:
 
 ## Contact
 - Preferred: GitHub Security Advisory for this repository
-- Ticket: https://discord.gg/8kJBYhTGW9
+- Ticket: https:
 
 Thank you for helping keep TitanBot safe.

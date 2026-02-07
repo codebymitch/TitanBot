@@ -4,7 +4,6 @@ import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js
 
 export default {
     async execute(interaction, config, client) {
-// Permission check (redundant due to setDefaultMemberPermissions, but good practice)
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
             return interaction.reply({
                 embeds: [
@@ -22,7 +21,6 @@ export default {
         try {
             const currentConfig = await getGuildConfig(client, guildId);
 
-            // Save the new premium role ID
             currentConfig.premiumRoleId = role.id;
 
             await setGuildConfig(client, guildId, currentConfig);

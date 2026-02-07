@@ -40,7 +40,6 @@ const { options, guild, client } = interaction;
             const image = options.getString('image');
 
             try {
-                // Update the goodbye configuration (uses separate controls)
                 await updateWelcomeConfig(client, guild.id, {
                     goodbyeEnabled: true,
                     goodbyeChannelId: channel.id,
@@ -48,12 +47,11 @@ const { options, guild, client } = interaction;
                     leaveEmbed: {
                         title: "Goodbye {user.tag}",
                         description: message,
-                        color: 0xff0000, // Red color for goodbye
+color: 0xff0000,
                         ...(image && { image: { url: image } })
                     }
                 });
 
-                // Create a preview of the goodbye message
                 const previewMessage = message
                     .replace(/{user}/g, interaction.user.tag)
                     .replace(/{username}/g, interaction.user.username)
@@ -61,7 +59,7 @@ const { options, guild, client } = interaction;
                     .replace(/{memberCount}/g, guild.memberCount.toLocaleString());
 
                 const embed = new EmbedBuilder()
-                    .setColor(0x00ff00) // Green color for success
+.setColor(0x00ff00)
                     .setTitle('✅ Goodbye System Configured')
                     .setDescription(`Goodbye messages will now be sent to ${channel}`)
                     .addFields(

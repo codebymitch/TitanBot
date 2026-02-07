@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-// Open-Meteo APIs (Free and NO API Key Required for non-commercial use)
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
 
@@ -17,11 +16,9 @@ export default {
         ),
 
     async execute(interaction) {
-        // Defer early, unless it's already been acknowledged
 try {
             const city = interaction.options.getString("city");
 
-            // --- Step 1: Get Coordinates (Geocoding) ---
             const geoResponse = await fetch(
                 `${GEOCODING_URL}?name=${encodeURIComponent(city)}`,
             );
@@ -42,13 +39,11 @@ try {
             const { latitude, longitude, name, country } = geoData.results[0];
             const cityDisplay = name;
 
-            // --- Step 2: Get Weather Data ---
             const weatherResponse = await fetch(
                 `${WEATHER_URL}?latitude=${latitude}&longitude=${longitude}&current_weather=true`,
             );
             const weatherData = await weatherResponse.json();
 
-            // Check for API system errors
             if (weatherData.error) {
                 console.error("Open-Meteo API Error:", weatherData.reason);
                 await interaction.editReply({
@@ -62,17 +57,14 @@ try {
                 return;
             }
 
-            // Extract values (Open-Meteo uses current_weather)
             const current = weatherData.current || weatherData.current_weather || {};
             const temperature = current.temperature != null ? Math.round(current.temperature) : "N/A";
             const humidity = current.relativehumidity ?? current.relative_humidity_2m ?? "N/A";
             const windSpeed = current.windspeed != null ? Math.round(current.windspeed) : "N/A";
             const weatherCode = current.weathercode ?? current.weather_code ?? null;
 
-            // Convert WMO Weather Code to a description and emoji
             const condition = getWeatherDescription(weatherCode);
 
-            // --- Step 3: Create the Embed ---
             const embed = createEmbed({ title: `🌎 Weather in ${cityDisplay}, ${country}`, description: condition.description })
                 .addFields(
                     {

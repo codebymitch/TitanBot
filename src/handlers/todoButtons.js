@@ -7,7 +7,6 @@ const sharedTodoAddHandler = {
   async execute(interaction, client, args) {
     const listId = args[0];
     
-    // Create a modal for task input
     const modal = new ModalBuilder()
       .setCustomId(`shared_todo_add_modal:${listId}`)
       .setTitle('Add Task to Shared List');
@@ -31,7 +30,6 @@ const sharedTodoCompleteHandler = {
   async execute(interaction, client, args) {
     const listId = args[0];
     
-    // Create a modal for task ID input
     const modal = new ModalBuilder()
       .setCustomId(`shared_todo_complete_modal:${listId}`)
       .setTitle('Complete Task in Shared List');
@@ -68,7 +66,6 @@ const sharedTodoAddModalHandler = {
         });
       }
 
-      // Check if user is a member
       if (!listData.members || !listData.members.includes(userId)) {
         return interaction.reply({
           embeds: [errorEmbed("Error", "You don't have access to this list.")],
@@ -76,11 +73,9 @@ const sharedTodoAddModalHandler = {
         });
       }
 
-      // Ensure listData has the required structure
       if (!listData.tasks) listData.tasks = [];
       if (!listData.nextId) listData.nextId = 1;
 
-      // Add the task
       const newTask = {
         id: listData.nextId++,
         text: taskText,
@@ -125,7 +120,6 @@ const sharedTodoCompleteModalHandler = {
         });
       }
 
-      // Check if user is a member
       if (!listData.members || !listData.members.includes(userId)) {
         return interaction.reply({
           embeds: [errorEmbed("Error", "You don't have access to this list.")],
@@ -133,7 +127,6 @@ const sharedTodoCompleteModalHandler = {
         });
       }
 
-      // Ensure listData has the required structure
       if (!listData.tasks) listData.tasks = [];
 
       const task = listData.tasks.find(t => t.id === taskId);

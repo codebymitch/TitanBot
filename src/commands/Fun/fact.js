@@ -2,8 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Fun/fact.js
-// Simulated dataset of interesting facts
 const facts = [
   "A day on Venus is longer than a year on Venus.",
   "The shortest war in history was between Britain and Zanzibar on August 27, 1896. It lasted 38 to 45 minutes.",
@@ -20,7 +18,6 @@ export default {
 
   async execute(interaction) {
 try {
-      // Get a random fact from the array
       const randomFact = facts[Math.floor(Math.random() * facts.length)];
 
       const embed = successEmbed("🧠 Did You Know?", `💡 **${randomFact}**`);

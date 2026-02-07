@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
 import { errorEmbed } from '../../utils/embeds.js';
 
-// Import all config command functions
 import birthdayToggle from './modules/config_birthday_toggle.js';
 import loggingStatus from './modules/config_logging_status.js';
 import loggingSetchannel from './modules/config_logging_setchannel.js';
@@ -155,7 +154,6 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-// Check permissions before deferring
         if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
             return interaction.reply({
                 embeds: [
@@ -203,7 +201,6 @@ export default {
         } catch (error) {
             console.error("Config command error:", error);
             
-            // Handle based on interaction state
             const errorMessage = {
                 embeds: [
                     errorEmbed(

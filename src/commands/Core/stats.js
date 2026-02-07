@@ -2,7 +2,6 @@ import { SlashCommandBuilder, version } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Core/stats.js
 export default {
     data: new SlashCommandBuilder()
     .setName("stats")

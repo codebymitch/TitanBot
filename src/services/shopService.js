@@ -23,19 +23,15 @@ class ShopService {
         try {
             const { guildId } = options;
             
-            // Get the item from the shop
             const item = getItemById(itemId);
             if (!item) {
                 return { success: false, message: 'Item not found in the shop.' };
             }
 
-            // Get user's current balance
             const userBalance = await getUserBalance(userId, guildId);
             
-            // Calculate total cost
             const totalCost = getCurrentPrice(itemId, { quantity, userData: userBalance });
             
-            // Check if user can afford the item
             if (userBalance.balance < totalCost) {
                 const currency = this.getCurrencyInfo();
                 return { 
@@ -44,14 +40,11 @@ class ShopService {
                 };
             }
 
-            // Validate the purchase
             const validation = validatePurchase(itemId, userBalance);
             if (!validation.valid) {
                 return { success: false, message: validation.reason };
             }
 
-            // Process the purchase
-            // 1. Deduct the cost from the user's balance
             await updateUserBalance(userId, -totalCost, 'shop_purchase', {
                 itemId,
                 itemName: item.name,
@@ -59,11 +52,8 @@ class ShopService {
                 unitPrice: totalCost / quantity
             });
 
-            // 2. Add the item to the user's inventory
-            // This would be implemented based on your database structure
             await this.addToUserInventory(userId, itemId, quantity, guildId);
 
-            // 3. Log the transaction
             this.logger.info(`User ${userId} purchased ${quantity}x ${item.name} for ${totalCost} ${this.getCurrencyName()}`);
 
             return {
@@ -93,10 +83,7 @@ class ShopService {
      */
     async getUserInventory(userId, guildId) {
         try {
-            // This would be implemented based on your database structure
-            // Example:
-            // return await db.collection('inventory').find({ userId, guildId }).toArray();
-            return []; // Placeholder
+return [];
         } catch (error) {
             this.logger.error(`Error getting user inventory: ${error.message}`, { error, userId, guildId });
             return [];
@@ -109,13 +96,6 @@ class ShopService {
      */
     async addToUserInventory(userId, itemId, quantity = 1, guildId = null) {
         try {
-            // This would be implemented based on your database structure
-            // Example:
-            // await db.collection('inventory').updateOne(
-            //     { userId, itemId, guildId },
-            //     { $inc: { quantity } },
-            //     { upsert: true }
-            // );
         } catch (error) {
             this.logger.error(`Error adding item to inventory: ${error.message}`, { error, userId, itemId, quantity, guildId });
             throw error;
@@ -127,7 +107,7 @@ class ShopService {
      * @returns {string} The name of the currency
      */
     getCurrencyName() {
-        return 'coins'; // This could be configurable
+return 'coins';
     }
 
     /**
@@ -146,8 +126,6 @@ class ShopService {
             .setDescription('Browse and purchase items from the shop. Use the buttons to navigate.')
             .setFooter({ text: `Page ${page}` });
 
-        // Add items to the embed based on the selected category
-        // This would be implemented based on your shop structure
         
         return embed;
     }
@@ -157,7 +135,6 @@ class ShopService {
      * @returns {Array} The available shop categories
      */
     getCategories() {
-        // Add 'All' category first
         const categories = [
             { 
                 id: 'all', 
@@ -197,6 +174,5 @@ class ShopService {
     }
 }
 
-// Export a singleton instance
 const shopService = new ShopService();
 export default shopService;

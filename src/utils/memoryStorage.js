@@ -13,7 +13,6 @@ class MemoryStorage {
     async get(key, defaultValue = null) {
         const value = this.data.get(key);
         
-        // Check if key has expired
         if (this.expirationTimes.has(key)) {
             const expirationTime = this.expirationTimes.get(key);
             if (Date.now() > expirationTime) {
@@ -29,7 +28,6 @@ class MemoryStorage {
     async set(key, value, ttl = null) {
         this.data.set(key, value);
         
-        // Set expiration if TTL is provided
         if (ttl && ttl > 0) {
             this.expirationTimes.set(key, Date.now() + (ttl * 1000));
         }
@@ -47,7 +45,6 @@ class MemoryStorage {
         const keys = [];
         for (const [key] of this.data.keys()) {
             if (key.startsWith(prefix)) {
-                // Check if key has expired
                 if (this.expirationTimes.has(key)) {
                     const expirationTime = this.expirationTimes.get(key);
                     if (Date.now() > expirationTime) {
@@ -65,7 +62,6 @@ class MemoryStorage {
     async exists(key) {
         const value = this.data.get(key);
         
-        // Check if key has expired
         if (this.expirationTimes.has(key)) {
             const expirationTime = this.expirationTimes.get(key);
             if (Date.now() > expirationTime) {

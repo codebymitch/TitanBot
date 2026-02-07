@@ -3,13 +3,10 @@ import { logger } from '../utils/logger.js';
 
 export default async function loadTodoButtons(client) {
   try {
-    // Load the main shared_todo_add button
     client.buttons.set('shared_todo_add', todoAddHandler);
     
-    // Load the shared_todo_complete button
     client.buttons.set('shared_todo_complete', sharedTodoCompleteHandler);
     
-    // Load modal handlers
     client.modals.set('shared_todo_add_modal', sharedTodoAddModalHandler);
     client.modals.set('shared_todo_complete_modal', sharedTodoCompleteModalHandler);
     

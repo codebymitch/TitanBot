@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Fun/mock.js
 export default {
     data: new SlashCommandBuilder()
     .setName("mock")
@@ -19,14 +18,11 @@ try {
       const originalText = interaction.options.getString("text");
       let mockedText = "";
 
-      // Iterate through the string, alternating between lower and upper case
       for (let i = 0; i < originalText.length; i++) {
         const char = originalText[i];
         if (i % 2 === 0) {
-          // Even index -> lower case
           mockedText += char.toLowerCase();
         } else {
-          // Odd index -> upper case
           mockedText += char.toUpperCase();
         }
       }

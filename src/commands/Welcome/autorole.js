@@ -36,7 +36,6 @@ const { options, guild, client } = interaction;
         if (subcommand === 'add') {
             const role = options.getRole('role');
             
-            // Check if the bot can manage the role
             if (role.position >= guild.members.me.roles.highest.position) {
                 return interaction.reply({
                     content: "❌ I can't assign roles that are higher than my highest role.",
@@ -55,10 +54,8 @@ const { options, guild, client } = interaction;
                     });
                 }
 
-                // Add the role to auto-assign
                 autoRoles.add(role.id);
                 
-                // Update the configuration
                 await updateWelcomeConfig(client, guild.id, {
                     roleIds: Array.from(autoRoles)
                 });
@@ -89,10 +86,8 @@ const { options, guild, client } = interaction;
                     });
                 }
 
-                // Remove the role from auto-assign
                 autoRoles.delete(role.id);
                 
-                // Update the configuration
                 await updateWelcomeConfig(client, guild.id, {
                     roleIds: Array.from(autoRoles)
                 });
@@ -121,12 +116,10 @@ const { options, guild, client } = interaction;
                     });
                 }
 
-                // Fetch all roles at once for better performance
                 const roles = await guild.roles.fetch();
                 const validRoles = [];
                 const invalidRoleIds = [];
                 
-                // Check each role to see if it still exists
                 for (const roleId of autoRoles) {
                     const role = roles.get(roleId);
                     if (role) {
@@ -136,7 +129,6 @@ const { options, guild, client } = interaction;
                     }
                 }
 
-                // Clean up any invalid roles
                 if (invalidRoleIds.length > 0) {
                     const updatedRoles = autoRoles.filter(id => !invalidRoleIds.includes(id));
                     await updateWelcomeConfig(client, guild.id, {
@@ -151,9 +143,8 @@ const { options, guild, client } = interaction;
                     });
                 }
 
-                // Create an embed with the list of roles
                 const embed = new EmbedBuilder()
-                    .setColor(0x0099ff) // Blue color
+.setColor(0x0099ff)
                     .setTitle('Auto-Assigned Roles')
                     .setDescription(validRoles.map(r => `• ${r}`).join('\n'))
                     .setFooter({ text: `Total: ${validRoles.length} role(s)` });

@@ -17,17 +17,14 @@ try {
                 });
             }
 
-            // Get current date
             const today = new Date();
             const currentYear = today.getFullYear();
 
-            // Convert birthdays to array and sort by next occurrence
             const upcomingBirthdays = [];
             
             for (const [userId, userData] of Object.entries(birthdays)) {
                 let nextBirthday = new Date(currentYear, userData.month - 1, userData.day);
                 
-                // If birthday has already passed this year, use next year
                 if (nextBirthday < today) {
                     nextBirthday = new Date(currentYear + 1, userData.month - 1, userData.day);
                 }
@@ -41,10 +38,8 @@ try {
                 });
             }
 
-            // Sort by days until birthday
             upcomingBirthdays.sort((a, b) => a.daysUntil - b.daysUntil);
 
-            // Take only the next 5
             const next5 = upcomingBirthdays.slice(0, 5);
 
             if (next5.length === 0) {

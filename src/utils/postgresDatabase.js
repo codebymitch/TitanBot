@@ -28,10 +28,8 @@ class PostgreSQLDatabase {
 
     async _establishConnection() {
         try {
-            // Ensure environment variables are loaded
             await new Promise(resolve => setTimeout(resolve, 100));
 
-            // Create connection pool
             this.pool = new pg.Pool({
                 host: pgConfig.options.host,
                 port: pgConfig.options.port,
@@ -45,7 +43,6 @@ class PostgreSQLDatabase {
                 connectionTimeoutMillis: pgConfig.options.connectionTimeoutMillis,
             });
 
-            // Test the connection
             const client = await this.pool.connect();
             await client.query('SELECT NOW()');
             client.release();
@@ -53,11 +50,9 @@ class PostgreSQLDatabase {
             this.isConnected = true;
             logger.info('✅ PostgreSQL Database initialized successfully');
             
-            // Create tables if auto-create is enabled
             if (pgConfig.features.autoCreateTables) {
                 await this.createTables();
                 
-                // Add counters column to guilds table if it doesn't exist
                 try {
                     const columnCheck = await this.pool.query(`
                         SELECT column_name 
@@ -98,7 +93,6 @@ class PostgreSQLDatabase {
      */
     async createTables() {
         const tables = [
-            // Guilds table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.guilds} (
                 id VARCHAR(20) PRIMARY KEY,
                 config JSONB DEFAULT '{}',
@@ -107,7 +101,6 @@ class PostgreSQLDatabase {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             
-            // Users table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.users} (
                 id VARCHAR(20) PRIMARY KEY,
                 username VARCHAR(100),
@@ -117,7 +110,6 @@ class PostgreSQLDatabase {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             
-            // Guild users table (for guild-specific user data)
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.guild_users} (
                 guild_id VARCHAR(20),
                 user_id VARCHAR(20),
@@ -128,7 +120,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (user_id) REFERENCES ${pgConfig.tables.users}(id) ON DELETE CASCADE
             )`,
             
-            // Birthdays table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.birthdays} (
                 guild_id VARCHAR(20),
                 user_id VARCHAR(20),
@@ -141,7 +132,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (user_id) REFERENCES ${pgConfig.tables.users}(id) ON DELETE CASCADE
             )`,
             
-            // Giveaways table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.giveaways} (
                 id SERIAL PRIMARY KEY,
                 guild_id VARCHAR(20),
@@ -154,7 +144,6 @@ class PostgreSQLDatabase {
                 UNIQUE(guild_id, message_id)
             )`,
             
-            // Tickets table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.tickets} (
                 guild_id VARCHAR(20),
                 channel_id VARCHAR(20) PRIMARY KEY,
@@ -165,7 +154,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (guild_id) REFERENCES ${pgConfig.tables.guilds}(id) ON DELETE CASCADE
             )`,
             
-            // AFK status table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.afk_status} (
                 guild_id VARCHAR(20),
                 user_id VARCHAR(20),
@@ -177,7 +165,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (user_id) REFERENCES ${pgConfig.tables.users}(id) ON DELETE CASCADE
             )`,
             
-            // Welcome configs table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.welcome_configs} (
                 guild_id VARCHAR(20) PRIMARY KEY,
                 config JSONB NOT NULL DEFAULT '{}',
@@ -186,7 +173,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (guild_id) REFERENCES ${pgConfig.tables.guilds}(id) ON DELETE CASCADE
             )`,
             
-            // Leveling configs table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.leveling_configs} (
                 guild_id VARCHAR(20) PRIMARY KEY,
                 config JSONB NOT NULL DEFAULT '{}',
@@ -195,7 +181,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (guild_id) REFERENCES ${pgConfig.tables.guilds}(id) ON DELETE CASCADE
             )`,
             
-            // User levels table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.user_levels} (
                 guild_id VARCHAR(20),
                 user_id VARCHAR(20),
@@ -211,7 +196,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (user_id) REFERENCES ${pgConfig.tables.users}(id) ON DELETE CASCADE
             )`,
             
-            // Economy table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.economy} (
                 guild_id VARCHAR(20),
                 user_id VARCHAR(20),
@@ -225,7 +209,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (user_id) REFERENCES ${pgConfig.tables.users}(id) ON DELETE CASCADE
             )`,
             
-            // Invite tracking table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.invite_tracking} (
                 guild_id VARCHAR(20),
                 inviter_id VARCHAR(20),
@@ -238,7 +221,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (guild_id) REFERENCES ${pgConfig.tables.guilds}(id) ON DELETE CASCADE
             )`,
             
-            // Application roles table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.application_roles} (
                 guild_id VARCHAR(20),
                 role_id VARCHAR(20),
@@ -249,7 +231,6 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (guild_id) REFERENCES ${pgConfig.tables.guilds}(id) ON DELETE CASCADE
             )`,
             
-            // Temporary data table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.temp_data} (
                 key VARCHAR(255) PRIMARY KEY,
                 value JSONB NOT NULL,
@@ -257,7 +238,6 @@ class PostgreSQLDatabase {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`,
             
-            // Cache data table
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.cache_data} (
                 key VARCHAR(255) PRIMARY KEY,
                 value JSONB NOT NULL,
@@ -275,6 +255,127 @@ class PostgreSQLDatabase {
         }
         
         logger.info('✅ Database tables created/verified');
+        
+        await this.createIndexes();
+        await this.createAuditTriggers();
+    }
+
+    /**
+     * Create performance indexes for better query performance
+     */
+    async createIndexes() {
+        const indexes = [
+            `CREATE INDEX IF NOT EXISTS idx_guild_users_guild_id ON ${pgConfig.tables.guild_users}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_guild_users_user_id ON ${pgConfig.tables.guild_users}(user_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_birthdays_guild_id ON ${pgConfig.tables.birthdays}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_birthdays_month_day ON ${pgConfig.tables.birthdays}(month, day)`,
+            `CREATE INDEX IF NOT EXISTS idx_giveaways_guild_id ON ${pgConfig.tables.giveaways}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_giveaways_ends_at ON ${pgConfig.tables.giveaways}(ends_at)`,
+            `CREATE INDEX IF NOT EXISTS idx_tickets_guild_id ON ${pgConfig.tables.tickets}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_tickets_expires_at ON ${pgConfig.tables.tickets}(expires_at)`,
+            `CREATE INDEX IF NOT EXISTS idx_afk_status_guild_id ON ${pgConfig.tables.afk_status}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_afk_status_expires_at ON ${pgConfig.tables.afk_status}(expires_at)`,
+            `CREATE INDEX IF NOT EXISTS idx_user_levels_guild_id ON ${pgConfig.tables.user_levels}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_user_levels_xp ON ${pgConfig.tables.user_levels}(xp)`,
+            `CREATE INDEX IF NOT EXISTS idx_economy_guild_id ON ${pgConfig.tables.economy}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_temp_data_expires_at ON ${pgConfig.tables.temp_data}(expires_at)`,
+            `CREATE INDEX IF NOT EXISTS idx_cache_data_expires_at ON ${pgConfig.tables.cache_data}(expires_at)`
+        ];
+
+        for (const index of indexes) {
+            try {
+                await this.pool.query(index);
+            } catch (error) {
+                logger.warn('Error creating index:', error.message);
+            }
+        }
+        
+        logger.info('✅ Performance indexes created/verified');
+    }
+
+    /**
+     * Create audit triggers for automatic updated_at timestamps
+     */
+    async createAuditTriggers() {
+        try {
+            const functionQuery = `
+                CREATE OR REPLACE FUNCTION update_updated_at_column()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    NEW.updated_at = CURRENT_TIMESTAMP;
+                    RETURN NEW;
+                END;
+                $$ language 'plpgsql';
+            `;
+            
+            await this.pool.query(functionQuery);
+            
+            const triggers = [
+                `CREATE TRIGGER update_guilds_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.guilds} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_users_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.users} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_welcome_configs_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.welcome_configs} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_leveling_configs_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.leveling_configs} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_user_levels_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.user_levels} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_economy_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.economy} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_application_roles_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.application_roles} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_invite_tracking_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.invite_tracking} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_guild_users_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.guild_users} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_birthdays_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.birthdays} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_giveaways_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.giveaways} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_tickets_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.tickets} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
+                 
+                `CREATE TRIGGER update_afk_status_updated_at 
+                 BEFORE UPDATE ON ${pgConfig.tables.afk_status} 
+                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`
+            ];
+
+            for (const trigger of triggers) {
+                try {
+                    await this.pool.query(trigger);
+                } catch (error) {
+                    logger.warn('Error creating trigger:', error.message);
+                }
+            }
+            
+            logger.info('✅ Audit triggers created/verified');
+        } catch (error) {
+            logger.warn('Error creating audit triggers:', error.message);
+        }
     }
 
     /**
@@ -290,7 +391,6 @@ class PostgreSQLDatabase {
                 return defaultValue;
             }
 
-            // Parse the key to determine table and data
             const parsedKey = this.parseKey(key);
             
             if (parsedKey.type === 'temp') {
@@ -309,7 +409,6 @@ class PostgreSQLDatabase {
                 return result.rows.length > 0 ? result.rows[0].value : defaultValue;
             }
 
-            // Handle structured keys
             return await this.getStructuredData(parsedKey, defaultValue);
         } catch (error) {
             logger.error(`Error getting value for key ${key}:`, error);
@@ -331,7 +430,6 @@ class PostgreSQLDatabase {
                 return false;
             }
 
-            // Parse the key to determine table and data
             const parsedKey = this.parseKey(key);
             const expiresAt = ttl ? new Date(Date.now() + ttl * 1000) : null;
             
@@ -355,7 +453,6 @@ class PostgreSQLDatabase {
                 return true;
             }
 
-            // Handle structured keys
             return await this.setStructuredData(parsedKey, value, ttl);
         } catch (error) {
             logger.error(`Error setting value for key ${key}:`, error);
@@ -387,7 +484,6 @@ class PostgreSQLDatabase {
                 return true;
             }
 
-            // Handle structured keys
             return await this.deleteStructuredData(parsedKey);
         } catch (error) {
             logger.error(`Error deleting key ${key}:`, error);
@@ -409,14 +505,12 @@ class PostgreSQLDatabase {
 
             const keys = [];
             
-            // Search in temp_data
             const tempResult = await this.pool.query(
                 `SELECT key FROM ${pgConfig.tables.temp_data} WHERE key LIKE $1 AND (expires_at IS NULL OR expires_at > NOW())`,
                 [`${prefix}%`]
             );
             keys.push(...tempResult.rows.map(row => row.key));
             
-            // Search in cache_data
             const cacheResult = await this.pool.query(
                 `SELECT key FROM ${pgConfig.tables.cache_data} WHERE key LIKE $1 AND (expires_at IS NULL OR expires_at > NOW())`,
                 [`${prefix}%`]
@@ -499,7 +593,6 @@ class PostgreSQLDatabase {
      * @returns {Object} Parsed key information
      */
     parseKey(key) {
-        // Handle temp and cache keys
         if (key.startsWith('temp:')) {
             return { type: 'temp', fullKey: key };
         }
@@ -507,7 +600,6 @@ class PostgreSQLDatabase {
             return { type: 'cache', fullKey: key };
         }
 
-        // Parse structured keys like "guild:12345:config"
         const parts = key.split(':');
         
         if (parts[0] === 'guild') {
@@ -543,12 +635,10 @@ class PostgreSQLDatabase {
             }
         }
 
-        // Handle counter keys
         if (parts[0] === 'counters' && parts[1]) {
             return { type: 'counters', guildId: parts[1], fullKey: key };
         }
 
-        // Default to temp data for unknown keys
         return { type: 'temp', fullKey: key };
     }
 
@@ -664,7 +754,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'guild_birthdays':
-                    // Ensure guild exists before inserting birthday data
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -672,12 +761,9 @@ class PostgreSQLDatabase {
                         [parsedKey.guildId]
                     );
                     
-                    // Clear existing birthdays for this guild
                     await this.pool.query(`DELETE FROM ${pgConfig.tables.birthdays} WHERE guild_id = $1`, [parsedKey.guildId]);
                     
-                    // Insert new birthdays with user existence checks
                     for (const [userId, birthday] of Object.entries(value)) {
-                        // Ensure user exists before inserting birthday data
                         await this.pool.query(
                             `INSERT INTO ${pgConfig.tables.users} (id, created_at) 
                              VALUES ($1, CURRENT_TIMESTAMP) 
@@ -694,7 +780,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'guild_giveaways':
-                    // Ensure guild exists before inserting giveaway data
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -702,10 +787,8 @@ class PostgreSQLDatabase {
                         [parsedKey.guildId]
                     );
                     
-                    // Clear existing giveaways for this guild
                     await this.pool.query(`DELETE FROM ${pgConfig.tables.giveaways} WHERE guild_id = $1`, [parsedKey.guildId]);
                     
-                    // Insert new giveaways
                     for (const giveaway of value) {
                         await this.pool.query(
                             `INSERT INTO ${pgConfig.tables.giveaways} (guild_id, message_id, data, ends_at) 
@@ -716,7 +799,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'welcome_config':
-                    // Ensure guild exists before inserting welcome config
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -733,7 +815,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'leveling_config':
-                    // Ensure guild exists before inserting leveling config
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -750,7 +831,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'user_level':
-                    // Ensure guild exists before inserting user level data
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -758,7 +838,6 @@ class PostgreSQLDatabase {
                         [parsedKey.guildId]
                     );
                     
-                    // Ensure user exists before inserting user level data
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.users} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -776,7 +855,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'economy':
-                    // Ensure guild exists before inserting economy data to satisfy foreign key constraint
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -784,7 +862,6 @@ class PostgreSQLDatabase {
                         [parsedKey.guildId]
                     );
                     
-                    // Ensure user exists before inserting economy data to satisfy foreign key constraint
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.users} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -802,7 +879,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'afk_status':
-                    // Ensure guild exists before inserting AFK status
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -810,7 +886,6 @@ class PostgreSQLDatabase {
                         [parsedKey.guildId]
                     );
                     
-                    // Ensure user exists before inserting AFK status
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.users} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -828,7 +903,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'ticket':
-                    // Ensure guild exists before inserting ticket data
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -846,7 +920,6 @@ class PostgreSQLDatabase {
                     return true;
                 
                 case 'counters':
-                    // Ensure guild exists before inserting counter data
                     await this.pool.query(
                         `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
                          VALUES ($1, CURRENT_TIMESTAMP) 
@@ -854,7 +927,6 @@ class PostgreSQLDatabase {
                         [parsedKey.guildId]
                     );
                     
-                    // Check if counters column exists
                     const columnCheck = await this.pool.query(`
                         SELECT column_name 
                         FROM information_schema.columns 
@@ -892,7 +964,6 @@ class PostgreSQLDatabase {
                         console.error('Error detail:', queryError.detail);
                         console.error('Error hint:', queryError.hint);
                         
-                        // Try to save as a stringified JSON as fallback
                         try {
                             const jsonString = JSON.stringify(value);
                             console.log('Attempting to save as stringified JSON:', jsonString);
@@ -1011,7 +1082,6 @@ class PostgreSQLDatabase {
     }
 }
 
-// Create singleton instance
 const pgDb = new PostgreSQLDatabase();
 
 export { PostgreSQLDatabase, pgDb };

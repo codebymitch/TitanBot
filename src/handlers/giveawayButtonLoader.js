@@ -6,7 +6,6 @@ import { logger } from '../utils/logger.js';
  * @param {Client} client - Discord client
  */
 export function loadGiveawayButtons(client) {
-  // Register giveaway button handlers
   client.buttons.set(giveawayJoinHandler.customId, giveawayJoinHandler);
   client.buttons.set(giveawayEndHandler.customId, giveawayEndHandler);
   client.buttons.set(giveawayRerollHandler.customId, giveawayRerollHandler);

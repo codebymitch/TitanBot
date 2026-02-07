@@ -2,12 +2,9 @@ import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } fro
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Simple math expression evaluator (safe alternative to eval)
 function evaluate(expression) {
-    // Remove spaces and convert to lowercase
     let expr = expression.replace(/\s/g, '').toLowerCase();
     
-    // Basic math functions and constants
     const math = {
         sin: Math.sin,
         cos: Math.cos,
@@ -21,17 +18,13 @@ function evaluate(expression) {
         e: Math.E
     };
     
-    // Replace math functions and constants
     expr = expr.replace(/sin|cos|tan|sqrt|abs|log|log10|exp|pi|e/g, (match) => `math.${match}`);
     
-    // Replace degree symbol and convert to radians
     expr = expr.replace(/(\d+)\s*deg/g, (match, num) => `(${num} * Math.PI / 180)`);
     
-    // Handle power operator
     expr = expr.replace(/\^/g, '**');
     
     try {
-        // Use Function constructor instead of eval for better security
         const func = new Function('math', `return ${expr}`);
         return func(math);
     } catch (error) {
@@ -39,11 +32,9 @@ function evaluate(expression) {
     }
 }
 
-// Store calculation history (in-memory, resets on bot restart)
 const calculationHistory = new Map();
 const MAX_HISTORY = 5;
 
-// Migrated from: commands/Tools/calculate.js
 export default {
     data: new SlashCommandBuilder()
         .setName("calculate")
@@ -62,7 +53,6 @@ try {
 
             const expression = interaction.options.getString("expression");
 
-            // Validate the expression (basic check to prevent abuse)
             if (
                 !/^[0-9+\-*/.()^%! ,<>=&|~?:\[\]{}a-z√π∞°]+$/i.test(expression)
             ) {
@@ -77,11 +67,10 @@ try {
                 });
             }
 
-            // Check for potentially dangerous expressions
             const dangerousPatterns = [
                 /\b(?:import|require|process|fs|child_process|exec|eval|Function|setTimeout|setInterval|new\s+Function)\s*\(/i,
                 /`/g, // Template literals
-                /\$\{.*\}/, // Template literals
+/\$\{.*\}/,
                 /\b(?:localStorage|document|window|fetch|XMLHttpRequest)\b/,
                 /\b(?:while|for)\s*\([^)]*\)\s*\{/,
                 /\b(?:function\*|yield|await|async)\b/,
@@ -101,20 +90,16 @@ try {
                 }
             }
 
-            // Evaluate the expression
             let result;
             try {
                 result = evaluate(expression);
 
-                // Format the result
                 let formattedResult;
                 if (typeof result === "number") {
-                    // Format large numbers with commas
                     formattedResult = result.toLocaleString("en-US", {
                         maximumFractionDigits: 10,
                     });
 
-                    // If the number is very small, use scientific notation
                     if (
                         Math.abs(result) > 0 &&
                         (Math.abs(result) >= 1e10 || Math.abs(result) < 1e-3)
@@ -135,7 +120,6 @@ try {
                     formattedResult = String(result);
                 }
 
-                // Add to history
                 const userId = interaction.user.id;
                 if (!calculationHistory.has(userId)) {
                     calculationHistory.set(userId, []);
@@ -148,12 +132,10 @@ try {
                     timestamp: Date.now(),
                 });
 
-                // Keep only the most recent calculations
                 if (history.length > MAX_HISTORY) {
                     history.pop();
                 }
 
-                // Create buttons for common operations
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setCustomId(`calc_${interaction.id}_add`)
@@ -177,7 +159,6 @@ try {
                         .setStyle(ButtonStyle.Secondary),
                 );
 
-                // Create the embed
                 const embed = successEmbed(
                     "🧮 Calculation Result",
                     `**Expression:** \`${expression.replace(/`/g, "\`")}\`\n` +
@@ -190,11 +171,10 @@ try {
                     components: [row],
                 });
 
-                // Set up a collector for the buttons
                 const filter = (i) =>
                     i.customId.startsWith(`calc_${interaction.id}`) &&
                     i.user.id === interaction.user.id;
-                const BUTTON_TIMEOUT = 300000; // 5 minutes
+const BUTTON_TIMEOUT = 300000;
                 const collector =
                     interaction.channel.createMessageComponentCollector({
                         filter,
@@ -206,12 +186,10 @@ try {
                         const operation = i.customId.split("_")[2];
 
                         if (operation === "history") {
-                            // Defer the update for history since we're not showing a modal
                             if (!i.deferred && !i.replied) {
                                 await i.deferUpdate().catch(console.error);
                             }
 
-                            // Show calculation history
                             const userHistory =
                                 calculationHistory.get(userId) || [];
 
@@ -238,10 +216,8 @@ try {
                             return;
                         }
 
-                        // Handle arithmetic operations - show modal first
                         let operator = "";
 
-                        // Set operator based on operation
                         switch (operation) {
                             case "add":
                                 operator = "+";
@@ -257,7 +233,6 @@ try {
                                 break;
                         }
 
-                        // Show modal first without deferring
                         try {
                             await i.showModal({
                                 customId: `calc_modal_${i.user.id}_${operation}`,
@@ -299,7 +274,7 @@ try {
                                 filter: (m) =>
                                     m.customId ===
                                     `calc_modal_${i.user.id}_${operation}`,
-                                time: 300000, // 5 minutes
+time: 300000,
                             });
 
                             await modalResponse.deferUpdate();
@@ -310,12 +285,10 @@ try {
                                 );
                             const newExpression = `(${expression}) ${operator} (${operand})`;
 
-                            // Calculate the new result
                             let newResult;
                             try {
                                 newResult = evaluate(newExpression);
                                 
-                                // Format the new result
                                 let formattedNewResult;
                                 if (typeof newResult === "number") {
                                     formattedNewResult = newResult.toLocaleString("en-US", {
@@ -332,7 +305,6 @@ try {
                                     formattedNewResult = String(newResult);
                                 }
 
-                                // Update the embed with new calculation
                                 const updatedEmbed = successEmbed(
                                     "🧮 Calculation Result",
                                     `**Expression:** \`${newExpression.replace(/`/g, "\`")}\`\n` +
@@ -377,9 +349,7 @@ try {
                 });
 
                 collector.on("end", (collected, reason) => {
-                    // Disable all buttons when the collector ends
                     if (reason === "timeout") {
-                        // Create a new row with disabled buttons
                         const disabledRow =
                             new ActionRowBuilder().addComponents(
                                 new ButtonBuilder()
@@ -391,7 +361,6 @@ try {
                                     .setDisabled(true),
                             );
 
-                        // Edit the message to disable the buttons
                         interaction
                             .editReply({
                                 components: [disabledRow],

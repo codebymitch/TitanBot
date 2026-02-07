@@ -15,26 +15,23 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-try {
+        try {
             const targetUser = interaction.options.getUser("user") || interaction.user;
             const guildId = interaction.guildId;
 
             if (targetUser.bot) {
-                await interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            "Balance Check Failed",
-                            "Bots don't have an economy balance.",
-                        ),
-                    ],
+                return await interaction.reply({
+                    embeds: [errorEmbed(
+                        "❌ Invalid Target",
+                        "Bots don't have an economy balance."
+                    )],
+                    ephemeral: true
                 });
-                return;
             }
 
             const userData = await getEconomyData(client, guildId, targetUser.id);
             const maxBank = getMaxBankCapacity(userData);
 
-            // Ensure values are numbers with defaults
             const wallet = typeof userData.wallet === 'number' ? userData.wallet : 0;
             const bank = typeof userData.bank === 'number' ? userData.bank : 0;
 
@@ -64,18 +61,20 @@ try {
                     iconURL: interaction.user.displayAvatarURL(),
                 });
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed] });
         } catch (error) {
-            console.error("Balance command error:", error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "Could not retrieve balance at this time.",
-                    ),
-                ],
-            });
+            console.error('Balance command error:', error);
+            try {
+                await interaction.reply({
+                    embeds: [errorEmbed(
+                        "❌ Error",
+                        "Something went wrong while checking balance. Please try again."
+                    )],
+                    ephemeral: true
+                });
+            } catch (replyError) {
+                console.error('Failed to send error response:', replyError);
+            }
         }
     },
 };
-

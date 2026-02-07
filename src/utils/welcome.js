@@ -9,7 +9,6 @@ import {
 } from 'discord.js';
 import { getColor } from './database.js';
 
-// Key generators for welcome system
 const getWelcomeConfigKey = (guildId) => `welcome:${guildId}:config`;
 
 /**
@@ -27,7 +26,6 @@ export async function getWelcomeConfig(client, guildId) {
         const key = getWelcomeConfigKey(guildId);
         const rawConfig = await client.db.get(key, {});
         
-        // Default configuration
         const defaultConfig = {
             enabled: false,
             channelId: null,
@@ -60,12 +58,11 @@ export async function getWelcomeConfig(client, guildId) {
                 enabled: false,
                 maxJoins: 5,
                 timeWindow: 10,
-                action: 'kick' // 'kick', 'ban', or 'timeout'
+action: 'kick'
             },
-            joinRoles: [] // Array of role IDs to add on join
+joinRoles: []
         };
 
-        // Merge with saved config
         return { ...defaultConfig, ...rawConfig };
     } catch (error) {
         console.error(`Error getting welcome config for guild ${guildId}:`, error);
@@ -125,19 +122,16 @@ export function formatWelcomeMessage(message, data) {
     if (!message) return '';
     
     const placeholders = {
-        // User placeholders
         '{user.mention}': data.user?.toString(),
         '{user.tag}': data.user?.tag,
         '{user.username}': data.user?.username,
         '{user.discriminator}': data.user?.discriminator,
         '{user.id}': data.user?.id,
         
-        // Guild placeholders
         '{guild.name}': data.guild?.name,
         '{guild.id}': data.guild?.id,
         '{guild.memberCount}': data.guild?.memberCount,
         
-        // Invite placeholders
         '{inviter.mention}': data.inviter?.toString(),
         '{inviter.tag}': data.inviter?.tag,
         '{inviter.username}': data.inviter?.username,
@@ -156,7 +150,6 @@ export function formatWelcomeMessage(message, data) {
     return result;
 }
 
-// Guild Member Add Event Handler
 export const handleGuildMemberAdd = {
     name: Events.GuildMemberAdd,
     
@@ -171,7 +164,6 @@ export const handleGuildMemberAdd = {
             
             if (!config.enabled) return;
             
-            // Handle auto-role
             if (config.autoRole?.enabled && config.autoRole.roleId) {
                 try {
                     const role = await guild.roles.fetch(config.autoRole.roleId);
@@ -183,7 +175,6 @@ export const handleGuildMemberAdd = {
                 }
             }
             
-            // Handle welcome message
             if (config.channelId) {
                 try {
                     const channel = await guild.channels.fetch(config.channelId);
@@ -230,7 +221,6 @@ export const handleGuildMemberAdd = {
                 }
             }
             
-            // Handle DM message
             if (config.dmMessage?.enabled && config.dmMessage.message) {
                 try {
                     await member.send(
@@ -240,12 +230,10 @@ export const handleGuildMemberAdd = {
                         })
                     );
                 } catch (error) {
-                    // User might have DMs disabled, which throws an error
                     console.error(`Failed to send DM to ${member.id}:`, error);
                 }
             }
             
-            // Handle join logs
             if (config.joinLogs?.enabled && config.joinLogs.channelId) {
                 try {
                     const logChannel = await guild.channels.fetch(config.joinLogs.channelId);
@@ -274,7 +262,6 @@ export const handleGuildMemberAdd = {
     }
 };
 
-// Guild Member Remove Event Handler
 export const handleGuildMemberRemove = {
     name: Events.GuildMemberRemove,
     

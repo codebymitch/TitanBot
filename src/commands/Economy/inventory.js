@@ -26,7 +26,7 @@ const userId = interaction.user.id;
                     .filter(
                         ([itemId, quantity]) =>
                             quantity > 0 && SHOP_ITEMS[itemId],
-                    ) // Filter out 0 quantity and unknown items
+)
                     .map(
                         ([itemId, quantity]) =>
                             `**${SHOP_ITEMS[itemId].name}:** ${quantity}x`,

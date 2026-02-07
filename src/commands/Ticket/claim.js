@@ -14,7 +14,6 @@ export default {
 const channel = interaction.channel;
 
         try {
-            // Use the new ticket system to claim the ticket
             const result = await claimTicket(channel, interaction.user);
             
             if (!result.success) {
@@ -37,7 +36,6 @@ const channel = interaction.channel;
                 ],
             });
 
-            // Log the event
             const logEmbed = createEmbed({
                 title: "✅ Ticket Claimed (Audit Log)",
                 description: `${interaction.user} claimed ticket ${channel}.`,

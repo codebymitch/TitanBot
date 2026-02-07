@@ -8,7 +8,6 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY || '4e44d9029b1270a757cddc766a1bcb
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 const MAX_RESULTS = 5;
 
-// Migrated from: commands/Search/movie.js
 export default {
     data: new SlashCommandBuilder()
         .setName("movie")
@@ -32,7 +31,6 @@ export default {
         ),
     async execute(interaction) {
 try {
-            // Check if movie search is enabled in the guild config
             const guildConfig = await getGuildConfig(
                 interaction.client,
                 interaction.guild?.id,
@@ -49,7 +47,6 @@ try {
                 });
             }
 
-            // Check if API key is available
             if (!TMDB_API_KEY) {
                 console.error("TMDB API key is not configured");
                 return await interaction.editReply({
@@ -66,9 +63,7 @@ try {
             const title = interaction.options.getString("title");
             const type = interaction.options.getString("type") || "movie";
 
-            // Show typing indicator while searching
 
-            // Search for the movie/TV show
             const searchResponse = await axios.get(
                 `https://api.themoviedb.org/3/search/${type}`,
                 {
@@ -82,7 +77,7 @@ try {
                         page: 1,
                         region: guildConfig?.region || "US",
                     },
-                    timeout: 8000, // 8 second timeout
+timeout: 8000,
                 },
             );
 
@@ -97,7 +92,6 @@ try {
                 });
             }
 
-            // Get the first result
             const result = searchResponse.data.results[0];
             const mediaType = type === "movie" ? "Movie" : "TV Show";
             const mediaTitle = result.title || result.name || "Unknown Title";
@@ -106,7 +100,6 @@ try {
                 ? new Date(releaseDate).getFullYear()
                 : "N/A";
 
-            // Get additional details
             const detailsResponse = await axios.get(
                 `https://api.themoviedb.org/3/${type}/${result.id}`,
                 {
@@ -127,7 +120,6 @@ try {
                   ? `${details.episode_run_time[0]}m per episode`
                   : "N/A";
 
-            // Get content rating
             let contentRating = "N/A";
             if (type === "movie") {
                 const usCert = details.release_dates?.results?.find(
@@ -145,18 +137,15 @@ try {
                 }
             }
 
-            // Format genres
             const genres =
                 details.genres?.map((g) => g.name).join(", ") || "N/A";
 
-            // Format cast (top 3)
             const cast =
                 details.credits?.cast
                     ?.slice(0, 3)
                     .map((p) => p.name)
                     .join(", ") || "N/A";
 
-            // Create the embed with successEmbed for consistent styling
             const embed = successEmbed(
                 details.overview || "No overview available.",
                 `${mediaTitle} (${year})`
@@ -198,7 +187,6 @@ try {
                         "https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bdc75aaebeb75dc7ae79426ddd9be3b2be1e342510f8202baf6bffa71d7f5c4.svg",
                 });
 
-            // Add backdrop image if available
             if (result.backdrop_path) {
                 embed.setImage(
                     `https://image.tmdb.org/t/p/w1280${result.backdrop_path}`,
@@ -232,7 +220,6 @@ try {
                     flags: ["Ephemeral"],
                 })
                 .catch(() => {
-                    // If the interaction was already replied to, try a follow-up
                     interaction
                         .followUp({
                             embeds: [errorEmbed("Error", errorMessage)],
@@ -244,7 +231,6 @@ try {
     },
 };
 
-// Helper function to get guild config
 async function getGuildConfig(client, guildId) {
     if (!guildId) return {};
     try {

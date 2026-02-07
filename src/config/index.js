@@ -11,7 +11,6 @@ const __dirname = path.dirname(__filename);
  * Combines environment variables, bot config, and other settings
  */
 const config = {
-  // Paths
   paths: {
     root: path.join(__dirname, "../.."),
     commands: path.join(__dirname, "../src/commands"),
@@ -22,22 +21,18 @@ const config = {
     models: path.join(__dirname, "../models"),
   },
 
-  // Bot configuration
   bot: {
     ...botConfig,
-    // Core bot settings
     token: process.env.DISCORD_TOKEN || process.env.TOKEN,
     clientId: process.env.CLIENT_ID,
     guildId: process.env.GUILD_ID,
 
-    // Shop configuration
     shop: {
       ...botConfig.shop,
       ...shop,
     },
   },
 
-  // Database configuration
   database: {
     url: process.env.DATABASE_URL || "replit",
     options: {
@@ -48,7 +43,6 @@ const config = {
       w: "majority",
     },
 
-    // Collections/table names
     collections: {
       users: "users",
       guilds: "guilds",
@@ -61,7 +55,6 @@ const config = {
     },
   },
 
-  // Logging configuration
   logging: {
     level: process.env.LOG_LEVEL || "info",
     file: {
@@ -83,7 +76,6 @@ const config = {
     },
   },
 
-  // API and external services
   api: {
     port: process.env.PORT || 3000,
     cors: {
@@ -92,15 +84,13 @@ const config = {
       allowedHeaders: ["Content-Type", "Authorization"],
     },
     rateLimit: {
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // limit each IP to 100 requests per windowMs
+windowMs: 15 * 60 * 1000,
+max: 100,
     },
   },
 
-  // Shop configuration
   shop,
 
-  // Feature toggles
   features: {
     economy: true,
     leveling: true,
@@ -112,13 +102,11 @@ const config = {
     logging: true,
   },
 
-  // Environment
   env: process.env.NODE_ENV || "development",
   isProduction: process.env.NODE_ENV === "production",
   isDevelopment: process.env.NODE_ENV !== "production",
 };
 
-// Freeze the config to prevent accidental modifications
 Object.freeze(config);
 
 export default config;

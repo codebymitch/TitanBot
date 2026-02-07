@@ -8,7 +8,6 @@ export default {
 
   async execute(client) {
     try {
-      // Set bot presence from configuration
       client.user.setPresence(config.bot.presence);
 
       logger.info(`Ready! Logged in as ${client.user.tag}`);

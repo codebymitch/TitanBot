@@ -30,7 +30,6 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-    // Permission check
         if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
             return await interaction.editReply({
                 embeds: [
@@ -47,12 +46,11 @@ export default {
         const deleteDays = interaction.options.getInteger("delete_days") || 0;
 
         try {
-            // Parse user IDs from input
             const userIds = usersInput
-                .replace(/<@!?(\d+)>/g, '$1') // Replace mentions with just IDs
-                .split(/[\s,]+/) // Split by spaces or commas
-                .filter(id => id && /^\d+$/.test(id)) // Filter valid IDs
-                .slice(0, 20); // Limit to 20 users at once
+.replace(/<@!?(\d+)>/g, '$1')
+.split(/[\s,]+/)
+.filter(id => id && /^\d+$/.test(id))
+.slice(0, 20);
 
             if (userIds.length === 0) {
                 return await interaction.editReply({
@@ -65,7 +63,6 @@ export default {
                 });
             }
 
-            // Prevent self-banning
             if (userIds.includes(interaction.user.id)) {
                 return await interaction.editReply({
                     embeds: [
@@ -77,7 +74,6 @@ export default {
                 });
             }
 
-            // Prevent bot-banning
             if (userIds.includes(client.user.id)) {
                 return await interaction.editReply({
                     embeds: [
@@ -95,10 +91,8 @@ export default {
                 skipped: []
             };
 
-            // Process each user
             for (const userId of userIds) {
                 try {
-                    // Try to fetch the user
                     const user = await client.users.fetch(userId).catch(() => null);
                     
                     if (!user) {
@@ -106,11 +100,9 @@ export default {
                         continue;
                     }
 
-                    // Try to get guild member
                     const member = await interaction.guild.members.fetch(userId).catch(() => null);
                     
                     if (member) {
-                        // Check if user can be banned (hierarchy check)
                         if (member.roles.highest.position >= interaction.member.roles.highest.position && 
                             interaction.guild.ownerId !== interaction.user.id) {
                             results.skipped.push({ 
@@ -122,7 +114,6 @@ export default {
                         }
                     }
 
-                    // Ban the user
                     await interaction.guild.members.ban(userId, {
                         reason: reason,
                         deleteMessageDays: deleteDays
@@ -133,7 +124,6 @@ export default {
                         userId
                     });
 
-                    // Log the action
                     await logModerationAction({
                         client,
                         guild: interaction.guild,
@@ -160,7 +150,6 @@ export default {
                 }
             }
 
-            // Create result embed
             let description = `**Mass Ban Results:**\n\n`;
             
             if (results.successful.length > 0) {

@@ -1,10 +1,8 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-// Store active countdowns
 const activeCountdowns = new Map();
 
-// Function to create control buttons
 const createControlButtons = (countdownId, isPaused = false) => {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -17,7 +15,6 @@ const createControlButtons = (countdownId, isPaused = false) => {
             .setStyle(ButtonStyle.Danger),
     );
 };
-// Migrated from: commands/Tools/countdown.js
 export default {
     data: new SlashCommandBuilder()
         .setName("countdown")
@@ -53,7 +50,6 @@ export default {
 
             const totalSeconds = minutes * 60 + seconds;
 
-            // Validate duration
             if (totalSeconds <= 0) {
                 throw new Error("Please specify a duration of at least 1 second.");
             }
@@ -65,22 +61,18 @@ export default {
             const endTime = Date.now() + totalSeconds * 1000;
             const countdownId = `${interaction.channelId}-${Date.now()}`;
 
-            // Create initial control buttons
             const row = createControlButtons(countdownId);
 
-            // Initial message
             const initialEmbed = successEmbed(
                 `⏱️ ${title}`,
                 `Time remaining: **${formatTime(totalSeconds)}**`,
             );
 
-            // Send the initial message
             const message = await interaction.channel.send({
                 embeds: [initialEmbed],
                 components: [row],
             });
 
-            // Store the countdown data
             const countdownData = {
                 message,
                 endTime,
@@ -91,13 +83,10 @@ export default {
                 interval: null,
             };
 
-            // Start the countdown
             startCountdown(countdownId, countdownData);
 
-            // Store reference
             activeCountdowns.set(countdownId, countdownData);
 
-            // Set up a collector for the countdown buttons
             const filter = (i) => {
                 return i.customId.startsWith('countdown_') && 
                        i.customId.endsWith(countdownId) && 
@@ -123,7 +112,6 @@ export default {
                     return;
                 }
 
-                // Check if the user has permission to control the countdown
                 if (!i.member.permissions.has("MANAGE_MESSAGES")) {
                     await i.reply({
                         content: 'You need the "Manage Messages" permission to control countdowns.',
@@ -135,12 +123,10 @@ export default {
                 switch (action) {
                     case "pause":
                         if (countdownData.isPaused) {
-                            // Resume the countdown
                             countdownData.isPaused = false;
                             countdownData.endTime = Date.now() + countdownData.remainingTime;
                             startCountdown(countdownId, countdownData);
 
-                            // Update the message with new button state
                             const currentEmbed = countdownData.message.embeds[0];
                             await countdownData.message.edit({
                                 embeds: [currentEmbed],
@@ -152,12 +138,10 @@ export default {
                                 flags: ["Ephemeral"],
                             });
                         } else {
-                            // Pause the countdown
                             clearInterval(countdownData.interval);
                             countdownData.isPaused = true;
                             countdownData.remainingTime = countdownData.endTime - Date.now();
 
-                            // Update the message with new button state
                             const currentEmbed = countdownData.message.embeds[0];
                             await countdownData.message.edit({
                                 embeds: [currentEmbed],
@@ -172,7 +156,6 @@ export default {
                         break;
 
                     case "cancel":
-                        // Cancel the countdown
                         clearInterval(countdownData.interval);
 
                         const embed = successEmbed(
@@ -196,7 +179,6 @@ export default {
             });
             
             collector.on("end", () => {
-                // Clean up the countdown when the collector ends
                 cleanupCountdown(countdownId);
             });
 
@@ -220,7 +202,6 @@ export default {
     },
 };
 
-// Handle button interactions for countdowns
 export async function handleCountdownInteraction(interaction) {
     if (!interaction.isButton()) return false;
 
@@ -235,7 +216,6 @@ export async function handleCountdownInteraction(interaction) {
         return true;
     }
 
-    // Check if the user has permission to control the countdown
     if (!interaction.member.permissions.has("MANAGE_MESSAGES")) {
         await interaction.editReply({
             content:
@@ -248,13 +228,11 @@ export async function handleCountdownInteraction(interaction) {
     switch (action) {
         case "pause":
             if (countdownData.isPaused) {
-                // Resume the countdown
                 countdownData.isPaused = false;
                 countdownData.endTime =
                     Date.now() + countdownData.remainingTime;
                 startCountdown(countdownId, countdownData);
 
-                // Update the message with new button state
                 const currentEmbed = countdownData.message.embeds[0];
                 await countdownData.message.edit({
                     embeds: [currentEmbed],
@@ -266,13 +244,11 @@ export async function handleCountdownInteraction(interaction) {
                     flags: ["Ephemeral"],
                 });
             } else {
-                // Pause the countdown
                 clearInterval(countdownData.interval);
                 countdownData.isPaused = true;
                 countdownData.remainingTime =
                     countdownData.endTime - Date.now();
 
-                // Update the message with new button state
                 const currentEmbed = countdownData.message.embeds[0];
                 await countdownData.message.edit({
                     embeds: [currentEmbed],
@@ -287,7 +263,6 @@ export async function handleCountdownInteraction(interaction) {
             break;
 
         case "cancel":
-            // Cancel the countdown
             clearInterval(countdownData.interval);
 
             const embed = successEmbed(
@@ -313,7 +288,6 @@ export async function handleCountdownInteraction(interaction) {
 }
 
 function startCountdown(countdownId, countdownData) {
-    // Clear any existing interval
     if (countdownData.interval) {
         clearInterval(countdownData.interval);
         countdownData.interval = null;
@@ -332,7 +306,6 @@ function startCountdown(countdownId, countdownData) {
             const remaining = Math.max(0, countdownData.endTime - now);
             countdownData.remainingTime = remaining;
 
-            // Only update the message every second to avoid rate limits
             if (now - countdownData.lastUpdate >= 1000) {
                 countdownData.lastUpdate = now;
 
@@ -342,7 +315,6 @@ function startCountdown(countdownId, countdownData) {
                 );
 
                 try {
-                    // Update the message with current control buttons
                     await countdownData.message.edit({
                         embeds: [embed],
                         components: [
@@ -354,11 +326,9 @@ function startCountdown(countdownId, countdownData) {
                     });
                 } catch (error) {
                     console.error("Error updating countdown message:", error);
-                    // Don't clean up here, as it might be a temporary issue
                 }
             }
 
-            // Check if countdown has finished
             if (remaining <= 0) {
                 clearInterval(countdownData.interval);
 

@@ -6,9 +6,8 @@ import { pickWinners } from '../utils/giveaways.js';
  */
 export async function checkGiveaways(client) {
   try {
-    // Check if database is available (including memory fallback)
     if (!client.db || typeof client.db.get !== "function") {
-      return; // Silently return if no database available
+return;
     }
 
     for (const [guildId, guild] of client.guilds.cache) {
@@ -18,19 +17,16 @@ export async function checkGiveaways(client) {
       let updated = false;
 
       for (const [messageId, giveaway] of Object.entries(giveaways)) {
-        // Skip invalid giveaway objects
         if (!giveaway || typeof giveaway !== 'object') {
           continue;
         }
 
-        // Check if giveaway has required properties
         const endTime = giveaway.endsAt || giveaway.endTime;
         if (!endTime) {
           continue;
         }
 
         if (endTime <= now && !giveaway.ended) {
-          // End the giveaway
           giveaway.ended = true;
           updated = true;
           
@@ -44,7 +40,6 @@ export async function checkGiveaways(client) {
             const participants = giveaway.participants || [];
             const winners = pickWinners(participants, giveaway.winnerCount);
             
-            // Update the message
             const winnerMentions = winners.length > 0 
               ? winners.map(id => `<@${id}>`).join(', ')
               : 'No valid entries!';
@@ -68,7 +63,6 @@ export async function checkGiveaways(client) {
               components: []
             });
             
-            // Announce winners
             if (winners.length > 0) {
               const winnerAnnouncement = `🎉 Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**!`;
               await channel.send({ content: winnerAnnouncement });

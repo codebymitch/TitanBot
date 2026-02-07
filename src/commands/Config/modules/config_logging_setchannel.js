@@ -27,7 +27,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
 
         const guildId = interaction.guildId;
 
-        // 🔑 1. Fetch the current config using guildConfig service
         const currentConfig = await getGuildConfig(client, guildId);
 
         const logChannel = interaction.options.getChannel("channel");
@@ -36,7 +35,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
         const ticketTranscript = interaction.options.getChannel("ticket_transcript");
 
         try {
-            // Handle ticket lifecycle channel
             if (ticketLifecycle) {
                 const validation = validateLogChannel(ticketLifecycle, interaction.guild.members.me);
                 if (!validation.valid) {
@@ -61,7 +59,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 });
             }
 
-            // Handle ticket transcript channel
             if (ticketTranscript) {
                 const validation = validateLogChannel(ticketTranscript, interaction.guild.members.me);
                 if (!validation.valid) {
@@ -86,11 +83,9 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 });
             }
 
-            // Handle main logging channel (original functionality)
             if (disableLogging) {
                 currentConfig.logChannelId = null;
                 currentConfig.enableLogging = false;
-                // 🔑 2. Save using guildConfig service
                 await setGuildConfig(client, guildId, currentConfig);
 
                 return interaction.editReply({
@@ -103,7 +98,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 });
             }
 
-            // Handle main logging channel setup
             if (logChannel) {
                 const permissionsInChannel = logChannel.permissionsFor(
                     interaction.guild.members.me,
@@ -124,11 +118,9 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                     });
                 }
 
-                // Update local config object
                 currentConfig.logChannelId = logChannel.id;
                 currentConfig.enableLogging = true;
 
-                // 🔑 4. Save using guildConfig service
                 await setGuildConfig(client, guildId, currentConfig);
 
                 await interaction.editReply({
@@ -140,7 +132,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                     ],
                 });
 
-                // Log the action using the newly updated config
                 await logEvent({
                     client,
                     guild: interaction.guild,
@@ -159,7 +150,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 return;
             }
 
-            // No option provided
             return interaction.editReply({
                 embeds: [
                     errorEmbed(

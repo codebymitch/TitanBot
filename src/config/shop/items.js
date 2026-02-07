@@ -11,7 +11,7 @@ export const shopItems = [
         description: 'Allows 1 extra use of the `/work` command.',
         type: 'consumable',
         maxQuantity: 5,
-        cooldown: 86400000, // 24 hours in milliseconds
+cooldown: 86400000,
         effect: {
             type: 'command_boost',
             command: 'work',
@@ -48,7 +48,7 @@ export const shopItems = [
         price: 15000,
         description: 'A special role granting a fancy color and a 10% daily bonus.',
         type: 'role',
-        roleId: null, // Should be set via config command
+roleId: null,
         effect: {
             type: 'daily_bonus',
             multiplier: 1.1
@@ -168,7 +168,6 @@ export function validatePurchase(itemId, userData) {
         return { valid: false, reason: 'Item not found' };
     }
 
-    // Check if user already has the maximum quantity of a consumable
     if (item.type === 'consumable' && item.maxQuantity) {
         const userItem = userData.inventory?.find(i => i.id === itemId);
         if (userItem && userItem.quantity >= item.maxQuantity) {
@@ -179,7 +178,6 @@ export function validatePurchase(itemId, userData) {
         }
     }
 
-    // Check if user already has an upgrade at max level
     if (item.type === 'upgrade' && item.maxLevel) {
         const userUpgrade = userData.upgrades?.find(u => u.id === itemId);
         if (userUpgrade && userUpgrade.level >= item.maxLevel) {
@@ -190,7 +188,6 @@ export function validatePurchase(itemId, userData) {
         }
     }
 
-    // Check if user already has a tool that's not consumed
     if (item.type === 'tool') {
         const userTool = userData.inventory?.find(i => i.id === itemId);
         if (userTool && userTool.durability > 0) {
@@ -201,7 +198,6 @@ export function validatePurchase(itemId, userData) {
         }
     }
 
-    // Check if user already has the role
     if (item.type === 'role' && item.roleId) {
         if (userData.roles?.includes(item.roleId)) {
             return { 

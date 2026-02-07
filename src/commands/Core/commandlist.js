@@ -1,6 +1,8 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import path from 'path';
+import fs from 'fs';
 
 function getIcon(folder) {
     const icons = {
@@ -26,34 +28,29 @@ function getIcon(folder) {
  * @returns {EmbedBuilder}
  */
 function createCommandListEmbed() {
-    const foldersPath = path.join(process.cwd(), "commands");
+    const foldersPath = path.join(process.cwd(), "src", "commands");
     const commandFolders = fs.readdirSync(foldersPath);
 
     const embed = createEmbed({ title: "📜 TitanBot Command List", description: "Here is a complete list of all available commands, organized by category.", });
 
     let totalCommands = 0;
 
-    // Loop through every folder in 'commands/'
     for (const folder of commandFolders) {
-        // Skip system files if any exist
         if (folder.startsWith(".")) continue;
 
         const commandsPath = path.join(foldersPath, folder);
 
-        // Ensure it is a directory
         if (fs.lstatSync(commandsPath).isDirectory()) {
             const commandFiles = fs
                 .readdirSync(commandsPath)
                 .filter((file) => file.endsWith(".js"));
 
             if (commandFiles.length > 0) {
-                // Format: `/ban`, `/kick`
                 const fileNames = commandFiles.map(
                     (file) => `\`/${file.replace(".js", "")}\``,
                 );
                 totalCommands += commandFiles.length;
 
-                // Add field to embed
                 embed.addFields({
                     name: `${getIcon(folder)} ${folder}`,
                     value: fileNames.join(", "),
@@ -75,17 +72,18 @@ export default {
 try {
             const commandListEmbed = createCommandListEmbed();
 
-            // This command replies ephemerally and does not need buttons.
             await interaction.reply({
                 embeds: [commandListEmbed],
                 ephemeral: false,
             });
         } catch (error) {
             console.error('CommandList command error:', error);
-            return interaction.editReply({
-                embeds: [createEmbed({ title: 'System Error', description: 'Could not build or display the command list.' })],
-                ephemeral: true,
-            });
+            if (!interaction.replied) {
+                return interaction.reply({
+                    embeds: [createEmbed({ title: 'System Error', description: 'Could not build or display the command list.' })],
+                    flags: [MessageFlags.Ephemeral],
+                });
+            }
         }
     },
 };

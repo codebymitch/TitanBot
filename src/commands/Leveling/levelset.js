@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
-// Migrated from: commands/Leveling/levelset.js
 export default {
     data: new SlashCommandBuilder()
         .setName("levelset")
@@ -30,11 +29,9 @@ try {
             const newLevel = interaction.options.getInteger("level");
             const userData = await getUserLevelData(client, interaction.guildId, targetUser.id);
             
-            // Calculate new XP and total XP
-            const newXp = 0; // Reset XP to 0 for the new level
+const newXp = 0;
             const newTotalXp = getXpForLevel(newLevel) + newXp;
             
-            // Update user data
             userData.level = newLevel;
             userData.xp = newXp;
             userData.totalXp = newTotalXp;

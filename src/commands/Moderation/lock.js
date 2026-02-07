@@ -3,20 +3,17 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 
-// Migrated from: commands/Moderation/lock.js
 export default {
     data: new SlashCommandBuilder()
     .setName("lock")
     .setDescription(
       "Locks the current channel (prevents @everyone from sending messages).",
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels), // Requires Manage Channels permission
+.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
   category: "moderation",
 
   async execute(interaction, config, client) {
-  // safeExecute already defers; don't defer again
 
-    // Ensure user has permission
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
       return await interaction.editReply({
         embeds: [
@@ -31,9 +28,7 @@ export default {
     const everyoneRole = interaction.guild.roles.everyone;
 
     try {
-      // Check if the channel is already locked (optional but good UX)
       const currentPermissions = channel.permissionsFor(everyoneRole);
-      // Check if SendMessages is explicitly denied or implicitly denied
       if (currentPermissions.has(PermissionFlagsBits.SendMessages) === false) {
         return await interaction.editReply({
           embeds: [
@@ -45,19 +40,17 @@ export default {
         });
       }
 
-      // Lock the channel: Deny the SendMessages permission for @everyone
       await channel.permissionOverwrites.edit(
         everyoneRole,
         { SendMessages: false },
-        { type: 0, reason: `Channel locked by ${interaction.user.tag}` }, // type 0 is the default role type
+{ type: 0, reason: `Channel locked by ${interaction.user.tag}` },
       );
 
-      // --- LOGGING THE ACTION ---
       const lockEmbed = createEmbed(
         "🔒 Channel Locked (Action Log)",
         `${channel} has been locked down by ${interaction.user}.`,
       )
-        .setColor("#CC00CC") // Purple/Magenta for Configuration/State Change
+.setColor("#CC00CC")
         .addFields(
           { name: "Channel", value: channel.toString(), inline: true },
           {
@@ -81,7 +74,6 @@ export default {
           }
         }
       });
-      // ---------------------------
 
       await interaction.editReply({
         embeds: [

@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Fun/reverse.js
 export default {
     data: new SlashCommandBuilder()
     .setName("reverse")
@@ -18,7 +17,6 @@ export default {
 try {
       const originalText = interaction.options.getString("text");
 
-      // Split the string into an array of characters, reverse the array, and join it back
       const reversedText = originalText.split("").reverse().join("");
 
       const embed = successEmbed(

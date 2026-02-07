@@ -11,7 +11,6 @@ import {
     saveApplicationRoles
 } from '../../utils/database.js';
 
-// Migrated from: commands/Community/app-admin.js
 export default {
     data: new SlashCommandBuilder()
     .setName("app-admin")
@@ -159,7 +158,6 @@ export default {
 const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
 
-        // Check permissions
         const settings = await getApplicationSettings(interaction.client, guild.id);
         const isManager =
             member.permissions.has(PermissionFlagsBits.ManageGuild) ||
@@ -238,11 +236,9 @@ async function handleSetup(interaction, settings) {
     }
 
     if (Object.keys(updates).length === 0) {
-        // Show current settings if no updates
         return showCurrentSettings(interaction, settings);
     }
 
-    // Save the updates
     await saveApplicationSettings(
         interaction.client,
         interaction.guild.id,
@@ -250,10 +246,8 @@ async function handleSetup(interaction, settings) {
     );
     const updatedSettings = { ...settings, ...updates };
 
-    // Show updated settings
     await showCurrentSettings(interaction, updatedSettings);
 
-    // Note: Log channel update functionality removed as logstatus command doesn't support this method
 }
 
 async function showCurrentSettings(interaction, settings) {
@@ -325,7 +319,6 @@ async function handleView(interaction) {
         embed.setThumbnail(application.avatar);
     }
 
-    // Add answers to the embed
     application.answers.forEach((answer, index) => {
         embed.addFields({
             name: answer.question,
@@ -337,7 +330,6 @@ async function handleView(interaction) {
         });
     });
 
-    // Add action buttons if application is pending
     if (application.status === "pending") {
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -395,7 +387,6 @@ async function handleReview(interaction) {
     const status = action === "approve" ? "approved" : "denied";
     const statusColor = status === "approved" ? "#00FF00" : "#FF0000";
 
-    // Update the application
     await updateApplication(interaction.client, interaction.guild.id, appId, {
         status,
         reviewer: interaction.user.id,
@@ -403,7 +394,6 @@ async function handleReview(interaction) {
         reviewedAt: new Date().toISOString(),
     });
 
-    // Notify the user
     try {
         const user = await interaction.client.users.fetch(application.userId);
         const dmEmbed = createEmbed(
@@ -417,10 +407,8 @@ async function handleReview(interaction) {
         await user.send({ embeds: [dmEmbed] });
     } catch (error) {
         console.error("Error sending DM to user:", error);
-        // Continue even if DM fails
     }
 
-    // Update the log message if it exists
     if (application.logMessageId && application.logChannelId) {
         try {
             const logChannel = interaction.guild.channels.cache.get(
@@ -444,7 +432,7 @@ async function handleReview(interaction) {
 
                         await logMessage.edit({
                             embeds: [newEmbed],
-                            components: [], // Remove action buttons
+components: [],
                         });
                     }
                 }
@@ -454,7 +442,6 @@ async function handleReview(interaction) {
         }
     }
 
-    // Assign role if approved
     if (action === "approve") {
         try {
             const member = await interaction.guild.members.fetch(
@@ -463,7 +450,6 @@ async function handleReview(interaction) {
             await member.roles.add(application.role);
         } catch (error) {
             console.error("Error assigning role:", error);
-            // Continue even if role assignment fails
         }
     }
 
@@ -492,13 +478,11 @@ async function handleList(interaction) {
         filters,
     );
 
-    // Filter by user if specified
     if (user) {
         applications = applications.filter((app) => app.userId === user.id);
     }
 
     if (applications.length === 0) {
-        // Get available application roles to show instead
         const applicationRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
         
         if (applicationRoles.length > 0) {
@@ -534,7 +518,6 @@ async function handleList(interaction) {
         }
     }
 
-    // Sort by creation date (newest first) and limit results
     applications = applications
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, limit);
@@ -567,7 +550,6 @@ async function handleList(interaction) {
 }
 
 async function handleQuestions(interaction, settings) {
-    // Show a modal to edit questions
     const modal = new ModalBuilder()
         .setCustomId("edit_questions")
         .setTitle("Edit Application Questions");
@@ -575,13 +557,12 @@ async function handleQuestions(interaction, settings) {
     const questions =
         settings.questions || ["Question 1", "Question 2"];
 
-    // Add a text input for each question (up to 5)
     for (let i = 0; i < 5; i++) {
         const input = new TextInputBuilder()
             .setCustomId(`q${i}`)
             .setLabel(`Question ${i + 1}`)
             .setStyle(TextInputStyle.Short)
-            .setRequired(i === 0) // Only first question is required
+.setRequired(i === 0)
             .setValue(questions[i] || "");
 
         const row = new ActionRowBuilder().addComponents(input);
@@ -590,16 +571,14 @@ async function handleQuestions(interaction, settings) {
 
     await interaction.showModal(modal);
 
-    // Handle the modal submission
     try {
         const modalResponse = await interaction.awaitModalSubmit({
-            time: 30 * 60 * 1000, // 30 minutes
+time: 30 * 60 * 1000,
             filter: (i) =>
                 i.customId === "edit_questions" &&
                 i.user.id === interaction.user.id,
         });
 
-        // Process the questions
         const newQuestions = [];
         for (let i = 0; i < 5; i++) {
             const question = modalResponse.fields
@@ -617,7 +596,6 @@ async function handleQuestions(interaction, settings) {
             });
         }
 
-        // Save the questions
         await saveApplicationSettings(
             interaction.client,
             interaction.guild.id,
@@ -638,7 +616,6 @@ async function handleQuestions(interaction, settings) {
         });
     } catch (error) {
         if (error.message.includes("timeout")) {
-            // Modal was not submitted within the time limit
             return;
         }
         console.error("Error processing questions:", error);
@@ -688,7 +665,6 @@ async function handleRoles(interaction) {
 
             const customName = name || role.name;
             
-            // Check if role already exists
             if (currentRoles.some(appRole => appRole.roleId === role.id)) {
                 return interaction.editReply({
                     embeds: [errorEmbed("This role is already configured for applications.")],
@@ -696,7 +672,6 @@ async function handleRoles(interaction) {
                 });
             }
 
-            // Add the role
             currentRoles.push({
                 roleId: role.id,
                 name: customName
@@ -721,7 +696,6 @@ async function handleRoles(interaction) {
                 });
             }
 
-            // Check if role exists
             const roleIndex = currentRoles.findIndex(appRole => appRole.roleId === role.id);
             if (roleIndex === -1) {
                 return interaction.editReply({
@@ -730,7 +704,6 @@ async function handleRoles(interaction) {
                 });
             }
 
-            // Remove the role
             const removedRole = currentRoles.splice(roleIndex, 1)[0];
             await saveApplicationRoles(interaction.client, interaction.guild.id, currentRoles);
 
@@ -751,7 +724,6 @@ async function handleRoles(interaction) {
     }
 }
 
-// Handle button interactions for application approval/denial
 export async function handleApplicationButton(interaction) {
     if (!interaction.isButton()) return;
     
@@ -762,7 +734,6 @@ export async function handleApplicationButton(interaction) {
     const isApprove = action === 'app';
     
     try {
-        // Get the application
         const application = await getApplication(interaction.client, interaction.guild.id, appId);
         if (!application) {
             return interaction.reply({
@@ -778,7 +749,6 @@ export async function handleApplicationButton(interaction) {
             });
         }
         
-        // Check permissions
         const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
         const isManager = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild) ||
             (settings.managerRoles && settings.managerRoles.some(roleId => interaction.member.roles.cache.has(roleId)));
@@ -790,7 +760,6 @@ export async function handleApplicationButton(interaction) {
             });
         }
         
-        // Show confirmation modal
         const modal = new ModalBuilder()
             .setCustomId(`app_review_${appId}_${isApprove ? 'approve' : 'deny'}`)
             .setTitle(`${isApprove ? 'Approve' : 'Deny'} Application`)
@@ -816,7 +785,6 @@ export async function handleApplicationButton(interaction) {
     }
 }
 
-// Handle modal submissions for application reviews
 export async function handleApplicationReviewModal(interaction) {
     if (!interaction.isModalSubmit()) return;
     
@@ -828,7 +796,6 @@ export async function handleApplicationReviewModal(interaction) {
     const isApprove = action === 'approve';
     
     try {
-        // Get the application
         const application = await getApplication(interaction.client, interaction.guild.id, appId);
         if (!application) {
             return interaction.reply({
@@ -837,7 +804,6 @@ export async function handleApplicationReviewModal(interaction) {
             });
         }
         
-        // Update the application
         const status = isApprove ? 'approved' : 'denied';
         await updateApplication(interaction.client, interaction.guild.id, appId, {
             status,
@@ -846,7 +812,6 @@ export async function handleApplicationReviewModal(interaction) {
             reviewedAt: new Date().toISOString()
         });
         
-        // Notify the user
         try {
             const user = await interaction.client.users.fetch(application.userId);
             const dmEmbed = createEmbed(
@@ -862,7 +827,6 @@ export async function handleApplicationReviewModal(interaction) {
             console.error('Error sending DM to user:', error);
         }
         
-        // Update the log message if it exists
         if (application.logMessageId && application.logChannelId) {
             try {
                 const logChannel = interaction.guild.channels.cache.get(application.logChannelId);
@@ -890,7 +854,6 @@ export async function handleApplicationReviewModal(interaction) {
             }
         }
         
-        // Assign role if approved
         if (isApprove) {
             try {
                 const member = await interaction.guild.members.fetch(application.userId);

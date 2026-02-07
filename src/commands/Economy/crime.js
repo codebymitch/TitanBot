@@ -2,12 +2,14 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { MessageTemplates } from '../../utils/messageTemplates.js';
 
-const CRIME_COOLDOWN = 60 * 60 * 1000; // 1 hour cooldown
+const CRIME_COOLDOWN = 60 * 60 * 1000;
 const MIN_CRIME_AMOUNT = 100;
 const MAX_CRIME_AMOUNT = 2000;
-const FAILURE_RATE = 0.4; // 40% chance of failure
-const JAIL_TIME = 2 * 60 * 60 * 1000; // 2 hours jail time on failure
+const FAILURE_RATE = 0.4;
+const JAIL_TIME = 2 * 60 * 60 * 1000;
 
 const CRIME_TYPES = [
     { name: "Pickpocketing", min: 100, max: 500, risk: 0.3 },
@@ -36,39 +38,35 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-const userId = interaction.user.id;
-        const guildId = interaction.guildId;
-        const now = Date.now();
+        return withErrorHandling(async () => {
+            await interaction.deferReply();
+            
+            const userId = interaction.user.id;
+            const guildId = interaction.guildId;
+            const now = Date.now();
 
-        try {
             const userData = await getEconomyData(client, guildId, userId);
             const lastCrime = userData.cooldowns?.crime || 0;
             const isJailed = userData.jailedUntil && userData.jailedUntil > now;
 
-            // Check if user is in jail
             if (isJailed) {
                 const timeLeft = Math.ceil((userData.jailedUntil - now) / (1000 * 60));
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            "Jail Time",
-                            `You're in jail for ${timeLeft} more minutes!`
-                        ),
-                    ],
-                });
+                throw createError(
+                    "User is in jail",
+                    ErrorTypes.RATE_LIMIT,
+                    `You're in jail for ${timeLeft} more minutes!`,
+                    { jailTimeRemaining: userData.jailedUntil - now }
+                );
             }
 
-            // Check cooldown
             if (now < lastCrime + CRIME_COOLDOWN) {
                 const timeLeft = Math.ceil((lastCrime + CRIME_COOLDOWN - now) / (1000 * 60));
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Cooldown Active",
-                            `You need to wait ${timeLeft} more minutes before committing another crime.`
-                        ),
-                    ],
-                });
+                throw createError(
+                    "Crime cooldown active",
+                    ErrorTypes.RATE_LIMIT,
+                    `You need to wait ${timeLeft} more minutes before committing another crime.`,
+                    { remaining: lastCrime + CRIME_COOLDOWN - now, cooldownType: 'crime' }
+                );
             }
 
             const crimeType = interaction.options.getString("type").toLowerCase();
@@ -77,18 +75,19 @@ const userId = interaction.user.id;
             );
 
             if (!crime) {
-                return interaction.editReply({
-                    embeds: [errorEmbed("Invalid Crime", "Please select a valid crime type.")],
-                });
+                throw createError(
+                    "Invalid crime type",
+                    ErrorTypes.VALIDATION,
+                    "Please select a valid crime type.",
+                    { crimeType }
+                );
             }
 
-            // Calculate success/failure
             const isSuccess = Math.random() > crime.risk;
             const amountEarned = isSuccess
                 ? Math.floor(Math.random() * (crime.max - crime.min + 1)) + crime.min
                 : 0;
 
-            // Update user data
             userData.cooldowns = userData.cooldowns || {};
             userData.cooldowns.crime = now;
 
@@ -97,38 +96,27 @@ const userId = interaction.user.id;
                 
                 await setEconomyData(client, guildId, userId, userData);
                 
-                return interaction.editReply({
-                    embeds: [
-                        successEmbed(
-                            "Crime Successful!",
-                            `You successfully committed ${crime.name} and earned **${amountEarned}** coins!`
-                        ),
-                    ],
-                });
+                const embed = successEmbed(
+                    "Crime Successful!",
+                    `You successfully committed ${crime.name} and earned **${amountEarned}** coins!`
+                );
+                
+                await interaction.editReply({ embeds: [embed] });
             } else {
-                // Failed the crime - go to jail
                 const fine = Math.floor(amountEarned * 0.2);
                 userData.wallet = Math.max(0, (userData.wallet || 0) - fine);
                 userData.jailedUntil = now + JAIL_TIME;
                 
                 await setEconomyData(client, guildId, userId, userData);
                 
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Crime Failed!",
-                            `You were caught while attempting ${crime.name} and have been sent to jail! ` +
-                            `You were fined ${fine} coins and will be in jail for 2 hours.`
-                        ),
-                    ],
-                });
+                const embed = errorEmbed(
+                    "Crime Failed!",
+                    `You were caught while attempting ${crime.name} and have been sent to jail! ` +
+                    `You were fined ${fine} coins and will be in jail for 2 hours.`
+                );
+                
+                await interaction.editReply({ embeds: [embed] });
             }
-        } catch (error) {
-            console.error("Error in crime command:", error);
-            return interaction.editReply({
-                embeds: [errorEmbed("Error", "An error occurred while processing your crime.")],
-            });
-        }
+        }, { command: 'crime' });
     },
 };
-

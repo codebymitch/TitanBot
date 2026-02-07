@@ -3,10 +3,10 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 
-const SLUT_COOLDOWN = 45 * 60 * 1000; // 45 minutes cooldown
+const SLUT_COOLDOWN = 45 * 60 * 1000;
 const MIN_SLUT_AMOUNT = 100;
 const MAX_SLUT_AMOUNT = 800;
-const FAILURE_RATE = 0.25; // 25% chance of failure
+const FAILURE_RATE = 0.25;
 
 const SLUT_ACTIVITIES = [
     { name: "Street Walking", min: 100, max: 400, risk: 0.2 },
@@ -59,7 +59,6 @@ const userId = interaction.user.id;
             const userData = await getEconomyData(client, guildId, userId);
             const lastSlut = userData.lastSlut || 0;
 
-            // Check cooldown
             if (now - lastSlut < SLUT_COOLDOWN) {
                 const remainingTime = Math.ceil((SLUT_COOLDOWN - (now - lastSlut)) / 60000);
                 return interaction.reply({
@@ -72,7 +71,6 @@ const userId = interaction.user.id;
                 });
             }
 
-            // Get selected activity or random
             const activityType = interaction.options.getString("activity");
             const activity = activityType 
                 ? SLUT_ACTIVITIES.find(a => a.name.toLowerCase().replace(/\s+/g, '_') === activityType)
@@ -89,15 +87,12 @@ const userId = interaction.user.id;
                 });
             }
 
-            // Calculate success based on risk
             const success = Math.random() > activity.risk;
             let earnings = 0;
 
             if (success) {
-                // Calculate earnings
                 earnings = Math.floor(Math.random() * (activity.max - activity.min + 1)) + activity.min;
                 
-                // Update user data
                 userData.wallet += earnings;
                 userData.lastSlut = now;
                 userData.totalSluts = (userData.totalSluts || 0) + 1;
@@ -105,7 +100,6 @@ const userId = interaction.user.id;
 
                 await setEconomyData(client, guildId, userId, userData);
 
-                // Success response
                 const response = SLUT_RESPONSES[Math.floor(Math.random() * SLUT_RESPONSES.length)];
                 return interaction.editReply({
                     embeds: [
@@ -119,7 +113,6 @@ const userId = interaction.user.id;
                     ]
                 });
             } else {
-                // Failure
                 userData.lastSlut = now;
                 userData.totalSluts = (userData.totalSluts || 0) + 1;
                 userData.failedSluts = (userData.failedSluts || 0) + 1;

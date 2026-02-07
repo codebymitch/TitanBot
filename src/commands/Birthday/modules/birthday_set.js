@@ -9,7 +9,6 @@ try {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            // Validate date
             const currentYear = new Date().getFullYear();
             const date = new Date(currentYear, month - 1, day);
             

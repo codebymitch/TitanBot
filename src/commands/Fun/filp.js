@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Fun/filp.js
 export default {
     data: new SlashCommandBuilder()
     .setName("flip")
@@ -10,7 +9,6 @@ export default {
 
   async execute(interaction) {
 try {
-      // Generate 0 (Heads) or 1 (Tails)
       const result = Math.random() < 0.5 ? "Heads" : "Tails";
       const emoji = result === "Heads" ? "🪙" : "🔮";
 

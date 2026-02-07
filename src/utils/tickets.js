@@ -141,7 +141,6 @@ export async function updateTicketMessage(channel, options = {}) {
         const embed = message.embeds[0] || new EmbedBuilder();
         const priorityInfo = PRIORITY_MAP[priority] || PRIORITY_MAP.medium;
         
-        // Update status field
         let statusText = '\n\n**Status**\n';
         
         if (isClosed) {
@@ -152,12 +151,10 @@ export async function updateTicketMessage(channel, options = {}) {
             statusText += '🟢 Open';
         }
         
-        // Add priority if provided
         if (priority) {
             statusText += `\n\n**Priority**\n${priorityInfo.emoji} ${priorityInfo.label}`;
         }
 
-        // Update or add status field
         const fields = embed.data.fields || [];
         const statusFieldIndex = fields.findIndex(f => f.name === 'Status');
         
@@ -167,10 +164,8 @@ export async function updateTicketMessage(channel, options = {}) {
             fields.push({ name: 'Status', value: statusText, inline: false });
         }
 
-        // Update embed
         embed.setFields(fields);
         
-        // Update color based on status
         if (isClosed) {
             embed.setColor(getColor('error'));
         } else if (isClaimed) {
@@ -179,7 +174,6 @@ export async function updateTicketMessage(channel, options = {}) {
             embed.setColor(priorityInfo.color || getColor('primary'));
         }
 
-        // Create action buttons
         const row = new ActionRowBuilder();
         
         if (!isClosed) {
@@ -198,7 +192,6 @@ export async function updateTicketMessage(channel, options = {}) {
                     .setDisabled(isClaimed && claimer?.id !== message.author.id)
             );
             
-            // Add priority buttons if not claimed or claimed by current user
             if (!isClaimed || (claimer && claimer.id === message.author.id)) {
                 Object.entries(PRIORITY_MAP).forEach(([key, { emoji }]) => {
                     row.addComponents(
@@ -212,7 +205,6 @@ export async function updateTicketMessage(channel, options = {}) {
                 });
             }
         } else {
-            // Ticket is closed, only show reopen button
             row.addComponents(
                 new ButtonBuilder()
                     .setCustomId('ticket_reopen')
@@ -222,7 +214,6 @@ export async function updateTicketMessage(channel, options = {}) {
             );
         }
 
-        // Update the message
         return message.edit({ 
             embeds: [embed],
             components: [row]

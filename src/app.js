@@ -19,7 +19,6 @@ import fs from 'fs/promises';
 import express from 'express';
 import cron from 'node-cron';
 
-// Polyfill for ReadableStream in older Node.js environments
 import { ReadableStream } from 'web-streams-polyfill';
 if (typeof global.ReadableStream === 'undefined') {
     global.ReadableStream = ReadableStream;
@@ -125,11 +124,8 @@ class TitanBot extends Client {
   }
 
   setupCronJobs() {
-    // Daily birthday check at 6 AM UTC
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
-    // Check giveaways every minute
     cron.schedule('* * * * *', () => checkGiveaways(this));
-    // Update counters every 15 minutes
     cron.schedule('*/15 * * * *', () => this.updateAllCounters());
   }
 
@@ -154,7 +150,7 @@ class TitanBot extends Client {
   }
 
   async loadHandlers() {
-    const handlers = ['events', 'interactions']; // Removed 'commands' since we're using the new handler
+const handlers = ['events', 'interactions'];
     
     for (const handler of handlers) {
       try {
@@ -162,14 +158,12 @@ class TitanBot extends Client {
         await loadHandler(this);
         logger.info(`Loaded ${handler} handler`);
       } catch (error) {
-        // Ignore missing handlers that might not exist
         if (error.code !== 'MODULE_NOT_FOUND') {
           logger.error(`Error loading ${handler} handler:`, error);
         }
       }
     }
     
-    // Load todo button handlers
     try {
       const { default: loadTodoButtons } = await import('./handlers/todoButtonLoader.js');
       await loadTodoButtons(this);
@@ -178,7 +172,6 @@ class TitanBot extends Client {
       logger.error('Error loading todo button handlers:', error);
     }
     
-    // Load ticket button handlers
     try {
       const { default: loadTicketButtons } = await import('./handlers/ticketButtonLoader.js');
       await loadTicketButtons(this);
@@ -187,13 +180,20 @@ class TitanBot extends Client {
       logger.error('Error loading ticket button handlers:', error);
     }
     
-    // Load giveaway button handlers
     try {
       const { loadGiveawayButtons } = await import('./handlers/giveawayButtonLoader.js');
       loadGiveawayButtons(this);
       logger.info('Loaded giveaway button handlers');
     } catch (error) {
       logger.error('Error loading giveaway button handlers:', error);
+    }
+    
+    try {
+      const { loadVerificationButtons } = await import('./handlers/verificationButtonLoader.js');
+      await loadVerificationButtons(this);
+      logger.info('Loaded verification button handlers');
+    } catch (error) {
+      logger.error('Error loading verification button handlers:', error);
     }
   }
 
@@ -206,7 +206,6 @@ class TitanBot extends Client {
   }
 }
 
-// Start the bot when this file is run directly
 try {
   const bot = new TitanBot();
   bot.start();

@@ -4,18 +4,14 @@ import { getGuildConfig } from './guildConfig.js';
 import { addXp } from './xpSystem.js';
 import { pgDb } from '../utils/postgresDatabase.js';
 
-// Initialize database connection
 let db = null;
 let useFallback = false;
 let connectionType = 'none';
 
-// Check if we're in a Replit environment (for backward compatibility)
 const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
 
-// Async database initialization
 async function initializeLevelingDatabase() {
   try {
-    // Try to connect to PostgreSQL first
     logger.info('Leveling: Attempting to connect to PostgreSQL...');
     const pgConnected = await pgDb.connect();
     if (pgConnected) {
@@ -28,7 +24,6 @@ async function initializeLevelingDatabase() {
     logger.warn('Leveling: PostgreSQL connection failed, using mock database:', error.message);
   }
   
-  // Fallback to mock database for non-Replit environments
   db = {
     get: async (key, defaultValue = null) => defaultValue,
     set: async (key, value, ttl = null) => true,
@@ -43,15 +38,12 @@ async function initializeLevelingDatabase() {
   logger.info('Leveling: Using mock database (fallback)');
 }
 
-// Initialize database immediately
 initializeLevelingDatabase();
 
-// XP required for each level (exponential formula)
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
 
 export function getXpForLevel(level) {
-  // 5 * (level ^ 2) + (50 * level) + 100 - 50
   return 5 * Math.pow(level, 2) + 50 * level + 50;
 }
 
@@ -74,14 +66,12 @@ export function getLevelFromXp(xp) {
 
 export async function getLeaderboard(client, guildId, limit = 10) {
   try {
-    // Get all user level data
     const guild = client.guilds.cache.get(guildId);
     if (!guild) return [];
     
     const members = await guild.members.fetch();
     const leaderboard = [];
     
-    // Get level data for all members
     for (const [userId, member] of members) {
       if (member.user.bot) continue;
       
@@ -96,10 +86,8 @@ export async function getLeaderboard(client, guildId, limit = 10) {
       }
     }
     
-    // Sort by total XP
     leaderboard.sort((a, b) => b.totalXp - a.totalXp);
     
-    // Add rank
     leaderboard.forEach((entry, index) => {
       entry.rank = index + 1;
     });
@@ -126,13 +114,11 @@ export function createLeaderboardEmbed(leaderboard, guild) {
   const top3 = leaderboard.slice(0, 3);
   const rest = leaderboard.slice(3);
   
-  // Add top 3 with special formatting
   const top3Text = top3.map((user, index) => {
     const medal = ['🥇', '🥈', '🥉'][index];
     return `${medal} **#${user.rank}** ${user.username} - Level ${user.level} (${user.totalXp} XP)`;
   }).join('\n');
   
-  // Add rest of the leaderboard
   const restText = rest.map(user => {
     return `**#${user.rank}** ${user.username} - Level ${user.level} (${user.totalXp} XP)`;
   }).join('\n');
@@ -144,7 +130,6 @@ export function createLeaderboardEmbed(leaderboard, guild) {
   return embed;
 }
 
-// --- DATABASE FUNCTIONS FOR LEVELING ---
 
 export async function getLevelingConfig(client, guildId) {
   const config = await getGuildConfig(client, guildId);
@@ -172,7 +157,6 @@ export async function getUserLevelData(client, guildId, userId) {
     };
   }
   
-  // Ensure all required fields exist
   return {
     xp: data.xp || 0,
     level: data.level || 0,

@@ -3,7 +3,6 @@ import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
 
-// Migrated from: commands/Leveling/levelremove.js
 export default {
     data: new SlashCommandBuilder()
         .setName("levelremove")
@@ -31,21 +30,17 @@ try {
             const levelsToRemove = interaction.options.getInteger("levels");
             const userData = await getUserLevelData(client, interaction.guildId, targetUser.id);
             
-            // Calculate new level (can't go below 0)
             const newLevel = Math.max(0, userData.level - levelsToRemove);
             
-            // If we're already at level 0, don't make any changes
             if (userData.level === 0) {
                 return interaction.reply({
                     embeds: [createEmbed({ title: "Level Remove", description: `${targetUser.tag} is already at level 0.` })]
                 });
             }
             
-            // Calculate new XP and total XP
-            const newXp = 0; // Reset XP to 0 for the new level
+const newXp = 0;
             const newTotalXp = getXpForLevel(newLevel) + newXp;
             
-            // Update user data
             userData.level = newLevel;
             userData.xp = newXp;
             userData.totalXp = newTotalXp;

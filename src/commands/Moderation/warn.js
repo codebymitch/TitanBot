@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-// Migrated from: commands/Moderation/warn.js
 export default {
     data: new SlashCommandBuilder()
         .setName("warn")
@@ -25,7 +24,6 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            // Permission check
                 if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
                     throw new Error("You need the `Moderate Members` permission to issue warnings.");
                 }
@@ -36,12 +34,10 @@ export default {
                 const moderator = interaction.user;
                 const guildId = interaction.guildId;
 
-                // Target validation
                 if (!member) {
                     throw new Error("The target user is not currently in this server.");
                 }
 
-                // Get warnings and add new one
                 const warningsKey = `warnings-${guildId}-${target.id}`;
                 const userWarns = await client.db.get(warningsKey);
                 const warningsArray = Array.isArray(userWarns) ? userWarns : [];
@@ -56,7 +52,6 @@ export default {
 
                 const totalWarns = warningsArray.length;
 
-                // Log the action
                 await logModerationAction({
                     client,
                     guild: interaction.guild,
@@ -74,7 +69,6 @@ export default {
                     }
                 });
 
-                // Send success response
                 await interaction.editReply({
                     embeds: [
                         successEmbed(

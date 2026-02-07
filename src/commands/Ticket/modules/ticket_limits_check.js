@@ -7,11 +7,9 @@ export default {
         const guildId = interaction.guild.id;
 
         try {
-            // Get guild config
             const guildConfig = await getGuildConfig(client, guildId);
             const maxTickets = guildConfig.maxTicketsPerUser || 3;
 
-            // Count user's open tickets
             const ticketChannels = interaction.guild.channels.cache.filter(
                 channel => channel.name.startsWith('ticket-') && 
                 channel.topic && 

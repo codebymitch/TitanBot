@@ -23,15 +23,12 @@ export default {
             const triggerChannel = interaction.options.getChannel('trigger_channel');
         const guildId = interaction.guild.id;
 
-        // Get current config
         const currentConfig = await getJoinToCreateConfig(client, guildId);
 
-        // Check if this trigger channel exists in the system
         if (!currentConfig.triggerChannels.includes(triggerChannel.id)) {
             throw new Error(`${triggerChannel} is not configured as a Join to Create trigger channel.`);
         }
 
-        // Create the configuration menu
         const embed = new EmbedBuilder()
             .setTitle('⚙️ Join to Create Configuration')
             .setDescription(`Configure settings for ${triggerChannel}`)
@@ -56,7 +53,6 @@ export default {
             .setFooter({ text: 'Select an option to configure below' })
             .setTimestamp();
 
-        // Create select menu for configuration options
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId(`jointocreate_config_${triggerChannel.id}`)
             .setPlaceholder('Select a configuration option')
@@ -88,16 +84,14 @@ export default {
         await interaction.editReply({
             embeds: [embed],
             components: [row],
-            // No need to include flags in editReply since they're set during deferReply
         }).catch(error => {
             console.error('Failed to edit reply in config_setup:', error);
         });
 
-        // Create collector for the select menu interaction
         const collector = interaction.channel.createMessageComponentCollector({
             componentType: ComponentType.StringSelect,
             filter: (i) => i.user.id === interaction.user.id && i.customId === `jointocreate_config_${triggerChannel.id}`,
-            time: 60000 // 60 seconds
+time: 60000
         });
 
         collector.on('collect', async (selectInteraction) => {
@@ -134,7 +128,6 @@ export default {
 
         collector.on('end', async (collected, reason) => {
             if (reason === 'time') {
-                // Disable the select menu when collector expires
                 const disabledRow = new ActionRowBuilder().addComponents(
                     selectMenu.setDisabled(true)
                 );
@@ -172,10 +165,9 @@ async function handleNameTemplateChange(interaction, triggerChannel, currentConf
 
     await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
-    // Create a message collector for the user's response
     const collector = interaction.channel.createMessageCollector({
         filter: (m) => m.author.id === interaction.user.id,
-        time: 30000, // 30 seconds
+time: 30000,
         max: 1
     });
 
@@ -183,7 +175,6 @@ async function handleNameTemplateChange(interaction, triggerChannel, currentConf
         try {
             const newTemplate = message.content.trim();
             
-            // Validate template
             if (!newTemplate || newTemplate.length > 100) {
                 await interaction.followUp({
                     embeds: [errorEmbed('Invalid Template', 'Template must be between 1 and 100 characters.')],
@@ -192,7 +183,6 @@ async function handleNameTemplateChange(interaction, triggerChannel, currentConf
                 return;
             }
 
-            // Update the configuration
             const channelOptions = currentConfig.channelOptions || {};
             channelOptions[triggerChannel.id] = {
                 ...channelOptions[triggerChannel.id],
@@ -208,7 +198,6 @@ async function handleNameTemplateChange(interaction, triggerChannel, currentConf
                 flags: MessageFlags.Ephemeral,
             });
 
-            // Delete the user's message
             await message.delete().catch(() => {});
         } catch (error) {
             console.error('Template update error:', error);
@@ -263,7 +252,6 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
                 return;
             }
 
-            // Update the configuration
             const channelOptions = currentConfig.channelOptions || {};
             channelOptions[triggerChannel.id] = {
                 ...channelOptions[triggerChannel.id],
@@ -338,7 +326,6 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
                 return;
             }
 
-            // Update the configuration
             const channelOptions = currentConfig.channelOptions || {};
             channelOptions[triggerChannel.id] = {
                 ...channelOptions[triggerChannel.id],

@@ -3,7 +3,6 @@ import axios from 'axios';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Search/urban.js
 export default {
     data: new SlashCommandBuilder()
         .setName('urban')
@@ -17,7 +16,6 @@ export default {
 try {
             const term = interaction.options.getString('term');
             
-            // Check if the term is too short
             if (term.length < 2) {
                 return await interaction.reply({
                     embeds: [errorEmbed('Error', 'Please enter a term with at least 2 characters.')],
@@ -25,7 +23,6 @@ try {
                 });
             }
             
-            // Check if Urban Dictionary is enabled in the guild config
             const guildConfig = await getGuildConfig(interaction.client, interaction.guild.id);
             if (guildConfig?.disabledCommands?.includes('urban')) {
                 return await interaction.editReply({
@@ -49,17 +46,14 @@ try {
             const cleanDefinition = definition.definition.replace(/\[|\]/g, '');
             const cleanExample = definition.example.replace(/\[|\]/g, '');
             
-            // Format the definition to handle markdown and newlines
             const formattedDefinition = cleanDefinition
-                .replace(/\n\s*\n/g, '\n\n') // Normalize multiple newlines
+.replace(/\n\s*\n/g, '\n\n')
                 .slice(0, 2000);
                 
-            // Format the example to handle markdown and newlines
             const formattedExample = cleanExample
                 ? `*"${cleanExample.replace(/\n/g, ' ').slice(0, 500)}..."*`
                 : '*No example provided*';
             
-            // Create the embed with successEmbed for consistent styling
             const embed = successEmbed(
                 definition.word,
                 formattedDefinition
@@ -107,7 +101,6 @@ try {
     },
 };
 
-// Helper function to get guild config
 async function getGuildConfig(client, guildId) {
     try {
         const config = await client.db.get(`guild_${guildId}_config`);

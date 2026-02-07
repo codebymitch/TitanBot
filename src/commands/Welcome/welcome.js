@@ -45,7 +45,6 @@ const { options, guild, client } = interaction;
             const ping = options.getBoolean('ping') ?? false;
 
             try {
-                // Update the welcome configuration
                 const newConfig = await updateWelcomeConfig(client, guild.id, {
                     enabled: true,
                     channelId: channel.id,
@@ -54,7 +53,6 @@ const { options, guild, client } = interaction;
                     welcomePing: ping
                 });
 
-                // Create a preview of the welcome message
                 const previewMessage = message
                     .replace(/{user}/g, interaction.user.toString())
                     .replace(/{username}/g, interaction.user.username)
@@ -62,7 +60,7 @@ const { options, guild, client } = interaction;
                     .replace(/{memberCount}/g, guild.memberCount.toLocaleString());
 
                 const embed = new EmbedBuilder()
-                    .setColor(0x00ff00) // Green color for success
+.setColor(0x00ff00)
                     .setTitle('✅ Welcome System Configured')
                     .setDescription(`Welcome messages will now be sent to ${channel}`)
                     .addFields(

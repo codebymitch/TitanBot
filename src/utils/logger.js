@@ -9,13 +9,11 @@ const { combine, timestamp, printf, colorize, errors, json } = format;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Define log format
 const logFormat = printf(({ level, message, timestamp, stack }) => {
   const logMessage = `[${timestamp}] [${level}]: ${stack || message}`;
   return logMessage;
 });
 
-// Create logger instance
 const logger = createLogger({
   level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
   format: combine(
@@ -25,7 +23,6 @@ const logger = createLogger({
   ),
   defaultMeta: { service: 'titan-bot' },
   transports: [
-    // Write all logs with level `error` and below to `error.log`
     new transports.DailyRotateFile({
       filename: path.join(__dirname, '../../logs/error-%DATE%.log'),
       level: 'error',
@@ -33,7 +30,6 @@ const logger = createLogger({
       maxFiles: '14d',
       zippedArchive: true,
     }),
-    // Write all logs with level `info` and below to `combined.log`
     new transports.DailyRotateFile({
       filename: path.join(__dirname, '../../logs/combined-%DATE%.log'),
       maxSize: '20m',
@@ -41,7 +37,6 @@ const logger = createLogger({
       zippedArchive: true,
     }),
   ],
-  // Handle exceptions and rejections
   exceptionHandlers: [
     new transports.DailyRotateFile({
       filename: path.join(__dirname, '../../logs/exceptions-%DATE%.log'),
@@ -60,7 +55,6 @@ const logger = createLogger({
   ],
 });
 
-// If we're not in production, also log to console with colors
 if (process.env.NODE_ENV !== 'production') {
   logger.add(new transports.Console({
     format: combine(
@@ -72,7 +66,6 @@ if (process.env.NODE_ENV !== 'production') {
     level: 'debug',
   }));
 } else {
-  // In production, only log warnings and errors to console
   logger.add(new transports.Console({
     format: combine(
       colorize(),
@@ -84,7 +77,6 @@ if (process.env.NODE_ENV !== 'production') {
   }));
 }
 
-// Create a stream for morgan
 logger.stream = {
   write: (message) => {
     logger.info(message.trim());

@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, saveGiveaway } from '../../utils/giveaways.js';
 const parseDuration = (durationString) => {
-    // Regex to match formats like "1h", "30m", "5d", "10s"
     const regex = /(\d+)([hmds])/i;
     const match = durationString.match(regex);
 
@@ -30,21 +29,17 @@ const parseDuration = (durationString) => {
             return null;
     }
 
-    // Cap duration to 30 days
     const maxDuration = 30 * 24 * 60 * 60 * 1000;
     if (ms > maxDuration) {
         return maxDuration;
     }
-    // Minimum duration 10 seconds (for testing, usually 1 minute)
     const minDuration = 10 * 1000;
     if (ms < minDuration) {
-        // If the duration is too short, default to the minimum
         return minDuration;
     }
 
     return ms;
 };
-// Migrated from: commands/Giveaway/gcreate.js
 export default {
     data: new SlashCommandBuilder()
         .setName("gcreate")
@@ -78,7 +73,7 @@ export default {
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(false),
         )
-        .setDefaultMemberPermissions(0x0000000000000008n), // Administrator permission
+.setDefaultMemberPermissions(0x0000000000000008n),
 
     async execute(interaction) {
         try {
@@ -107,7 +102,6 @@ export default {
 
             const endTime = Date.now() + durationMs;
 
-            // Create giveaway data
             const initialGiveawayData = {
                 messageId: "placeholder",
                 channelId: targetChannel.id,
@@ -121,7 +115,6 @@ export default {
                 isEnded: false,
             };
 
-            // Send giveaway message
             const embed = giveawayEmbed(initialGiveawayData, "active");
             const row = giveawayButtons(false);
             const giveawayMessage = await targetChannel.send({
@@ -130,7 +123,6 @@ export default {
                 components: [row],
             });
 
-            // Update message ID and save to database
             initialGiveawayData.messageId = giveawayMessage.id;
             await saveGiveaway(
                 interaction.client,
@@ -138,7 +130,6 @@ export default {
                 initialGiveawayData,
             );
 
-            // Confirm success
             await interaction.reply({
                 embeds: [
                     successEmbed(

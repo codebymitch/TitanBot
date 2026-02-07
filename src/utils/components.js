@@ -1,7 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
 import { getColor } from '../config/bot.js';
 
-// Create a standardized promo row for commands
 export function getPromoRow() {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -19,7 +18,6 @@ export function getPromoRow() {
     );
 }
 
-// Create a confirmation button row
 export function getConfirmationButtons(customIdPrefix = 'confirm') {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -35,7 +33,6 @@ export function getConfirmationButtons(customIdPrefix = 'confirm') {
     );
 }
 
-// Create a pagination row
 export function getPaginationRow(customIdPrefix = 'page', currentPage = 1, totalPages = 1) {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -66,7 +63,6 @@ export function getPaginationRow(customIdPrefix = 'page', currentPage = 1, total
     );
 }
 
-// Create a select menu for choices
 export function createSelectMenu(customId, placeholder, options = [], min = 1, max = 1) {
     return new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
@@ -78,7 +74,6 @@ export function createSelectMenu(customId, placeholder, options = [], min = 1, m
     );
 }
 
-// Create a button with a custom style
 export function createButton(customId, label, style = 'primary', emoji = null, disabled = false) {
     const button = new ButtonBuilder()
         .setCustomId(customId)
@@ -93,7 +88,6 @@ export function createButton(customId, label, style = 'primary', emoji = null, d
     return button;
 }
 
-// Create a link button
 export function createLinkButton(label, url, emoji = null) {
     const button = new ButtonBuilder()
         .setLabel(label)
@@ -107,7 +101,6 @@ export function createLinkButton(label, url, emoji = null) {
     return button;
 }
 
-// Create a row of buttons
 export function createButtonRow(buttons) {
     const row = new ActionRowBuilder();
     

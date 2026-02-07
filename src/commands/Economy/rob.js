@@ -2,13 +2,13 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { MessageTemplates } from '../../utils/messageTemplates.js';
 
-// --- Configuration ---
-const ROB_COOLDOWN = 4 * 60 * 60 * 1000; // 4 hours
-const BASE_ROB_SUCCESS_CHANCE = 0.25; // 25% chance of success
-const ROB_PERCENTAGE = 0.15; // Robber takes 15% of the victim's cash
-const FINE_PERCENTAGE = 0.1; // Robber loses 10% of their cash if caught/failed
-
+const ROB_COOLDOWN = 4 * 60 * 60 * 1000;
+const BASE_ROB_SUCCESS_CHANCE = 0.25;
+const ROB_PERCENTAGE = 0.15;
+const FINE_PERCENTAGE = 0.1;
 
 export default {
     data: new SlashCommandBuilder()
@@ -22,105 +22,99 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-const robberId = interaction.user.id;
-        const victimUser = interaction.options.getUser("user");
-        const guildId = interaction.guildId;
-        const now = Date.now();
+        return withErrorHandling(async () => {
+            await interaction.deferReply();
+            
+            const robberId = interaction.user.id;
+            const victimUser = interaction.options.getUser("user");
+            const guildId = interaction.guildId;
+            const now = Date.now();
 
-        // --- 1. Initial Checks ---
-        if (robberId === victimUser.id) {
-            return interaction.reply({
-                embeds: [
-                    errorEmbed("Robbery Failed", "You cannot rob yourself."),
-                ],
-            });
-        }
-        if (victimUser.bot) {
-            return interaction.editReply({
-                embeds: [errorEmbed("Robbery Failed", "You cannot rob a bot.")],
-            });
-        }
+            if (robberId === victimUser.id) {
+                throw createError(
+                    "Cannot rob self",
+                    ErrorTypes.VALIDATION,
+                    "You cannot rob yourself.",
+                    { robberId, victimId: victimUser.id }
+                );
+            }
+            
+            if (victimUser.bot) {
+                throw createError(
+                    "Cannot rob bot",
+                    ErrorTypes.VALIDATION,
+                    "You cannot rob a bot.",
+                    { victimId: victimUser.id, isBot: true }
+                );
+            }
 
-        try {
             const robberData = await getEconomyData(client, guildId, robberId);
-            const victimData = await getEconomyData(
-                client,
-                guildId,
-                victimUser.id,
-            );
+            const victimData = await getEconomyData(client, guildId, victimUser.id);
+            
+            if (!robberData || !victimData) {
+                throw createError(
+                    "Failed to load economy data",
+                    ErrorTypes.DATABASE,
+                    "Failed to load economy data. Please try again later.",
+                    { robberId: !!robberData, victimId: !!victimData, guildId }
+                );
+            }
+            
             const lastRob = robberData.lastRob || 0;
 
-            // --- 2. Cooldown Check ---
             if (now < lastRob + ROB_COOLDOWN) {
                 const remaining = lastRob + ROB_COOLDOWN - now;
                 const hours = Math.floor(remaining / (1000 * 60 * 60));
-                const minutes = Math.floor(
-                    (remaining % (1000 * 60 * 60)) / (1000 * 60),
+                const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+
+                throw createError(
+                    "Robbery cooldown active",
+                    ErrorTypes.RATE_LIMIT,
+                    `You need to lay low. Wait **${hours}h ${minutes}m** before attempting another robbery.`,
+                    { remaining, hours, minutes, cooldownType: 'rob' }
                 );
-
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Robbery Cooldown",
-                            `You need to lay low. Wait **${hours}h ${minutes}m** before attempting another robbery.`,
-                        ),
-                    ],
-                });
             }
 
-            // --- 3. Victim Check ---
             if (victimData.wallet < 500) {
-                // Set a minimum cash requirement for a worthwhile robbery
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Robbery Failed",
-                            `${victimUser.username} is too poor. They need at least $500 cash to be worth robbing.`,
-                        ),
-                    ],
-                });
+                throw createError(
+                    "Victim too poor",
+                    ErrorTypes.VALIDATION,
+                    `${victimUser.username} is too poor. They need at least $500 cash to be worth robbing.`,
+                    { victimWallet: victimData.wallet, required: 500 }
+                );
             }
 
-            // --- 4. Personal Safe Check ---
             const hasSafe = victimData.inventory["personal_safe"] || 0;
 
             if (hasSafe > 0) {
-                // Victim owns a Personal Safe, robbery fails but no fine is applied to the robber
-                robberData.cooldowns.rob = now;
+                robberData.lastRob = now;
                 await setEconomyData(client, guildId, robberId, robberData);
 
-                return interaction.editReply({
+                return await interaction.editReply({
                     embeds: [
-                        errorEmbed(
-                            "🚨 Safe Activated!",
-                            `${victimUser.username} was prepared! Your attempt failed because they own a **Personal Safe**. You got away clean but didn't gain anything.`,
-                        ),
+                        MessageTemplates.ERRORS.CONFIGURATION_REQUIRED(
+                            "robbery protection",
+                            `${victimUser.username} was prepared! Your attempt failed because they own a **Personal Safe**. You got away clean but didn't gain anything.`
+                        )
                     ],
                 });
             }
 
-            // --- 5. Gambling Logic (without Safe) ---
             const isSuccessful = Math.random() < BASE_ROB_SUCCESS_CHANCE;
             let resultEmbed;
 
             if (isSuccessful) {
-                // Success: Robber gains cash, Victim loses cash
-                const amountStolen = Math.floor(
-                    victimData.wallet * ROB_PERCENTAGE,
-                );
+                const amountStolen = Math.floor(victimData.wallet * ROB_PERCENTAGE);
 
                 robberData.wallet = (robberData.wallet || 0) + amountStolen;
                 victimData.wallet = (victimData.wallet || 0) - amountStolen;
 
-                resultEmbed = successEmbed(
-                    "💰 Robbery Successful!",
-                    `You successfully stole **$${amountStolen.toLocaleString()}** from ${victimUser.username}!`,
+                resultEmbed = MessageTemplates.SUCCESS.DATA_UPDATED(
+                    "robbery",
+                    `You successfully stole **$${amountStolen.toLocaleString()}** from ${victimUser.username}!`
                 );
             } else {
-                // Failure: Robber loses cash (fined), Victim loses nothing
-                const fineAmount = Math.floor(
-                    (robberData.wallet || 0) * FINE_PERCENTAGE,
-                );
+                const fineAmount = Math.floor((robberData.wallet || 0) * FINE_PERCENTAGE);
 
                 if ((robberData.wallet || 0) < fineAmount) {
                     robberData.wallet = 0;
@@ -128,13 +122,12 @@ const robberId = interaction.user.id;
                     robberData.wallet = (robberData.wallet || 0) - fineAmount;
                 }
 
-                resultEmbed = errorEmbed(
-                    "🚔 Caught!",
-                    `You failed the robbery and were caught! You were fined **$${fineAmount.toLocaleString()}** of your own cash.`,
+                resultEmbed = MessageTemplates.ERRORS.INSUFFICIENT_PERMISSIONS(
+                    "robbery failed",
+                    `You failed the robbery and were caught! You were fined **$${fineAmount.toLocaleString()}** of your own cash.`
                 );
             }
 
-            // --- 6. Update Data and Respond ---
             robberData.lastRob = now;
 
             await setEconomyData(client, guildId, robberId, robberData);
@@ -156,17 +149,7 @@ const robberId = interaction.user.id;
                 .setFooter({ text: `Next robbery available in 4 hours.` });
 
             await interaction.editReply({ embeds: [resultEmbed] });
-        } catch (error) {
-            console.error("Rob command error:", error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "Could not process the robbery attempt.",
-                    ),
-                ],
-            });
-        }
+        }, { command: 'rob' });
     },
 };
 

@@ -3,7 +3,6 @@ import axios from 'axios';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Search/define.js
 export default {
     data: new SlashCommandBuilder()
         .setName('define')
@@ -16,7 +15,6 @@ export default {
 try {
             const word = interaction.options.getString('word');
             
-            // Check if the word is too short
             if (word.length < 2) {
                 return await interaction.reply({
                     embeds: [errorEmbed('Error', 'Please enter a word with at least 2 characters.')],
@@ -41,7 +39,6 @@ try {
                 data.phonetic ? `*${data.phonetic}*` : ''
             );
             
-            // Add each meaning with examples
             data.meanings.slice(0, 5).forEach(meaning => {
                 const definitions = meaning.definitions
                     .slice(0, 3)
@@ -63,7 +60,6 @@ try {
                 }
             });
             
-            // Add source attribution
             embed.setFooter({ text: 'Powered by Free Dictionary API' });
             
             await interaction.editReply({ embeds: [embed] });

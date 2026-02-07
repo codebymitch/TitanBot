@@ -16,7 +16,6 @@ export default {
       const user = interaction.options.getUser("target") || interaction.user;
       const member = interaction.guild.members.cache.get(user.id);
 
-      // Calculate account creation time
       const createdTimestamp = Math.floor(user.createdAt.getTime() / 1000);
       const joinedTimestamp = member?.joinedAt ? Math.floor(member.joinedAt.getTime() / 1000) : null;
 

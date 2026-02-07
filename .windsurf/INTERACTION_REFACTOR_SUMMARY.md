@@ -7,14 +7,12 @@ Your bot has been refactored from an **event-handler-managed** interaction syste
 ## Before (Problematic Pattern)
 
 ```javascript
-// Event Handler (interactionCreate.js)
 - Automatically deferred EVERY interaction
 - Commands had to use editReply()
 - Double-deferring issues
 - Timing problems
 - Multiple channel creation bugs
 
-// Commands
 - Expected interaction to already be deferred
 - Used editReply() exclusively
 - No control over interaction lifecycle
@@ -23,13 +21,11 @@ Your bot has been refactored from an **event-handler-managed** interaction syste
 ## After (Standard Pattern)
 
 ```javascript
-// Event Handler (interactionCreate.js)
 - Routes interactions to commands
 - Does NOT defer automatically
 - Commands manage their own lifecycle
 - Proper error handling based on interaction state
 
-// Commands
 - Defer if they need time (database ops, API calls)
 - Reply immediately if quick
 - Full control over interaction lifecycle
@@ -92,7 +88,6 @@ Your bot has been refactored from an **event-handler-managed** interaction syste
 ### Quick Commands (No Defer Needed)
 ```javascript
 async execute(interaction, config, client) {
-    // Quick operation - reply immediately
     await interaction.reply({
         content: 'Done!',
         ephemeral: true
@@ -103,14 +98,11 @@ async execute(interaction, config, client) {
 ### Long Commands (Defer Needed)
 ```javascript
 async execute(interaction, config, client) {
-    // Defer since this takes time
     await InteractionHelper.safeDefer(interaction);
     
     try {
-        // Do long operation (database, API, etc.)
         await someLongOperation();
         
-        // Edit the deferred reply
         await InteractionHelper.safeEditReply(interaction, {
             content: 'Operation complete!'
         });
@@ -125,11 +117,9 @@ async execute(interaction, config, client) {
 ### Commands Using safeExecute (Still Work)
 ```javascript
 async execute(interaction, config, client) {
-    // safeExecute handles deferring internally
     await InteractionHelper.safeExecute(
         interaction,
         async () => {
-            // Your command logic
         },
         errorEmbed('Error', 'Something went wrong')
     );

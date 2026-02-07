@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Utility/serverinfo.js
 export default {
     data: new SlashCommandBuilder()
     .setName("serverinfo")

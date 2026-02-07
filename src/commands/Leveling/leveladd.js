@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
-// Migrated from: commands/Leveling/leveladd.js
 export default {
     data: new SlashCommandBuilder()
         .setName("leveladd")
@@ -35,14 +34,12 @@ export default {
                     targetUser.id,
                 );
 
-                // Calculate new level and XP
                 const newLevel = userData.level + levelsToAdd;
                 const newXp = 0;
                 const newTotalXp =
                     userData.totalXp +
                     (getXpForLevel(newLevel) - getXpForLevel(userData.level));
 
-                // Update user data
                 userData.level = newLevel;
                 userData.xp = newXp;
                 userData.totalXp = newTotalXp;

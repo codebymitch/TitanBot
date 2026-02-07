@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
-// Migrated from: commands/Utility/report.js
 export default {
     data: new SlashCommandBuilder()
         .setName("report")
@@ -29,7 +28,6 @@ export default {
      * @param {import('discord.js').Client} client
      */
     async execute(interaction, config, client) {
-    // safeExecute already defers; don't defer again
 
         const targetUser = interaction.options.getUser("user");
         const reason = interaction.options.getString("reason");
@@ -50,12 +48,10 @@ export default {
                 });
             }
 
-            // 2. Fetch the report channel object
             const reportChannel =
                 interaction.guild.channels.cache.get(reportChannelId);
 
             if (!reportChannel) {
-                // This error handles cases where the channel ID exists, but the channel was deleted
                 return await interaction.editReply({
                     embeds: [
                         errorEmbed(
@@ -67,7 +63,7 @@ export default {
             }
 
             const reportEmbed = createEmbed({ title: `🚨 NEW USER REPORT: ${targetUser.tag}`, description: `**Reported By:** ${interaction.user.tag} (\`${interaction.user.id}\`)\n**Reported User:** ${targetUser.tag} (\`${targetUser.id}\`)` })
-                .setColor(0xff0000) // Red color for urgency
+.setColor(0xff0000)
                 .setThumbnail(targetUser.displayAvatarURL())
                 .addFields(
                     { name: "Reason", value: reason },
@@ -83,13 +79,11 @@ export default {
                     },
                 );
 
-            // 4. Send the report
             await reportChannel.send({
                 content: `<@&${interaction.guild.ownerId}> New Report!`,
                 embeds: [reportEmbed],
             });
 
-            // 5. Confirmation reply (Ephemeral)
             await interaction.editReply({
                 embeds: [
                     createEmbed({ title: "✅ Report Submitted", description: `Your report against **${targetUser.tag}** has been successfully filed and sent to the moderation team. Thank you!`, }),

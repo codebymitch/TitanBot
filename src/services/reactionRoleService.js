@@ -35,7 +35,6 @@ export async function addReactionRole(client, guildId, messageId, emoji, roleId)
             roles: {}
         };
 
-        // Add or update the role for this emoji
         data.roles[emoji] = roleId;
         
         await client.db.set(key, data);
@@ -63,10 +62,8 @@ export async function removeReactionRole(client, guildId, messageId, emoji) {
             return false;
         }
 
-        // Remove the role for this emoji
         delete data.roles[emoji];
 
-        // If there are no more roles, delete the message data
         if (Object.keys(data.roles).length === 0) {
             await client.db.delete(key);
         } else {
@@ -92,18 +89,13 @@ export async function getAllReactionRoleMessages(client, guildId) {
         
         let keys;
         try {
-            // Try to list keys with prefix
             keys = await client.db.list(prefix);
             
-            // Handle different response formats
             if (keys && typeof keys === 'object') {
                 if (Array.isArray(keys)) {
-                    // Already an array
                 } else if (keys.value && Array.isArray(keys.value)) {
-                    // Response format: { value: [...] }
                     keys = keys.value;
                 } else {
-                    // Try to get all keys and filter
                     const allKeys = await client.db.list();
                     
                     if (Array.isArray(allKeys)) {
@@ -133,7 +125,6 @@ export async function getAllReactionRoleMessages(client, guildId) {
                 const data = await client.db.get(key);
                 
                 if (data) {
-                    // Handle database response format
                     let actualData;
                     if (data && data.ok && data.value) {
                         actualData = data.value;

@@ -3,11 +3,9 @@ import { getEconomyKey } from './database.js';
 import { getFromDb, setInDb } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
-// Use bank capacity from config
 const BASE_BANK_CAPACITY = BotConfig.economy.baseBankCapacity;
 const BANK_CAPACITY_PER_LEVEL = BotConfig.economy.bankCapacityPerLevel || 5000;
 
-// Default economy data for new users
 const DEFAULT_ECONOMY_DATA = {
     wallet: 0,
     bank: 0,
@@ -63,7 +61,6 @@ export async function getEconomyData(client, guildId, userId) {
     } catch (error) {
         logger.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
         
-        // Only use fallback if PostgreSQL is completely unavailable
         if (error.message && (error.message.includes('ECONNREFUSED') || error.message.includes('connection'))) {
             if (client._economyFallback) {
                 const key = getEconomyKey(guildId, userId);
@@ -116,13 +113,11 @@ export async function setEconomyData(client, guildId, userId, newData) {
         const existingData = await getEconomyData(client, guildId, userId);
         const mergedData = { ...existingData, ...newData };
         
-        // Save to primary database (PostgreSQL)
         await setInDb(key, mergedData);
         return true;
     } catch (error) {
         logger.error('Error saving economy data:', error);
         
-        // Only use fallback if PostgreSQL is completely unavailable
         if (error.message && (error.message.includes('ECONNREFUSED') || error.message.includes('connection'))) {
             logger.warn(`PostgreSQL unavailable, using memory fallback for guild ${guildId}`);
             
@@ -329,7 +324,6 @@ export async function checkCooldown(client, guildId, userId, action, cooldownTim
             return { onCooldown: true, timeLeft };
         }
         
-        // Update last action time
         lastAction[action] = now;
         userData.lastAction = lastAction;
         await setEconomyData(client, guildId, userId, userData);

@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
-// Migrated from: commands/Giveaway/greroll.js
 export default {
     data: new SlashCommandBuilder()
         .setName("greroll")
@@ -13,7 +12,7 @@ export default {
                 .setDescription("The message ID of the ended giveaway.")
                 .setRequired(true),
         )
-        .setDefaultMemberPermissions(0x0000000000000008n), // Administrator permission
+.setDefaultMemberPermissions(0x0000000000000008n),
 
     async execute(interaction) {
         if (!interaction.inGuild()) {
@@ -73,7 +72,6 @@ export default {
             });
         }
 
-        // Use 'participants' for consistency with gcreate
         const participants = giveaway.participants || [];
         
         if (participants.length < giveaway.winnerCount) {
@@ -88,19 +86,16 @@ export default {
         }
 
         try {
-            // 1. Pick New Winner(s)
             const newWinners = pickWinners(
                 participants,
                 giveaway.winnerCount,
             );
             const newWinnerIds = newWinners.map((w) => w);
 
-            // 2. Locate the message and channel
             const channel = await interaction.client.channels.fetch(
                 giveaway.channelId,
             );
             if (!channel || !channel.isTextBased()) {
-                // If channel is gone, just update DB and return
                 giveaway.winnerIds = newWinnerIds;
                 await saveGiveaway(
                     interaction.client,
@@ -121,7 +116,6 @@ export default {
                 .fetch(messageId)
                 .catch(() => null);
             if (!message) {
-                // If message is gone, update DB and announce in reply
                 giveaway.winnerIds = newWinnerIds;
                 await saveGiveaway(
                     interaction.client,
@@ -144,8 +138,7 @@ export default {
                 });
             }
 
-            // 3. Update the database and message
-            giveaway.winnerIds = newWinnerIds; // Overwrite previous winners
+giveaway.winnerIds = newWinnerIds;
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
@@ -153,7 +146,7 @@ export default {
             );
 
             const newEmbed = giveawayEmbed(giveaway, "reroll", newWinnerIds);
-            const newRow = giveawayButtons(true); // Still ended
+const newRow = giveawayButtons(true);
 
             await message.edit({
                 content: "🔄 **GIVEAWAY REROLLED** 🔄",
@@ -161,7 +154,6 @@ export default {
                 components: [newRow],
             });
 
-            // 4. Announce new winner(s) in the channel
             const winnerMentions = newWinnerIds
                 .map((id) => `<@${id}>`)
                 .join(", ");

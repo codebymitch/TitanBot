@@ -1,4 +1,3 @@
-// src/handlers/commands.js
 import { readdir, stat } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -26,7 +25,6 @@ export default async (client) => {
 
     for (const file of commandFiles) {
       try {
-        // Convert absolute path to relative path from commands directory
         const relativePath = file.replace(commandsPath, '').replace(/^[\\/]/, '').replace(/\\/g, '/');
         const commandModule = await import(`../commands/${relativePath}`);
         const command = commandModule.default;

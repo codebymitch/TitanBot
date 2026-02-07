@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
-// Migrated from: commands/Fun/roll.js
 export default {
     data: new SlashCommandBuilder()
     .setName("roll")
@@ -19,9 +18,8 @@ try {
       const notation = interaction.options
         .getString("notation")
         .toLowerCase()
-        .replace(/\s/g, ""); // Remove spaces
+.replace(/\s/g, "");
 
-      // Regex to match NdS[+/-M] -> (N)umber of Dice, (S)ides, (M)odifier
       const match = notation.match(/^(\d*)d(\d+)([\+\-]\d+)?$/);
 
       if (!match) {

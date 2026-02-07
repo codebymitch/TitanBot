@@ -2,7 +2,6 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
-// Migrated from: commands/Giveaway/gend.js
 export default {
     data: new SlashCommandBuilder()
         .setName("gend")
@@ -15,7 +14,7 @@ export default {
                 .setDescription("The message ID of the giveaway to end.")
                 .setRequired(true),
         )
-        .setDefaultMemberPermissions(0x0000000000000008n), // Administrator permission
+.setDefaultMemberPermissions(0x0000000000000008n),
 
     async execute(interaction) {
         try {
@@ -55,11 +54,9 @@ export default {
                 });
             }
 
-            // 1. Pick Winner(s) - Use 'participants' for consistency with gcreate
             const winners = pickWinners(giveaway.participants || [], giveaway.winnerCount);
-            const winnerIds = winners.map((w) => w); // Store raw IDs
+const winnerIds = winners.map((w) => w);
 
-            // 2. Locate the message and channel
             const channel = await interaction.client.channels.fetch(
                 giveaway.channelId,
             );
@@ -100,9 +97,8 @@ export default {
                 });
             }
 
-            // 3. Update the database and message
             giveaway.isEnded = true;
-            giveaway.winnerIds = winnerIds; // Store the winning IDs
+giveaway.winnerIds = winnerIds;
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
@@ -118,7 +114,6 @@ export default {
                 components: [newRow],
             });
 
-            // 4. Announce winner(s) in the channel
             if (winnerIds.length > 0) {
                 const winnerMentions = winnerIds
                     .map((id) => `<@${id}>`)

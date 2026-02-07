@@ -7,13 +7,10 @@ export default {
         const guildId = interaction.guildId;
 
         try {
-            // 1. Fetch current guild configuration
             let guildConfig = await getGuildConfig(client, guildId);
 
-            // 2. Update the configuration object
             guildConfig.reportChannelId = channel.id;
 
-            // 3. Save the updated configuration
             await setGuildConfig(client, guildId, guildConfig);
 
             await interaction.reply({

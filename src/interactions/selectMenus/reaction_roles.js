@@ -12,11 +12,9 @@ export async function execute(interaction, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
         if (!deferSuccess) return;
 
-        // Get the reaction role data from database using consistent key format
         const key = `reaction_roles:${interaction.guildId}:${interaction.message.id}`;
         const reactionRoleData = await client.db.get(key);
         
-        // Handle database response format
         let actualData;
         if (reactionRoleData && reactionRoleData.ok && reactionRoleData.value) {
             actualData = reactionRoleData.value;
@@ -39,7 +37,6 @@ export async function execute(interaction, client) {
         const member = interaction.member;
         const selectedRoleIds = interaction.values;
         
-        // Check if bot has permission to manage roles
         if (!interaction.guild.members.me.permissions.has('ManageRoles')) {
             return interaction.editReply({
                 embeds: [
@@ -50,60 +47,48 @@ export async function execute(interaction, client) {
             });
         }
         
-        // Check bot's role hierarchy
         const botRolePosition = interaction.guild.members.me.roles.highest.position;
         
-        // Handle both array format (new system) and object format (old system)
         let availableRoleIds;
         if (Array.isArray(actualData.roles)) {
-            // New format: roles is an array of role IDs
             availableRoleIds = actualData.roles;
         } else if (typeof actualData.roles === 'object') {
-            // Old format: roles is an object mapping emoji to role ID
             availableRoleIds = Object.values(actualData.roles);
         } else {
             availableRoleIds = [];
         }
 
-        // Track changes for response message
         const addedRoles = [];
         const removedRoles = [];
 
-        // Process each selected role
         for (const roleId of selectedRoleIds) {
             if (!availableRoleIds.includes(roleId)) continue;
 
             const role = interaction.guild.roles.cache.get(roleId);
             if (!role) continue;
             
-            // Check bot hierarchy for this role
             if (role.position >= botRolePosition) continue;
 
             if (!member.roles.cache.has(roleId)) {
-                // Add the role
                 await member.roles.add(role);
                 addedRoles.push(role.name);
             }
         }
 
-        // Process roles that should be removed (not selected but user has them)
         for (const roleId of availableRoleIds) {
-            if (selectedRoleIds.includes(roleId)) continue; // Skip if selected
+if (selectedRoleIds.includes(roleId)) continue;
 
             const role = interaction.guild.roles.cache.get(roleId);
             if (!role) continue;
 
-            // Check bot hierarchy for this role
             if (role.position >= botRolePosition) continue;
 
             if (member.roles.cache.has(roleId)) {
-                // Remove the role
                 await member.roles.remove(role);
                 removedRoles.push(role.name);
             }
         }
 
-        // Create response message
         let description = '🎭 **Roles updated successfully!**\n\n';
         
         if (addedRoles.length > 0) {

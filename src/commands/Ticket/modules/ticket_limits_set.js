@@ -8,13 +8,10 @@ export default {
         const guildId = interaction.guild.id;
 
         try {
-            // Get current config
             const guildConfig = await getGuildConfig(client, guildId);
             
-            // Update max tickets
             guildConfig.maxTicketsPerUser = maxTickets;
 
-            // Save to database
             const configKey = getGuildConfigKey(guildId);
             await client.db.set(configKey, guildConfig);
 

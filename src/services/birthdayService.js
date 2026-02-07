@@ -30,7 +30,6 @@ export async function checkBirthdays(client) {
       const channel = await guild.channels.fetch(birthdayChannelId).catch(() => null);
       if (!channel) continue;
 
-      // Role cleanup from yesterday
       const trackingKey = `bday-role-tracking-${guildId}`;
       const trackingData = (await client.db.get(trackingKey)) || {};
       const updatedTrackingData = { ...trackingData };
@@ -51,7 +50,6 @@ export async function checkBirthdays(client) {
         await client.db.set(trackingKey, updatedTrackingData);
       }
 
-      // Check for birthdays today
       const birthdaysKey = `birthdays:${guildId}`;
       const birthdays = (await client.db.get(birthdaysKey)) || {};
       const birthdayMembers = [];

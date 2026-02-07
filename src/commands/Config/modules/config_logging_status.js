@@ -17,9 +17,10 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 });
             }
 
+            await interaction.deferReply();
+
             const currentConfig = await getGuildConfig(client, interaction.guildId);
 
-            // Helper function to determine channel/role status
             const getStatus = (id, type) => {
                 let status = "❌ Not Set";
                 if (id) {
@@ -33,7 +34,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 return status;
             };
 
-            // --- Configuration Statuses ---
             const logChannelStatus = getStatus(
                 currentConfig.logChannelId,
                 "channel",
@@ -42,13 +42,11 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 currentConfig.reportChannelId,
                 "channel",
             );
-            // --- ADDED PREMIUM ROLE STATUS ---
             const premiumRoleStatus = getStatus(
                 currentConfig.premiumRoleId,
                 "role",
             );
 
-            // --- TOGGLEABLE SYSTEMS STATUS ---
             const levelingConfig = await getLevelingConfig(client, interaction.guildId);
             const levelingStatus = levelingConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
             
@@ -58,23 +56,18 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             
             const autoRoleStatus = getStatus(currentConfig.autoRole, "role");
             
-            // Check birthday system status
             const birthdayStatus = currentConfig.birthdayChannelId ? 
                 "✅ **Enabled**" : "❌ **Disabled**";
 
-            // Enhanced moderation logging status
             const moderationLoggingStatus = currentConfig.enableLogging && currentConfig.logChannelId 
                 ? "✅ **Enabled**" : "❌ **Disabled**";
 
-            // Additional systems
             const applicationConfig = await getApplicationSettings(client, interaction.guildId);
             const applicationStatus = applicationConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
 
-            // Ticket system status
             const maxTicketsPerUser = currentConfig.maxTicketsPerUser || 3;
             const dmOnClose = currentConfig.dmOnClose !== false;
             
-            // Get ticket logging channels
             const ticketLogging = currentConfig.ticketLogging || {};
             const lifecycleChannelStatus = getStatus(ticketLogging.lifecycleChannelId, "channel");
             const transcriptChannelStatus = getStatus(ticketLogging.transcriptChannelId, "channel");
@@ -96,11 +89,9 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 
             const ticketLimitsStatus = `🎫 **${maxTicketsPerUser}** per user\n📩 DM on Close: ${dmOnClose ? '✅' : '❌'}\n📊 Open Tickets: ${totalOpenTickets}\n📝 Ticket Logging: ${ticketLoggingStatus}`;
 
-            // --- LOG IGNORE FILTERS STATUS ---
             const ignoredUsers = currentConfig.logIgnore?.users || [];
             const ignoredChannels = currentConfig.logIgnore?.channels || [];
 
-            // Format lists for display
             const formatIdList = (list) => {
                 if (list.length === 0) return "None";
                 if (list.length > 5)
@@ -116,7 +107,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 .setColor("#3498DB")
                 .setTimestamp()
                 .addFields(
-                    // 🎮 Core Systems Section
                     {
                         name: "🎮 Leveling System",
                         value: levelingStatus,
@@ -162,7 +152,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                         value: ticketLimitsStatus,
                         inline: true,
                     },
-                    // 📊 Configuration Channels Section
                     {
                         name: "📊 Configuration Channels",
                         value: "**Audit Logs:** " + logChannelStatus + 
@@ -171,7 +160,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                                "\n**Ticket Transcripts:** " + transcriptChannelStatus,
                         inline: false,
                     },
-                    // ❌ Filter Settings Section
                     {
                         name: "❌ Log Filters",
                         value: "**Users:** " + formatIdList(ignoredUsers) + "\n**Channels:** " + formatIdList(ignoredChannels),

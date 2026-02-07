@@ -3,7 +3,6 @@ import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getLevelingConfig, saveLevelingConfig } from '../../utils/database.js';
 
-// Migrated from: commands/Leveling/levelconfig.js
 export default {
     data: new SlashCommandBuilder()
         .setName("levelconfig")

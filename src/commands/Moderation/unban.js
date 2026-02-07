@@ -22,7 +22,6 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            // Permission check
                 if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
                     throw new Error("You do not have permission to unban members.");
                 }
@@ -30,7 +29,6 @@ export default {
                 const targetUser = interaction.options.getUser("target");
                 const reason = interaction.options.getString("reason") || "No reason provided";
 
-                // Check if user is actually banned
                 const banList = await interaction.guild.bans.fetch();
                 const banInfo = banList.get(targetUser.id);
 
@@ -38,10 +36,8 @@ export default {
                     throw new Error(`${targetUser.tag} is not currently banned from this server.`);
                 }
 
-                // Unban the user
                 await interaction.guild.members.unban(targetUser.id, reason);
 
-                // Log the action
                 await logModerationAction({
                     client,
                     guild: interaction.guild,
@@ -57,7 +53,6 @@ export default {
                     }
                 });
 
-                // Send success response
                 await interaction.editReply({
                     embeds: [
                         successEmbed(

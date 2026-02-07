@@ -11,7 +11,6 @@ const interactionTypes = ['buttons', 'selectMenus', 'modals'];
 
 export default async (client) => {
   try {
-    // Check if interactions directory exists and has files
     const interactionsPath = join(__dirname, '../interactions');
     
     for (const type of interactionTypes) {

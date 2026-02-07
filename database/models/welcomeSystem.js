@@ -8,7 +8,6 @@ const welcomeSystem = sequelize.define('welcomeSystem', {
         allowNull: false,
         unique: true
     },
-    // Welcome message settings
     welcomeEnabled: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
@@ -31,7 +30,6 @@ const welcomeSystem = sequelize.define('welcomeSystem', {
         defaultValue: false
     },
     
-    // Goodbye message settings
     goodbyeEnabled: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
@@ -50,13 +48,11 @@ const welcomeSystem = sequelize.define('welcomeSystem', {
         allowNull: true
     },
     
-    // Auto-role settings
     autoRoles: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: []
     },
     
-    // Timestamps
     createdAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
@@ -67,7 +63,6 @@ const welcomeSystem = sequelize.define('welcomeSystem', {
     }
 });
 
-// Create the table if it doesn't exist
 welcomeSystem.sync({ alter: true }).catch(console.error);
 
 module.exports = welcomeSystem;
