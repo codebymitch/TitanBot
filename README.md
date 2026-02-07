@@ -2,15 +2,15 @@
 
 **TitanBot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and PostgreSQL for optimal performance and data persistence.
 
-[![Support Server](https:
-[![Discord.js](https:
+[![Support Server](https://img.shields.io/badge/-Support%20Server-%235865F2?logo=discord&logoColor=white&style=flat-square&logoWidth=20)](https://discord.gg/YOUR_INVITE)
+[![Discord.js](https://img.shields.io/npm/v/discord.js?style=flat-square&labelColor=%23202225&color=%23202225&logo=npm&logoColor=white&logoWidth=20)](https://www.npmjs.com/package/discord.js)
+![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-%23336791?logo=postgresql&logoColor=white&style=flat-square&logoWidth=20)
 
 ## 📚 Table of Contents
 
 - [🌟 Features Overview](#-features-overview)
-- [🚀 Quick Setup](#-quick-setup)
-  - [Installation Steps](#installation-steps)
-  - [📹 Video Tutorial](#-video-tutorial)
+- [🚀 Quick Setup](#-video-tutorial)
+- [💡 Manual Installation Steps](#installation-steps)
 - [🗄️ Database System](#️-database-system)
 - [🌐 Support Server](#-support-server)
 - [🏗️ Bot Architecture](#-bot-architecture)
@@ -36,7 +36,7 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 
 ### 📹 Video Tutorial
 For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
-[**TitanBot Setup Tutorial**](https:
+[**TitanBot Setup Tutorial**](https://www.youtube.com/watch?v=YOUR_TUTORIAL_ID)
 
 ### Prerequisites
 - Node.js 18.0.0 or higher
@@ -47,8 +47,8 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 
 1. **Clone the Repository**
    ```bash
-git clone https:
-   cd TitanBot-redis
+git clone https://github.com/yourusername/TitanBot.git
+   cd TitanBot
    ```
 
 2. **Install Dependencies**
@@ -68,7 +68,7 @@ git clone https:
    GUILD_ID=your_discord_guild_id_here
 
    # PostgreSQL Configuration (Recommended)
-POSTGRES_URL=postgresql:
+POSTGRES_URL=postgresql://titanbot:yourpassword@localhost:5432/titanbot
    POSTGRES_HOST=localhost
    POSTGRES_PORT=5432
    POSTGRES_DB=titanbot
@@ -80,8 +80,8 @@ POSTGRES_URL=postgresql:
    AUTO_MIGRATE=false
 
    # Bot Configuration
-   NODE_ENV=development
-   LOG_LEVEL=info
+NODE_ENV=development
+LOG_LEVEL=info
    ```
 
 4. **Setup PostgreSQL Database** (Optional but recommended)
@@ -115,7 +115,7 @@ TitanBot uses **PostgreSQL** as its primary database with intelligent fallback t
 - **Scalability**: Better performance for large datasets
 - **TTL Support**: Automatic key expiration for temporary data
 - **Connection Management**: Automatic reconnection with exponential backoff
-- **Migration System**: Version-controlled schema updates
+- **Automatic Schema Creation**: Tables and indexes created on connection
 
 ### Fallback System
 - **Memory Storage**: Automatic fallback when PostgreSQL is unavailable
@@ -171,7 +171,6 @@ We welcome contributions to TitanBot! Here's how you can help:
 - Add proper error handling
 - Include documentation for new features
 - Test with PostgreSQL and memory storage
-- Ensure database migrations are properly handled
 
 ## 📜 License
 
