@@ -44,6 +44,16 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 - **Ticket Limits** - Prevent spam
 - **Transcript System** - Save ticket history
 
+### 🔢 Server Counters
+- **Member Counter** - Live member count channels
+- **Voice Counters** - Track voice stats
+- **Dynamic Updates** - Real-time channel updates
+
+### 🎭 Reaction Roles
+- **Role Assignment** - Self-assignable roles
+- **Emoji Selection** - Reaction-based system
+- **Multi-role Support** - Multiple role options
+
 </td>
 <td width="50%" valign="top">
 
@@ -71,16 +81,6 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 - **Welcome Messages** - Greet new members
 - **Auto Roles** - Assign roles on join
 - **Custom Embeds** - Personalized messages
-
-### 🔢 Server Counters
-- **Member Counter** - Live member count channels
-- **Voice Counters** - Track voice stats
-- **Dynamic Updates** - Real-time channel updates
-
-### 🎭 Reaction Roles
-- **Role Assignment** - Self-assignable roles
-- **Emoji Selection** - Reaction-based system
-- **Multi-role Support** - Multiple role options
 
 </td>
 </tr>
