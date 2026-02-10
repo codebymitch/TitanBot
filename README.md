@@ -47,7 +47,7 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 
 1. **Clone the Repository**
    ```bash
-git clone https://github.com/yourusername/TitanBot.git
+   git clone https://github.com/yourusername/TitanBot.git
    cd TitanBot
    ```
 
@@ -68,7 +68,7 @@ git clone https://github.com/yourusername/TitanBot.git
    GUILD_ID=your_discord_guild_id_here
 
    # PostgreSQL Configuration (Recommended)
-POSTGRES_URL=postgresql://titanbot:yourpassword@localhost:5432/titanbot
+   POSTGRES_URL=postgresql://titanbot:yourpassword@localhost:5432/titanbot
    POSTGRES_HOST=localhost
    POSTGRES_PORT=5432
    POSTGRES_DB=titanbot
@@ -80,8 +80,8 @@ POSTGRES_URL=postgresql://titanbot:yourpassword@localhost:5432/titanbot
    AUTO_MIGRATE=false
 
    # Bot Configuration
-NODE_ENV=development
-LOG_LEVEL=info
+   NODE_ENV=development
+   LOG_LEVEL=info
    ```
 
 4. **Setup PostgreSQL Database** (Optional but recommended)
