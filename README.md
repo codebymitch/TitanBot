@@ -20,17 +20,97 @@
 
 TitanBot offers a complete suite of tools for Discord server management and community engagement:
 
-#### 🛡️ Moderation & Administration
-#### 💰 Economy System
-#### 🎮 Fun & Entertainment
-#### 📊 Leveling & XP System
-#### 🎫 Advanced Ticket System
-#### 🎉 Giveaways & Events
-#### 🎂 Birthday System
-#### 🔧 Utility Tools
-#### 👋 Welcome System
-#### 🔢 Server Counters
-#### 🎭 Reaction Roles
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🛡️ Moderation & Administration
+- **Ban/Kick/Timeout** - Comprehensive member management
+- **Warn System** - Track and manage user warnings
+- **Mass Actions** - Bulk ban/kick capabilities
+- **Lock/Unlock** - Channel control commands
+- **Purge** - Advanced message cleanup
+- **User Notes** - Keep detailed moderation records
+- **Case Management** - View and track all mod actions
+
+### 💰 Economy System
+- **Balance & Banking** - Wallet and bank accounts
+- **Daily Rewards** - Claim daily coins
+- **Work/Crime/Slut** - Multiple earning methods
+- **Shop & Inventory** - Buy and manage items
+- **Gambling** - Risk it for rewards
+- **Rob & Beg** - Interactive economy features
+- **Leaderboards** - Track top earners
+- **Pay System** - Transfer money between users
+
+### 🎮 Fun & Entertainment
+- **Ship Calculator** - Check compatibility
+- **Fight Command** - Fun user battles
+- **Mock Text** - mOcK tExT gEnErAtOr
+- **Roll Dice** - Random number generation
+- **Coin Flip** - Heads or tails
+- **Random Facts** - Learn something new
+- **Wanted Poster** - Create fun wanted images
+- **Text Reversal** - Reverse any text
+
+### 🎫 Advanced Ticket System
+- **Create Tickets** - User support system
+- **Claim & Priority** - Staff ticket management
+- **Close Tickets** - Resolve and archive
+- **Ticket Limits** - Prevent spam
+- **Transcript System** - Save ticket history
+
+</td>
+<td width="50%" valign="top">
+
+### 📊 Leveling & XP System
+- **Rank Cards** - Beautiful level display
+- **XP Tracking** - Automatic message-based XP
+- **Leaderboards** - Server-wide rankings
+- **Level Roles** - Auto-assign roles by level
+- **Admin Controls** - Add/remove/set XP
+- **Custom Configuration** - Personalize leveling
+
+### 🎉 Giveaways & Events
+- **Create Giveaways** - Host exciting events
+- **Multiple Winners** - Support multi-winner giveaways
+- **Auto Picking** - Automatic winner selection
+- **Reroll System** - Pick new winners if needed
+
+### 🎂 Birthday System
+- **Birthday Tracking** - Never miss a birthday
+- **Auto Announcements** - Celebrate automatically
+- **Birthday Lists** - View upcoming birthdays
+- **Timezone Support** - Accurate worldwide tracking
+
+### 🔧 Utility Tools
+- **User Info** - Detailed member information
+- **Server Info** - Server statistics and data
+- **Avatar Display** - View user/server avatars
+- **Weather** - Check weather anywhere
+- **Report System** - Report issues to staff
+- **Todo Lists** - Personal task management
+- **First Message** - Jump to channel's first message
+
+### 👋 Welcome System
+- **Welcome Messages** - Greet new members
+- **Goodbye Messages** - Farewell messages
+- **Auto Roles** - Assign roles on join
+- **Custom Embeds** - Personalized messages
+
+### 🔢 Server Counters
+- **Member Counter** - Live member count channels
+- **Voice Counters** - Track voice stats
+- **Dynamic Updates** - Real-time channel updates
+
+### 🎭 Reaction Roles
+- **Role Assignment** - Self-assignable roles
+- **Emoji Selection** - Reaction-based system
+- **Multi-role Support** - Multiple role options
+
+</td>
+</tr>
+</table>
 
 ## 🚀 Quick Setup (recommend)
 
