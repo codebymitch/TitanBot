@@ -1,6 +1,6 @@
 import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
-import { getFromDb, setInDb } from '../services/database.js';
+import { getFromDb, setInDb } from '../utils/database.js';
 
 const sharedTodoAddHandler = {
   name: 'shared_todo_add',

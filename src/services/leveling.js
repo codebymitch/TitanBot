@@ -2,44 +2,9 @@ import { EmbedBuilder } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from './guildConfig.js';
 import { addXp } from './xpSystem.js';
-import { pgDb } from '../utils/postgresDatabase.js';
 
-let db = null;
-let useFallback = false;
-let connectionType = 'none';
-
-const isReplitEnvironment = process.env.REPL_ID || process.env.REPL_OWNER || process.env.REPL_SLUG;
-
-async function initializeLevelingDatabase() {
-  try {
-    logger.info('Leveling: Attempting to connect to PostgreSQL...');
-    const pgConnected = await pgDb.connect();
-    if (pgConnected) {
-      db = pgDb;
-      connectionType = 'postgresql';
-      logger.info('✅ Leveling: PostgreSQL Database initialized');
-      return;
-    }
-  } catch (error) {
-    logger.warn('Leveling: PostgreSQL connection failed, using mock database:', error.message);
-  }
-  
-  db = {
-    get: async (key, defaultValue = null) => defaultValue,
-    set: async (key, value, ttl = null) => true,
-    delete: async (key) => true,
-    list: async (prefix) => [],
-    exists: async (key) => false,
-    increment: async (key, amount = 1) => amount,
-    decrement: async (key, amount = 1) => -amount
-  };
-  useFallback = true;
-  connectionType = 'memory';
-  logger.info('Leveling: Using mock database (fallback)');
-}
-
-initializeLevelingDatabase();
-
+// Database is managed centrally in app.js via client.db
+// All functions in this file receive 'client' as parameter and use client.db
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
 

@@ -74,7 +74,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             
             let totalOpenTickets = 0;
             try {
-                const { getFromDb } = await import('../../../services/database.js');
+                const { getFromDb } = await import('../../../utils/database.js');
                 const ticketKeys = await getFromDb(`guild:${interaction.guildId}:ticket:*`, {});
                 for (const key of Object.keys(ticketKeys)) {
                     const ticketData = await getFromDb(key, null);
