@@ -65,10 +65,18 @@ export function createEmbed({
   return embed;
 }
 
-export function errorEmbed(message, error = null) {
+export function errorEmbed(message, error = null, options = {}) {
+  const { showDetails = process.env.NODE_ENV !== 'production' } = options;
+  let description = message;
+
+  if (error && showDetails) {
+    const detailText = typeof error === 'string' ? error : (error.message || String(error));
+    description = `${message}\n${formatCodeBlock(detailText)}`;
+  }
+
   return createEmbed({
     title: '❌ Error',
-    description: error ? `${message}\n\`\`\`${error.message || error}\`\`\`` : message,
+    description,
     color: 'error',
     timestamp: true
   });

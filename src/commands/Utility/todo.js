@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-import { getFromDb, setInDb } from '../../services/database.js';
+import { getFromDb, setInDb } from '../../utils/database.js';
 function generateShareId() {
     return Math.random().toString(36).substring(2, 9);
 }

@@ -2,6 +2,7 @@ import { pgDb } from './postgresDatabase.js';
 import { MemoryStorage } from './memoryStorage.js';
 import { logger } from './logger.js';
 import { BotConfig } from '../config/bot.js';
+import { normalizeGuildConfig } from './schemas.js';
 
 class DatabaseWrapper {
     constructor() {
@@ -9,6 +10,7 @@ class DatabaseWrapper {
         this.db = null;
         this.useFallback = false;
         this.connectionType = 'none';
+        this.degradedModeWarningShown = false;
     }
 
     async initialize() {
@@ -22,22 +24,28 @@ class DatabaseWrapper {
             if (pgConnected) {
                 this.db = pgDb;
                 this.connectionType = 'postgresql';
-                logger.info('✅ PostgreSQL Database initialized');
+                logger.info('✅ PostgreSQL Database initialized - using persistent database');
                 this.initialized = true;
                 return;
             }
         } catch (error) {
-            logger.warn('PostgreSQL connection failed, using memory storage:', error.message);
+            logger.warn('PostgreSQL connection failed:', error.message);
         }
 
+        // Fallback to memory storage
         this.db = new MemoryStorage();
         this.useFallback = true;
         this.connectionType = 'memory';
-        logger.info('🔄 Using in-memory storage as fallback');
+        logger.warn('⚠️  DATABASE DEGRADED MODE ENABLED - Using in-memory storage (data will be lost on restart)');
+        logger.warn('⚠️  Please check PostgreSQL connection and restart the bot when fixed');
         this.initialized = true;
+        this.degradedModeWarningShown = true;
     }
 
     async set(key, value, ttl = null) {
+        if (this.useFallback) {
+            logger.debug(`[DEGRADED] Writing to memory: ${key}`);
+        }
         return this.db.set(key, value, ttl);
     }
 
@@ -46,6 +54,9 @@ class DatabaseWrapper {
     }
 
     async delete(key) {
+        if (this.useFallback) {
+            logger.debug(`[DEGRADED] Deleting from memory: ${key}`);
+        }
         return this.db.delete(key);
     }
 
@@ -62,6 +73,9 @@ class DatabaseWrapper {
     }
 
     async increment(key, amount = 1) {
+        if (this.useFallback) {
+            logger.debug(`[DEGRADED] Incrementing in memory: ${key}`);
+        }
         if (this.db.increment) {
             return this.db.increment(key, amount);
         }
@@ -72,6 +86,9 @@ class DatabaseWrapper {
     }
 
     async decrement(key, amount = 1) {
+        if (this.useFallback) {
+            logger.debug(`[DEGRADED] Decrementing in memory: ${key}`);
+        }
         if (this.db.decrement) {
             return this.db.decrement(key, amount);
         }
@@ -81,8 +98,33 @@ class DatabaseWrapper {
         return newValue;
     }
 
+    /**
+     * Check if database is in degraded mode (memory-only fallback)
+     * @returns {boolean} True if using in-memory storage fallback
+     */
+    isDegraded() {
+        return this.useFallback;
+    }
+
+    /**
+     * Check if database is fully available (PostgreSQL)
+     * @returns {boolean} True if connected to PostgreSQL
+     */
     isAvailable() {
         return this.db && !this.useFallback;
+    }
+
+    /**
+     * Get current connection status
+     * @returns {Object} Status information
+     */
+    getStatus() {
+        return {
+            initialized: this.initialized,
+            connectionType: this.connectionType,
+            isDegraded: this.useFallback,
+            isAvailable: this.isAvailable()
+        };
     }
 
     getConnectionType() {
@@ -170,21 +212,15 @@ export async function getGuildConfig(client, guildId) {
         const rawConfig = await client.db.get(configKey, {});
         const cleanedConfig = unwrapReplitData(rawConfig);
 
-        const finalConfig =
-            typeof cleanedConfig === "object" && cleanedConfig !== null
-                ? cleanedConfig
-                : {};
-
-        finalConfig.logIgnore = finalConfig.logIgnore || {
-            users: [],
-            channels: [],
+        const defaults = {
+            logIgnore: { users: [], channels: [] },
+            enabledCommands: {},
+            reportChannelId: null,
+            birthdayChannelId: null,
+            premiumRoleId: null
         };
-        finalConfig.enabledCommands = finalConfig.enabledCommands || {};
-        finalConfig.reportChannelId = finalConfig.reportChannelId || null;
-        finalConfig.birthdayChannelId = finalConfig.birthdayChannelId || null;
-        finalConfig.premiumRoleId = finalConfig.premiumRoleId || null;
 
-        return finalConfig;
+        return normalizeGuildConfig(cleanedConfig, defaults);
     } catch (error) {
         console.error(`Error fetching config for guild ${guildId}:`, error);
         return {};
@@ -404,6 +440,76 @@ export async function deleteGiveaway(client, guildId, messageId) {
 }
 
 /**
+ * Get all giveaways that have ended (SQL-optimized for PostgreSQL)
+ * Uses the giveaways table index on ends_at for efficient querying
+ * @param {Object} client - Discord client with database
+ * @returns {Promise<Array>} Array of ended giveaway records
+ */
+export async function getEndedGiveaways(client) {
+    try {
+        if (!client.db || !client.db.isAvailable()) {
+            logger.warn('Database not available for getEndedGiveaways, using fallback');
+            return [];
+        }
+
+        const { pgDb } = await import('./postgresDatabase.js');
+        const { pgConfig } = await import('../config/postgres.js');
+        
+        if (!pgDb.isAvailable()) {
+            return [];
+        }
+
+        const result = await pgDb.pool.query(
+            `SELECT id, guild_id, message_id, data, ends_at 
+             FROM ${pgConfig.tables.giveaways} 
+             WHERE ends_at <= NOW() 
+             AND (data->>'ended')::boolean = false
+             ORDER BY ends_at ASC`
+        );
+
+        return result.rows || [];
+    } catch (error) {
+        logger.error('Error getting ended giveaways:', error);
+        return [];
+    }
+}
+
+/**
+ * Mark a giveaway as ended in the database
+ * @param {Object} client - Discord client with database
+ * @param {number} giveawayId - The giveaway ID from the database
+ * @param {Object} endedData - The updated giveaway data to save
+ * @returns {Promise<boolean>} Success status
+ */
+export async function markGiveawayEnded(client, giveawayId, endedData) {
+    try {
+        if (!client.db || !client.db.isAvailable()) {
+            logger.warn('Database not available for markGiveawayEnded');
+            return false;
+        }
+
+        const { pgDb } = await import('./postgresDatabase.js');
+        const { pgConfig } = await import('../config/postgres.js');
+        
+        if (!pgDb.isAvailable()) {
+            return false;
+        }
+
+        await pgDb.pool.query(
+            `UPDATE ${pgConfig.tables.giveaways} 
+             SET data = $1, updated_at = NOW() 
+             WHERE id = $2`,
+            [endedData, giveawayId]
+        );
+
+        return true;
+    } catch (error) {
+        logger.error('Error marking giveaway as ended:', error);
+        return false;
+    }
+}
+
+/**
  * Generate a consistent key for giveaways in the database
  * @param {string} guildId - The guild ID
  * @returns {string} The formatted key
@@ -412,7 +518,25 @@ export function giveawayKey(guildId) {
     return `guild:${guildId}:giveaways`;
 }
 
+/**
+ * Get the economy data key for a user in a guild
+ * @param {string} guildId - The guild ID
+ * @param {string} userId - The user ID
+ * @returns {string} The economy key
+ */
+export function getEconomyKey(guildId, userId) {
+    return `guild:${guildId}:economy:${userId}`;
+}
 
+/**
+ * Get the AFK status key for a user in a guild
+ * @param {string} guildId - The guild ID
+ * @param {string} userId - The user ID
+ * @returns {string} The AFK key
+ */
+export function getAFKKey(guildId, userId) {
+    return `guild:${guildId}:afk:${userId}`;
+}
 
 /**
  * Get the welcome system configuration key for a guild

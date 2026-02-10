@@ -43,28 +43,20 @@ class TitanBot extends Client {
   constructor() {
     super({
       intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMessageTyping,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.DirectMessageReactions,
-        GatewayIntentBits.DirectMessageTyping,
-        GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.GuildWebhooks,
-        GatewayIntentBits.GuildIntegrations,
-        GatewayIntentBits.GuildEmojisAndStickers,
-        GatewayIntentBits.GuildScheduledEvents,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMessagePolls,
-        GatewayIntentBits.DirectMessagePolls,
-        GatewayIntentBits.AutoModerationConfiguration,
-        GatewayIntentBits.AutoModerationExecution,
-        GatewayIntentBits.GuildModeration
+        // Core functionality
+        GatewayIntentBits.Guilds,                    // Basic guild events (required)
+        GatewayIntentBits.GuildMembers,              // Member join/leave (welcome system)
+        
+        // Message handling
+        GatewayIntentBits.GuildMessages,             // Message create (leveling, commands)
+        GatewayIntentBits.MessageContent,            // Required to read message content for leveling
+        GatewayIntentBits.GuildMessageReactions,     // Reaction tracking for giveaways
+        
+        // Voice
+        GatewayIntentBits.GuildVoiceStates,          // Voice channel tracking
+        
+        // Moderation & Logging
+        GatewayIntentBits.GuildModeration,           // Moderation audit logging
       ],
     });
 
@@ -87,7 +79,22 @@ class TitanBot extends Client {
       logger.info('Initializing database...');
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
-      logger.info('Database initialization completed');
+      
+      // Check database status and report
+      const dbStatus = this.db.getStatus();
+      if (dbStatus.isDegraded) {
+        logger.warn('');
+        logger.warn('╔═══════════════════════════════════════════════════════╗');
+        logger.warn('║ ⚠️  DATABASE RUNNING IN DEGRADED MODE                 ║');
+        logger.warn('║                                                       ║');
+        logger.warn('║ Connection: In-Memory Storage (PostgreSQL unavailable)║');
+        logger.warn('║ Data Persistence: DISABLED - data lost on restart    ║');
+        logger.warn('║ Action Required: Fix PostgreSQL and restart bot      ║');
+        logger.warn('╚═══════════════════════════════════════════════════════╝');
+        logger.warn('');
+      } else {
+        logger.info(`✅ Database Status: ${dbStatus.connectionType} (fully operational)`);
+      }
       
       logger.info('Starting web server...');
       this.startWebServer();
@@ -119,8 +126,99 @@ class TitanBot extends Client {
 
   startWebServer() {
     const app = express();
-    app.get("/", (req, res) => res.send("TitanBot System Online"));
-    app.listen(3000, () => logger.info("Web Server is ready."));
+    const port = this.config.api?.port || process.env.PORT || 3000;
+    const corsOrigin = this.config.api?.cors?.origin || '*';
+    
+    // CORS middleware
+    app.use((req, res, next) => {
+      const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
+      const origin = req.headers.origin;
+      
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin || '*');
+      }
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      
+      if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+      }
+      next();
+    });
+
+    // Simple rate limiting middleware (requests per minute per IP)
+    const requestCounts = new Map();
+    const windowMs = 60000; // 1 minute
+    const maxRequests = this.config.api?.rateLimit?.max || 100;
+    
+    app.use((req, res, next) => {
+      const ip = req.ip;
+      const now = Date.now();
+      const windowStart = now - windowMs;
+      
+      if (!requestCounts.has(ip)) {
+        requestCounts.set(ip, []);
+      }
+      
+      const times = requestCounts.get(ip).filter(t => t > windowStart);
+      
+      if (times.length >= maxRequests) {
+        return res.status(429).json({ error: 'Too many requests' });
+      }
+      
+      times.push(now);
+      requestCounts.set(ip, times);
+      next();
+    });
+
+    // Health check endpoint
+    app.get('/health', (req, res) => {
+      const dbStatus = this.db?.getStatus?.() || { isDegraded: 'unknown' };
+      const status = {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: {
+          connected: dbStatus.connectionType !== 'none',
+          degraded: dbStatus.isDegraded,
+          type: dbStatus.connectionType
+        }
+      };
+      res.status(200).json(status);
+    });
+
+    // Readiness check endpoint (only healthy if DB is available)
+    app.get('/ready', (req, res) => {
+      const dbStatus = this.db?.getStatus?.() || { isDegraded: true };
+      const isReady = this.ready && !dbStatus.isDegraded;
+      
+      if (isReady) {
+        return res.status(200).json({ 
+          ready: true, 
+          message: 'Bot is ready' 
+        });
+      }
+      
+      res.status(503).json({ 
+        ready: false,
+        reason: !this.ready ? 'Bot not Ready' : 'Database degraded' 
+      });
+    });
+
+    // Default endpoint
+    app.get('/', (req, res) => {
+      res.status(200).json({ 
+        message: 'TitanBot System Online',
+        version: '2.0.0',
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    app.listen(port, () => {
+      logger.info(`✅ Web Server running on port ${port}`);
+      logger.info(`   Health: http://localhost:${port}/health`);
+      logger.info(`   Ready: http://localhost:${port}/ready`);
+    });
   }
 
   setupCronJobs() {
@@ -204,10 +302,73 @@ const handlers = ['events', 'interactions'];
       logger.error('Error registering commands:', error);
     }
   }
+
+  /**
+   * Gracefully shutdown the bot
+   * Stops cron jobs, closes database connection, and destroys Discord client
+   */
+  async shutdown(reason = 'UNKNOWN') {
+    logger.info(`\n${'='.repeat(60)}`);
+    logger.info(`🛑 Graceful Shutdown Initiated (${reason})`);
+    logger.info(`${'='.repeat(60)}`);
+
+    try {
+      // Stop all cron jobs
+      logger.info('Stopping cron jobs...');
+      cron.getTasks().forEach(task => task.stop());
+      logger.info('✅ Cron jobs stopped');
+
+      // Close database connection
+      if (this.db && this.db.db) {
+        logger.info('Closing database connection...');
+        try {
+          if (this.db.db.pool) {
+            await this.db.db.pool.end();
+            logger.info('✅ Database connection closed');
+          }
+        } catch (error) {
+          logger.warn('Error closing database pool:', error.message);
+        }
+      }
+
+      // Destroy Discord client
+      logger.info('Destroying Discord client...');
+      if (this.isReady()) {
+        await this.destroy();
+        logger.info('✅ Discord client destroyed');
+      }
+
+      logger.info('✅ Graceful shutdown complete');
+      process.exit(0);
+    } catch (error) {
+      logger.error('Error during graceful shutdown:', error);
+      process.exit(1);
+    }
+  }
 }
 
 try {
   const bot = new TitanBot();
+  
+  // Setup graceful shutdown handlers
+  const setupShutdown = () => {
+    process.on('SIGTERM', () => bot.shutdown('SIGTERM'));
+    process.on('SIGINT', () => bot.shutdown('SIGINT'));
+    
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught Exception:', error);
+      bot.shutdown('UNCAUGHT_EXCEPTION');
+    });
+    
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      bot.shutdown('UNHANDLED_REJECTION');
+    });
+  };
+  
+  setupShutdown();
   bot.start();
 } catch (error) {
   logger.error('Fatal error during bot startup:', error);
