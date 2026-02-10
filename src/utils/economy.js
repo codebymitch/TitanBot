@@ -1,5 +1,6 @@
 import { getColor } from './database.js';
 import { BotConfig } from '../config/bot.js';
+import { normalizeEconomyData } from './schemas.js';
 
 const ECONOMY_CONFIG = BotConfig.economy || {};
 const BASE_BANK_CAPACITY = ECONOMY_CONFIG.baseBankCapacity || 10000;
@@ -12,6 +13,20 @@ daily: 24 * 60 * 60 * 1000,
 work: 60 * 60 * 1000,
 crime: 2 * 60 * 60 * 1000,
 rob: 4 * 60 * 60 * 1000,
+};
+
+const DEFAULT_ECONOMY_DATA = {
+    wallet: 0,
+    bank: 0,
+    bankLevel: 0,
+    xp: 0,
+    level: 1,
+    lastDaily: 0,
+    lastWork: 0,
+    lastCrime: 0,
+    lastRob: 0,
+    inventory: {},
+    cooldowns: {}
 };
 
 /**
@@ -61,35 +76,10 @@ export async function getEconomyData(client, guildId, userId) {
         const key = getEconomyKey(guildId, userId);
         const data = await client.db.get(key, {});
         
-        return {
-            wallet: data.wallet || 0,
-            bank: data.bank || 0,
-            bankLevel: data.bankLevel || 0,
-            xp: data.xp || 0,
-            level: data.level || 1,
-            lastDaily: data.lastDaily || 0,
-            lastWork: data.lastWork || 0,
-            lastCrime: data.lastCrime || 0,
-            lastRob: data.lastRob || 0,
-            inventory: data.inventory || {},
-            cooldowns: data.cooldowns || {},
-            ...data
-        };
+        return normalizeEconomyData(data, DEFAULT_ECONOMY_DATA);
     } catch (error) {
         console.error(`Error getting economy data for user ${userId}:`, error);
-        return {
-            wallet: 0,
-            bank: 0,
-            bankLevel: 0,
-            xp: 0,
-            level: 1,
-            lastDaily: 0,
-            lastWork: 0,
-            lastCrime: 0,
-            lastRob: 0,
-            inventory: {},
-            cooldowns: {}
-        };
+        return normalizeEconomyData({}, DEFAULT_ECONOMY_DATA);
     }
 }
 
@@ -108,7 +98,8 @@ export async function setEconomyData(client, guildId, userId, data) {
         }
 
         const key = getEconomyKey(guildId, userId);
-        await client.db.set(key, data);
+        const normalized = normalizeEconomyData(data, DEFAULT_ECONOMY_DATA);
+        await client.db.set(key, normalized);
         return true;
     } catch (error) {
         console.error(`Error saving economy data for user ${userId}:`, error);

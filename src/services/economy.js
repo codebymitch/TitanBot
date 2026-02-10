@@ -2,6 +2,7 @@ import { BotConfig } from "../config/bot.js";
 import { getEconomyKey } from './database.js';
 import { getFromDb, setInDb } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
+import { normalizeEconomyData } from '../utils/schemas.js';
 
 const BASE_BANK_CAPACITY = BotConfig.economy.baseBankCapacity;
 const BANK_CAPACITY_PER_LEVEL = BotConfig.economy.bankCapacityPerLevel || 5000;
@@ -42,59 +43,21 @@ export async function getEconomyData(client, guildId, userId) {
     try {
         const key = getEconomyKey(guildId, userId);
         
-        const data = await getFromDb(key, {
-            wallet: 0,
-            bank: 0,
-            bankLevel: 1,
-            lastDaily: 0,
-            lastWeekly: 0,
-            lastWork: 0,
-            lastCrime: 0,
-            lastRob: 0,
-            lastDeposit: 0,
-            lastWithdraw: 0,
-            inventory: {},
-            cooldowns: {}
-        });
-        
-        return data;
+        const data = await getFromDb(key, DEFAULT_ECONOMY_DATA);
+
+        return normalizeEconomyData(data, DEFAULT_ECONOMY_DATA);
     } catch (error) {
         logger.error(`Error getting economy data for user ${userId} in guild ${guildId}:`, error);
         
         if (error.message && (error.message.includes('ECONNREFUSED') || error.message.includes('connection'))) {
             if (client._economyFallback) {
                 const key = getEconomyKey(guildId, userId);
-                return client._economyFallback.get(key) || {
-                    wallet: 0,
-                    bank: 0,
-                    bankLevel: 1,
-                    lastDaily: 0,
-                    lastWeekly: 0,
-                    lastWork: 0,
-                    lastCrime: 0,
-                    lastRob: 0,
-                    lastDeposit: 0,
-                    lastWithdraw: 0,
-                    inventory: {},
-                    cooldowns: {}
-                };
+                const cached = client._economyFallback.get(key);
+                return normalizeEconomyData(cached, DEFAULT_ECONOMY_DATA);
             }
         }
         
-        return {
-            wallet: 0,
-            bank: 0,
-            bankLevel: 1,
-            lastDaily: 0,
-            lastWeekly: 0,
-            lastWork: 0,
-            lastCrime: 0,
-            lastRob: 0,
-            lastDeposit: 0,
-            lastWithdraw: 0,
-            inventory: {},
-            cooldowns: {}
-        };
+        return normalizeEconomyData({}, DEFAULT_ECONOMY_DATA);
     }
 }
 
@@ -107,11 +70,15 @@ export async function getEconomyData(client, guildId, userId) {
  * @returns {Promise<boolean>} Whether the operation was successful
  */
 export async function setEconomyData(client, guildId, userId, newData) {
+    let mergedData = null;
     try {
         const key = getEconomyKey(guildId, userId);
         
         const existingData = await getEconomyData(client, guildId, userId);
-        const mergedData = { ...existingData, ...newData };
+        mergedData = normalizeEconomyData(
+            { ...existingData, ...newData },
+            DEFAULT_ECONOMY_DATA
+        );
         
         await setInDb(key, mergedData);
         return true;

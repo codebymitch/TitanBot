@@ -27,57 +27,83 @@ class PostgreSQLDatabase {
     }
 
     async _establishConnection() {
-        try {
-            await new Promise(resolve => setTimeout(resolve, 100));
+        const retries = Number.isFinite(pgConfig.options.retries) ? pgConfig.options.retries : 0;
+        const baseDelay = Number.isFinite(pgConfig.options.backoffBase) ? pgConfig.options.backoffBase : 100;
+        const multiplier = Number.isFinite(pgConfig.options.backoffMultiplier) ? pgConfig.options.backoffMultiplier : 2;
+        const attempts = Math.max(1, retries + 1);
 
-            this.pool = new pg.Pool({
-                host: pgConfig.options.host,
-                port: pgConfig.options.port,
-                database: pgConfig.options.database,
-                user: pgConfig.options.user,
-                password: pgConfig.options.password,
-                ssl: pgConfig.options.ssl,
-                max: pgConfig.options.max,
-                min: pgConfig.options.min,
-                idleTimeoutMillis: pgConfig.options.idleTimeoutMillis,
-                connectionTimeoutMillis: pgConfig.options.connectionTimeoutMillis,
-            });
+        for (let attempt = 1; attempt <= attempts; attempt += 1) {
+            try {
+                await new Promise(resolve => setTimeout(resolve, 100));
 
-            const client = await this.pool.connect();
-            await client.query('SELECT NOW()');
-            client.release();
+                this.pool = new pg.Pool({
+                    host: pgConfig.options.host,
+                    port: pgConfig.options.port,
+                    database: pgConfig.options.database,
+                    user: pgConfig.options.user,
+                    password: pgConfig.options.password,
+                    ssl: pgConfig.options.ssl,
+                    max: pgConfig.options.max,
+                    min: pgConfig.options.min,
+                    idleTimeoutMillis: pgConfig.options.idleTimeoutMillis,
+                    connectionTimeoutMillis: pgConfig.options.connectionTimeoutMillis,
+                });
 
-            this.isConnected = true;
-            logger.info('✅ PostgreSQL Database initialized successfully');
-            
-            if (pgConfig.features.autoCreateTables) {
-                await this.createTables();
-                
-                try {
-                    const columnCheck = await this.pool.query(`
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'guilds' AND column_name = 'counters'
-                    `);
-                    
-                    if (columnCheck.rows.length === 0) {
-                        await this.pool.query(`
-                            ALTER TABLE ${pgConfig.tables.guilds} 
-                            ADD COLUMN counters JSONB DEFAULT '[]'
+                const client = await this.pool.connect();
+                await client.query('SELECT NOW()');
+                client.release();
+
+                this.isConnected = true;
+                logger.info('✅ PostgreSQL Database initialized successfully');
+
+                if (pgConfig.features.autoCreateTables) {
+                    await this.createTables();
+
+                    try {
+                        const columnCheck = await this.pool.query(`
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'guilds' AND column_name = 'counters'
                         `);
-                        logger.info('✅ Added counters column to guilds table');
+
+                        if (columnCheck.rows.length === 0) {
+                            await this.pool.query(`
+                                ALTER TABLE ${pgConfig.tables.guilds} 
+                                ADD COLUMN counters JSONB DEFAULT '[]'
+                            `);
+                            logger.info('✅ Added counters column to guilds table');
+                        }
+                    } catch (error) {
+                        logger.warn('Could not add counters column to guilds table:', error.message);
                     }
-                } catch (error) {
-                    logger.warn('Could not add counters column to guilds table:', error.message);
                 }
+
+                return true;
+            } catch (error) {
+                if (this.pool) {
+                    try {
+                        await this.pool.end();
+                    } catch (closeError) {
+                        logger.warn('Failed to close PostgreSQL pool after error:', closeError.message);
+                    }
+                    this.pool = null;
+                }
+
+                const isLastAttempt = attempt >= attempts;
+                if (isLastAttempt) {
+                    logger.error('❌ Failed to initialize PostgreSQL Database:', error);
+                    this.isConnected = false;
+                    return false;
+                }
+
+                logger.warn(`PostgreSQL connection attempt ${attempt} failed: ${error.message}`);
+                const backoff = Math.round(baseDelay * Math.pow(multiplier, attempt - 1));
+                await new Promise(resolve => setTimeout(resolve, backoff));
             }
-            
-            return true;
-        } catch (error) {
-            logger.error('❌ Failed to initialize PostgreSQL Database:', error);
-            this.isConnected = false;
-            return false;
         }
+
+        this.isConnected = false;
+        return false;
     }
 
     /**

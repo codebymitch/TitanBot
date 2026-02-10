@@ -1,5 +1,6 @@
 import { logger } from './logger.js';
 import { MessageFlags } from 'discord.js';
+import { handleInteractionError } from './errorHandler.js';
 
 /**
  * Helper class for handling Discord interactions with proper error handling
@@ -172,7 +173,12 @@ if (Date.now() - deferStartTime > 3000) {
             await commandFunction();
         } catch (error) {
             logger.error('Error executing command:', error);
-            
+
+            if (!errorEmbed) {
+                await handleInteractionError(interaction, error, { source: 'interactionHelper.safeExecute' });
+                return;
+            }
+
             let errorResponse;
             if (typeof errorEmbed === 'string') {
                 const { errorEmbed: createErrorEmbed } = await import('./embeds.js');
@@ -183,7 +189,7 @@ if (Date.now() - deferStartTime > 3000) {
                 const { errorEmbed: createErrorEmbed } = await import('./embeds.js');
                 errorResponse = { embeds: [createErrorEmbed('Command execution failed.', error)] };
             }
-            
+
             const editSuccess = await this.safeEditReply(interaction, errorResponse);
             if (!editSuccess) {
                 logger.warn(`Failed to send error response for interaction ${interaction.id}, interaction may have expired`);

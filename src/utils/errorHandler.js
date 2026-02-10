@@ -1,5 +1,5 @@
 import { logger } from './logger.js';
-import { errorEmbed } from './embeds.js';
+import { createEmbed } from './embeds.js';
 
 /**
  * Error types for categorization
@@ -162,10 +162,12 @@ export async function handleInteractionError(interaction, error, context = {}) {
         context
     });
 
-    const embed = errorEmbed(
-        getErrorTitle(errorType),
-        userMessage
-    );
+    const embed = createEmbed({
+        title: getErrorTitle(errorType),
+        description: userMessage,
+        color: 'error',
+        timestamp: true
+    });
 
     if (errorType === ErrorTypes.RATE_LIMIT) {
         embed.addFields({

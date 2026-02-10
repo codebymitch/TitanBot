@@ -1,5 +1,17 @@
 import { getGuildConfig as getGuildConfigDb, setGuildConfig as setGuildConfigDb } from '../utils/database.js';
 import { BotConfig } from '../config/bot.js';
+import { normalizeGuildConfig } from '../utils/schemas.js';
+
+const GUILD_CONFIG_DEFAULTS = {
+    prefix: BotConfig.prefix,
+    modRole: null,
+    adminRole: null,
+    logChannelId: null,
+    welcomeChannel: null,
+    welcomeMessage: 'Welcome {user} to {server}!',
+    autoRole: null,
+    dmOnClose: true
+};
 
 /**
  * Get guild configuration with defaults
@@ -9,18 +21,8 @@ import { BotConfig } from '../config/bot.js';
  */
 export async function getGuildConfig(client, guildId) {
     const config = await getGuildConfigDb(client, guildId);
-    
-    return {
-        prefix: BotConfig.prefix,
-        modRole: null,
-        adminRole: null,
-logChannelId: null,
-        welcomeChannel: null,
-        welcomeMessage: 'Welcome {user} to {server}!',
-        autoRole: null,
-dmOnClose: true,
-        ...config
-    };
+
+    return normalizeGuildConfig(config, GUILD_CONFIG_DEFAULTS);
 }
 
 /**
@@ -31,7 +33,8 @@ dmOnClose: true,
  * @returns {Promise<boolean>} Whether the operation was successful
  */
 export async function setGuildConfig(client, guildId, config) {
-    return await setGuildConfigDb(client, guildId, config);
+    const normalized = normalizeGuildConfig(config, GUILD_CONFIG_DEFAULTS);
+    return await setGuildConfigDb(client, guildId, normalized);
 }
 
 /**
@@ -44,7 +47,8 @@ export async function setGuildConfig(client, guildId, config) {
 export async function updateGuildConfig(client, guildId, updates) {
     const currentConfig = await getGuildConfigDb(client, guildId);
     const newConfig = { ...currentConfig, ...updates };
-    return await setGuildConfigDb(client, guildId, newConfig);
+    const normalized = normalizeGuildConfig(newConfig, GUILD_CONFIG_DEFAULTS);
+    return await setGuildConfigDb(client, guildId, normalized);
 }
 
 /**

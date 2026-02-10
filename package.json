@@ -33,6 +33,7 @@
     "play-dl": "^1.9.7",
     "titan-ultimate-bot": "file:",
     "web-streams-polyfill": "^3.3.3",
+    "zod": "^3.24.1",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   },

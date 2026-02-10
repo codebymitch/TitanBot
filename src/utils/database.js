@@ -2,6 +2,7 @@ import { pgDb } from './postgresDatabase.js';
 import { MemoryStorage } from './memoryStorage.js';
 import { logger } from './logger.js';
 import { BotConfig } from '../config/bot.js';
+import { normalizeGuildConfig } from './schemas.js';
 
 class DatabaseWrapper {
     constructor() {
@@ -170,21 +171,15 @@ export async function getGuildConfig(client, guildId) {
         const rawConfig = await client.db.get(configKey, {});
         const cleanedConfig = unwrapReplitData(rawConfig);
 
-        const finalConfig =
-            typeof cleanedConfig === "object" && cleanedConfig !== null
-                ? cleanedConfig
-                : {};
-
-        finalConfig.logIgnore = finalConfig.logIgnore || {
-            users: [],
-            channels: [],
+        const defaults = {
+            logIgnore: { users: [], channels: [] },
+            enabledCommands: {},
+            reportChannelId: null,
+            birthdayChannelId: null,
+            premiumRoleId: null
         };
-        finalConfig.enabledCommands = finalConfig.enabledCommands || {};
-        finalConfig.reportChannelId = finalConfig.reportChannelId || null;
-        finalConfig.birthdayChannelId = finalConfig.birthdayChannelId || null;
-        finalConfig.premiumRoleId = finalConfig.premiumRoleId || null;
 
-        return finalConfig;
+        return normalizeGuildConfig(cleanedConfig, defaults);
     } catch (error) {
         console.error(`Error fetching config for guild ${guildId}:`, error);
         return {};
