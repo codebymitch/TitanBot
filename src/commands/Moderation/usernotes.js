@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { getFromDb, setInDb, deleteFromDb } from '../../utils/database.js';
@@ -159,7 +159,7 @@ export default {
                         "An error occurred while processing your request. Please try again later."
                     ),
                 ],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -214,7 +214,7 @@ async function handleViewNotes(interaction, targetUser, notes) {
         return interaction.reply({
             embeds: [
                 infoEmbed(
-                    "📝 No Notes",
+                    "ðŸ“ No Notes",
                     `There are no notes for **${targetUser.tag}**.`
                 ),
             ],
@@ -240,7 +240,7 @@ async function handleViewNotes(interaction, targetUser, notes) {
     return interaction.reply({
         embeds: [
             infoEmbed(
-                `📝 User Notes (${notes.length})`,
+                `ðŸ“ User Notes (${notes.length})`,
                 description
             )
         ]
@@ -303,7 +303,7 @@ async function handleClearNotes(interaction, targetUser, notes, guildId) {
     return interaction.reply({
         embeds: [
             successEmbed(
-                "🗑️ Notes Cleared",
+                "ðŸ—‘ï¸ Notes Cleared",
                 `Cleared **${noteCount}** notes from **${targetUser.tag}**.`
             )
         ]
@@ -312,11 +312,13 @@ async function handleClearNotes(interaction, targetUser, notes, guildId) {
 
 function getNoteTypeInfo(type) {
     const types = {
-        warning: { emoji: "⚠️", color: "#FF6B6B" },
-        positive: { emoji: "✅", color: "#51CF66" },
-        neutral: { emoji: "📝", color: "#74C0FC" },
-        alert: { emoji: "🚨", color: "#FFD43B" }
+        warning: { emoji: "âš ï¸", color: "#FF6B6B" },
+        positive: { emoji: "âœ…", color: "#51CF66" },
+        neutral: { emoji: "ðŸ“", color: "#74C0FC" },
+        alert: { emoji: "ðŸš¨", color: "#FFD43B" }
     };
     
     return types[type] || types.neutral;
 }
+
+

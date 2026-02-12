@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, version } from 'discord.js';
+﻿import { SlashCommandBuilder, version, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -16,7 +16,7 @@ try {
       );
       const nodeVersion = process.version;
 
-      const embed = createEmbed({ title: "📊 System Statistics", description: "Real-time performance metrics.", }).addFields(
+      const embed = createEmbed({ title: "ðŸ“Š System Statistics", description: "Real-time performance metrics.", }).addFields(
         { name: "Servers", value: `${totalGuilds}`, inline: true },
         { name: "Users", value: `${totalMembers}`, inline: true },
         { name: "Node.js", value: `${nodeVersion}`, inline: true },
@@ -33,8 +33,10 @@ try {
       console.error('Stats command error:', error);
       return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not fetch system statistics.' })],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   },
 };
+
+

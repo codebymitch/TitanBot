@@ -1,4 +1,4 @@
-import { logger } from './logger.js';
+﻿import { logger } from './logger.js';
 import { MessageFlags } from 'discord.js';
 import { handleInteractionError } from './errorHandler.js';
 
@@ -236,3 +236,4 @@ export function withErrorHandling(target, propertyName, descriptor) {
 
     return descriptor;
 }
+

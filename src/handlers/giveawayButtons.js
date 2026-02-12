@@ -1,4 +1,4 @@
-import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, isGiveawayEnded } from '../utils/giveaways.js';
+﻿import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, isGiveawayEnded } from '../utils/giveaways.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { InteractionResponseType } from 'discord.js';
 
@@ -55,7 +55,7 @@ flags: 64
       });
 
       await interaction.reply({
-        embeds: [successEmbed('Success!', 'You have entered the giveaway! 🎉')],
+        embeds: [successEmbed('Success!', 'You have entered the giveaway! ðŸŽ‰')],
 flags: 64
       });
 
@@ -103,7 +103,7 @@ flags: 64
       const updatedRow = giveawayButtons(true);
 
       await interaction.message.edit({
-        content: '🎉 **GIVEAWAY ENDED** 🎉',
+        content: 'ðŸŽ‰ **GIVEAWAY ENDED** ðŸŽ‰',
         embeds: [updatedEmbed],
         components: [updatedRow]
       });
@@ -155,7 +155,7 @@ flags: 64
       const updatedRow = giveawayButtons(true);
 
       await interaction.message.edit({
-        content: '🔄 **GIVEAWAY REROLLED** 🔄',
+        content: 'ðŸ”„ **GIVEAWAY REROLLED** ðŸ”„',
         embeds: [updatedEmbed],
         components: [updatedRow]
       });
@@ -173,3 +173,4 @@ flags: 64
     }
   }
 };
+

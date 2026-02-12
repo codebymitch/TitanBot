@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -14,7 +14,7 @@ try {
 
       const createdTimestamp = Math.floor(guild.createdAt.getTime() / 1000);
 
-      const embed = createEmbed({ title: `🏰 Server Info: ${guild.name}`, description: `Server ID: ${guild.id}` })
+      const embed = createEmbed({ title: `ðŸ° Server Info: ${guild.name}`, description: `Server ID: ${guild.id}` })
         .setThumbnail(guild.iconURL({ size: 256 }))
         .addFields(
           { name: "Owner", value: owner.user.tag, inline: true },
@@ -42,8 +42,9 @@ try {
       console.error('ServerInfo command error:', error);
       return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not retrieve server information.' })],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   },
 };
+

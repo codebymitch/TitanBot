@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
@@ -62,8 +62,9 @@ export default {
             console.error('LevelAdd command error:', error);
             return interaction.reply({
                 embeds: [errorEmbed('System Error', 'Could not add levels at this time.')],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },
 };
+

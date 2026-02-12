@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -21,7 +21,7 @@ try {
 
       if (challenger.id === opponent.id) {
         return interaction.reply({
-          content: `⚔️ **${challenger.username}** can't fight themselves! That's a draw before it even starts.`,
+          content: `âš”ï¸ **${challenger.username}** can't fight themselves! That's a draw before it even starts.`,
         });
       }
 
@@ -32,7 +32,7 @@ const damage = rand(10, 50);
 
       const log = [];
       log.push(
-        `💥 **${challenger.username}** challenges **${opponent.username}** to a duel! (Best of ${rounds} rounds)`,
+        `ðŸ’¥ **${challenger.username}** challenges **${opponent.username}** to a duel! (Best of ${rounds} rounds)`,
       );
 
       for (let i = 1; i <= rounds; i++) {
@@ -52,8 +52,8 @@ const damage = rand(10, 50);
       const outcomeText = log.join("\n");
 
       const embed = successEmbed(
-        `${outcomeText}\n\n👑 **${winner.username}** has defeated ${loser.username} and claims the victory!`,
-        `🏆 Duel Complete!`
+        `${outcomeText}\n\nðŸ‘‘ **${winner.username}** has defeated ${loser.username} and claims the victory!`,
+        `ðŸ† Duel Complete!`
       );
 
       await interaction.editReply({ embeds: [embed] });
@@ -63,3 +63,4 @@ const damage = rand(10, 50);
     }
   },
 };
+

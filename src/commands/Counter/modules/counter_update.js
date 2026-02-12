@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, ChannelType } from 'discord.js';
+﻿import { PermissionFlagsBits, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter } from '../../../services/counterService.js';
 
@@ -16,7 +16,7 @@ export async function handleUpdate(interaction, client) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await interaction.reply({ 
             embeds: [errorEmbed("You need **Manage Channels** permission to update counters.")],
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral 
         });
         return;
     }
@@ -24,7 +24,7 @@ export async function handleUpdate(interaction, client) {
     if (newChannel && newChannel.type !== ChannelType.GuildText && newChannel.type !== ChannelType.GuildVoice) {
         await interaction.reply({
             embeds: [errorEmbed("Counters can only be placed on text or voice channels.")],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
         return;
     }
@@ -32,7 +32,7 @@ export async function handleUpdate(interaction, client) {
     if (!newType && !newChannel) {
         await interaction.reply({
             embeds: [errorEmbed("You must provide at least one option to update (type or channel).")],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
         return;
     }
@@ -96,9 +96,9 @@ export async function handleUpdate(interaction, client) {
 
         const finalChannel = guild.channels.cache.get(updatedCounter.channelId);
         const typeEmoji = {
-            members: "👥",
-            bots: "🤖", 
-            members_only: "👤"
+            members: "ðŸ‘¥",
+            bots: "ðŸ¤–", 
+            members_only: "ðŸ‘¤"
         };
 
         const typeDisplay = {
@@ -109,14 +109,14 @@ export async function handleUpdate(interaction, client) {
 
         const changes = [];
         if (newType && newType !== oldType) {
-            changes.push(`**Type:** ${typeEmoji[oldType]} ${typeDisplay[oldType]} → ${typeEmoji[newType]} ${typeDisplay[newType]}`);
+            changes.push(`**Type:** ${typeEmoji[oldType]} ${typeDisplay[oldType]} â†’ ${typeEmoji[newType]} ${typeDisplay[newType]}`);
         }
         if (newChannel && newChannel.id !== oldChannelId) {
-            changes.push(`**Channel:** ${oldChannel} → ${finalChannel}`);
+            changes.push(`**Channel:** ${oldChannel} â†’ ${finalChannel}`);
         }
 
         await interaction.editReply({
-            embeds: [successEmbed(`✅ **Counter Updated Successfully!**\n\n**Counter ID:** \`${counterId}\`\n\n${changes.join('\n')}\n\n**New Settings:**\n**Type:** ${typeEmoji[updatedCounter.type]} ${typeDisplay[updatedCounter.type]}\n**Channel:** ${finalChannel}\n**Channel Name:** ${finalChannel.name}\n\nThe counter will automatically update every 15 minutes.`)]
+            embeds: [successEmbed(`âœ… **Counter Updated Successfully!**\n\n**Counter ID:** \`${counterId}\`\n\n${changes.join('\n')}\n\n**New Settings:**\n**Type:** ${typeEmoji[updatedCounter.type]} ${typeDisplay[updatedCounter.type]}\n**Channel:** ${finalChannel}\n**Channel Name:** ${finalChannel.name}\n\nThe counter will automatically update every 15 minutes.`)]
         });
 
     } catch (error) {
@@ -126,3 +126,4 @@ export async function handleUpdate(interaction, client) {
         );
     }
 }
+

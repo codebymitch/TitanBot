@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 export default {
@@ -83,7 +83,7 @@ const channel = interaction.options.getChannel('channel');
                             label: role.name,
                             description: `Add/remove the ${role.name} role`,
                             value: role.id,
-emoji: '🎭'
+emoji: 'ðŸŽ­'
                         }))
                     )
             );
@@ -96,7 +96,7 @@ emoji: '🎭'
                     fields: [
                         {
                             name: 'Available Roles',
-                            value: roles.map(role => `• ${role}`).join('\n')
+                            value: roles.map(role => `â€¢ ${role}`).join('\n')
                         }
                     ]
                 }],
@@ -139,3 +139,4 @@ throw error;
         }
     }
 };
+

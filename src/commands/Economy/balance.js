@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
@@ -22,10 +22,10 @@ export default {
             if (targetUser.bot) {
                 return await interaction.reply({
                     embeds: [errorEmbed(
-                        "❌ Invalid Target",
+                        "âŒ Invalid Target",
                         "Bots don't have an economy balance."
                     )],
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -36,22 +36,22 @@ export default {
             const bank = typeof userData.bank === 'number' ? userData.bank : 0;
 
             const embed = createEmbed({
-                title: `💰 ${targetUser.username}'s Balance`,
+                title: `ðŸ’° ${targetUser.username}'s Balance`,
                 description: `Here is the current financial status for ${targetUser.username}.`,
             })
                 .addFields(
                     {
-                        name: "💵 Cash",
+                        name: "ðŸ’µ Cash",
                         value: `$${wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "🏦 Bank",
+                        name: "ðŸ¦ Bank",
                         value: `$${bank.toLocaleString()} / $${maxBank.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "💎 Total",
+                        name: "ðŸ’Ž Total",
                         value: `$${(wallet + bank).toLocaleString()}`,
                         inline: true,
                     }
@@ -67,10 +67,10 @@ export default {
             try {
                 await interaction.reply({
                     embeds: [errorEmbed(
-                        "❌ Error",
+                        "âŒ Error",
                         "Something went wrong while checking balance. Please try again."
                     )],
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             } catch (replyError) {
                 console.error('Failed to send error response:', replyError);
@@ -78,3 +78,4 @@ export default {
         }
     },
 };
+

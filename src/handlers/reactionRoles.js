@@ -1,4 +1,4 @@
-import { Events, EmbedBuilder } from 'discord.js';
+﻿import { Events, EmbedBuilder, MessageFlags } from 'discord.js';
 import { getReactionRoleMessage, addReactionRole, removeReactionRole } from '../services/reactionRoleService.js';
 import { errorEmbed } from '../utils/embeds.js';
 
@@ -102,7 +102,7 @@ export async function handleReactionRoles(interaction) {
                 if (!member.permissions.has('MANAGE_ROLES')) {
                     await interaction.reply({
                         embeds: [errorEmbed('You need the `Manage Roles` permission to use this command.')],
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                     return true;
                 }
@@ -136,10 +136,10 @@ export async function handleReactionRoles(interaction) {
                 await interaction.reply({
                     embeds: [
                         new EmbedBuilder()
-                            .setDescription(`✅ Added reaction role for ${emoji} to <@&${role.id}>`)
+                            .setDescription(`âœ… Added reaction role for ${emoji} to <@&${role.id}>`)
                             .setColor('#00ff00')
                     ],
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
 
                 return true;
@@ -152,12 +152,12 @@ export async function handleReactionRoles(interaction) {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
                 embeds: [errorEmbed('An error occurred while processing your request.')],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         } else {
             await interaction.reply({
                 embeds: [errorEmbed('An error occurred while processing your request.')],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
         return true;
@@ -177,3 +177,5 @@ export function setupReactionRoleListeners(client) {
         await handleReactionRemove(client, reaction, user);
     });
 }
+
+

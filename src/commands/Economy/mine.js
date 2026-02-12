@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
@@ -62,7 +62,7 @@ const hasPickaxe = userData.inventory["diamond_pickaxe"] || 0;
                 finalEarned = Math.floor(
                     baseEarned * DIAMOND_PICKAXE_MULTIPLIER,
                 );
-                multiplierMessage = `\n(💎 Diamond Pickaxe Bonus: **+50%**)`;
+                multiplierMessage = `\n(ðŸ’Ž Diamond Pickaxe Bonus: **+50%**)`;
             }
 
             const location =
@@ -76,11 +76,11 @@ userData.lastMine = now;
             await setEconomyData(client, guildId, userId, userData);
 
             const embed = successEmbed(
-                "💰 Mining Expedition Successful!",
+                "ðŸ’° Mining Expedition Successful!",
                 `You explored a **${location}** and managed to find minerals worth **$${finalEarned.toLocaleString()}**!${multiplierMessage}`,
             )
                 .addFields({
-                    name: "💵 New Cash Balance",
+                    name: "ðŸ’µ New Cash Balance",
                     value: `$${userData.wallet.toLocaleString()}`,
                     inline: true,
                 })
@@ -90,3 +90,4 @@ userData.lastMine = now;
         }, { command: 'mine' });
     },
 };
+

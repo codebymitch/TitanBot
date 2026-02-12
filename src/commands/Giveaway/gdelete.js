@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getGuildGiveaways, deleteGiveaway } from '../../utils/giveaways.js';
@@ -38,7 +38,7 @@ export default {
                             "No giveaway was found with that message ID.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -76,7 +76,7 @@ export default {
                         `Successfully deleted the giveaway for **${giveaway.prize}** ${statusMsg}. No winner was picked.`,
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         } catch (error) {
             console.error("Error deleting giveaway:", error);
@@ -88,8 +88,9 @@ export default {
                         "An error occurred while trying to delete the giveaway. Check bot permissions.",
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },
 };
+

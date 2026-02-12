@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getUserLevelData, getLevelingConfig, getXpForLevel } from '../../utils/database.js';
@@ -80,5 +80,6 @@ export default {
 
 function createProgressBar(percentage, length = 10) {
     const filled = Math.round((percentage / 100) * length);
-    return "█".repeat(filled) + "░".repeat(length - filled);
+    return "â–ˆ".repeat(filled) + "â–‘".repeat(length - filled);
 }
+

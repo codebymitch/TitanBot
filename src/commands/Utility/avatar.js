@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -26,8 +26,9 @@ try {
       console.error('Avatar command error:', error);
       return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not display avatar at this time.' })],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   },
 };
+

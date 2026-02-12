@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
@@ -71,12 +71,12 @@ export default {
             )
                 .addFields(
                     {
-                        name: "💵 New Cash Balance",
+                        name: "ðŸ’µ New Cash Balance",
                         value: `$${userData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "🏦 New Bank Balance",
+                        name: "ðŸ¦ New Bank Balance",
                         value: `$${userData.bank.toLocaleString()}`,
                         inline: true,
                     },
@@ -86,3 +86,4 @@ export default {
         }, { command: 'withdraw' });
     },
 };
+

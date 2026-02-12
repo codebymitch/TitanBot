@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { MessageFlags } from 'discord.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -124,7 +124,7 @@ export default {
                         role,
                         `Purchased role: ${item.name}`,
                     );
-                    successDescription += `\n\n**👑 The role ${role.toString()} has been granted to you!**`;
+                    successDescription += `\n\n**ðŸ‘‘ The role ${role.toString()} has been granted to you!**`;
                 } catch (roleError) {
                     userData.wallet += totalCost;
                     await setEconomyData(client, guildId, userId, userData);
@@ -137,7 +137,7 @@ export default {
                 }
             } else if (item.type === "upgrade") {
                 userData.upgrades[itemId] = true;
-                successDescription += `\n\n**✨ Your upgrade is now active!**`;
+                successDescription += `\n\n**âœ¨ Your upgrade is now active!**`;
             } else if (item.type === "consumable") {
                 userData.inventory[itemId] =
                     (userData.inventory[itemId] || 0) + quantity;
@@ -146,7 +146,7 @@ export default {
             await setEconomyData(client, guildId, userId, userData);
 
             const embed = successEmbed(
-                "💰 Purchase Successful",
+                "ðŸ’° Purchase Successful",
                 successDescription,
             ).addFields({
                 name: "New Balance",
@@ -158,3 +158,4 @@ export default {
         }, { command: 'buy' });
     },
 };
+

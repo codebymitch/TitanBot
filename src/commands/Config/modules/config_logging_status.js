@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, EmbedBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getLevelingConfig, getWelcomeConfig, getApplicationSettings, getModlogSettings } from '../../../utils/database.js';
@@ -22,14 +22,14 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             const currentConfig = await getGuildConfig(client, interaction.guildId);
 
             const getStatus = (id, type) => {
-                let status = "❌ Not Set";
+                let status = "âŒ Not Set";
                 if (id) {
                     const item =
                         type === "role"
                             ? interaction.guild.roles.cache.get(id)
                             : interaction.guild.channels.cache.get(id);
 
-                    status = item ? item.toString() : `⚠️ ID: ${id} (Missing)`;
+                    status = item ? item.toString() : `âš ï¸ ID: ${id} (Missing)`;
                 }
                 return status;
             };
@@ -48,22 +48,22 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             );
 
             const levelingConfig = await getLevelingConfig(client, interaction.guildId);
-            const levelingStatus = levelingConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
+            const levelingStatus = levelingConfig?.enabled ? "âœ… **Enabled**" : "âŒ **Disabled**";
             
             const welcomeConfig = await getWelcomeConfig(client, interaction.guildId);
-            const welcomeStatus = welcomeConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
-            const goodbyeStatus = welcomeConfig?.goodbyeEnabled ? "✅ **Enabled**" : "❌ **Disabled**";
+            const welcomeStatus = welcomeConfig?.enabled ? "âœ… **Enabled**" : "âŒ **Disabled**";
+            const goodbyeStatus = welcomeConfig?.goodbyeEnabled ? "âœ… **Enabled**" : "âŒ **Disabled**";
             
             const autoRoleStatus = getStatus(currentConfig.autoRole, "role");
             
             const birthdayStatus = currentConfig.birthdayChannelId ? 
-                "✅ **Enabled**" : "❌ **Disabled**";
+                "âœ… **Enabled**" : "âŒ **Disabled**";
 
             const moderationLoggingStatus = currentConfig.enableLogging && currentConfig.logChannelId 
-                ? "✅ **Enabled**" : "❌ **Disabled**";
+                ? "âœ… **Enabled**" : "âŒ **Disabled**";
 
             const applicationConfig = await getApplicationSettings(client, interaction.guildId);
-            const applicationStatus = applicationConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
+            const applicationStatus = applicationConfig?.enabled ? "âœ… **Enabled**" : "âŒ **Disabled**";
 
             const maxTicketsPerUser = currentConfig.maxTicketsPerUser || 3;
             const dmOnClose = currentConfig.dmOnClose !== false;
@@ -85,9 +85,9 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             }
             
             const ticketLoggingStatus = ticketLogging.lifecycleChannelId || ticketLogging.transcriptChannelId 
-                ? "✅ **Enabled**" : "❌ **Disabled**";
+                ? "âœ… **Enabled**" : "âŒ **Disabled**";
                 
-            const ticketLimitsStatus = `🎫 **${maxTicketsPerUser}** per user\n📩 DM on Close: ${dmOnClose ? '✅' : '❌'}\n📊 Open Tickets: ${totalOpenTickets}\n📝 Ticket Logging: ${ticketLoggingStatus}`;
+            const ticketLimitsStatus = `ðŸŽ« **${maxTicketsPerUser}** per user\nðŸ“© DM on Close: ${dmOnClose ? 'âœ…' : 'âŒ'}\nðŸ“Š Open Tickets: ${totalOpenTickets}\nðŸ“ Ticket Logging: ${ticketLoggingStatus}`;
 
             const ignoredUsers = currentConfig.logIgnore?.users || [];
             const ignoredChannels = currentConfig.logIgnore?.channels || [];
@@ -100,7 +100,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             };
 
             const statusEmbed = new EmbedBuilder()
-                .setTitle("⚙️ Server Configuration Status")
+                .setTitle("âš™ï¸ Server Configuration Status")
                 .setDescription(
                     `Current settings fetched for **${interaction.guild.name}**.`,
                 )
@@ -108,52 +108,52 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 .setTimestamp()
                 .addFields(
                     {
-                        name: "🎮 Leveling System",
+                        name: "ðŸŽ® Leveling System",
                         value: levelingStatus,
                         inline: true,
                     },
                     {
-                        name: "🎂 Birthday System",
+                        name: "ðŸŽ‚ Birthday System",
                         value: birthdayStatus,
                         inline: true,
                     },
                     {
-                        name: "👋 Welcome System",
+                        name: "ðŸ‘‹ Welcome System",
                         value: welcomeStatus,
                         inline: true,
                     },
                     {
-                        name: "👋 Goodbye System",
+                        name: "ðŸ‘‹ Goodbye System",
                         value: goodbyeStatus,
                         inline: true,
                     },
                     {
-                        name: "🤖 Auto Role",
+                        name: "ðŸ¤– Auto Role",
                         value: autoRoleStatus,
                         inline: true,
                     },
                     {
-                        name: "📋 Applications",
+                        name: "ðŸ“‹ Applications",
                         value: applicationStatus,
                         inline: true,
                     },
                     {
-                        name: "🔨 Enhanced Moderation Logging",
+                        name: "ðŸ”¨ Enhanced Moderation Logging",
                         value: moderationLoggingStatus,
                         inline: true,
                     },
                     {
-                        name: "💎 Premium Role",
+                        name: "ðŸ’Ž Premium Role",
                         value: premiumRoleStatus,
                         inline: true,
                     },
                     {
-                        name: "🎫 Ticket Limits",
+                        name: "ðŸŽ« Ticket Limits",
                         value: ticketLimitsStatus,
                         inline: true,
                     },
                     {
-                        name: "📊 Configuration Channels",
+                        name: "ðŸ“Š Configuration Channels",
                         value: "**Audit Logs:** " + logChannelStatus + 
                                "\n**Report Logs:** " + reportChannelStatus +
                                "\n**Ticket Lifecycle:** " + lifecycleChannelStatus +
@@ -161,7 +161,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                         inline: false,
                     },
                     {
-                        name: "❌ Log Filters",
+                        name: "âŒ Log Filters",
                         value: "**Users:** " + formatIdList(ignoredUsers) + "\n**Channels:** " + formatIdList(ignoredChannels),
                         inline: false,
                     },
@@ -181,3 +181,4 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
         }
     }
 };
+

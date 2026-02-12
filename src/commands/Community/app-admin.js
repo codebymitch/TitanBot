@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { 
@@ -256,7 +256,7 @@ async function showCurrentSettings(interaction, settings) {
     embed.addFields(
         {
             name: "Status",
-            value: settings.enabled ? "✅ Enabled" : "❌ Disabled",
+            value: settings.enabled ? "âœ… Enabled" : "âŒ Disabled",
             inline: true,
         },
         {
@@ -336,12 +336,12 @@ async function handleView(interaction) {
                 .setCustomId(`app_approve_${application.id}`)
                 .setLabel("Approve")
                 .setStyle(ButtonStyle.Success)
-                .setEmoji("✅"),
+                .setEmoji("âœ…"),
             new ButtonBuilder()
                 .setCustomId(`app_deny_${application.id}`)
                 .setLabel("Deny")
                 .setStyle(ButtonStyle.Danger)
-                .setEmoji("❌"),
+                .setEmoji("âŒ"),
         );
 
         await interaction.editReply({
@@ -528,10 +528,10 @@ async function handleList(interaction) {
         const status = app.status.charAt(0).toUpperCase() + app.status.slice(1);
         const statusEmoji =
             {
-                Pending: "🟡",
-                Approved: "🟢",
-                Denied: "🔴",
-            }[status] || "⚪";
+                Pending: "ðŸŸ¡",
+                Approved: "ðŸŸ¢",
+                Denied: "ðŸ”´",
+            }[status] || "âšª";
 
         embed.addFields({
             name: `${statusEmoji} ${app.roleName} - ${app.username}`,
@@ -881,3 +881,4 @@ export async function handleApplicationReviewModal(interaction) {
         });
     }
 }
+

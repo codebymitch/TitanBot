@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 export default {
@@ -19,7 +19,7 @@ export default {
       const createdTimestamp = Math.floor(user.createdAt.getTime() / 1000);
       const joinedTimestamp = member?.joinedAt ? Math.floor(member.joinedAt.getTime() / 1000) : null;
 
-      const embed = createEmbed({ title: `👤 User Info: ${user.username}` })
+      const embed = createEmbed({ title: `ðŸ‘¤ User Info: ${user.username}` })
         .setThumbnail(user.displayAvatarURL({ size: 256 }))
         .addFields(
           { name: "ID", value: user.id, inline: true },
@@ -59,9 +59,11 @@ export default {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ embeds: [errEmbed] });
       } else {
-        await interaction.reply({ embeds: [errEmbed], ephemeral: true });
+        await interaction.reply({ embeds: [errEmbed], flags: MessageFlags.Ephemeral });
       }
       return;
     }
   },
 };
+
+

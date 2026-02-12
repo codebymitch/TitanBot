@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 
@@ -57,14 +57,14 @@ export default {
                 default:
                     return await interaction.reply({
                         embeds: [errorEmbed("Invalid Subcommand", "Please select a valid subcommand.")],
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
             }
         } catch (error) {
             console.error("AutoVerify command error:", error);
             return await interaction.reply({
                 embeds: [errorEmbed("System Error", "An error occurred while processing your request.")],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -156,9 +156,9 @@ async function handleStatus(interaction, guild, client) {
         return await interaction.reply({
             embeds: [infoEmbed(
                 "Auto-Verification Status",
-                "🔴 **Status:** Disabled\n\nAuto-verification is currently disabled. Users must verify manually.\n\nUse `/autoverify enable` to enable it."
+                "ðŸ”´ **Status:** Disabled\n\nAuto-verification is currently disabled. Users must verify manually.\n\nUse `/autoverify enable` to enable it."
             )],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -178,23 +178,23 @@ async function handleStatus(interaction, guild, client) {
     }
 
     const statusEmbed = createEmbed({
-        title: "🤖 Auto-Verification Status",
+        title: "ðŸ¤– Auto-Verification Status",
         description: "Current auto-verification configuration:",
         color: "#00FF00"
     })
     .addFields(
         {
-            name: "📊 Status",
-            value: "✅ Enabled",
+            name: "ðŸ“Š Status",
+            value: "âœ… Enabled",
             inline: true
         },
         {
-            name: "🎯 Criteria",
+            name: "ðŸŽ¯ Criteria",
             value: criteriaDescription,
             inline: true
         },
         {
-            name: "📅 Account Age Requirement",
+            name: "ðŸ“… Account Age Requirement",
             value: autoVerify.accountAgeDays ? `${autoVerify.accountAgeDays} days` : "N/A",
             inline: true
         }
@@ -202,6 +202,7 @@ async function handleStatus(interaction, guild, client) {
 
     await interaction.reply({
         embeds: [statusEmbed],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
     });
 }
+

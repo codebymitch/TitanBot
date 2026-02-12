@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 import { logEvent } from '../../../utils/moderation.js';
@@ -52,7 +52,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "🎫 Ticket Lifecycle Channel Set",
+                            "ðŸŽ« Ticket Lifecycle Channel Set",
                             `**Channel:** ${ticketLifecycle}\n**Logs:** Ticket open, close, delete, claim, unclaim, and priority events\n\n**Updated by:** ${interaction.user.tag}`
                         ),
                     ],
@@ -76,7 +76,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "📜 Ticket Transcript Channel Set",
+                            "ðŸ“œ Ticket Transcript Channel Set",
                             `**Channel:** ${ticketTranscript}\n**Logs:** Ticket transcript generation\n\n**Updated by:** ${interaction.user.tag}`
                         ),
                     ],
@@ -91,7 +91,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "Logging Disabled 🚫",
+                            "Logging Disabled ðŸš«",
                             "Server logging has been disabled.",
                         ),
                     ],
@@ -126,7 +126,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 await interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "Log Channel Set 📝",
+                            "Log Channel Set ðŸ“",
                             `Logs will be sent to ${logChannel}.`,
                         ),
                     ],
@@ -172,3 +172,4 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
         }
     }
 };
+

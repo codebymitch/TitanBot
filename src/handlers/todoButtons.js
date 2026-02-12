@@ -1,4 +1,4 @@
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
+﻿import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { getFromDb, setInDb } from '../utils/database.js';
 
@@ -62,14 +62,14 @@ const sharedTodoAddModalHandler = {
       if (!listData) {
         return interaction.reply({
           embeds: [errorEmbed("Error", "Shared list not found.")],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
       if (!listData.members || !listData.members.includes(userId)) {
         return interaction.reply({
           embeds: [errorEmbed("Error", "You don't have access to this list.")],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -89,14 +89,14 @@ const sharedTodoAddModalHandler = {
 
       return interaction.reply({
         embeds: [successEmbed("Task Added", `Added "${taskText}" to the shared list.`)],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
     } catch (error) {
       console.error("Error in shared todo add modal:", error);
       return interaction.reply({
         embeds: [errorEmbed("Error", "An error occurred while adding the task.")],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -116,14 +116,14 @@ const sharedTodoCompleteModalHandler = {
       if (!listData) {
         return interaction.reply({
           embeds: [errorEmbed("Error", "Shared list not found.")],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
       if (!listData.members || !listData.members.includes(userId)) {
         return interaction.reply({
           embeds: [errorEmbed("Error", "You don't have access to this list.")],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -134,7 +134,7 @@ const sharedTodoCompleteModalHandler = {
       if (!task) {
         return interaction.reply({
           embeds: [errorEmbed("Error", "Task not found.")],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -146,14 +146,14 @@ const sharedTodoCompleteModalHandler = {
       
       return interaction.reply({
         embeds: [successEmbed("Task Completed", `Marked "${task.text}" as complete!`)],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
     } catch (error) {
       console.error("Error in shared todo complete modal:", error);
       return interaction.reply({
         embeds: [errorEmbed("Error", "An error occurred while completing the task.")],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -161,3 +161,5 @@ const sharedTodoCompleteModalHandler = {
 
 export default sharedTodoAddHandler;
 export { sharedTodoCompleteHandler, sharedTodoAddModalHandler, sharedTodoCompleteModalHandler };
+
+

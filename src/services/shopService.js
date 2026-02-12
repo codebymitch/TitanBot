@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+﻿import { EmbedBuilder } from 'discord.js';
 import { shopConfig, getItemById, validatePurchase, getCurrentPrice, getItemsInCategory } from '../config/shop/index.js';
 import { logger } from '../utils/logger.js';
 import { getUserBalance, updateUserBalance } from './economyService.js';
@@ -121,7 +121,7 @@ return 'coins';
         const { category, page = 1 } = options;
         
         const embed = new EmbedBuilder()
-            .setTitle('🛒 TitanBot Shop')
+            .setTitle('ðŸ›’ TitanBot Shop')
             .setColor('#5865F2')
             .setDescription('Browse and purchase items from the shop. Use the buttons to navigate.')
             .setFooter({ text: `Page ${page}` });
@@ -139,9 +139,9 @@ return 'coins';
             { 
                 id: 'all', 
                 name: 'All Items', 
-                emoji: '🛍️',
+                emoji: 'ðŸ›ï¸',
                 description: 'Browse all available items',
-                icon: '🛍️'
+                icon: 'ðŸ›ï¸'
             },
             ...shopConfig.categories
         ];
@@ -176,3 +176,4 @@ return 'coins';
 
 const shopService = new ShopService();
 export default shopService;
+

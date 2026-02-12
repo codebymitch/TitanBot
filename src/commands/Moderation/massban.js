@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -153,25 +153,25 @@ export default {
             let description = `**Mass Ban Results:**\n\n`;
             
             if (results.successful.length > 0) {
-                description += `✅ **Successfully Banned (${results.successful.length}):**\n`;
+                description += `âœ… **Successfully Banned (${results.successful.length}):**\n`;
                 results.successful.forEach(result => {
-                    description += `• ${result.user} (${result.userId})\n`;
+                    description += `â€¢ ${result.user} (${result.userId})\n`;
                 });
                 description += '\n';
             }
 
             if (results.skipped.length > 0) {
-                description += `⚠️ **Skipped (${results.skipped.length}):**\n`;
+                description += `âš ï¸ **Skipped (${results.skipped.length}):**\n`;
                 results.skipped.forEach(result => {
-                    description += `• ${result.user} - ${result.reason}\n`;
+                    description += `â€¢ ${result.user} - ${result.reason}\n`;
                 });
                 description += '\n';
             }
 
             if (results.failed.length > 0) {
-                description += `❌ **Failed (${results.failed.length}):**\n`;
+                description += `âŒ **Failed (${results.failed.length}):**\n`;
                 results.failed.forEach(result => {
-                    description += `• ${result.userId} - ${result.reason}\n`;
+                    description += `â€¢ ${result.userId} - ${result.reason}\n`;
                 });
             }
 
@@ -180,7 +180,7 @@ export default {
             return await interaction.editReply({
                 embeds: [
                     embed(
-                        `🔨 Mass Ban Completed`,
+                        `ðŸ”¨ Mass Ban Completed`,
                         description
                     )
                 ]
@@ -199,3 +199,4 @@ export default {
         }
     }
 };
+

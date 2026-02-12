@@ -1,4 +1,4 @@
-import { getGuildConfig as getGuildConfigDb, setGuildConfig as setGuildConfigDb } from '../utils/database.js';
+﻿import { getGuildConfig as getGuildConfigDb, setGuildConfig as setGuildConfigDb } from '../utils/database.js';
 import { BotConfig } from '../config/bot.js';
 import { normalizeGuildConfig } from '../utils/schemas.js';
 
@@ -75,3 +75,4 @@ export async function getConfigValue(client, guildId, key, defaultValue = null) 
 export async function setConfigValue(client, guildId, key, value) {
     return await updateGuildConfig(client, guildId, { [key]: value });
 }
+

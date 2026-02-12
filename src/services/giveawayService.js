@@ -1,4 +1,4 @@
-import { pickWinners } from '../utils/giveaways.js';
+﻿import { pickWinners } from '../utils/giveaways.js';
 import { getEndedGiveaways, markGiveawayEnded } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
@@ -56,7 +56,7 @@ export async function checkGiveaways(client) {
         const embed = message.embeds[0]?.data || {};
         const endedEmbed = {
           ...embed,
-          title: '🎉 Giveaway Ended!',
+          title: 'ðŸŽ‰ Giveaway Ended!',
           fields: [
             { name: 'Winners', value: winnerMentions, inline: true },
             { name: 'Entries', value: participants.length.toString(), inline: true },
@@ -82,7 +82,7 @@ export async function checkGiveaways(client) {
         }
 
         if (winners.length > 0) {
-          const winnerAnnouncement = `🎉 Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**!`;
+          const winnerAnnouncement = `ðŸŽ‰ Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**!`;
           await channel.send({ content: winnerAnnouncement });
         }
 
@@ -95,3 +95,4 @@ export async function checkGiveaways(client) {
     logger.error('Error checking giveaways:', error);
   }
 }
+

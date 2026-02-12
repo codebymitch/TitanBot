@@ -1,4 +1,4 @@
-import { Events, EmbedBuilder } from 'discord.js';
+﻿import { Events, EmbedBuilder } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { getWelcomeConfig } from '../utils/database.js';
 
@@ -26,7 +26,7 @@ export default {
                     .replace(/{membercount}/g, guild.memberCount);
                 
                 const embed = new EmbedBuilder()
-                    .setTitle(welcomeConfig.leaveEmbed?.title || '👋 Goodbye')
+                    .setTitle(welcomeConfig.leaveEmbed?.title || 'ðŸ‘‹ Goodbye')
 .setDescription(goodbyeMessage)
                     .setColor(welcomeConfig.leaveEmbed?.color || 0xff0000)
                     .setThumbnail(user.displayAvatarURL())
@@ -69,3 +69,4 @@ export default {
     }
   }
 };
+

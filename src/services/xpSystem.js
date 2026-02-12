@@ -1,4 +1,4 @@
-import { logger } from '../utils/logger.js';
+﻿import { logger } from '../utils/logger.js';
 import { getLevelingConfig } from '../utils/database.js';
 import { getUserLevelData, saveUserLevelData } from './leveling.js';
 import { getXpForLevel } from '../utils/database.js';
@@ -74,3 +74,4 @@ export async function addXp(client, guild, member, xpToAdd) {
     return { success: false, error: error.message };
   }
 }
+

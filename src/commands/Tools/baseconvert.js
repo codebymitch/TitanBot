@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -99,7 +99,7 @@ try {
                     }
                     
                     const embed = successEmbed(
-                        '🔄 Base Conversion Result',
+                        'ðŸ”„ Base Conversion Result',
                         `**From ${fromName} (${fromBase}):** \`${fromPrefix}${cleanNumber}\`\n` +
                         `**To ${toName} (${toBase}):** \`${toPrefix}${result}\`\n` +
                         `**Decimal:** \`${decimalValue.toLocaleString()}\``
@@ -142,7 +142,7 @@ try {
                 }
                 
                 const embed = successEmbed(
-                    '🔄 Base Conversion Results',
+                    'ðŸ”„ Base Conversion Results',
                     description
                 );
                 
@@ -158,3 +158,4 @@ try {
         }
     },
 };
+

@@ -1,4 +1,4 @@
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder } from 'discord.js';
+﻿import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
@@ -23,11 +23,11 @@ const createTicketHandler = {
         return interaction.reply({
           embeds: [
             errorEmbed(
-              '🎫 Ticket Limit Reached',
+              'ðŸŽ« Ticket Limit Reached',
               `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets before creating a new one.\n\n**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}`
             )
           ],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -52,12 +52,12 @@ const createTicketHandler = {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           embeds: [errorEmbed('Error', 'Could not open ticket creation form.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       } else {
         await interaction.followUp({
           embeds: [errorEmbed('Error', 'Could not open ticket creation form.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     }
@@ -68,7 +68,7 @@ const createTicketModalHandler = {
   name: 'create_ticket_modal',
   async execute(interaction, client) {
     try {
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const reason = interaction.fields.getTextInputValue('reason');
@@ -92,14 +92,14 @@ const createTicketModalHandler = {
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to create ticket.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       console.error('Error creating ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while creating your ticket.')],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -109,7 +109,7 @@ const closeTicketHandler = {
   name: 'ticket_close',
   async execute(interaction, client) {
     try {
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const result = await closeTicket(interaction.channel, interaction.user);
@@ -117,7 +117,7 @@ const closeTicketHandler = {
       if (result.success) {
         await interaction.editReply({
           embeds: [successEmbed('Ticket Closed', 'This ticket has been closed.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         
         await logEvent({
@@ -133,14 +133,14 @@ const closeTicketHandler = {
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to close ticket.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       console.error('Error closing ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while closing the ticket.')],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -150,7 +150,7 @@ const claimTicketHandler = {
   name: 'ticket_claim',
   async execute(interaction, client) {
     try {
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const result = await claimTicket(interaction.channel, interaction.user);
@@ -158,7 +158,7 @@ const claimTicketHandler = {
       if (result.success) {
         await interaction.editReply({
           embeds: [successEmbed('Ticket Claimed', 'You have successfully claimed this ticket!')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         
         await logEvent({
@@ -173,14 +173,14 @@ const claimTicketHandler = {
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to claim ticket.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       console.error('Error claiming ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while claiming the ticket.')],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -190,7 +190,7 @@ const priorityTicketHandler = {
   name: 'ticket_priority',
   async execute(interaction, client, args) {
     try {
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const priority = args[0];
@@ -199,19 +199,19 @@ const priorityTicketHandler = {
       if (result.success) {
         await interaction.editReply({
           embeds: [successEmbed('Priority Updated', `Ticket priority set to ${priority}.`)],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to update priority.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       console.error('Error updating ticket priority:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while updating the priority.')],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -221,7 +221,7 @@ const transcriptTicketHandler = {
   name: 'ticket_transcript',
   async execute(interaction, client) {
     try {
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const messages = await interaction.channel.messages.fetch({ limit: 100 });
@@ -232,7 +232,7 @@ const transcriptTicketHandler = {
       if (!messages || messages.size === 0) {
         await interaction.editReply({
           embeds: [errorEmbed('No Messages', 'No messages found in this ticket channel.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -264,7 +264,7 @@ const isUserMessage = m.type === 0;
       if (!sortedMessages || sortedMessages.length === 0) {
         await interaction.editReply({
           embeds: [errorEmbed('No User Messages', 'No user messages found to include in the transcript.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -285,10 +285,10 @@ const isUserMessage = m.type === 0;
 </head>
 <body>
     <div class="header">
-        <h1>🎫 Ticket Transcript</h1>
+        <h1>ðŸŽ« Ticket Transcript</h1>
         <p><strong>Channel:</strong> ${interaction.channel.name}</p>
         <p><strong>Created:</strong> <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F></p>
-        <p><strong>Generated:</strong> 📅 <t:${Math.floor(Date.now() / 1000)}:F></p>
+        <p><strong>Generated:</strong> ðŸ“… <t:${Math.floor(Date.now() / 1000)}:F></p>
         <p><strong>Messages:</strong> ${sortedMessages.length}</p>
     </div>
 `;
@@ -311,7 +311,7 @@ const isUserMessage = m.type === 0;
         if (message.attachments && message.attachments.size > 0) {
           htmlTranscript += `
         <div class="attachments">
-            📎 Attachments: ${message.attachments.map(a => `<a href="${a.url}">${a.name}</a>`).join(', ')}
+            ðŸ“Ž Attachments: ${message.attachments.map(a => `<a href="${a.url}">${a.name}</a>`).join(', ')}
         </div>`;
         }
         
@@ -324,8 +324,8 @@ const isUserMessage = m.type === 0;
 </html>`;
       
       const transcriptEmbed = createEmbed({
-        title: `📜 Ticket Transcript - ${interaction.channel.name}`,
-        description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** 📅 <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}\n\n📎 The complete HTML transcript has been attached as a file.`,
+        title: `ðŸ“œ Ticket Transcript - ${interaction.channel.name}`,
+        description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** ðŸ“… <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}\n\nðŸ“Ž The complete HTML transcript has been attached as a file.`,
         color: 0x3498db,
         footer: { text: `Ticket ID: ${interaction.channel.id}` }
       });
@@ -335,7 +335,7 @@ const isUserMessage = m.type === 0;
       
       try {
         await interaction.user.send({
-          content: `📜 **Ticket Transcript** for \`${interaction.channel.name}\``,
+          content: `ðŸ“œ **Ticket Transcript** for \`${interaction.channel.name}\``,
           embeds: [transcriptEmbed],
           files: [{
             attachment: buffer,
@@ -345,11 +345,11 @@ const isUserMessage = m.type === 0;
         
         await interaction.editReply({
           embeds: [{
-            title: '✅ Transcript Sent',
+            title: 'âœ… Transcript Sent',
             description: 'The ticket transcript has been sent to your DMs as both an embed and an HTML file.',
 color: 4689679
           }],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         
         await logTicketEvent({
@@ -375,7 +375,7 @@ color: 4689679
         console.error('Could not DM user:', dmError);
         await interaction.editReply({
           embeds: [errorEmbed('DM Failed', 'I couldn\'t send you the transcript. Please enable DMs from server members.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -383,7 +383,7 @@ color: 4689679
       console.error('Error creating transcript:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'Failed to create ticket transcript.')],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -393,7 +393,7 @@ const unclaimTicketHandler = {
   name: 'ticket_unclaim',
   async execute(interaction, client) {
     try {
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const { unclaimTicket } = await import('../services/ticket.js');
@@ -402,7 +402,7 @@ const unclaimTicketHandler = {
       if (result.success) {
         await interaction.editReply({
           embeds: [successEmbed('Ticket Unclaimed', 'You have successfully unclaimed this ticket!')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         
         await logEvent({
@@ -417,14 +417,14 @@ const unclaimTicketHandler = {
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to unclaim ticket.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       console.error('Error unclaiming ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while unclaiming the ticket.')],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -434,7 +434,7 @@ const reopenTicketHandler = {
   name: 'ticket_reopen',
   async execute(interaction, client) {
     try {
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const { reopenTicket } = await import('../services/ticket.js');
@@ -443,7 +443,7 @@ const reopenTicketHandler = {
       if (result.success) {
         await interaction.editReply({
           embeds: [successEmbed('Ticket Reopened', 'You have successfully reopened this ticket!')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         
         await logEvent({
@@ -458,14 +458,14 @@ const reopenTicketHandler = {
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to reopen ticket.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       console.error('Error reopening ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while reopening the ticket.')],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -475,7 +475,7 @@ const deleteTicketHandler = {
   name: 'ticket_delete',
   async execute(interaction, client) {
     try {
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const { deleteTicket } = await import('../services/ticket.js');
@@ -484,7 +484,7 @@ const deleteTicketHandler = {
       if (result.success) {
         await interaction.editReply({
           embeds: [successEmbed('Ticket Deleted', 'This ticket will be permanently deleted in 3 seconds.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         
         await logEvent({
@@ -499,14 +499,14 @@ const deleteTicketHandler = {
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to delete ticket.')],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       console.error('Error deleting ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while deleting the ticket.')],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -523,3 +523,5 @@ export {
   reopenTicketHandler,
   deleteTicketHandler 
 };
+
+

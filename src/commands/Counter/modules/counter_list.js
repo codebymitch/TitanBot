@@ -1,4 +1,4 @@
-import { PermissionFlagsBits } from 'discord.js';
+﻿import { PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters } from '../../../services/counterService.js';
 
@@ -13,7 +13,7 @@ export async function handleList(interaction, client) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await interaction.reply({ 
             embeds: [errorEmbed("You need **Manage Channels** permission to view counters.")],
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral 
         });
         return;
     }
@@ -25,25 +25,25 @@ export async function handleList(interaction, client) {
 
         if (counters.length === 0) {
             const embed = createEmbed({
-                title: "📋 Server Counters",
+                title: "ðŸ“‹ Server Counters",
                 description: "No counters have been set up for this server yet.\n\nUse `/counter create` to set up your first counter!",
                 color: 0xFFFF00
             });
 
             embed.addFields({
-                name: "🔧 **Available Counter Types**",
-                value: "👥 **Members** - Total server members\n🤖 **Bots** - Bot count only\n👤 **Humans** - Human members only",
+                name: "ðŸ”§ **Available Counter Types**",
+                value: "ðŸ‘¥ **Members** - Total server members\nðŸ¤– **Bots** - Bot count only\nðŸ‘¤ **Humans** - Human members only",
                 inline: false
             });
 
             embed.addFields({
-                name: "📝 **Usage Examples**",
+                name: "ðŸ“ **Usage Examples**",
                 value: "`/counter create type:Members channel:#general`\n`/counter create type:Bots channel:#member-count`\n`/counter list`",
                 inline: false
             });
 
             embed.setFooter({ 
-                text: "Counter System • Automatic updates every 15 minutes" 
+                text: "Counter System â€¢ Automatic updates every 15 minutes" 
             });
 
             await interaction.editReply({ embeds: [embed] });
@@ -51,7 +51,7 @@ export async function handleList(interaction, client) {
         }
 
         const embed = createEmbed({
-            title: `📋 Server Counters (${counters.length})`,
+            title: `ðŸ“‹ Server Counters (${counters.length})`,
             description: "Here are all the active counters for this server.\n\nCounters automatically update every 15 minutes.",
             color: 0x0099FF
         });
@@ -62,15 +62,15 @@ export async function handleList(interaction, client) {
             
             if (!channel) {
                 embed.addFields({
-                    name: `❌ Counter #${i + 1} - Channel Missing`,
-                    value: `**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}\n**Channel:** Deleted channel (ID: ${counter.channelId})\n**Status:** ⚠️ Channel no longer exists\n**Created:** ${new Date(counter.createdAt).toLocaleDateString()}`,
+                    name: `âŒ Counter #${i + 1} - Channel Missing`,
+                    value: `**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}\n**Channel:** Deleted channel (ID: ${counter.channelId})\n**Status:** âš ï¸ Channel no longer exists\n**Created:** ${new Date(counter.createdAt).toLocaleDateString()}`,
                     inline: false
                 });
                 continue;
             }
 
             const currentCount = getCurrentCount(guild, counter.type);
-            const status = channel.name.includes(':') ? '✅ Active' : '⚠️ Not Updated';
+            const status = channel.name.includes(':') ? 'âœ… Active' : 'âš ï¸ Not Updated';
             
             embed.addFields({
                 name: `${getCounterEmoji(counter.type)} Counter #${i + 1} - ${channel.name}`,
@@ -80,7 +80,7 @@ export async function handleList(interaction, client) {
         }
 
         embed.addFields({
-            name: "📊 **Statistics**",
+            name: "ðŸ“Š **Statistics**",
             value: `**Total Counters:** ${counters.length}\n**Active Counters:** ${counters.filter(c => {
                 const channel = guild.channels.cache.get(c.channelId);
                 return channel && channel.name.includes(':');
@@ -89,13 +89,13 @@ export async function handleList(interaction, client) {
         });
 
         embed.addFields({
-            name: "🔧 **Management Commands**",
+            name: "ðŸ”§ **Management Commands**",
             value: "`/counter create` - Create new counter\n`/counter update` - Update existing counter\n`/counter delete` - Delete counter",
             inline: false
         });
 
         embed.setFooter({ 
-            text: "Counter System • Automatic updates every 15 minutes" 
+            text: "Counter System â€¢ Automatic updates every 15 minutes" 
         });
         embed.setTimestamp();
 
@@ -116,11 +116,11 @@ export async function handleList(interaction, client) {
  */
 function getCounterTypeDisplay(type) {
     const types = {
-        members: "👥 Members",
-        bots: "🤖 Bots",
-        members_only: "👤 Humans"
+        members: "ðŸ‘¥ Members",
+        bots: "ðŸ¤– Bots",
+        members_only: "ðŸ‘¤ Humans"
     };
-    return types[type] || "❓ Unknown";
+    return types[type] || "â“ Unknown";
 }
 
 /**
@@ -130,11 +130,11 @@ function getCounterTypeDisplay(type) {
  */
 function getCounterEmoji(type) {
     const emojis = {
-        members: "👥",
-        bots: "🤖",
-        members_only: "👤"
+        members: "ðŸ‘¥",
+        bots: "ðŸ¤–",
+        members_only: "ðŸ‘¤"
     };
-    return emojis[type] || "❓";
+    return emojis[type] || "â“";
 }
 
 /**
@@ -155,3 +155,4 @@ function getCurrentCount(guild, type) {
             return 0;
     }
 }
+

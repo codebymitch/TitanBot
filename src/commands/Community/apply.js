@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+﻿import { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { 
@@ -153,7 +153,7 @@ export async function handleApplicationModal(interaction) {
             const logChannel = interaction.guild.channels.cache.get(settings.logChannelId);
             if (logChannel) {
                 const logEmbed = createEmbed({
-                    title: '📝 New Application',
+                    title: 'ðŸ“ New Application',
                     description: `**User:** <@${interaction.user.id}> (${interaction.user.tag})\n` +
                         `**Application:** ${applicationRole.name}\n` +
                         `**Role:** ${role.name}\n` +
@@ -345,3 +345,4 @@ async function handleStatus(interaction) {
         return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
     }
 }
+

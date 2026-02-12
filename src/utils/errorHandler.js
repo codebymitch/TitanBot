@@ -1,5 +1,6 @@
-import { logger } from './logger.js';
+﻿import { logger } from './logger.js';
 import { createEmbed } from './embeds.js';
+import { MessageFlags } from 'discord.js';
 
 /**
  * Error types for categorization
@@ -171,17 +172,17 @@ export async function handleInteractionError(interaction, error, context = {}) {
 
     if (errorType === ErrorTypes.RATE_LIMIT) {
         embed.addFields({
-            name: "💡 Tip",
+            name: "ðŸ’¡ Tip",
             value: "Rate limits help prevent spam. Wait a moment before trying again."
         });
     } else if (errorType === ErrorTypes.PERMISSION) {
         embed.addFields({
-            name: "🔧 Need Help?",
+            name: "ðŸ”§ Need Help?",
             value: "Contact a server administrator if you believe this is an error."
         });
     } else if (errorType === ErrorTypes.CONFIGURATION) {
         embed.addFields({
-            name: "📋 Configuration",
+            name: "ðŸ“‹ Configuration",
             value: "This feature needs to be configured by a server administrator."
         });
     }
@@ -192,7 +193,7 @@ export async function handleInteractionError(interaction, error, context = {}) {
         };
         
         if (!interaction.deferred && !interaction.replied) {
-            errorMessage.ephemeral = true;
+            errorMessage.flags = MessageFlags.Ephemeral;
         }
         
         if (interaction.deferred || interaction.replied) {
@@ -210,15 +211,15 @@ export async function handleInteractionError(interaction, error, context = {}) {
  */
 function getErrorTitle(errorType) {
     const titles = {
-        [ErrorTypes.VALIDATION]: "❌ Invalid Input",
-        [ErrorTypes.PERMISSION]: "🚫 Permission Denied",
-        [ErrorTypes.CONFIGURATION]: "⚙️ Configuration Error",
-        [ErrorTypes.DATABASE]: "🗄️ Database Error",
-        [ErrorTypes.NETWORK]: "🌐 Network Error",
-        [ErrorTypes.DISCORD_API]: "🔌 API Error",
-        [ErrorTypes.USER_INPUT]: "💬 Input Error",
-        [ErrorTypes.RATE_LIMIT]: "⏱️ Slow Down!",
-        [ErrorTypes.UNKNOWN]: "❓ Unexpected Error"
+        [ErrorTypes.VALIDATION]: "âŒ Invalid Input",
+        [ErrorTypes.PERMISSION]: "ðŸš« Permission Denied",
+        [ErrorTypes.CONFIGURATION]: "âš™ï¸ Configuration Error",
+        [ErrorTypes.DATABASE]: "ðŸ—„ï¸ Database Error",
+        [ErrorTypes.NETWORK]: "ðŸŒ Network Error",
+        [ErrorTypes.DISCORD_API]: "ðŸ”Œ API Error",
+        [ErrorTypes.USER_INPUT]: "ðŸ’¬ Input Error",
+        [ErrorTypes.RATE_LIMIT]: "â±ï¸ Slow Down!",
+        [ErrorTypes.UNKNOWN]: "â“ Unexpected Error"
     };
     
     return titles[errorType] || titles[ErrorTypes.UNKNOWN];
@@ -264,3 +265,4 @@ export default {
     withErrorHandling,
     createError
 };
+

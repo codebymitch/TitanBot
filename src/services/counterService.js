@@ -1,4 +1,4 @@
-import { logger } from '../utils/logger.js';
+﻿import { logger } from '../utils/logger.js';
 
 /**
  * Update a specific counter
@@ -151,3 +151,4 @@ export async function saveServerCounters(client, guildId, counters) {
     return false;
   }
 }
+

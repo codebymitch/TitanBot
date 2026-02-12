@@ -1,4 +1,4 @@
-import { readdir } from 'fs/promises';
+﻿import { readdir } from 'fs/promises';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -48,3 +48,4 @@ export default async (client) => {
     logger.error('Error loading interactions:', error);
   }
 };
+

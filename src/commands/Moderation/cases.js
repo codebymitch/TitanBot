@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getModerationCases } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -61,7 +61,7 @@ export default {
                 const pageCases = cases.slice(startIndex, endIndex);
 
                 const embed = createEmbed({
-                    title: '📋 Moderation Cases',
+                    title: 'ðŸ“‹ Moderation Cases',
                     description: `Showing moderation cases for **${interaction.guild.name}**\n\n**Page ${page} of ${totalPages}**`
                 });
 
@@ -88,7 +88,7 @@ export default {
                 
                 const prevButton = new ButtonBuilder()
                     .setCustomId('prev_page')
-                    .setLabel('⬅️ Previous')
+                    .setLabel('â¬…ï¸ Previous')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(page === 1);
 
@@ -100,7 +100,7 @@ export default {
 
                 const nextButton = new ButtonBuilder()
                     .setCustomId('next_page')
-                    .setLabel('Next ➡️')
+                    .setLabel('Next âž¡ï¸')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(page === totalPages);
 
@@ -161,3 +161,4 @@ time: 120000
         }
     }
 };
+

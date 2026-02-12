@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 export default {
@@ -30,7 +30,7 @@ export default {
                     } catch (error) {
                         await interaction.reply({
                             embeds: [errorEmbed('Error', 'Invalid timezone. Please use a valid timezone identifier (e.g., UTC, America/New_York, Europe/London)')],
-                            ephemeral: true
+                            flags: MessageFlags.Ephemeral
                         });
                         return;
                     }
@@ -39,20 +39,22 @@ export default {
                     const unixTimestamp = Math.floor(now.getTime() / 1000);
                     
                     const embed = successEmbed(
-                        '🕒 Current Time',
+                        'ðŸ•’ Current Time',
                         `**${timezone}:** ${timeString}\n` +
                         `**Unix Timestamp:** \`${unixTimestamp}\`\n` +
                         `**ISO String:** \`${now.toISOString()}\``
                     );
                     
-                    await interaction.reply({ embeds: [embed], ephemeral: true });
+                    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         } catch (error) {
             console.error('Time command error:', error);
             const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
             await interaction[replyMethod]({
                 embeds: [errorEmbed('Error', 'Failed to get the current time.')],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
     },
 };
+
+

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 
@@ -28,7 +28,7 @@ export default {
             await interaction.editReply({
                 embeds: [
                     successEmbed(
-                        "✅ Configuration Saved",
+                        "âœ… Configuration Saved",
                         `The **Premium Shop Role** has been successfully set to ${role.toString()}.`,
                     ),
                 ],
@@ -46,3 +46,4 @@ export default {
         }
     }
 };
+

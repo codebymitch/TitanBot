@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -60,7 +60,7 @@ try {
       const modifierText = modifier !== 0 ? ` + (${modifier})` : "";
 
       const embed = successEmbed(
-        `🎲 Rolling ${numDice}d${numSides}${modifier !== 0 ? match[3] : ""}`,
+        `ðŸŽ² Rolling ${numDice}d${numSides}${modifier !== 0 ? match[3] : ""}`,
         `${resultsDetail}**Total Roll:** ${totalRoll}${modifierText} = **${finalTotal}**`,
       );
 
@@ -71,3 +71,4 @@ try {
     }
   },
 };
+

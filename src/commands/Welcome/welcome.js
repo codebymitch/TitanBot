@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
@@ -61,12 +61,12 @@ const { options, guild, client } = interaction;
 
                 const embed = new EmbedBuilder()
 .setColor(0x00ff00)
-                    .setTitle('✅ Welcome System Configured')
+                    .setTitle('âœ… Welcome System Configured')
                     .setDescription(`Welcome messages will now be sent to ${channel}`)
                     .addFields(
                         { name: 'Message Preview', value: previewMessage },
-                        { name: 'Ping User', value: ping ? '✅ Yes' : '❌ No' },
-                        { name: 'Status', value: '✅ Enabled' }
+                        { name: 'Ping User', value: ping ? 'âœ… Yes' : 'âŒ No' },
+                        { name: 'Status', value: 'âœ… Enabled' }
                     )
                     .setFooter({ text: 'Tip: Use /welcome toggle to enable/disable welcome messages' });
 
@@ -77,7 +77,7 @@ const { options, guild, client } = interaction;
                 await interaction.editReply({ embeds: [embed] });
             } catch (error) {
                 await interaction.editReply({ 
-                    content: '❌ An error occurred while setting up the welcome system.', 
+                    content: 'âŒ An error occurred while setting up the welcome system.', 
                     flags: ["Ephemeral"] 
                 });
             }
@@ -93,15 +93,16 @@ const { options, guild, client } = interaction;
                 });
 
                 await interaction.editReply({
-                    content: `✅ Welcome messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
+                    content: `âœ… Welcome messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.editReply({ 
-                    content: '❌ An error occurred while toggling welcome messages.', 
+                    content: 'âŒ An error occurred while toggling welcome messages.', 
                     flags: ["Ephemeral"] 
                 });
             }
         }
     },
 };
+

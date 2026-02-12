@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import axios from 'axios';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -67,7 +67,7 @@ try {
                 },
                 { 
                     name: 'Stats', 
-                    value: `👍 ${definition.thumbs_up.toLocaleString()} • 👎 ${definition.thumbs_down.toLocaleString()}`,
+                    value: `ðŸ‘ ${definition.thumbs_up.toLocaleString()} â€¢ ðŸ‘Ž ${definition.thumbs_down.toLocaleString()}`,
                     inline: true 
                 },
                 { 
@@ -110,3 +110,4 @@ async function getGuildConfig(client, guildId) {
         return {};
     }
 }
+

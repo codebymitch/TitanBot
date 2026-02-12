@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Permission Guard - Centralized permission checking for commands
  * Ensures consistent security checks across all command handlers
  */
 
-import { PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { logger } from './logger.js';
 import { errorEmbed } from './embeds.js';
 
@@ -71,7 +71,7 @@ export async function checkUserPermissions(
   if (!member.permissions.has(requiredPermissions)) {
     await interaction.reply({
       embeds: [errorEmbed('Permission Denied', errorMessage)],
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     
     logger.warn(
@@ -100,7 +100,7 @@ export async function checkBotPermissions(
   if (!targetChannel || !targetChannel.guild) {
     await interaction.reply({
       embeds: [errorEmbed('Error', 'Could not determine channel.')],
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return false;
   }
@@ -109,7 +109,7 @@ export async function checkBotPermissions(
   if (!botMember) {
     await interaction.reply({
       embeds: [errorEmbed('Error', 'Could not find bot member in this guild.')],
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     return false;
   }
@@ -130,7 +130,7 @@ export async function checkBotPermissions(
         'Missing Permissions',
         `I need the following permissions in ${targetChannel}: ${missingPerms.join(', ')}`
       )],
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     });
     
     logger.warn(
@@ -166,3 +166,4 @@ export default {
   checkBotPermissions,
   auditPermissionCheck
 };
+

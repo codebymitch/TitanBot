@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
@@ -126,7 +126,7 @@ export default {
                     .map((id) => `<@${id}>`)
                     .join(", ");
                 await channel.send({
-                    content: `🎉 **GIVEAWAY REROLL** 🎉 New winners for **${giveaway.prize}**: ${winnerMentions}!`,
+                    content: `ðŸŽ‰ **GIVEAWAY REROLL** ðŸŽ‰ New winners for **${giveaway.prize}**: ${winnerMentions}!`,
                 });
                 return interaction.editReply({
                     embeds: [
@@ -149,7 +149,7 @@ giveaway.winnerIds = newWinnerIds;
 const newRow = giveawayButtons(true);
 
             await message.edit({
-                content: "🔄 **GIVEAWAY REROLLED** 🔄",
+                content: "ðŸ”„ **GIVEAWAY REROLLED** ðŸ”„",
                 embeds: [newEmbed],
                 components: [newRow],
             });
@@ -158,7 +158,7 @@ const newRow = giveawayButtons(true);
                 .map((id) => `<@${id}>`)
                 .join(", ");
             await channel.send({
-                content: `🔄 **REROLL WINNERS** 🔄 CONGRATULATIONS ${winnerMentions}! You are the new winner(s) for the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
+                content: `ðŸ”„ **REROLL WINNERS** ðŸ”„ CONGRATULATIONS ${winnerMentions}! You are the new winner(s) for the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
             });
 
             return interaction.editReply({
@@ -182,3 +182,4 @@ const newRow = giveawayButtons(true);
         }
     },
 };
+

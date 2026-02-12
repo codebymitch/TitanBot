@@ -1,4 +1,4 @@
-import { 
+﻿import { 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
@@ -302,3 +302,4 @@ export const handleGuildMemberRemove = {
         }
     }
 };
+

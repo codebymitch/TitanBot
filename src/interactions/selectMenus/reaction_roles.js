@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+﻿import { EmbedBuilder, MessageFlags } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 /**
@@ -9,7 +9,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
  */
 export async function execute(interaction, client) {
     try {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
         if (!deferSuccess) return;
 
         const key = `reaction_roles:${interaction.guildId}:${interaction.message.id}`;
@@ -28,7 +28,7 @@ export async function execute(interaction, client) {
             return interaction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setDescription('❌ This reaction role message is no longer active.')
+                        .setDescription('âŒ This reaction role message is no longer active.')
                         .setColor('#ED4245')
                 ]
             });
@@ -41,7 +41,7 @@ export async function execute(interaction, client) {
             return interaction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setDescription('❌ I do not have permission to manage roles in this server.')
+                        .setDescription('âŒ I do not have permission to manage roles in this server.')
                         .setColor('#ED4245')
                 ]
             });
@@ -89,14 +89,14 @@ if (selectedRoleIds.includes(roleId)) continue;
             }
         }
 
-        let description = '🎭 **Roles updated successfully!**\n\n';
+        let description = 'ðŸŽ­ **Roles updated successfully!**\n\n';
         
         if (addedRoles.length > 0) {
-            description += `✅ **Added:** ${addedRoles.map(name => `**${name}**`).join(', ')}\n`;
+            description += `âœ… **Added:** ${addedRoles.map(name => `**${name}**`).join(', ')}\n`;
         }
         
         if (removedRoles.length > 0) {
-            description += `❌ **Removed:** ${removedRoles.map(name => `**${name}**`).join(', ')}\n`;
+            description += `âŒ **Removed:** ${removedRoles.map(name => `**${name}**`).join(', ')}\n`;
         }
         
         if (addedRoles.length === 0 && removedRoles.length === 0) {
@@ -114,13 +114,13 @@ if (selectedRoleIds.includes(roleId)) continue;
         console.error('Error handling reaction role select menu:', error);
         
         const errorEmbed = new EmbedBuilder()
-            .setDescription('❌ An error occurred while updating your roles. Please try again.')
+            .setDescription('âŒ An error occurred while updating your roles. Please try again.')
             .setColor('#ED4245');
 
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ embeds: [errorEmbed], ephemeral: true });
+            await interaction.followUp({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
         } else {
-            await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+            await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
         }
     }
 }
@@ -129,3 +129,4 @@ export default {
     name: 'reaction_roles',
     execute
 };
+

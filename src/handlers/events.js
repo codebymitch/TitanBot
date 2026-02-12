@@ -1,4 +1,4 @@
-import { readdir } from 'fs/promises';
+﻿import { readdir } from 'fs/promises';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -26,3 +26,4 @@ export default async function loadEvents(client) {
         }
     }
 }
+

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -56,11 +56,11 @@ const score = stringToHash(combination) % 101;
       }
 
       const progressBar =
-        "█".repeat(Math.floor(score / 10)) +
-        "░".repeat(10 - Math.floor(score / 10));
+        "â–ˆ".repeat(Math.floor(score / 10)) +
+        "â–‘".repeat(10 - Math.floor(score / 10));
 
       const embed = successEmbed(
-        `💖 Ship Score: ${name1} vs ${name2}`,
+        `ðŸ’– Ship Score: ${name1} vs ${name2}`,
         `Compatibility: **${score}%**\n\n\`${progressBar}\`\n\n*${description}*`,
       );
 
@@ -71,3 +71,4 @@ const score = stringToHash(combination) % 101;
     }
   },
 };
+

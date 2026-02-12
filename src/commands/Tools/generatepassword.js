@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 export default {
@@ -34,7 +34,7 @@ export default {
                 if (length < 8 || length > 50) {
                     await interaction.reply({
                         embeds: [errorEmbed('Error', 'Password length must be between 8 and 50 characters.')],
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -77,7 +77,7 @@ export default {
             }
             
             let strength = 'Weak';
-            let strengthEmoji = '🔴';
+            let strengthEmoji = 'ðŸ”´';
 let strengthColor = 0xff0000;
             
             const hasLower = /[a-z]/.test(password);
@@ -102,24 +102,24 @@ let strengthColor = 0xff0000;
             
             if (score > 80) {
                 strength = 'Very Strong';
-                strengthEmoji = '🟢';
+                strengthEmoji = 'ðŸŸ¢';
 strengthColor = 0x00ff00;
             } else if (score > 60) {
                 strength = 'Strong';
-                strengthEmoji = '🟢';
+                strengthEmoji = 'ðŸŸ¢';
 strengthColor = 0x00aa00;
             } else if (score > 40) {
                 strength = 'Good';
-                strengthEmoji = '🟡';
+                strengthEmoji = 'ðŸŸ¡';
 strengthColor = 0xffff00;
             } else if (score > 20) {
                 strength = 'Weak';
-                strengthEmoji = '🟠';
+                strengthEmoji = 'ðŸŸ ';
 strengthColor = 0xffa500;
             }
             
             const embed = successEmbed(
-                '🔑 Generated Password',
+                'ðŸ”‘ Generated Password',
                 `**Password:** ||\`${password}\`||\n` +
                 `**Length:** ${password.length} characters\n` +
                 `**Strength:** ${strengthEmoji} ${strength}\n` +
@@ -128,14 +128,15 @@ strengthColor = 0xffa500;
             
             await interaction.reply({ 
                 embeds: [embed],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             console.error('GeneratePassword command error:', error);
             return interaction.reply({
                 embeds: [errorEmbed('System Error', 'Could not generate a password at this time.')],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },
 };
+

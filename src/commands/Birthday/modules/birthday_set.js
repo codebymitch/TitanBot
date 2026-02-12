@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildBirthdays, setBirthday, deleteBirthday, getMonthName } from '../../../utils/database.js';
 
 export default {
@@ -24,7 +24,7 @@ try {
                 const monthName = getMonthName(month);
                 await interaction.editReply({
                     embeds: [successEmbed(
-                        "Birthday Set! 🎂",
+                        "Birthday Set! ðŸŽ‚",
                         `Your birthday has been set to **${monthName} ${day}**!`
                     )]
                 });
@@ -41,3 +41,4 @@ try {
         }
     }
 };
+

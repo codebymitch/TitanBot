@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shop items configuration
  * Defines all items available in the shop with their properties
  */
@@ -68,7 +68,7 @@ roleId: null,
     },
     {
         id: 'fishing_rod',
-        name: '🎣 Fishing Rod',
+        name: 'ðŸŽ£ Fishing Rod',
         price: 5000,
         description: 'Used for fishing commands',
         type: 'tool',
@@ -80,7 +80,7 @@ roleId: null,
     },
     {
         id: 'pickaxe',
-        name: '⛏️ Pickaxe',
+        name: 'â›ï¸ Pickaxe',
         price: 7500,
         description: 'Used for mining commands',
         type: 'tool',
@@ -92,7 +92,7 @@ roleId: null,
     },
     {
         id: 'laptop',
-        name: '💻 Laptop',
+        name: 'ðŸ’» Laptop',
         price: 15000,
         description: 'Increases work earnings',
         type: 'tool',
@@ -104,7 +104,7 @@ roleId: null,
     },
     {
         id: 'lucky_charm',
-        name: '🍀 Lucky Charm',
+        name: 'ðŸ€ Lucky Charm',
         price: 10000,
         description: 'Increases luck for gambling',
         type: 'consumable',
@@ -116,7 +116,7 @@ roleId: null,
     },
     {
         id: 'bank_note',
-        name: '📜 Bank Note',
+        name: 'ðŸ“œ Bank Note',
         price: 25000,
         description: 'Increases bank capacity by 10,000',
         type: 'upgrade',
@@ -209,3 +209,4 @@ export function validatePurchase(itemId, userData) {
 
     return { valid: true };
 }
+

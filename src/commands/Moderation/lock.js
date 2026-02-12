@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
@@ -47,7 +47,7 @@ export default {
       );
 
       const lockEmbed = createEmbed(
-        "🔒 Channel Locked (Action Log)",
+        "ðŸ”’ Channel Locked (Action Log)",
         `${channel} has been locked down by ${interaction.user}.`,
       )
 .setColor("#CC00CC")
@@ -78,7 +78,7 @@ export default {
       await interaction.editReply({
         embeds: [
           successEmbed(
-            `🔒 **Channel Locked**`,
+            `ðŸ”’ **Channel Locked**`,
             `${channel} is now locked down. No one can speak here now.`,
           ),
         ],
@@ -95,3 +95,4 @@ export default {
     }
   }
 };
+

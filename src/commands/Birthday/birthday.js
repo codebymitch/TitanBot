@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 
 import birthdaySet from './modules/birthday_set.js';
@@ -77,7 +77,7 @@ try {
                 default:
                     return interaction.reply({
                         embeds: [errorEmbed('Error', 'Unknown subcommand')],
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
             }
         } catch (error) {
@@ -85,7 +85,7 @@ try {
             
             const errorMessage = {
                 embeds: [errorEmbed('System Error', 'Could not process birthday command at this time.')],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             };
             
             if (interaction.deferred || interaction.replied) {
@@ -96,3 +96,4 @@ try {
         }
     }
 };
+

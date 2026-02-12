@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Get the reaction role message from the database
  * @param {Object} client - The Discord client
  * @param {string} guildId - The guild ID
@@ -176,3 +176,4 @@ export async function setReactionRoleChannel(client, guildId, messageId, channel
         return false;
     }
 }
+
