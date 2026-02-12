@@ -1,4 +1,4 @@
-import { EmbedBuilder, ChannelType } from 'discord.js';
+﻿import { EmbedBuilder, ChannelType } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logger } from './logger.js';
 
@@ -130,14 +130,14 @@ transcript: 0x1abc9c
       const user = await guild.client.users.fetch(event.userId).catch(() => null);
       if (user) {
         fields.push({
-          name: '👤 Ticket User',
+          name: 'ðŸ‘¤ Ticket User',
           value: `${user.tag} (${event.userId})`,
           inline: true
         });
       }
     } catch (error) {
       fields.push({
-        name: '👤 Ticket User',
+        name: 'ðŸ‘¤ Ticket User',
         value: `<@${event.userId}> (${event.userId})`,
         inline: true
       });
@@ -149,14 +149,14 @@ transcript: 0x1abc9c
       const executor = await guild.client.users.fetch(event.executorId).catch(() => null);
       if (executor) {
         fields.push({
-          name: '🔨 Executed By',
+          name: 'ðŸ”¨ Executed By',
           value: `${executor.tag} (${event.executorId})`,
           inline: true
         });
       }
     } catch (error) {
       fields.push({
-        name: '🔨 Executed By',
+        name: 'ðŸ”¨ Executed By',
         value: `<@${event.executorId}> (${event.executorId})`,
         inline: true
       });
@@ -165,7 +165,7 @@ transcript: 0x1abc9c
   
   if (event.reason) {
     fields.push({
-      name: '📝 Reason',
+      name: 'ðŸ“ Reason',
       value: event.reason,
       inline: false
     });
@@ -173,16 +173,16 @@ transcript: 0x1abc9c
   
   if (event.priority) {
     const priorityEmojis = {
-      none: '⚪',
-      low: '🔵',
-      medium: '🟢',
-      high: '🟡',
-      urgent: '🔴'
+      none: 'âšª',
+      low: 'ðŸ”µ',
+      medium: 'ðŸŸ¢',
+      high: 'ðŸŸ¡',
+      urgent: 'ðŸ”´'
     };
     
     fields.push({
-      name: '🎯 Priority',
-      value: `${priorityEmojis[event.priority] || '⚪'} ${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}`,
+      name: 'ðŸŽ¯ Priority',
+      value: `${priorityEmojis[event.priority] || 'âšª'} ${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}`,
       inline: true
     });
   }
@@ -191,7 +191,7 @@ transcript: 0x1abc9c
     Object.entries(event.metadata).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         fields.push({
-          name: `📊 ${key.charAt(0).toUpperCase() + key.slice(1)}`,
+          name: `ðŸ“Š ${key.charAt(0).toUpperCase() + key.slice(1)}`,
           value: String(value),
           inline: true
         });
@@ -214,37 +214,37 @@ function getEventDisplayInfo(event) {
   
   const eventMessages = {
     open: {
-      title: '🎫 Ticket Opened',
+      title: 'ðŸŽ« Ticket Opened',
       description: `A new ticket has been created: ${ticketRef}`
     },
     close: {
-      title: '🔒 Ticket Closed',
+      title: 'ðŸ”’ Ticket Closed',
       description: `Ticket ${ticketRef} has been closed`
     },
     delete: {
-      title: '🗑️ Ticket Deleted',
+      title: 'ðŸ—‘ï¸ Ticket Deleted',
       description: `Ticket ${ticketRef} has been permanently deleted`
     },
     claim: {
-      title: '🙋 Ticket Claimed',
+      title: 'ðŸ™‹ Ticket Claimed',
       description: `Ticket ${ticketRef} has been claimed`
     },
     unclaim: {
-      title: '🔓 Ticket Unclaimed',
+      title: 'ðŸ”“ Ticket Unclaimed',
       description: `Ticket ${ticketRef} has been unclaimed`
     },
     priority: {
-      title: '🎯 Priority Updated',
+      title: 'ðŸŽ¯ Priority Updated',
       description: `Priority changed for ticket ${ticketRef}`
     },
     transcript: {
-      title: '📜 Transcript Created',
+      title: 'ðŸ“œ Transcript Created',
       description: `Transcript generated for ticket ${ticketRef}`
     }
   };
   
   return eventMessages[event.type] || {
-    title: '🎫 Ticket Event',
+    title: 'ðŸŽ« Ticket Event',
     description: `An event occurred for ticket ${ticketRef}`
   };
 }
@@ -293,3 +293,4 @@ export function validateLogChannel(channel, botMember) {
   
   return { valid: true };
 }
+

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -13,7 +13,7 @@ try {
 
       const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`;
 
-      const embed = createEmbed({ title: "🔗 Invite This Bot", description: "Click the button below to add your customized bot to a server. This link uses your bot's unique ID and requests Administrator permissions.", }).setThumbnail(interaction.client.user.displayAvatarURL());
+      const embed = createEmbed({ title: "ðŸ”— Invite This Bot", description: "Click the button below to add your customized bot to a server. This link uses your bot's unique ID and requests Administrator permissions.", }).setThumbnail(interaction.client.user.displayAvatarURL());
 
       const inviteButton = new ButtonBuilder()
         .setLabel("Invite Bot")
@@ -27,9 +27,11 @@ try {
       console.error('Invite command error:', error);
       return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not build the invite link.' })],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   },
 };
+
+
 

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, addMoney, removeMoney, setEconomyData } from '../../utils/economy.js';
@@ -105,12 +105,12 @@ export default {
             )
                 .addFields(
                     {
-                        name: "💳 Payment Amount",
+                        name: "ðŸ’³ Payment Amount",
                         value: `$${amount.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "💵 Your New Balance",
+                        name: "ðŸ’µ Your New Balance",
                         value: `$${senderData.wallet.toLocaleString()}`,
                         inline: true,
                     },
@@ -124,7 +124,7 @@ export default {
 
             try {
                 const receiverEmbed = createEmbed({ 
-                    title: "💰 Incoming Payment!", 
+                    title: "ðŸ’° Incoming Payment!", 
                     description: `${interaction.user.username} paid you **$${amount.toLocaleString()}**.` 
                 }).addFields({
                     name: "Your New Cash",
@@ -138,4 +138,5 @@ export default {
         }, { command: 'pay' });
     },
 };
+
 

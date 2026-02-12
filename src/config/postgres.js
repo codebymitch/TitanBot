@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PostgreSQL Configuration for Titan Bot
  * Centralizes PostgreSQL connection settings and options
  */
@@ -117,3 +117,4 @@ export const pgConfig = {
 };
 
 export default pgConfig;
+

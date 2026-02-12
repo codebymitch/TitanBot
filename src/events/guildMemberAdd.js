@@ -1,4 +1,4 @@
-import { Events, EmbedBuilder } from 'discord.js';
+﻿import { Events, EmbedBuilder } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { getWelcomeConfig } from '../utils/database.js';
 import { successEmbed, errorEmbed } from '../utils/embeds.js';
@@ -32,7 +32,7 @@ export default {
                 
                 const embed = new EmbedBuilder()
 .setColor(0x00ff00)
-                    .setTitle('🎉 Welcome!')
+                    .setTitle('ðŸŽ‰ Welcome!')
 .setDescription(welcomeMessage)
                     .setThumbnail(user.displayAvatarURL())
                     .addFields(
@@ -117,12 +117,12 @@ async function handleVerification(member, guild, verificationConfig, client) {
                 const botRole = guild.members.me.roles.highest;
                 if (verifiedRole.position < botRole.position) {
                     await member.roles.add(verifiedRole.id, "Auto-verified on join");
-                    console.log(`✅ Auto-verified ${member.user.tag} (${member.id}) in ${guild.name}`);
+                    console.log(`âœ… Auto-verified ${member.user.tag} (${member.id}) in ${guild.name}`);
                     
                     try {
                         await member.send({
                             embeds: [{
-                                title: "🎉 Welcome to the Server!",
+                                title: "ðŸŽ‰ Welcome to the Server!",
                                 description: `You have been automatically verified in **${guild.name}**! You now have access to all server channels and features.`,
                                 color: 0x00FF00
                             }]
@@ -142,3 +142,4 @@ async function handleVerification(member, guild, verificationConfig, client) {
         console.error(`Error in auto-verification for ${member.user.tag}:`, error);
     }
 }
+

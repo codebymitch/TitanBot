@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
+﻿import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getGuildConfigKey } from '../../../utils/database.js';
 
@@ -16,7 +16,7 @@ export default {
             await client.db.set(configKey, guildConfig);
 
             const embed = successEmbed(
-                '✅ Ticket Limit Updated',
+                'âœ… Ticket Limit Updated',
                 `Maximum tickets per user has been set to **${maxTickets}**.\n\n` +
                 `Users will now be limited to ${maxTickets} open ticket${maxTickets !== 1 ? 's' : ''} at a time.`
             );
@@ -28,3 +28,4 @@ export default {
         }
     }
 };
+

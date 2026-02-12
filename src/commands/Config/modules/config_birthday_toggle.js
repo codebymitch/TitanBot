@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 
@@ -17,7 +17,7 @@ try {
                 return interaction.reply({
                     embeds: [
                         successEmbed(
-                            "🎂 Birthday Announcements Enabled",
+                            "ðŸŽ‚ Birthday Announcements Enabled",
                             `Birthday announcements will now be posted in ${channel}.`,
                         ),
                     ],
@@ -30,7 +30,7 @@ try {
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "🎂 Birthday Announcements Disabled",
+                            "ðŸŽ‚ Birthday Announcements Disabled",
                             "Birthday announcements have been disabled. No channel selected.",
                         ),
                     ],
@@ -51,3 +51,4 @@ try {
         }
     }
 };
+

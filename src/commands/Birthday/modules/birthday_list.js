@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildBirthdays, getMonthName } from '../../../utils/database.js';
 
 export default {
@@ -13,7 +13,7 @@ try {
                 });
             }
 
-            const embed = createEmbed("🎂 Server Birthdays", `Found ${Object.keys(birthdays).length} birthdays in ${interaction.guild.name}`);
+            const embed = createEmbed("ðŸŽ‚ Server Birthdays", `Found ${Object.keys(birthdays).length} birthdays in ${interaction.guild.name}`);
 
             const sortedBirthdays = Object.entries(birthdays)
                 .map(([userId, data]) => ({
@@ -46,3 +46,4 @@ try {
         }
     }
 };
+

@@ -1,4 +1,4 @@
-import { Events } from 'discord.js';
+﻿import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData, saveUserLevelData } from '../utils/database.js';
 import { addXp } from '../services/xpSystem.js';
@@ -54,3 +54,4 @@ async function handleLeveling(message, client) {
     logger.info(`${message.author.tag} leveled up to ${result.level} in ${message.guild.name}`);
   }
 }
+

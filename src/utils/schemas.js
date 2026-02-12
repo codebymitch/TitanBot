@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 
 const LogIgnoreSchema = z
   .object({
@@ -58,3 +58,4 @@ export function normalizeEconomyData(raw, defaults = {}) {
   const parsed = EconomyDataSchema.safeParse(merged);
   return parsed.success ? parsed.data : { ...defaults, ...base };
 }
+

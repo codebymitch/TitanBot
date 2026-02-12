@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -32,7 +32,7 @@ try {
 
       const embed = {
 color: 0x964b00,
-        title: `💥 𝐁𝐈𝐆 𝐁𝐎𝐔𝐍𝐓𝐘: WANTED! 💥`,
+        title: `ðŸ’¥ ððˆð† ððŽð”ðð“ð˜: WANTED! ðŸ’¥`,
         description: `**CRIMINAL:** ${targetUser.tag}\n**CRIME:** ${crime}`,
         fields: [
           {
@@ -56,3 +56,4 @@ color: 0x964b00,
     }
   },
 };
+

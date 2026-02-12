@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, ChannelType } from 'discord.js';
+﻿import { PermissionFlagsBits, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter } from '../../../services/counterService.js';
 
@@ -15,7 +15,7 @@ export async function handleCreate(interaction, client) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await interaction.reply({ 
             embeds: [errorEmbed("You need **Manage Channels** permission to create counters.")],
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral 
         });
         return;
     }
@@ -82,7 +82,7 @@ export async function handleCreate(interaction, client) {
         };
 
         await interaction.editReply({
-            embeds: [successEmbed(`✅ **Counter Created Successfully!**\n\n**Type:** ${typeDisplay[type]}\n**Channel Type:** ${channelType}\n**Channel:** ${targetChannel}\n**Channel Name:** ${targetChannel.name}\n**Counter ID:** \`${newCounter.id}\`\n\nThe counter will automatically update every 15 minutes.\n\nUse \`/counter list\` to view all counters.`)]
+            embeds: [successEmbed(`âœ… **Counter Created Successfully!**\n\n**Type:** ${typeDisplay[type]}\n**Channel Type:** ${channelType}\n**Channel:** ${targetChannel}\n**Channel Name:** ${targetChannel.name}\n**Counter ID:** \`${newCounter.id}\`\n\nThe counter will automatically update every 15 minutes.\n\nUse \`/counter list\` to view all counters.`)]
         });
 
     } catch (error) {
@@ -92,3 +92,4 @@ export async function handleCreate(interaction, client) {
         });
     }
 }
+

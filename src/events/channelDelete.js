@@ -1,4 +1,4 @@
-import { 
+﻿import { 
     getJoinToCreateConfig, 
     removeJoinToCreateTrigger,
     unregisterTemporaryChannel
@@ -62,3 +62,4 @@ if (channel.type !== 2 && channel.type !== 4) {
         }
     }
 };
+

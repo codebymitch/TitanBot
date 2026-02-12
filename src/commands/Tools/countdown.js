@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+﻿import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 const activeCountdowns = new Map();
@@ -7,11 +7,11 @@ const createControlButtons = (countdownId, isPaused = false) => {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId(`countdown_pause_${countdownId}`)
-            .setLabel(isPaused ? "▶️ Resume" : "⏸️ Pause")
+            .setLabel(isPaused ? "â–¶ï¸ Resume" : "â¸ï¸ Pause")
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId(`countdown_cancel_${countdownId}`)
-            .setLabel("❌ Cancel")
+            .setLabel("âŒ Cancel")
             .setStyle(ButtonStyle.Danger),
     );
 };
@@ -64,7 +64,7 @@ export default {
             const row = createControlButtons(countdownId);
 
             const initialEmbed = successEmbed(
-                `⏱️ ${title}`,
+                `â±ï¸ ${title}`,
                 `Time remaining: **${formatTime(totalSeconds)}**`,
             );
 
@@ -134,7 +134,7 @@ export default {
                             });
 
                             await i.reply({
-                                content: "▶️ Countdown resumed!",
+                                content: "â–¶ï¸ Countdown resumed!",
                                 flags: ["Ephemeral"],
                             });
                         } else {
@@ -149,7 +149,7 @@ export default {
                             });
 
                             await i.reply({
-                                content: "⏸️ Countdown paused!",
+                                content: "â¸ï¸ Countdown paused!",
                                 flags: ["Ephemeral"],
                             });
                         }
@@ -159,7 +159,7 @@ export default {
                         clearInterval(countdownData.interval);
 
                         const embed = successEmbed(
-                            `⏱️ ${countdownData.title} (Cancelled)`,
+                            `â±ï¸ ${countdownData.title} (Cancelled)`,
                             "The countdown was cancelled.",
                         );
 
@@ -171,7 +171,7 @@ export default {
                         cleanupCountdown(countdownId);
 
                         await i.reply({
-                            content: "❌ Countdown cancelled!",
+                            content: "âŒ Countdown cancelled!",
                             flags: ["Ephemeral"],
                         });
                         break;
@@ -183,8 +183,8 @@ export default {
             });
 
             await interaction.reply({
-                content: "✅ Countdown started!",
-                ephemeral: true,
+                content: "âœ… Countdown started!",
+                flags: MessageFlags.Ephemeral,
             });
         } catch (error) {
             console.error("Countdown command error:", error);
@@ -196,7 +196,7 @@ export default {
                         "Failed to start the countdown. Please try again.",
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },
@@ -240,7 +240,7 @@ export async function handleCountdownInteraction(interaction) {
                 });
 
                 await interaction.editReply({
-                    content: "▶️ Countdown resumed!",
+                    content: "â–¶ï¸ Countdown resumed!",
                     flags: ["Ephemeral"],
                 });
             } else {
@@ -256,7 +256,7 @@ export async function handleCountdownInteraction(interaction) {
                 });
 
                 await interaction.editReply({
-                    content: "⏸️ Countdown paused!",
+                    content: "â¸ï¸ Countdown paused!",
                     flags: ["Ephemeral"],
                 });
             }
@@ -266,7 +266,7 @@ export async function handleCountdownInteraction(interaction) {
             clearInterval(countdownData.interval);
 
             const embed = successEmbed(
-                `⏱️ ${countdownData.title} (Cancelled)`,
+                `â±ï¸ ${countdownData.title} (Cancelled)`,
                 "The countdown was cancelled.",
             );
 
@@ -278,7 +278,7 @@ export async function handleCountdownInteraction(interaction) {
             cleanupCountdown(countdownId);
 
             await interaction.editReply({
-                content: "❌ Countdown cancelled!",
+                content: "âŒ Countdown cancelled!",
                 flags: ["Ephemeral"],
             });
             break;
@@ -310,7 +310,7 @@ function startCountdown(countdownId, countdownData) {
                 countdownData.lastUpdate = now;
 
                 const embed = successEmbed(
-                    `⏱️ ${countdownData.title}`,
+                    `â±ï¸ ${countdownData.title}`,
                     `Time remaining: **${formatTime(Math.ceil(remaining / 1000))}**`,
                 );
 
@@ -333,8 +333,8 @@ function startCountdown(countdownId, countdownData) {
                 clearInterval(countdownData.interval);
 
                 const finishedEmbed = successEmbed(
-                    `⏱️ ${countdownData.title} (Finished!)`,
-                    "⏰ Time's up!",
+                    `â±ï¸ ${countdownData.title} (Finished!)`,
+                    "â° Time's up!",
                 );
 
                 await countdownData.message.edit({
@@ -372,3 +372,4 @@ function formatTime(seconds) {
         .filter(Boolean)
         .join(":");
 }
+

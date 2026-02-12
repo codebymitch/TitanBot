@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
+﻿import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters } from '../../../services/counterService.js';
 
@@ -14,7 +14,7 @@ export async function handleDelete(interaction, client) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await interaction.reply({ 
             embeds: [errorEmbed("You need **Manage Channels** permission to delete counters.")],
-            ephemeral: true 
+            flags: MessageFlags.Ephemeral 
         });
         return;
     }
@@ -42,8 +42,8 @@ export async function handleDelete(interaction, client) {
         const channel = guild.channels.cache.get(counterToDelete.channelId);
 
         const embed = createEmbed({
-            title: "⚠️ Delete Counter & Channel",
-            description: `Are you sure you want to delete this counter and its channel?\n\n**ID:** \`${counterToDelete.id}\`\n**Type:** ${getCounterTypeDisplay(counterToDelete.type)}\n**Channel:** ${channel || 'Deleted Channel'}\n\n⚠️ **The channel will be permanently deleted!**`,
+            title: "âš ï¸ Delete Counter & Channel",
+            description: `Are you sure you want to delete this counter and its channel?\n\n**ID:** \`${counterToDelete.id}\`\n**Type:** ${getCounterTypeDisplay(counterToDelete.type)}\n**Channel:** ${channel || 'Deleted Channel'}\n\nâš ï¸ **The channel will be permanently deleted!**`,
             color: 0xFF0000
         });
 
@@ -76,7 +76,7 @@ time: 30000,
                 } else if (i.customId === `cancel_delete_${counterToDelete.id}`) {
                     await i.update({
                         embeds: [createEmbed({ 
-                            title: "❌ Cancelled", 
+                            title: "âŒ Cancelled", 
                             description: "Counter deletion cancelled.",
                             color: 0xFF0000
                         })],
@@ -92,7 +92,7 @@ time: 30000,
             if (collected.size === 0) {
                 await interaction.editReply({
                     embeds: [createEmbed({ 
-                        title: "❌ Cancelled", 
+                        title: "âŒ Cancelled", 
                         description: "Counter deletion cancelled - no confirmation received.",
                         color: 0xFF0000
                     })],
@@ -126,7 +126,7 @@ async function performDeletion(interaction, client, guild, counter) {
         if (!saved) {
             await interaction.followUp({
                 embeds: [errorEmbed("Failed to delete counter. Please try again.")],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -143,7 +143,7 @@ async function performDeletion(interaction, client, guild, counter) {
             }
         }
 
-        let message = `✅ **Counter Deleted Successfully!**\n\n**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}`;
+        let message = `âœ… **Counter Deleted Successfully!**\n\n**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}`;
         
         if (channelDeleted) {
             message += `\n**Channel:** ${channel.name} (deleted)`;
@@ -161,7 +161,7 @@ async function performDeletion(interaction, client, guild, counter) {
         console.error("Error deleting counter:", error);
         await interaction.followUp({
             embeds: [errorEmbed("An error occurred while deleting the counter. Please try again.")],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 }
@@ -173,9 +173,10 @@ async function performDeletion(interaction, client, guild, counter) {
  */
 function getCounterTypeDisplay(type) {
     const types = {
-        members: "👥 Members",
-        bots: "🤖 Bots",
-        members_only: "👤 Humans"
+        members: "ðŸ‘¥ Members",
+        bots: "ðŸ¤– Bots",
+        members_only: "ðŸ‘¤ Humans"
     };
-    return types[type] || "❓ Unknown";
+    return types[type] || "â“ Unknown";
 }
+

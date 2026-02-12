@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -47,7 +47,7 @@ try {
             const colorName = getColorName(hexColor);
             
             const embed = successEmbed(
-                '🎨 Color Information',
+                'ðŸŽ¨ Color Information',
                 `**Hex:** \`${hexColor}\`\n` +
                 `**RGB:** \`rgb(${r}, ${g}, ${b})\`\n` +
                 `**HSL:** \`${rgbToHsl(r, g, b)}\`\n` +
@@ -57,7 +57,7 @@ try {
             .setImage(colorPreviewUrl);
             
             if (isRandom) {
-                embed.setFooter({ text: '✨ Randomly generated color' });
+                embed.setFooter({ text: 'âœ¨ Randomly generated color' });
             }
             
             await interaction.editReply({ embeds: [embed] });
@@ -137,3 +137,4 @@ function getColorName(hex) {
     
     return minDistance < 1000000 ? `Close to ${closestColor}` : null;
 }
+

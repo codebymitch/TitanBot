@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { addJoinToCreateTrigger, getJoinToCreateConfig, updateJoinToCreateConfig } from '../../utils/database.js';
@@ -31,9 +31,9 @@ export default {
                             { name: "{username}'s Space", value: "{username}'s Space" },
                             { name: "{displayName}'s Room", value: "{displayName}'s Room" },
                             { name: "{username}'s VC", value: "{username}'s VC" },
-                            { name: "🎵 {username}'s Music Room", value: "🎵 {username}'s Music Room" },
-                            { name: "🎮 {username}'s Gaming Room", value: "🎮 {username}'s Gaming Room" },
-                            { name: "💬 {username}'s Chat Room", value: "💬 {username}'s Chat Room" },
+                            { name: "ðŸŽµ {username}'s Music Room", value: "ðŸŽµ {username}'s Music Room" },
+                            { name: "ðŸŽ® {username}'s Gaming Room", value: "ðŸŽ® {username}'s Gaming Room" },
+                            { name: "ðŸ’¬ {username}'s Chat Room", value: "ðŸ’¬ {username}'s Chat Room" },
                             { name: "{username}'s Private Room", value: "{username}'s Private Room" }
                         )
                 )
@@ -96,10 +96,10 @@ export default {
                     responseEmbed = successEmbed(
                         `Updated existing Join to Create channel: ${triggerChannel}\n\n` +
                         `**New Settings:**\n` +
-                        `• Template: \`${nameTemplate}\`\n` +
-                        `• User Limit: ${userLimit === 0 ? 'None' : userLimit}\n` +
-                        `• Bitrate: ${bitrate} kbps`,
-                        '✅ Settings Updated'
+                        `â€¢ Template: \`${nameTemplate}\`\n` +
+                        `â€¢ User Limit: ${userLimit === 0 ? 'None' : userLimit}\n` +
+                        `â€¢ Bitrate: ${bitrate} kbps`,
+                        'âœ… Settings Updated'
                     );
                 } else {
                     const triggerChannel = await interaction.guild.channels.create({
@@ -126,10 +126,10 @@ bitrate: 64000,
                     responseEmbed = successEmbed(
                         `Created Join to Create channel: ${triggerChannel}\n\n` +
                         `**Settings:**\n` +
-                        `• Template: \`${nameTemplate}\`\n` +
-                        `• User Limit: ${userLimit === 0 ? 'None' : userLimit}\n` +
-                        `• Bitrate: ${bitrate} kbps`,
-                        '✅ Setup Complete'
+                        `â€¢ Template: \`${nameTemplate}\`\n` +
+                        `â€¢ User Limit: ${userLimit === 0 ? 'None' : userLimit}\n` +
+                        `â€¢ Bitrate: ${bitrate} kbps`,
+                        'âœ… Setup Complete'
                     );
                 }
             }
@@ -149,55 +149,55 @@ bitrate: 64000,
                 
                 const nameSelect = new StringSelectMenuBuilder()
                     .setCustomId(`jtc_config_name_${triggerChannel.id}`)
-                    .setPlaceholder('📝 Select a name template')
+                    .setPlaceholder('ðŸ“ Select a name template')
                     .addOptions(
-                        { label: "{username}'s Room (Default)", value: "{username}'s Room", description: "Classic room naming with username", emoji: "🏠" },
-                        { label: "{username}'s Channel", value: "{username}'s Channel", description: "Simple channel naming", emoji: "📢" },
-                        { label: "{username}'s Lounge", value: "{username}'s Lounge", description: "Casual lounge atmosphere", emoji: "🛋️" },
-                        { label: "{username}'s Space", value: "{username}'s Space", description: "Personal space for users", emoji: "🌌" },
-                        { label: "{displayName}'s Room", value: "{displayName}'s Room", description: "Uses server nickname instead of username", emoji: "🏷️" },
-                        { label: "{username}'s VC", value: "{username}'s VC", description: "Voice Channel abbreviation", emoji: "🎤" },
-                        { label: "🎵 {username}'s Music Room", value: "🎵 {username}'s Music Room", description: "Perfect for music sessions", emoji: "🎵" },
-                        { label: "🎮 {username}'s Gaming Room", value: "🎮 {username}'s Gaming Room", description: "Gaming focused channel", emoji: "🎮" },
-                        { label: "💬 {username}'s Chat Room", value: "💬 {username}'s Chat Room", description: "Great for conversations", emoji: "💬" },
-                        { label: "{username}'s Private Room", value: "{username}'s Private Room", description: "Private space for users", emoji: "🔒" }
+                        { label: "{username}'s Room (Default)", value: "{username}'s Room", description: "Classic room naming with username", emoji: "ðŸ " },
+                        { label: "{username}'s Channel", value: "{username}'s Channel", description: "Simple channel naming", emoji: "ðŸ“¢" },
+                        { label: "{username}'s Lounge", value: "{username}'s Lounge", description: "Casual lounge atmosphere", emoji: "ðŸ›‹ï¸" },
+                        { label: "{username}'s Space", value: "{username}'s Space", description: "Personal space for users", emoji: "ðŸŒŒ" },
+                        { label: "{displayName}'s Room", value: "{displayName}'s Room", description: "Uses server nickname instead of username", emoji: "ðŸ·ï¸" },
+                        { label: "{username}'s VC", value: "{username}'s VC", description: "Voice Channel abbreviation", emoji: "ðŸŽ¤" },
+                        { label: "ðŸŽµ {username}'s Music Room", value: "ðŸŽµ {username}'s Music Room", description: "Perfect for music sessions", emoji: "ðŸŽµ" },
+                        { label: "ðŸŽ® {username}'s Gaming Room", value: "ðŸŽ® {username}'s Gaming Room", description: "Gaming focused channel", emoji: "ðŸŽ®" },
+                        { label: "ðŸ’¬ {username}'s Chat Room", value: "ðŸ’¬ {username}'s Chat Room", description: "Great for conversations", emoji: "ðŸ’¬" },
+                        { label: "{username}'s Private Room", value: "{username}'s Private Room", description: "Private space for users", emoji: "ðŸ”’" }
                     );
                 
                 const limitButton = new ButtonBuilder()
                     .setCustomId(`jtc_config_limit_${triggerChannel.id}`)
-                    .setLabel('👥 Change User Limit')
+                    .setLabel('ðŸ‘¥ Change User Limit')
                     .setStyle(ButtonStyle.Secondary);
                     
                 const bitrateButton = new ButtonBuilder()
                     .setCustomId(`jtc_config_bitrate_${triggerChannel.id}`)
-                    .setLabel('🎵 Change Bitrate')
+                    .setLabel('ðŸŽµ Change Bitrate')
                     .setStyle(ButtonStyle.Secondary);
                     
                 const deleteButton = new ButtonBuilder()
                     .setCustomId(`jtc_config_delete_${triggerChannel.id}`)
-                    .setLabel('🗑️ Remove Channel')
+                    .setLabel('ðŸ—‘ï¸ Remove Channel')
                     .setStyle(ButtonStyle.Danger);
                 
                 const row1 = new ActionRowBuilder().addComponents(nameSelect);
                 const row2 = new ActionRowBuilder().addComponents(limitButton, bitrateButton, deleteButton);
                 
                 responseEmbed = {
-                    title: '⚙️ Join to Create Configuration',
+                    title: 'âš™ï¸ Join to Create Configuration',
                     description: `Current settings for ${triggerChannel}`,
                     color: 0x0099ff,
                     fields: [
                         {
-                            name: '📝 Channel Name Template',
+                            name: 'ðŸ“ Channel Name Template',
                             value: `\`${channelConfig.nameTemplate || currentConfig.channelNameTemplate || "{username}'s Room"}\``,
                             inline: false
                         },
                         {
-                            name: '👥 User Limit',
+                            name: 'ðŸ‘¥ User Limit',
                             value: `${(channelConfig.userLimit || currentConfig.userLimit) === 0 ? 'No limit' : (channelConfig.userLimit || currentConfig.userLimit) + ' users'}`,
                             inline: true
                         },
                         {
-                            name: '🎵 Bitrate',
+                            name: 'ðŸŽµ Bitrate',
                             value: `${(channelConfig.bitrate || currentConfig.bitrate || 64000) / 1000} kbps`,
                             inline: true
                         }
@@ -218,8 +218,8 @@ time: 300000
                 collector.on('collect', async (componentInteraction) => {
                     if (!componentInteraction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                         await componentInteraction.reply({
-                            content: '❌ You need **Manage Server** permission to use these controls.',
-                            ephemeral: true
+                            content: 'âŒ You need **Manage Server** permission to use these controls.',
+                            flags: MessageFlags.Ephemeral
                         });
                         return;
                     }
@@ -239,8 +239,8 @@ time: 300000
                     } catch (error) {
                         logger.error('Error handling config component interaction:', error);
                         await componentInteraction.reply({
-                            content: '❌ An error occurred while processing your request.',
-                            ephemeral: true
+                            content: 'âŒ An error occurred while processing your request.',
+                            flags: MessageFlags.Ephemeral
                         });
                     }
                 });
@@ -299,8 +299,8 @@ async function handleNameTemplateSelect(interaction, triggerChannel, currentConf
     });
 
     await interaction.reply({
-        content: `✅ **Name template updated to:** \`${selectedTemplate}\``,
-        ephemeral: true
+        content: `âœ… **Name template updated to:** \`${selectedTemplate}\``,
+        flags: MessageFlags.Ephemeral
     });
 }
 
@@ -333,8 +333,8 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig) 
 
         if (isNaN(userLimit) || userLimit < 0 || userLimit > 99) {
             await modalSubmission.reply({
-                content: '❌ **Invalid input!** Please enter a number between 0 and 99.\n• **0** = No user limit\n• **1-99** = Maximum number of users allowed',
-                ephemeral: true
+                content: 'âŒ **Invalid input!** Please enter a number between 0 and 99.\nâ€¢ **0** = No user limit\nâ€¢ **1-99** = Maximum number of users allowed',
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -350,8 +350,8 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig) 
         });
 
         await modalSubmission.reply({
-            content: `✅ **User limit updated to:** ${userLimit === 0 ? 'No limit' : userLimit + ' users'}`,
-            ephemeral: true
+            content: `âœ… **User limit updated to:** ${userLimit === 0 ? 'No limit' : userLimit + ' users'}`,
+            flags: MessageFlags.Ephemeral
         });
 
     } catch (error) {
@@ -391,8 +391,8 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig) {
 
         if (isNaN(bitrate) || bitrate < 8 || bitrate > 384) {
             await modalSubmission.reply({
-                content: '❌ **Invalid input!** Please enter a number between 8 and 384.\n• **8-64 kbps** = Minimum quality\n• **96-128 kbps** = Standard quality\n• **256-384 kbps** = High quality (requires boost level)',
-                ephemeral: true
+                content: 'âŒ **Invalid input!** Please enter a number between 8 and 384.\nâ€¢ **8-64 kbps** = Minimum quality\nâ€¢ **96-128 kbps** = Standard quality\nâ€¢ **256-384 kbps** = High quality (requires boost level)',
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -408,8 +408,8 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig) {
         });
 
         await modalSubmission.reply({
-            content: `✅ **Bitrate updated to:** ${bitrate} kbps`,
-            ephemeral: true
+            content: `âœ… **Bitrate updated to:** ${bitrate} kbps`,
+            flags: MessageFlags.Ephemeral
         });
 
     } catch (error) {
@@ -424,18 +424,18 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
     const confirmRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId(`jtc_delete_confirm`)
-            .setLabel('🗑️ Yes, Delete Channel')
+            .setLabel('ðŸ—‘ï¸ Yes, Delete Channel')
             .setStyle(ButtonStyle.Danger),
         new ButtonBuilder()
             .setCustomId(`jtc_delete_cancel`)
-            .setLabel('❌ Cancel')
+            .setLabel('âŒ Cancel')
             .setStyle(ButtonStyle.Secondary)
     );
 
     await interaction.reply({
-        content: `⚠️ **Are you sure you want to delete ${triggerChannel}?**\n\nThis will remove the Join to Create functionality for this channel and cannot be undone.`,
+        content: `âš ï¸ **Are you sure you want to delete ${triggerChannel}?**\n\nThis will remove the Join to Create functionality for this channel and cannot be undone.`,
         components: [confirmRow],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
     });
 
     const message = await interaction.fetchReply();
@@ -459,7 +459,7 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
                 await triggerChannel.delete('Join to Create channel removed by administrator');
 
                 await deleteInteraction.update({
-                    content: `✅ **${triggerChannel.name} has been deleted.**`,
+                    content: `âœ… **${triggerChannel.name} has been deleted.**`,
                     components: []
                 });
 
@@ -472,7 +472,7 @@ return;
             }
         } else {
             await deleteInteraction.update({
-                content: '❌ **Channel deletion cancelled.**',
+                content: 'âŒ **Channel deletion cancelled.**',
                 components: []
             });
         }
@@ -488,3 +488,4 @@ return;
         }
     });
 }
+

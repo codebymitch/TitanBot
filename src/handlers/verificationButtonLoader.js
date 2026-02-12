@@ -1,4 +1,4 @@
-import verificationButtonHandler from '../interactions/verificationButtonHandler.js';
+﻿import verificationButtonHandler from '../interactions/verificationButtonHandler.js';
 
 /**
  * Load verification button handlers
@@ -6,7 +6,8 @@ import verificationButtonHandler from '../interactions/verificationButtonHandler
  */
 export async function loadVerificationButtons(client) {
     client.buttons.set(verificationButtonHandler.customId, verificationButtonHandler);
-    console.log('✅ Loaded verification button handler');
+    console.log('âœ… Loaded verification button handler');
 }
 
 export default { loadVerificationButtons };
+

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -56,7 +56,7 @@ export default {
                 await interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "✅ User Unbanned",
+                            "âœ… User Unbanned",
                             `Successfully unbanned **${targetUser.tag}** from the server.\n\n**Reason:** ${reason}\n**Moderator:** ${interaction.user.tag}`
                         )
                     ]
@@ -67,3 +67,4 @@ export default {
         }
     }
 };
+

@@ -1,4 +1,4 @@
-import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
+﻿import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
 import { addJoinToCreateTrigger, getJoinToCreateConfig } from '../../../utils/database.js';
 
@@ -35,12 +35,12 @@ export default {
             const embed = successEmbed(
                 `Created trigger channel: ${triggerChannel}\n\n` +
                 `**Settings:**\n` +
-                `• Temporary Channel Name Template: \`${nameTemplate}\`\n` +
-                `• User Limit: ${userLimit === 0 ? 'No limit' : userLimit + ' users'}\n` +
-                `• Bitrate: ${bitrate} kbps\n` +
-                `${category ? `• Category: ${category.name}` : '• Category: None (root level)'}\n\n` +
+                `â€¢ Temporary Channel Name Template: \`${nameTemplate}\`\n` +
+                `â€¢ User Limit: ${userLimit === 0 ? 'No limit' : userLimit + ' users'}\n` +
+                `â€¢ Bitrate: ${bitrate} kbps\n` +
+                `${category ? `â€¢ Category: ${category.name}` : 'â€¢ Category: None (root level)'}\n\n` +
                 `When users join this channel, a temporary voice channel will be created for them.`,
-                '✅ Join to Create Setup Complete'
+                'âœ… Join to Create Setup Complete'
             );
 
             try {
@@ -66,3 +66,4 @@ export default {
         }
     }
 };
+

@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
+﻿import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 
 export default {
@@ -19,12 +19,12 @@ export default {
             const openTicketCount = ticketChannels.size;
 
             const embed = infoEmbed(
-                `🎫 Ticket Limit Check: ${user.tag}`,
+                `ðŸŽ« Ticket Limit Check: ${user.tag}`,
                 `**Open Tickets:** ${openTicketCount}/${maxTickets}\n` +
                 `**Remaining:** ${Math.max(0, maxTickets - openTicketCount)}\n\n` +
                 (openTicketCount >= maxTickets 
-                    ? '⚠️ This user has reached their ticket limit.' 
-                    : '✅ This user can create more tickets.')
+                    ? 'âš ï¸ This user has reached their ticket limit.' 
+                    : 'âœ… This user can create more tickets.')
             );
 
             await interaction.editReply({ embeds: [embed] });
@@ -34,3 +34,4 @@ export default {
         }
     }
 };
+

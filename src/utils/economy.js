@@ -1,4 +1,4 @@
-import { getColor } from './database.js';
+﻿import { getColor } from './database.js';
 import { BotConfig } from '../config/bot.js';
 import { normalizeEconomyData } from './schemas.js';
 
@@ -406,7 +406,7 @@ export function getShopInventory() {
         {
             id: 'fishing_rod',
             name: 'Fishing Rod',
-            emoji: '🎣',
+            emoji: 'ðŸŽ£',
             price: 500,
             description: 'Catch fish to sell for profit!',
             type: 'tool'
@@ -414,7 +414,7 @@ export function getShopInventory() {
         {
             id: 'hunting_rifle',
             name: 'Hunting Rifle',
-            emoji: '🔫',
+            emoji: 'ðŸ”«',
             price: 1000,
             description: 'Hunt animals for meat and fur!',
             type: 'tool'
@@ -422,7 +422,7 @@ export function getShopInventory() {
         {
             id: 'laptop',
             name: 'Laptop',
-            emoji: '💻',
+            emoji: 'ðŸ’»',
             price: 2000,
             description: 'Work as a programmer for higher pay!',
             type: 'tool',
@@ -431,7 +431,7 @@ export function getShopInventory() {
         {
             id: 'bank_loan',
             name: 'Bank Loan',
-            emoji: '🏦',
+            emoji: 'ðŸ¦',
             price: 5000,
             description: 'Increases your bank capacity by 50,000!',
             type: 'upgrade',
@@ -441,7 +441,7 @@ export function getShopInventory() {
         {
             id: 'lottery_ticket',
             name: 'Lottery Ticket',
-            emoji: '🎫',
+            emoji: 'ðŸŽ«',
             price: 100,
             description: 'A chance to win big!',
             type: 'consumable',
@@ -449,3 +449,4 @@ export function getShopInventory() {
         }
     ];
 }
+

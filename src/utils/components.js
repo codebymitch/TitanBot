@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
+﻿import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
 import { getColor } from '../config/bot.js';
 
 export function getPromoRow() {
@@ -24,12 +24,12 @@ export function getConfirmationButtons(customIdPrefix = 'confirm') {
             .setCustomId(`${customIdPrefix}_yes`)
             .setLabel('Confirm')
             .setStyle(ButtonStyle.Success)
-            .setEmoji('✅'),
+            .setEmoji('âœ…'),
         new ButtonBuilder()
             .setCustomId(`${customIdPrefix}_no`)
             .setLabel('Cancel')
             .setStyle(ButtonStyle.Danger)
-            .setEmoji('❌')
+            .setEmoji('âŒ')
     );
 }
 
@@ -120,3 +120,4 @@ export function createButtonRow(buttons) {
     
     return row;
 }
+

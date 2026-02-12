@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logEvent } from '../../../utils/moderation.js';
 
@@ -136,3 +136,4 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
         }
     }
 };
+

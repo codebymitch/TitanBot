@@ -1,4 +1,4 @@
-import { EmbedBuilder } from 'discord.js';
+﻿import { EmbedBuilder } from 'discord.js';
 import { getColor } from '../config/bot.js';
 
 export function createEmbed({
@@ -75,14 +75,14 @@ export function errorEmbed(message, error = null, options = {}) {
   }
 
   return createEmbed({
-    title: '❌ Error',
+    title: 'âŒ Error',
     description,
     color: 'error',
     timestamp: true
   });
 }
 
-export function successEmbed(message, title = '✅ Success') {
+export function successEmbed(message, title = 'âœ… Success') {
   return createEmbed({
     title,
     description: message,
@@ -91,7 +91,7 @@ export function successEmbed(message, title = '✅ Success') {
   });
 }
 
-export function infoEmbed(message, title = 'ℹ️ Information') {
+export function infoEmbed(message, title = 'â„¹ï¸ Information') {
   return createEmbed({
     title,
     description: message,
@@ -100,7 +100,7 @@ export function infoEmbed(message, title = 'ℹ️ Information') {
   });
 }
 
-export function warningEmbed(message, title = '⚠️ Warning') {
+export function warningEmbed(message, title = 'âš ï¸ Warning') {
   return createEmbed({
     title,
     description: message,
@@ -155,7 +155,7 @@ export function formatQuote(content) {
 
 export function formatList(items, ordered = false) {
   return items
-    .map((item, index) => (ordered ? `${index + 1}.` : '•') + ` ${item}`)
+    .map((item, index) => (ordered ? `${index + 1}.` : 'â€¢') + ` ${item}`)
     .join('\n');
 }
 
@@ -163,5 +163,6 @@ export function formatProgressBar(current, max, size = 10) {
   const progress = Math.min(Math.max(0, current / max), 1);
   const filled = Math.round(size * progress);
   const empty = size - filled;
-  return `[${'█'.repeat(filled)}${'░'.repeat(empty)}] ${Math.round(progress * 100)}%`;
+  return `[${'â–ˆ'.repeat(filled)}${'â–‘'.repeat(empty)}] ${Math.round(progress * 100)}%`;
 }
+

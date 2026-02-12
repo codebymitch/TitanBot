@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
@@ -47,7 +47,7 @@ export default {
       const deletedCount = deleted.size;
 
       const purgeEmbed = createEmbed(
-        "🗑️ Messages Purged (Action Log)",
+        "ðŸ—‘ï¸ Messages Purged (Action Log)",
         `${deletedCount} messages were deleted by ${interaction.user}.`,
       )
 .setColor("#E67E22")
@@ -80,7 +80,7 @@ export default {
 
       await interaction.editReply({
         embeds: [
-          successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
+          successEmbed(`ðŸ—‘ï¸ Deleted ${deletedCount} messages in ${channel}.`),
         ],
 ephemeral: false,
       });
@@ -99,3 +99,4 @@ ephemeral: false,
     }
   }
 };
+

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -10,7 +10,7 @@ export default {
   async execute(interaction) {
 try {
       const result = Math.random() < 0.5 ? "Heads" : "Tails";
-      const emoji = result === "Heads" ? "🪙" : "🔮";
+      const emoji = result === "Heads" ? "ðŸª™" : "ðŸ”®";
 
       const embed = successEmbed(
         "Heads or Tails?",
@@ -24,3 +24,4 @@ try {
     }
   },
 };
+

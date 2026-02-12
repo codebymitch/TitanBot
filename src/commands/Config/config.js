@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
 import { errorEmbed } from '../../utils/embeds.js';
 
 import birthdayToggle from './modules/config_birthday_toggle.js';
@@ -219,3 +219,4 @@ export default {
         }
     },
 };
+

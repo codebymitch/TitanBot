@@ -1,4 +1,4 @@
-import { getGuildConfig } from './guildConfig.js';
+﻿import { getGuildConfig } from './guildConfig.js';
 import { getGuildBirthdays } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
@@ -12,7 +12,7 @@ export async function checkBirthdays(client) {
   const currentDay = today.getUTCDate();
 
   if (process.env.NODE_ENV !== 'production') {
-    logger.debug(`🎂 Running daily birthday check for UTC: ${currentMonth}/${currentDay}.`);
+    logger.debug(`ðŸŽ‚ Running daily birthday check for UTC: ${currentMonth}/${currentDay}.`);
   }
 
   for (const [guildId, guild] of client.guilds.cache) {
@@ -59,7 +59,7 @@ export async function checkBirthdays(client) {
           if (member) {
             birthdayMembers.push(member);
             try {
-              await member.roles.add(birthdayRoleId, "Happy Birthday! 🎉");
+              await member.roles.add(birthdayRoleId, "Happy Birthday! ðŸŽ‰");
               updatedTrackingData[userId] = true;
             } catch (error) {
               console.error(`Error adding birthday role to ${member.user.tag}:`, error);
@@ -74,8 +74,8 @@ export async function checkBirthdays(client) {
         
         await channel.send({
           embeds: [{
-            title: '🎉 Happy Birthday! 🎂',
-            description: `A very happy birthday to ${mentionList}! Wishing you an amazing day! 🎈`,
+            title: 'ðŸŽ‰ Happy Birthday! ðŸŽ‚',
+            description: `A very happy birthday to ${mentionList}! Wishing you an amazing day! ðŸŽˆ`,
             color: 0xff69b4,
             footer: { text: 'Birthday Bot' },
             timestamp: new Date()
@@ -87,3 +87,4 @@ export async function checkBirthdays(client) {
     }
   }
 }
+

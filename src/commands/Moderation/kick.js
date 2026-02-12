@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
@@ -104,7 +104,7 @@ export default {
       await interaction.editReply({
         embeds: [
           successEmbed(
-            `👢 **Kicked** ${targetUser.tag}\n**Reason:** ${reason}`,
+            `ðŸ‘¢ **Kicked** ${targetUser.tag}\n**Reason:** ${reason}`,
           ),
         ],
       });
@@ -120,3 +120,4 @@ export default {
     }
   }
 };
+

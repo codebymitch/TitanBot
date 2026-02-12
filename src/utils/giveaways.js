@@ -1,4 +1,4 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+﻿import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import botConfig from '../config/bot.js';
 import { getGuildGiveaways as getGuildGiveawaysDb, saveGiveaway as saveGiveawayDb, deleteGiveaway as deleteGiveawayDb, unwrapReplitData } from './database.js';
 
@@ -86,7 +86,7 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
     const participants = giveaway.participants || [];
     
     const embed = new EmbedBuilder()
-        .setTitle(`🎉 ${giveaway.prize}`)
+        .setTitle(`ðŸŽ‰ ${giveaway.prize}`)
         .setDescription(giveaway.description || 'Enter this amazing giveaway!')
         .setColor(isEnded ? botConfig.embeds.colors.error : botConfig.embeds.colors.success)
         .addFields(
@@ -153,12 +153,12 @@ export function giveawayButtons(ended) {
         return new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('giveaway_reroll')
-                .setLabel('🎲 Reroll')
+                .setLabel('ðŸŽ² Reroll')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(false),
             new ButtonBuilder()
                 .setCustomId('giveaway_end')
-                .setLabel('✅ Ended')
+                .setLabel('âœ… Ended')
                 .setStyle(ButtonStyle.Success)
                 .setDisabled(true)
         );
@@ -166,12 +166,13 @@ export function giveawayButtons(ended) {
         return new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('giveaway_join')
-                .setLabel('🎉 Join')
+                .setLabel('ðŸŽ‰ Join')
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
                 .setCustomId('giveaway_end')
-                .setLabel('🛑 End')
+                .setLabel('ðŸ›‘ End')
                 .setStyle(ButtonStyle.Danger)
         );
     }
 }
+

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
@@ -59,7 +59,7 @@ export default {
             );
 
             const unlockEmbed = createEmbed(
-                "🔓 Channel Unlocked (Action Log)",
+                "ðŸ”“ Channel Unlocked (Action Log)",
                 `${channel} has been unlocked by ${interaction.user}.`,
             )
 .setColor("#2ECC71")
@@ -93,7 +93,7 @@ export default {
             await interaction.editReply({
                 embeds: [
                     successEmbed(
-                        `🔓 **Channel Unlocked**`,
+                        `ðŸ”“ **Channel Unlocked**`,
                         `${channel} is now unlocked. You may speak now.`,
                     ),
                 ],
@@ -110,3 +110,4 @@ export default {
         }
     }
 };
+

@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildBirthdays, getMonthName } from '../../../utils/database.js';
 
 export default {
@@ -54,7 +54,7 @@ try {
             }
 
             const embed = createEmbed(
-                '🎂 Next 5 Upcoming Birthdays',
+                'ðŸŽ‚ Next 5 Upcoming Birthdays',
                 `Here are the next 5 birthdays in ${interaction.guild.name}:`
             );
 
@@ -66,16 +66,16 @@ try {
                 
                 let timeUntil = '';
                 if (birthday.daysUntil === 0) {
-                    timeUntil = '🎉 **Today!**';
+                    timeUntil = 'ðŸŽ‰ **Today!**';
                 } else if (birthday.daysUntil === 1) {
-                    timeUntil = '📅 **Tomorrow!**';
+                    timeUntil = 'ðŸ“… **Tomorrow!**';
                 } else {
                     timeUntil = `In ${birthday.daysUntil} day${birthday.daysUntil > 1 ? 's' : ''}`;
                 }
 
                 embed.addFields({
                     name: `${i + 1}. ${userName}`,
-                    value: `📅 **Date:** ${monthName} ${birthday.day}\n⏰ **Time:** ${timeUntil}`,
+                    value: `ðŸ“… **Date:** ${monthName} ${birthday.day}\nâ° **Time:** ${timeUntil}`,
                     inline: false
                 });
             }
@@ -92,3 +92,4 @@ try {
         }
     }
 };
+

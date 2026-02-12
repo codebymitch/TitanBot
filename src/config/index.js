@@ -1,4 +1,4 @@
-import { fileURLToPath } from "url";
+﻿import { fileURLToPath } from "url";
 import path from "path";
 import botConfig, { validateConfig } from "./bot.js";
 import { shopConfig as shop } from "./shop/index.js";
@@ -110,3 +110,4 @@ max: 100,
 Object.freeze(config);
 
 export default config;
+

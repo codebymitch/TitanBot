@@ -1,4 +1,4 @@
-import { giveawayJoinHandler, giveawayEndHandler, giveawayRerollHandler } from './giveawayButtons.js';
+﻿import { giveawayJoinHandler, giveawayEndHandler, giveawayRerollHandler } from './giveawayButtons.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -14,3 +14,4 @@ export function loadGiveawayButtons(client) {
     logger.debug('Giveaway button handlers loaded');
   }
 }
+

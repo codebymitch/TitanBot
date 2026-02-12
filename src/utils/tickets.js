@@ -1,4 +1,4 @@
-import { 
+﻿import { 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
@@ -144,11 +144,11 @@ export async function updateTicketMessage(channel, options = {}) {
         let statusText = '\n\n**Status**\n';
         
         if (isClosed) {
-            statusText += `🔒 Closed${closer ? ` by ${closer}` : ''}`;
+            statusText += `ðŸ”’ Closed${closer ? ` by ${closer}` : ''}`;
         } else if (isClaimed && claimer) {
-            statusText += `🔑 Claimed by ${claimer}`;
+            statusText += `ðŸ”‘ Claimed by ${claimer}`;
         } else {
-            statusText += '🟢 Open';
+            statusText += 'ðŸŸ¢ Open';
         }
         
         if (priority) {
@@ -182,13 +182,13 @@ export async function updateTicketMessage(channel, options = {}) {
                     .setCustomId('ticket_close')
                     .setLabel('Close')
                     .setStyle(ButtonStyle.Danger)
-                    .setEmoji('🔒'),
+                    .setEmoji('ðŸ”’'),
                 
                 new ButtonBuilder()
                     .setCustomId('ticket_claim')
                     .setLabel(isClaimed ? 'Unclaim' : 'Claim')
                     .setStyle(isClaimed ? ButtonStyle.Secondary : ButtonStyle.Primary)
-                    .setEmoji(isClaimed ? '🔓' : '🔑')
+                    .setEmoji(isClaimed ? 'ðŸ”“' : 'ðŸ”‘')
                     .setDisabled(isClaimed && claimer?.id !== message.author.id)
             );
             
@@ -210,7 +210,7 @@ export async function updateTicketMessage(channel, options = {}) {
                     .setCustomId('ticket_reopen')
                     .setLabel('Reopen')
                     .setStyle(ButtonStyle.Success)
-                    .setEmoji('🔓')
+                    .setEmoji('ðŸ”“')
             );
         }
 
@@ -234,8 +234,9 @@ export function getPromoRow() {
             .setLabel('Need a bot like this?')
             .setURL('https://discord.gg/your-invite-link')
             .setStyle(ButtonStyle.Link)
-            .setEmoji('🤖')
+            .setEmoji('ðŸ¤–')
     );
     
     return row;
 }
+

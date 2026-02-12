@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
@@ -65,20 +65,20 @@ try {
 
             const condition = getWeatherDescription(weatherCode);
 
-            const embed = createEmbed({ title: `🌎 Weather in ${cityDisplay}, ${country}`, description: condition.description })
+            const embed = createEmbed({ title: `ðŸŒŽ Weather in ${cityDisplay}, ${country}`, description: condition.description })
                 .addFields(
                     {
-                        name: "🌡️ Temperature",
-                        value: `${temperature}°C`,
+                        name: "ðŸŒ¡ï¸ Temperature",
+                        value: `${temperature}Â°C`,
                         inline: true,
                     },
                     {
-                        name: "💧 Humidity",
+                        name: "ðŸ’§ Humidity",
                         value: `${humidity}%`,
                         inline: true,
                     },
                     {
-                        name: "💨 Wind Speed",
+                        name: "ðŸ’¨ Wind Speed",
                         value: `${windSpeed} km/h`,
                         inline: true,
                     },
@@ -108,17 +108,18 @@ try {
  */
 function getWeatherDescription(code) {
     if (code >= 0 && code <= 3) {
-        return { description: "Clear sky / Partly cloudy ☀️", emoji: "☀️" };
+        return { description: "Clear sky / Partly cloudy â˜€ï¸", emoji: "â˜€ï¸" };
     } else if (code >= 45 && code <= 48) {
-        return { description: "Fog and Rime fog 🌫️", emoji: "🌫️" };
+        return { description: "Fog and Rime fog ðŸŒ«ï¸", emoji: "ðŸŒ«ï¸" };
     } else if (code >= 51 && code <= 67) {
-        return { description: "Drizzle or Rain 🌧️", emoji: "🌧️" };
+        return { description: "Drizzle or Rain ðŸŒ§ï¸", emoji: "ðŸŒ§ï¸" };
     } else if (code >= 71 && code <= 75) {
-        return { description: "Snow fall ❄️", emoji: "❄️" };
+        return { description: "Snow fall â„ï¸", emoji: "â„ï¸" };
     } else if (code >= 80 && code <= 86) {
-        return { description: "Showers (Rain/Snow) 🌨️", emoji: "🌨️" };
+        return { description: "Showers (Rain/Snow) ðŸŒ¨ï¸", emoji: "ðŸŒ¨ï¸" };
     } else if (code >= 95 && code <= 99) {
-        return { description: "Thunderstorm ⛈️", emoji: "⛈️" };
+        return { description: "Thunderstorm â›ˆï¸", emoji: "â›ˆï¸" };
     }
     return { description: "Unknown conditions.", emoji: "" };
 }
+

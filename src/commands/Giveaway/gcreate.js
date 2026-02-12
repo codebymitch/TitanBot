@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, saveGiveaway } from '../../utils/giveaways.js';
@@ -118,7 +118,7 @@ export default {
             const embed = giveawayEmbed(initialGiveawayData, "active");
             const row = giveawayButtons(false);
             const giveawayMessage = await targetChannel.send({
-                content: "🎉 **NEW GIVEAWAY** 🎉",
+                content: "ðŸŽ‰ **NEW GIVEAWAY** ðŸŽ‰",
                 embeds: [embed],
                 components: [row],
             });
@@ -137,15 +137,16 @@ export default {
                         `A new giveaway for **${prize}** has been started in ${targetChannel} and will end in ${durationString}.`,
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         } catch (error) {
             console.error('Gcreate command error:', error);
             const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
             return interaction[replyMethod]({
                 embeds: [errorEmbed('System Error', 'Could not start giveaway at this time.')],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },
 };
+

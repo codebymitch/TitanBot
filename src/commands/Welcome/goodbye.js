@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
@@ -60,11 +60,11 @@ color: 0xff0000,
 
                 const embed = new EmbedBuilder()
 .setColor(0x00ff00)
-                    .setTitle('✅ Goodbye System Configured')
+                    .setTitle('âœ… Goodbye System Configured')
                     .setDescription(`Goodbye messages will now be sent to ${channel}`)
                     .addFields(
                         { name: 'Message Preview', value: previewMessage },
-                        { name: 'Status', value: '✅ Enabled' }
+                        { name: 'Status', value: 'âœ… Enabled' }
                     )
                     .setFooter({ text: 'Tip: Use /goodbye toggle to enable/disable goodbye messages' });
 
@@ -75,7 +75,7 @@ color: 0xff0000,
                 await interaction.editReply({ embeds: [embed] });
             } catch (error) {
                 await interaction.editReply({ 
-                    content: '❌ An error occurred while setting up the goodbye system.', 
+                    content: 'âŒ An error occurred while setting up the goodbye system.', 
                     flags: ["Ephemeral"] 
                 });
             }
@@ -91,15 +91,16 @@ color: 0xff0000,
                 });
 
                 await interaction.editReply({
-                    content: `✅ Goodbye messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
+                    content: `âœ… Goodbye messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.editReply({ 
-                    content: '❌ An error occurred while toggling goodbye messages.', 
+                    content: 'âŒ An error occurred while toggling goodbye messages.', 
                     flags: ["Ephemeral"] 
                 });
             }
         }
     },
 };
+

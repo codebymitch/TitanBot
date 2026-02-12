@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 export default {
@@ -16,7 +16,7 @@ export default {
             await interaction.reply({
                 embeds: [
                     successEmbed(
-                        "✅ Report Channel Set!",
+                        "âœ… Report Channel Set!",
                         `All new reports will now be sent to ${channel}.`,
                     ),
                 ],
@@ -34,3 +34,4 @@ export default {
         }
     }
 };
+

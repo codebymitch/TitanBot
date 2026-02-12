@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
@@ -27,7 +27,7 @@ export default {
             if (!userData) {
                 return await interaction.editReply({
                     embeds: [errorEmbed(
-                        "❌ Data Error",
+                        "âŒ Data Error",
                         "Failed to load your economy data. Please try again later."
                     )]
                 });
@@ -39,7 +39,7 @@ export default {
                 const timeRemaining = lastDaily + DAILY_COOLDOWN - now;
                 return await interaction.editReply({
                     embeds: [errorEmbed(
-                        "⏱️ Slow Down!",
+                        "â±ï¸ Slow Down!",
                         `You need to wait before claiming daily again. Try again in ${formatDuration(timeRemaining)}.`
                     )]
                 });
@@ -61,7 +61,7 @@ export default {
                     DAILY_AMOUNT * PREMIUM_BONUS_PERCENTAGE,
                 );
                 earned += bonusAmount;
-                bonusMessage = `\n✨ **Premium Bonus:** +$${bonusAmount.toLocaleString()}`;
+                bonusMessage = `\nâœ¨ **Premium Bonus:** +$${bonusAmount.toLocaleString()}`;
                 hasPremiumRole = true;
             }
 
@@ -71,7 +71,7 @@ userData.lastDaily = now;
             await setEconomyData(client, guildId, userId, userData);
 
             const embed = successEmbed(
-                "✅ Daily Claimed!",
+                "âœ… Daily Claimed!",
                 `You have claimed your daily **$${earned.toLocaleString()}**!${bonusMessage}`
             )
                 .addFields({
@@ -91,7 +91,7 @@ userData.lastDaily = now;
             try {
                 await interaction.editReply({
                     embeds: [errorEmbed(
-                        "❌ Error",
+                        "âŒ Error",
                         "Something went wrong while claiming daily. Please try again."
                     )]
                 });
@@ -101,3 +101,4 @@ userData.lastDaily = now;
         }
     },
 };
+

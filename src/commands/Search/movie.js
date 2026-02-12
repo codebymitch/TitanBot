@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -161,7 +161,7 @@ timeout: 8000,
                     {
                         name: "Rating",
                         value: result.vote_average
-                            ? `⭐ ${result.vote_average.toFixed(1)}/10 (${result.vote_count.toLocaleString()} votes)`
+                            ? `â­ ${result.vote_average.toFixed(1)}/10 (${result.vote_count.toLocaleString()} votes)`
                             : "N/A",
                         inline: true,
                     },
@@ -241,3 +241,4 @@ async function getGuildConfig(client, guildId) {
         return {};
     }
 }
+

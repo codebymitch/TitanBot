@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -20,14 +20,16 @@ try {
       const uptimeStr = `${days}d, ${hours}h, ${minutes}m, ${seconds}s`;
 
       await interaction.reply({
-        embeds: [createEmbed({ title: "⏱️ System Uptime", description: `**${uptimeStr}**` })],
+        embeds: [createEmbed({ title: "â±ï¸ System Uptime", description: `**${uptimeStr}**` })],
       });
     } catch (error) {
       console.error('Uptime command error:', error);
       return interaction.editReply({
         embeds: [createEmbed({ title: 'System Error', description: 'Could not compute uptime.' })],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   },
 };
+
+

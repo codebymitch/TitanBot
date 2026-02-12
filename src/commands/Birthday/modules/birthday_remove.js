@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { deleteBirthday } from '../../../utils/database.js';
 
 export default {
@@ -12,7 +12,7 @@ try {
             if (success) {
                 await interaction.reply({
                     embeds: [successEmbed(
-                        "Birthday Removed 🗑️",
+                        "Birthday Removed ðŸ—‘ï¸",
                         "Your birthday has been successfully removed from the server."
                     )]
                 });
@@ -32,3 +32,4 @@ try {
         }
     }
 };
+

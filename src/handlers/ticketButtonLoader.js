@@ -1,4 +1,4 @@
-import createTicketHandler, { 
+﻿import createTicketHandler, { 
   createTicketModalHandler, 
   closeTicketHandler, 
   claimTicketHandler, 
@@ -28,3 +28,4 @@ export default async function loadTicketButtons(client) {
     logger.error('Error loading ticket button handlers:', error);
   }
 }
+

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
@@ -38,7 +38,7 @@ export default {
                             "No giveaway was found with that message ID in the database.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -50,7 +50,7 @@ export default {
                             "This giveaway has already finished.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -73,7 +73,7 @@ const winnerIds = winners.map((w) => w);
                             "Could not find the channel where the giveaway was hosted. The giveaway has been removed from the database.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -93,7 +93,7 @@ const winnerIds = winners.map((w) => w);
                             "Could not find the giveaway message. The giveaway has been removed from the database.",
                         ),
                     ],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -109,7 +109,7 @@ giveaway.winnerIds = winnerIds;
             const newRow = giveawayButtons(true);
 
             await message.edit({
-                content: "🎉 **GIVEAWAY ENDED** 🎉",
+                content: "ðŸŽ‰ **GIVEAWAY ENDED** ðŸŽ‰",
                 embeds: [newEmbed],
                 components: [newRow],
             });
@@ -134,7 +134,7 @@ giveaway.winnerIds = winnerIds;
                         `Successfully ended the giveaway for **${giveaway.prize}** in ${channel}.`,
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         } catch (error) {
             console.error("Error ending giveaway:", error);
@@ -146,8 +146,9 @@ giveaway.winnerIds = winnerIds;
                         "An error occurred while trying to end the giveaway and update the message.",
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },
 };
+

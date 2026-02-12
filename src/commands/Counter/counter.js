@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 
 import { handleCreate } from './modules/counter_create.js';
@@ -102,23 +102,25 @@ export default {
                 default:
                     await interaction.reply({
                         embeds: [errorEmbed("Unknown subcommand.")],
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
             }
         } catch (error) {
             console.error(`Error in counter ${subcommand}:`, error);
             
             const errorEmbed = createEmbed({ 
-                title: "❌ Error", 
+                title: "âŒ Error", 
                 description: "An error occurred while processing your request.",
                 color: 0xFF0000
             });
 
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ embeds: [errorEmbed], ephemeral: true }).catch(console.error);
+                await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral }).catch(console.error);
             } else {
-                await interaction.followUp({ embeds: [errorEmbed], ephemeral: true }).catch(console.error);
+                await interaction.followUp({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral }).catch(console.error);
             }
         }
     }
 };
+
+

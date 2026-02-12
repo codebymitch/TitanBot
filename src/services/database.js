@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import { pgDb } from '../utils/postgresDatabase.js';
 import { logger } from '../utils/logger.js';
 
@@ -13,7 +13,7 @@ async function initializeServicesDatabase() {
     if (pgConnected) {
       db = pgDb;
       connectionType = 'postgresql';
-      logger.info('✅ Services: PostgreSQL Database initialized');
+      logger.info('âœ… Services: PostgreSQL Database initialized');
       return;
     }
   } catch (error) {
@@ -284,3 +284,4 @@ export default {
   getConnectionType: () => connectionType,
   useFallback: () => useFallback
 };
+

@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
+﻿import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getGuildConfigKey } from '../../../utils/database.js';
 
@@ -16,11 +16,11 @@ const currentSetting = guildConfig.dmOnClose !== false;
             await client.db.set(configKey, guildConfig);
 
             const embed = successEmbed(
-                '✅ DM Notification Setting Updated',
+                'âœ… DM Notification Setting Updated',
                 `DM notifications when tickets are closed: **${guildConfig.dmOnClose ? 'Enabled' : 'Disabled'}**\n\n` +
                 (guildConfig.dmOnClose 
-                    ? '📬 Users will receive a DM when their ticket is closed.' 
-                    : '📭 Users will NOT receive a DM when their ticket is closed.')
+                    ? 'ðŸ“¬ Users will receive a DM when their ticket is closed.' 
+                    : 'ðŸ“­ Users will NOT receive a DM when their ticket is closed.')
             );
 
             await interaction.editReply({ embeds: [embed] });
@@ -30,3 +30,4 @@ const currentSetting = guildConfig.dmOnClose !== false;
         }
     }
 };
+

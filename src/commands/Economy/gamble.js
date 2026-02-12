@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
@@ -64,7 +64,7 @@ export default {
             if (cloverCount > 0) {
                 winChance += CLOVER_WIN_BONUS;
                 userData.inventory["lucky_clover"] -= 1;
-                cloverMessage = `\n🍀 **Lucky Clover Consumed:** Your win chance was boosted to **${Math.round(winChance * 100)}%**!`;
+                cloverMessage = `\nðŸ€ **Lucky Clover Consumed:** Your win chance was boosted to **${Math.round(winChance * 100)}%**!`;
                 usedClover = true;
             }
 
@@ -77,14 +77,14 @@ export default {
 cashChange = amountWon;
 
                 resultEmbed = successEmbed(
-                    "🎉 You Won!",
+                    "ðŸŽ‰ You Won!",
                     `You successfully gambled and turned your **$${betAmount.toLocaleString()}** bet into **$${amountWon.toLocaleString()}**!${cloverMessage}`,
                 );
             } else {
 cashChange = -betAmount;
 
                 resultEmbed = errorEmbed(
-                    "💔 You Lost...",
+                    "ðŸ’” You Lost...",
                     `The dice rolled against you. You lost your **$${betAmount.toLocaleString()}** bet.`,
                 );
             }
@@ -97,7 +97,7 @@ userData.lastGamble = now;
             const newCash = userData.wallet;
 
             resultEmbed.addFields({
-                name: "💵 New Cash Balance",
+                name: "ðŸ’µ New Cash Balance",
                 value: `$${newCash.toLocaleString()}`,
                 inline: true,
             });
@@ -116,3 +116,4 @@ userData.lastGamble = now;
         }, { command: 'gamble' });
     },
 };
+

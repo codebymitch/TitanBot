@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
@@ -51,7 +51,7 @@ export default {
 
                     return await interaction.editReply({
                         embeds: [errorEmbed(
-                            "⏱️ Slow Down!",
+                            "â±ï¸ Slow Down!",
                             `You're working too fast! Wait **${hours}h ${minutes}m** before working again.`
                         )]
                     });
@@ -67,17 +67,17 @@ export default {
             await setEconomyData(client, guildId, userId, userData);
 
             const embed = successEmbed(
-                "💼 Work Complete!",
+                "ðŸ’¼ Work Complete!",
                 `You worked as a **${job}** and earned **$${earned.toLocaleString()}**!`
             )
                 .addFields(
                     {
-                        name: "💰 New Balance",
+                        name: "ðŸ’° New Balance",
                         value: `$${userData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "⏰ Next Work",
+                        name: "â° Next Work",
                         value: `<t:${Math.floor((now + WORK_COOLDOWN) / 1000)}:R>`,
                         inline: true,
                     }
@@ -93,7 +93,7 @@ export default {
             try {
                 await interaction.editReply({
                     embeds: [errorEmbed(
-                        "❌ Error",
+                        "âŒ Error",
                         "Something went wrong while processing your work request. Please try again."
                     )]
                 });
@@ -103,3 +103,4 @@ export default {
         }
     },
 };
+

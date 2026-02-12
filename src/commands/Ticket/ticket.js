@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
@@ -175,7 +175,7 @@ const panelMessage = interaction.options.getString("panel_message") || "Click th
 const dmOnClose = interaction.options.getBoolean("dm_on_close") !== false;
 
             const setupEmbed = createEmbed({ 
-                title: "🎫 Support Tickets", 
+                title: "ðŸŽ« Support Tickets", 
 description: panelMessage,
                 color: "#3498DB"
             });
@@ -185,7 +185,7 @@ description: panelMessage,
                     .setCustomId("create_ticket")
 .setLabel(buttonLabel)
                     .setStyle(ButtonStyle.Primary)
-                    .setEmoji("📩"),
+                    .setEmoji("ðŸ“©"),
             );
 
             try {
@@ -242,7 +242,7 @@ description: panelMessage,
                 });
 
                 const logEmbed = createEmbed({
-                    title: "🔧 Ticket System Setup (Configuration Log)",
+                    title: "ðŸ”§ Ticket System Setup (Configuration Log)",
                     description: `The ticket panel was set up in ${panelChannel} by ${interaction.user}.`,
                     color: "#F39C12"
                 })
@@ -314,3 +314,4 @@ description: panelMessage,
         }
     }
 };
+

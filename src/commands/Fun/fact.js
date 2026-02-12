@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -20,7 +20,7 @@ export default {
 try {
       const randomFact = facts[Math.floor(Math.random() * facts.length)];
 
-      const embed = successEmbed("🧠 Did You Know?", `💡 **${randomFact}**`);
+      const embed = successEmbed("ðŸ§  Did You Know?", `ðŸ’¡ **${randomFact}**`);
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
@@ -29,3 +29,4 @@ try {
     }
   },
 };
+

@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildBirthdays, getMonthName } from '../../../utils/database.js';
 
 export default {
@@ -26,7 +26,7 @@ try {
             
             await interaction.editReply({
                 embeds: [createEmbed(
-                    "🎂 Birthday Information",
+                    "ðŸŽ‚ Birthday Information",
                     targetUser.id === interaction.user.id ? "Your Birthday" : `${targetUser.username}'s Birthday`,
                     `**Date:** ${monthName} ${birthdayData.day}\n**User:** ${targetUser.toString()}`,
                     0xff69b4
@@ -40,3 +40,4 @@ try {
         }
     }
 };
+

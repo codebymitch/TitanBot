@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getLeaderboard, getLevelingConfig, getXpForLevel } from '../../utils/database.js';
@@ -22,7 +22,7 @@ export default {
                 }
 
                 const embed = new EmbedBuilder()
-                    .setTitle("🏆 Level Leaderboard")
+                    .setTitle("ðŸ† Level Leaderboard")
                     .setColor("#3498db")
                     .setDescription("Top 10 most active members in this server:")
                     .setTimestamp();
@@ -35,9 +35,9 @@ export default {
                             const xpForNextLevel = getXpForLevel(user.level + 1);
 
                             let rankPrefix = `${index + 1}.`;
-                            if (index === 0) rankPrefix = "🥇";
-                            else if (index === 1) rankPrefix = "🥈";
-                            else if (index === 2) rankPrefix = "🥉";
+                            if (index === 0) rankPrefix = "ðŸ¥‡";
+                            else if (index === 1) rankPrefix = "ðŸ¥ˆ";
+                            else if (index === 2) rankPrefix = "ðŸ¥‰";
                             else rankPrefix = `**${index + 1}.**`;
 
                             return `${rankPrefix} ${username} - Level ${user.level} (${user.xp}/${xpForNextLevel} XP)`;
@@ -55,3 +55,4 @@ export default {
                 await interaction.editReply({ embeds: [embed] });
     },
 };
+

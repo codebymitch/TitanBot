@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyKey } from '../../utils/database.js';
@@ -73,7 +73,7 @@ return b.net_worth - a.net_worth;
             const userRank =
                 allUserData.findIndex((u) => u.userId === interaction.user.id) +
                 1;
-            const rankEmoji = ["🥇", "🥈", "🥉"];
+            const rankEmoji = ["ðŸ¥‡", "ðŸ¥ˆ", "ðŸ¥‰"];
             const leaderboardEntries = [];
 
             for (let i = 0; i < topUsers.length; i++) {
@@ -105,7 +105,7 @@ return b.net_worth - a.net_worth;
             };
 
             const embed = createEmbed(
-                `👑 Economy Leaderboard (${fieldNameMap[sortBy]})`,
+                `ðŸ‘‘ Economy Leaderboard (${fieldNameMap[sortBy]})`,
                 leaderboardEntries.join("\n"),
             ).setFooter({
                 text: `Your Rank: ${userRank > 0 ? userRank : "Not Ranked"} | Data sorted by ${fieldNameMap[sortBy]}`,
@@ -125,4 +125,5 @@ return b.net_worth - a.net_worth;
         }
     },
 };
+
 
