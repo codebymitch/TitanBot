@@ -54,7 +54,7 @@ try {
             }
 
             const embed = createEmbed(
-                'ðŸŽ‚ Next 5 Upcoming Birthdays',
+                '🎂 Next 5 Upcoming Birthdays',
                 `Here are the next 5 birthdays in ${interaction.guild.name}:`
             );
 
@@ -66,16 +66,16 @@ try {
                 
                 let timeUntil = '';
                 if (birthday.daysUntil === 0) {
-                    timeUntil = 'ðŸŽ‰ **Today!**';
+                    timeUntil = '🎉 **Today!**';
                 } else if (birthday.daysUntil === 1) {
-                    timeUntil = 'ðŸ“… **Tomorrow!**';
+                    timeUntil = '📅 **Tomorrow!**';
                 } else {
                     timeUntil = `In ${birthday.daysUntil} day${birthday.daysUntil > 1 ? 's' : ''}`;
                 }
 
                 embed.addFields({
                     name: `${i + 1}. ${userName}`,
-                    value: `ðŸ“… **Date:** ${monthName} ${birthday.day}\nâ° **Time:** ${timeUntil}`,
+                    value: `📅 **Date:** ${monthName} ${birthday.day}\nâ° **Time:** ${timeUntil}`,
                     inline: false
                 });
             }
@@ -92,4 +92,6 @@ try {
         }
     }
 };
+
+
 

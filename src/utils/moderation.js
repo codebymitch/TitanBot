@@ -40,22 +40,22 @@ export async function logEvent({ client, guild, guildId, event }) {
     }
 
     const actionStyles = {
-      'Member Banned': { color: '#721919', icon: 'ðŸ”¨' },
-      'Member Kicked': { color: '#FFA500', icon: 'ðŸ‘¢' },
-      'Member Timed Out': { color: '#F1C40F', icon: 'â³' },
-      'Member Untimeouted': { color: '#2ECC71', icon: 'âœ…' },
-      'User Warned': { color: '#FEE75C', icon: 'âš ï¸' },
-      'Warnings Viewed': { color: '#3498DB', icon: 'ðŸ‘ï¸' },
-      'Messages Purged': { color: '#E67E22', icon: 'ðŸ—‘ï¸' },
-      'Channel Locked': { color: '#CC00CC', icon: 'ðŸ”’' },
-      'Channel Unlocked': { color: '#2ECC71', icon: 'ðŸ”“' },
-      'Case Created': { color: '#3498DB', icon: 'ðŸ“‹' },
-      'Case Updated': { color: '#9B59B6', icon: 'ðŸ“' },
-      'DM Sent': { color: '#3498DB', icon: 'âœ‰ï¸' },
-      'Log Channel Activated': { color: '#2ECC71', icon: 'ðŸ“' }
+      'Member Banned': { color: '#721919', icon: '🔨' },
+      'Member Kicked': { color: '#FFA500', icon: '👢' },
+      'Member Timed Out': { color: '#F1C40F', icon: '⏳' },
+      'Member Untimeouted': { color: '#2ECC71', icon: '✅' },
+      'User Warned': { color: '#FEE75C', icon: '⚠️' },
+      'Warnings Viewed': { color: '#3498DB', icon: '👁️' },
+      'Messages Purged': { color: '#E67E22', icon: '🗑️' },
+      'Channel Locked': { color: '#CC00CC', icon: '🔒' },
+      'Channel Unlocked': { color: '#2ECC71', icon: '🔓' },
+      'Case Created': { color: '#3498DB', icon: '📋' },
+      'Case Updated': { color: '#9B59B6', icon: '📝' },
+      'DM Sent': { color: '#3498DB', icon: '✉️' },
+      'Log Channel Activated': { color: '#2ECC71', icon: '📝' }
     };
 
-    const style = actionStyles[event.action] || { color: '#0099ff', icon: 'ðŸ”¨' };
+    const style = actionStyles[event.action] || { color: '#0099ff', icon: '🔨' };
 
     const embed = new EmbedBuilder()
       .setColor(event.color || style.color)
@@ -241,4 +241,6 @@ export async function logModerationAction({ client, guild, event }) {
   
   return caseId;
 }
+
+
 

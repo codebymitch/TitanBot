@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 
@@ -17,7 +17,7 @@ try {
             const latency = reply.createdTimestamp - interaction.createdTimestamp;
             const apiLatency = Math.round(interaction.client.ws.ping);
 
-            const embed = createEmbed({ title: "ðŸ“ Pong!", description: null }).addFields(
+            const embed = createEmbed({ title: "🏓 Pong!", description: null }).addFields(
                 { name: "Bot Latency", value: `${latency}ms`, inline: true },
                 { name: "API Latency", value: `${apiLatency}ms`, inline: true },
             );
@@ -35,5 +35,7 @@ try {
         }
     },
 };
+
+
 
 

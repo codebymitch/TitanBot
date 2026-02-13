@@ -68,7 +68,7 @@ export default {
             await InteractionHelper.universalReply(interaction, {
                 embeds: [
                     successEmbed(
-                        `ðŸš« **Banned** ${user.tag}`,
+                        `🚫 **Banned** ${user.tag}`,
                         `**Reason:** ${reason}`,
                     ),
                 ],
@@ -83,4 +83,6 @@ export default {
         }
     },
 };
+
+
 

@@ -76,14 +76,14 @@ try {
 .slice(0, 10);
             
             const embed = successEmbed(
-                'ðŸŽ² Random User Selected',
+                '🎲 Random User Selected',
                 shouldMention ? `${selectedMember}` : `**${user.username}**`
             )
             .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
             .addFields(
-                { name: 'ðŸ‘¤ Username', value: user.username, inline: true },
-                { name: 'ðŸ¤– Bot', value: user.bot ? 'Yes' : 'No', inline: true },
-                { name: `ðŸŽ­ Roles (${roles.length})`, value: roles.length > 0 ? roles.slice(0, 5).join(' ') + (roles.length > 5 ? ` +${roles.length - 5} more` : '') : 'No roles', inline: false }
+                { name: '👤 Username', value: user.username, inline: true },
+                { name: '🤖 Bot', value: user.bot ? 'Yes' : 'No', inline: true },
+                { name: `🎭 Roles (${roles.length})`, value: roles.length > 0 ? roles.slice(0, 5).join(' ') + (roles.length > 5 ? ` +${roles.length - 5} more` : '') : 'No roles', inline: false }
             )
             .setColor(selectedMember.displayHexColor || '#3498db');
             
@@ -91,7 +91,7 @@ try {
                 .addComponents(
                     new ButtonBuilder()
                         .setCustomId(`randomuser_${interaction.user.id}_again`)
-                        .setLabel('ðŸŽ² Pick Another User')
+                        .setLabel('🎲 Pick Another User')
                         .setStyle(ButtonStyle.Primary)
                 );
             
@@ -142,14 +142,14 @@ const collector = response.createMessageComponentCollector({ filter, time: 30000
                         .slice(0, 10);
                     
                     const newEmbed = successEmbed(
-                        'ðŸŽ² Random User Selected',
+                        '🎲 Random User Selected',
                         shouldMention ? `${newSelectedMember}` : `**${newUser.username}**`
                     )
                     .setThumbnail(newUser.displayAvatarURL({ dynamic: true, size: 256 }))
                     .addFields(
-                        { name: 'ðŸ‘¤ Username', value: newUser.username, inline: true },
-                        { name: 'ðŸ¤– Bot', value: newUser.bot ? 'Yes' : 'No', inline: true },
-                        { name: `ðŸŽ­ Roles (${newRoles.length})`, value: newRoles.length > 0 ? newRoles.slice(0, 5).join(' ') + (newRoles.length > 5 ? ` +${newRoles.length - 5} more` : '') : 'No roles', inline: false }
+                        { name: '👤 Username', value: newUser.username, inline: true },
+                        { name: '🤖 Bot', value: newUser.bot ? 'Yes' : 'No', inline: true },
+                        { name: `🎭 Roles (${newRoles.length})`, value: newRoles.length > 0 ? newRoles.slice(0, 5).join(' ') + (newRoles.length > 5 ? ` +${newRoles.length - 5} more` : '') : 'No roles', inline: false }
                     )
                     .setColor(newSelectedMember.displayHexColor || '#3498db');
                     
@@ -186,4 +186,6 @@ const collector = response.createMessageComponentCollector({ filter, time: 30000
         }
     },
 };
+
+
 

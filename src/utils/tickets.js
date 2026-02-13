@@ -144,11 +144,11 @@ export async function updateTicketMessage(channel, options = {}) {
         let statusText = '\n\n**Status**\n';
         
         if (isClosed) {
-            statusText += `ðŸ”’ Closed${closer ? ` by ${closer}` : ''}`;
+            statusText += `🔒 Closed${closer ? ` by ${closer}` : ''}`;
         } else if (isClaimed && claimer) {
-            statusText += `ðŸ”‘ Claimed by ${claimer}`;
+            statusText += `🔑 Claimed by ${claimer}`;
         } else {
-            statusText += 'ðŸŸ¢ Open';
+            statusText += '🟢 Open';
         }
         
         if (priority) {
@@ -182,13 +182,13 @@ export async function updateTicketMessage(channel, options = {}) {
                     .setCustomId('ticket_close')
                     .setLabel('Close')
                     .setStyle(ButtonStyle.Danger)
-                    .setEmoji('ðŸ”’'),
+                    .setEmoji('🔒'),
                 
                 new ButtonBuilder()
                     .setCustomId('ticket_claim')
                     .setLabel(isClaimed ? 'Unclaim' : 'Claim')
                     .setStyle(isClaimed ? ButtonStyle.Secondary : ButtonStyle.Primary)
-                    .setEmoji(isClaimed ? 'ðŸ”“' : 'ðŸ”‘')
+                    .setEmoji(isClaimed ? '🔓' : '🔑')
                     .setDisabled(isClaimed && claimer?.id !== message.author.id)
             );
             
@@ -210,7 +210,7 @@ export async function updateTicketMessage(channel, options = {}) {
                     .setCustomId('ticket_reopen')
                     .setLabel('Reopen')
                     .setStyle(ButtonStyle.Success)
-                    .setEmoji('ðŸ”“')
+                    .setEmoji('🔓')
             );
         }
 
@@ -234,9 +234,11 @@ export function getPromoRow() {
             .setLabel('Need a bot like this?')
             .setURL('https://discord.gg/your-invite-link')
             .setStyle(ButtonStyle.Link)
-            .setEmoji('ðŸ¤–')
+            .setEmoji('🤖')
     );
     
     return row;
 }
+
+
 

@@ -80,6 +80,8 @@ export default {
 
 function createProgressBar(percentage, length = 10) {
     const filled = Math.round((percentage / 100) * length);
-    return "â–ˆ".repeat(filled) + "â–‘".repeat(length - filled);
+    return "█".repeat(filled) + "░".repeat(length - filled);
 }
+
+
 

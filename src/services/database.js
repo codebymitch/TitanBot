@@ -13,7 +13,7 @@ async function initializeServicesDatabase() {
     if (pgConnected) {
       db = pgDb;
       connectionType = 'postgresql';
-      logger.info('âœ… Services: PostgreSQL Database initialized');
+      logger.info('✅ Services: PostgreSQL Database initialized');
       return;
     }
   } catch (error) {
@@ -284,4 +284,6 @@ export default {
   getConnectionType: () => connectionType,
   useFallback: () => useFallback
 };
+
+
 

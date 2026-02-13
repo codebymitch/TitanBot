@@ -20,7 +20,7 @@ export default {
 try {
       const randomFact = facts[Math.floor(Math.random() * facts.length)];
 
-      const embed = successEmbed("ðŸ§  Did You Know?", `ðŸ’¡ **${randomFact}**`);
+      const embed = successEmbed("🧠 Did You Know?", `💡 **${randomFact}**`);
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
@@ -29,4 +29,7 @@ try {
     }
   },
 };
+
+
+
 

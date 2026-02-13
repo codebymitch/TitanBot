@@ -19,7 +19,7 @@ try {
 
       await interaction.reply({
         embeds: [
-          createEmbed({ title: "ðŸš‘ Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!" }),
+          createEmbed({ title: "🚑 Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!" }),
         ],
         components: [actionRow],
         flags: ["Ephemeral"],
@@ -33,6 +33,8 @@ try {
     }
   },
 };
+
+
 
 
 

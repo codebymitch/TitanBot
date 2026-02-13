@@ -17,7 +17,7 @@ try {
                 return interaction.reply({
                     embeds: [
                         successEmbed(
-                            "ðŸŽ‚ Birthday Announcements Enabled",
+                            "🎂 Birthday Announcements Enabled",
                             `Birthday announcements will now be posted in ${channel}.`,
                         ),
                     ],
@@ -30,7 +30,7 @@ try {
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "ðŸŽ‚ Birthday Announcements Disabled",
+                            "🎂 Birthday Announcements Disabled",
                             "Birthday announcements have been disabled. No channel selected.",
                         ),
                     ],
@@ -51,4 +51,6 @@ try {
         }
     }
 };
+
+
 

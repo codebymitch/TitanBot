@@ -1,4 +1,4 @@
-import { createEmbed } from '../utils/embeds.js';
+﻿import { createEmbed } from '../utils/embeds.js';
 import { createButton, getPaginationRow } from '../utils/components.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -305,3 +305,7 @@ export const helpCategorySelectMenu = {
         }
     },
 };
+
+
+
+

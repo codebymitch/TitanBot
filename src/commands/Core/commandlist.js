@@ -6,21 +6,21 @@ import fs from 'fs';
 
 function getIcon(folder) {
     const icons = {
-        Core: "â„¹ï¸",
-        Moderation: "ðŸ›¡ï¸",
-        Economy: "ðŸ’°",
-        Utility: "ðŸ› ï¸",
-        Tickets: "ðŸŽ«",
-        Fun: "ðŸŽ²",
-        Leveling: "âœ¨",
-        Birthday: "ðŸŽ",
-        Counter: "ðŸ”Ÿ",
-        Giveaway: "ðŸŽ‰",
-        Reaction_roles: "ðŸ””",
-        Search: "ðŸ”",
-        Tools: "ðŸ”¨",
+        Core: "ℹ️",
+        Moderation: "🛡️",
+        Economy: "💰",
+        Utility: "🛠️",
+        Tickets: "🎫",
+        Fun: "🎲",
+        Leveling: "✨",
+        Birthday: "🎁",
+        Counter: "🔟",
+        Giveaway: "🎉",
+        Reaction_roles: "🔔",
+        Search: "🔍",
+        Tools: "🔨",
     };
-    return icons[folder] || "ðŸ“‚";
+    return icons[folder] || "📂";
 }
 
 /**
@@ -31,7 +31,7 @@ function createCommandListEmbed() {
     const foldersPath = path.join(process.cwd(), "src", "commands");
     const commandFolders = fs.readdirSync(foldersPath);
 
-    const embed = createEmbed({ title: "ðŸ“œ TitanBot Command List", description: "Here is a complete list of all available commands, organized by category.", });
+    const embed = createEmbed({ title: "📜 TitanBot Command List", description: "Here is a complete list of all available commands, organized by category.", });
 
     let totalCommands = 0;
 
@@ -60,7 +60,7 @@ function createCommandListEmbed() {
         }
     }
 
-    embed.setFooter({ text: `TitanBot â€¢ ${totalCommands} Commands Loaded` });
+    embed.setFooter({ text: `TitanBot • ${totalCommands} Commands Loaded` });
     return embed;
 }
 export default {
@@ -87,4 +87,7 @@ try {
         }
     },
 };
+
+
+
 

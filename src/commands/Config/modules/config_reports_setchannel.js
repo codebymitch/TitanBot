@@ -16,7 +16,7 @@ export default {
             await interaction.reply({
                 embeds: [
                     successEmbed(
-                        "âœ… Report Channel Set!",
+                        "✅ Report Channel Set!",
                         `All new reports will now be sent to ${channel}.`,
                     ),
                 ],
@@ -34,4 +34,6 @@ export default {
         }
     }
 };
+
+
 

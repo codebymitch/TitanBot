@@ -105,12 +105,12 @@ export default {
             )
                 .addFields(
                     {
-                        name: "ðŸ’³ Payment Amount",
+                        name: "💳 Payment Amount",
                         value: `$${amount.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "ðŸ’µ Your New Balance",
+                        name: "💵 Your New Balance",
                         value: `$${senderData.wallet.toLocaleString()}`,
                         inline: true,
                     },
@@ -124,7 +124,7 @@ export default {
 
             try {
                 const receiverEmbed = createEmbed({ 
-                    title: "ðŸ’° Incoming Payment!", 
+                    title: "💰 Incoming Payment!", 
                     description: `${interaction.user.username} paid you **$${amount.toLocaleString()}**.` 
                 }).addFields({
                     name: "Your New Cash",
@@ -138,5 +138,8 @@ export default {
         }, { command: 'pay' });
     },
 };
+
+
+
 
 

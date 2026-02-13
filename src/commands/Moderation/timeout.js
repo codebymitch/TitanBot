@@ -120,7 +120,7 @@ export default {
             await interaction.editReply({
                 embeds: [
                     successEmbed(
-                        `â³ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
+                        `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
                         `**Reason:** ${reason}`,
                     ),
                 ],
@@ -137,4 +137,6 @@ export default {
         }
     }
 };
+
+
 

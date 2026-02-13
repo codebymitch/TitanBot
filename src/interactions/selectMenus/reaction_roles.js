@@ -28,7 +28,7 @@ export async function execute(interaction, client) {
             return interaction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setDescription('âŒ This reaction role message is no longer active.')
+                        .setDescription('❌ This reaction role message is no longer active.')
                         .setColor('#ED4245')
                 ]
             });
@@ -41,7 +41,7 @@ export async function execute(interaction, client) {
             return interaction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setDescription('âŒ I do not have permission to manage roles in this server.')
+                        .setDescription('❌ I do not have permission to manage roles in this server.')
                         .setColor('#ED4245')
                 ]
             });
@@ -89,14 +89,14 @@ if (selectedRoleIds.includes(roleId)) continue;
             }
         }
 
-        let description = 'ðŸŽ­ **Roles updated successfully!**\n\n';
+        let description = '🎭 **Roles updated successfully!**\n\n';
         
         if (addedRoles.length > 0) {
-            description += `âœ… **Added:** ${addedRoles.map(name => `**${name}**`).join(', ')}\n`;
+            description += `✅ **Added:** ${addedRoles.map(name => `**${name}**`).join(', ')}\n`;
         }
         
         if (removedRoles.length > 0) {
-            description += `âŒ **Removed:** ${removedRoles.map(name => `**${name}**`).join(', ')}\n`;
+            description += `❌ **Removed:** ${removedRoles.map(name => `**${name}**`).join(', ')}\n`;
         }
         
         if (addedRoles.length === 0 && removedRoles.length === 0) {
@@ -114,7 +114,7 @@ if (selectedRoleIds.includes(roleId)) continue;
         console.error('Error handling reaction role select menu:', error);
         
         const errorEmbed = new EmbedBuilder()
-            .setDescription('âŒ An error occurred while updating your roles. Please try again.')
+            .setDescription('❌ An error occurred while updating your roles. Please try again.')
             .setColor('#ED4245');
 
         if (interaction.replied || interaction.deferred) {
@@ -129,4 +129,6 @@ export default {
     name: 'reaction_roles',
     execute
 };
+
+
 

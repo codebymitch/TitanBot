@@ -118,7 +118,7 @@ export default {
             const embed = giveawayEmbed(initialGiveawayData, "active");
             const row = giveawayButtons(false);
             const giveawayMessage = await targetChannel.send({
-                content: "ðŸŽ‰ **NEW GIVEAWAY** ðŸŽ‰",
+                content: "🎉 **NEW GIVEAWAY** 🎉",
                 embeds: [embed],
                 components: [row],
             });
@@ -149,4 +149,6 @@ export default {
         }
     },
 };
+
+
 

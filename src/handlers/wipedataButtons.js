@@ -83,17 +83,17 @@ const wipedataConfirmHandler = {
       }
 
       const successMessage =
-        `âœ… **Your data has been successfully wiped!**\n\n` +
+        `✅ **Your data has been successfully wiped!**\n\n` +
         `**Records Deleted:** ${deletedCount}\n\n` +
         `Your account has been reset to default values. You can now start fresh!\n\n` +
         `*All your economy balance, levels, items, and personal data have been removed.*`;
 
       await interaction.editReply({
-        embeds: [successEmbed(successMessage, 'ðŸ—‘ï¸ Data Wipe Complete')],
+        embeds: [successEmbed(successMessage, '🗑️ Data Wipe Complete')],
         components: []
       });
 
-      console.log(`âœ… User ${interaction.user.tag} (${userId}) wiped their data in guild ${guildId} - Deleted ${deletedCount} records`);
+      console.log(`✅ User ${interaction.user.tag} (${userId}) wiped their data in guild ${guildId} - Deleted ${deletedCount} records`);
 
     } catch (error) {
       console.error('Wipedata confirm button handler error:', error);
@@ -117,7 +117,7 @@ const wipedataCancelHandler = {
       await interaction.update({
         embeds: [
           createEmbed({
-            title: 'âŒ Data Wipe Cancelled',
+            title: '❌ Data Wipe Cancelled',
             description: 'Your data has been preserved. Your account remains unchanged.',
             color: 'info'
           })
@@ -125,7 +125,7 @@ const wipedataCancelHandler = {
         components: []
       });
 
-      console.log(`â„¹ï¸ User ${interaction.user.tag} (${interaction.user.id}) cancelled data wipe in guild ${interaction.guildId}`);
+      console.log(`ℹ️ User ${interaction.user.tag} (${interaction.user.id}) cancelled data wipe in guild ${interaction.guildId}`);
     } catch (error) {
       console.error('Wipedata cancel button handler error:', error);
       
@@ -140,5 +140,7 @@ const wipedataCancelHandler = {
 };
 
 export { wipedataConfirmHandler, wipedataCancelHandler };
+
+
 
 

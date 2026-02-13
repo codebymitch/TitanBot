@@ -13,35 +13,35 @@ export const shopConfig = {
     currency: currency.name,
     currencyName: currency.name,
     currencyNamePlural: currency.namePlural || `${currency.name}s`,
-    currencySymbol: currency.symbol || 'ðŸ’µ',
+    currencySymbol: currency.symbol || '💵',
     
     categories: [
         {
             id: 'consumables',
             name: 'Consumables',
             description: 'One-time use items that provide temporary benefits',
-            icon: 'ðŸ¯',
+            icon: '🍯',
             itemTypes: ['consumable']
         },
         {
             id: 'upgrades',
             name: 'Upgrades',
             description: 'Permanent upgrades that enhance your abilities',
-            icon: 'âš¡',
+            icon: '⚡',
             itemTypes: ['upgrade']
         },
         {
             id: 'tools',
             name: 'Tools',
             description: 'Equipment that helps you gather resources more efficiently',
-            icon: 'â›ï¸',
+            icon: '⛏️',
             itemTypes: ['tool']
         },
         {
             id: 'roles',
             name: 'Roles',
             description: 'Special roles with unique perks',
-            icon: 'ðŸŽ­',
+            icon: '🎭',
             itemTypes: ['role']
         }
     ],
@@ -82,17 +82,17 @@ mythic: '#E74C3C'
         },
         
         emojis: {
-            currency: 'ðŸª™',
-            quantity: 'âœ–ï¸',
-            price: 'ðŸ’µ',
-            owned: 'âœ…',
-            outOfStock: 'âŒ',
+            currency: '🪙',
+            quantity: '✖️',
+            price: '💵',
+            owned: '✅',
+            outOfStock: '❌',
             
             types: {
-                consumable: 'ðŸ¯',
-                upgrade: 'âš¡',
-                tool: 'â›ï¸',
-                role: 'ðŸŽ­'
+                consumable: '🍯',
+                upgrade: '⚡',
+                tool: '⛏️',
+                role: '🎭'
             }
         }
     },
@@ -102,7 +102,7 @@ mythic: '#E74C3C'
             enabled: true,
 interval: 86400000,
 announcementChannel: null,
-            message: 'ðŸ›’ **Shop Restocked!** New items are now available!'
+            message: '🛒 **Shop Restocked!** New items are now available!'
         },
         
         sales: {
@@ -111,7 +111,7 @@ announcementChannel: null,
                 {
 day: 0,
 discount: 0.2,
-                    message: 'ðŸ”¥ **Weekend Sale!** 20% off all items!'
+                    message: '🔥 **Weekend Sale!** 20% off all items!'
                 },
             ]
         }
@@ -175,7 +175,7 @@ export function getCategoryForItem(itemType) {
         id: 'other',
         name: 'Other',
         description: 'Miscellaneous items',
-        icon: 'ðŸ“¦'
+        icon: '📦'
     };
 }
 
@@ -192,4 +192,7 @@ export function getItemsInCategory(categoryId) {
         category.itemTypes.includes(item.type)
     );
 }
+
+
+
 

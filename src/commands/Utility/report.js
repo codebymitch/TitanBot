@@ -62,7 +62,7 @@ export default {
                 });
             }
 
-            const reportEmbed = createEmbed({ title: `ðŸš¨ NEW USER REPORT: ${targetUser.tag}`, description: `**Reported By:** ${interaction.user.tag} (\`${interaction.user.id}\`)\n**Reported User:** ${targetUser.tag} (\`${targetUser.id}\`)` })
+            const reportEmbed = createEmbed({ title: `🚨 NEW USER REPORT: ${targetUser.tag}`, description: `**Reported By:** ${interaction.user.tag} (\`${interaction.user.id}\`)\n**Reported User:** ${targetUser.tag} (\`${targetUser.id}\`)` })
 .setColor(0xff0000)
                 .setThumbnail(targetUser.displayAvatarURL())
                 .addFields(
@@ -86,7 +86,7 @@ export default {
 
             await interaction.editReply({
                 embeds: [
-                    createEmbed({ title: "âœ… Report Submitted", description: `Your report against **${targetUser.tag}** has been successfully filed and sent to the moderation team. Thank you!`, }),
+                    createEmbed({ title: "✅ Report Submitted", description: `Your report against **${targetUser.tag}** has been successfully filed and sent to the moderation team. Thank you!`, }),
                 ],
             });
         } catch (error) {
@@ -102,4 +102,7 @@ export default {
         }
     },
 };
+
+
+
 

@@ -18,14 +18,14 @@ export default {
                 const pageItems = shopItems.slice(startIndex, endIndex);
 
                 const embed = new EmbedBuilder()
-                    .setTitle("ðŸ›’ Store")
+                    .setTitle("🛒 Store")
                     .setColor(0x2b2d31)
                     .setDescription(`Click a button below to instantly buy an item, or use the \`/item buy\` command.\nFor more details before purchasing, use the \`/item info\` command.`);
 
                 pageItems.forEach(item => {
                     embed.addFields({
                         name: `${item.name}`,
-                        value: `ðŸ·ï¸ **Type:** ${item.type}\n${item.description}\nðŸ’š **Price:** ${item.price}`,
+                        value: `🏷️ **Type:** ${item.type}\n${item.description}\n💚 **Price:** ${item.price}`,
                         inline: false,
                     });
                 });
@@ -56,12 +56,12 @@ export default {
                         row.addComponents(
                             new ButtonBuilder()
                                 .setCustomId('shop_prev')
-                                .setLabel('â¬…ï¸ Previous')
+                                .setLabel('⬅️ Previous')
                                 .setStyle(ButtonStyle.Secondary)
                                 .setDisabled(page === 1),
                             new ButtonBuilder()
                                 .setCustomId('shop_next')
-                                .setLabel('Next âž¡ï¸')
+                                .setLabel('Next ➡️')
                                 .setStyle(ButtonStyle.Secondary)
                                 .setDisabled(page === totalPages)
                         );
@@ -87,7 +87,7 @@ export default {
             collector.on('collect', async (buttonInteraction) => {
                 if (buttonInteraction.user.id !== interaction.user.id) {
                     await buttonInteraction.reply({
-                        content: 'âŒ You cannot use these buttons. Run `/shop` to get your own shop view.',
+                        content: '❌ You cannot use these buttons. Run `/shop` to get your own shop view.',
                         flags: 64
                     });
                     return;
@@ -117,7 +117,7 @@ export default {
 
                     if (!item) {
                         return await buttonInteraction.editReply({
-                            content: 'âŒ Item not found.'
+                            content: '❌ Item not found.'
                         });
                     }
 
@@ -168,12 +168,12 @@ export default {
 
                         await buttonInteraction.editReply({
                             embeds: [successEmbed(
-                                `âœ… Purchased **${item.name}** for **$${totalCost.toLocaleString()}**\n\n**New Balance:** $${userData.wallet.toLocaleString()}`,
-                                'ðŸ›’ Purchase Complete'
+                                `✅ Purchased **${item.name}** for **$${totalCost.toLocaleString()}**\n\n**New Balance:** $${userData.wallet.toLocaleString()}`,
+                                '🛒 Purchase Complete'
                             )]
                         });
 
-                        console.log(`âœ… User ${buttonInteraction.user.tag} purchased ${item.id} for $${totalCost}`);
+                        console.log(`✅ User ${buttonInteraction.user.tag} purchased ${item.id} for $${totalCost}`);
                     } catch (error) {
                         console.error('Purchase error:', error);
                         await buttonInteraction.editReply({
@@ -200,9 +200,13 @@ export default {
         } catch (error) {
             console.error('Shop command error:', error);
             await interaction.reply({
-                content: 'âŒ An error occurred while loading the shop.',
+                content: '❌ An error occurred while loading the shop.',
                 flags: 64
             });
         }
     },
 };
+
+
+
+

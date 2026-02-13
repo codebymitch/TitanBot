@@ -17,11 +17,11 @@ const SLUT_ACTIVITIES = [
 ];
 
 const SLUT_RESPONSES = [
-    "You had an amazing night and earned ðŸ’°",
-    "Your client was very generous! You made ðŸ’°",
-    "Business is booming! You earned ðŸ’°",
-    "That was profitable! You received ðŸ’°",
-    "Your skills paid off! You got ðŸ’°",
+    "You had an amazing night and earned 💰",
+    "Your client was very generous! You made 💰",
+    "Business is booming! You earned 💰",
+    "That was profitable! You received 💰",
+    "Your skills paid off! You got 💰",
 ];
 
 const FAILURE_RESPONSES = [
@@ -104,11 +104,11 @@ const userId = interaction.user.id;
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            `ðŸ’° ${activity.name} - Success!`,
+                            `💰 ${activity.name} - Success!`,
                             `${response} **${earnings.toLocaleString()}** coins!\n\n` +
-                            `ðŸ’³ **New Balance:** ${userData.wallet.toLocaleString()} coins\n` +
-                            `ðŸ“Š **Total Sessions:** ${userData.totalSluts}\n` +
-                            `ðŸ’µ **Total Earnings:** ${userData.totalSlutEarnings.toLocaleString()} coins`
+                            `💳 **New Balance:** ${userData.wallet.toLocaleString()} coins\n` +
+                            `📊 **Total Sessions:** ${userData.totalSluts}\n` +
+                            `💵 **Total Earnings:** ${userData.totalSlutEarnings.toLocaleString()} coins`
                         )
                     ]
                 });
@@ -123,11 +123,11 @@ const userId = interaction.user.id;
                 return interaction.editReply({
                     embeds: [
                         errorEmbed(
-                            `âŒ ${activity.name} - Failed`,
+                            `❌ ${activity.name} - Failed`,
                             `${response}\n\n` +
-                            `ðŸ’³ **Current Balance:** ${userData.wallet.toLocaleString()} coins\n` +
-                            `ðŸ“Š **Total Sessions:** ${userData.totalSluts}\n` +
-                            `âŒ **Failed Sessions:** ${userData.failedSluts}`
+                            `💳 **Current Balance:** ${userData.wallet.toLocaleString()} coins\n` +
+                            `📊 **Total Sessions:** ${userData.totalSluts}\n` +
+                            `❌ **Failed Sessions:** ${userData.failedSluts}`
                         )
                     ]
                 });
@@ -146,5 +146,8 @@ const userId = interaction.user.id;
         }
     },
 };
+
+
+
 
 

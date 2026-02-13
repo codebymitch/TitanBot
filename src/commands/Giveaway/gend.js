@@ -109,7 +109,7 @@ giveaway.winnerIds = winnerIds;
             const newRow = giveawayButtons(true);
 
             await message.edit({
-                content: "ðŸŽ‰ **GIVEAWAY ENDED** ðŸŽ‰",
+                content: "🎉 **GIVEAWAY ENDED** 🎉",
                 embeds: [newEmbed],
                 components: [newRow],
             });
@@ -151,4 +151,6 @@ giveaway.winnerIds = winnerIds;
         }
     },
 };
+
+
 

@@ -39,7 +39,7 @@ export default {
                     const unixTimestamp = Math.floor(now.getTime() / 1000);
                     
                     const embed = successEmbed(
-                        'ðŸ•’ Current Time',
+                        '🕒 Current Time',
                         `**${timezone}:** ${timeString}\n` +
                         `**Unix Timestamp:** \`${unixTimestamp}\`\n` +
                         `**ISO String:** \`${now.toISOString()}\``
@@ -56,5 +56,7 @@ export default {
         }
     },
 };
+
+
 
 

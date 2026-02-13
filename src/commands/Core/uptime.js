@@ -20,7 +20,7 @@ try {
       const uptimeStr = `${days}d, ${hours}h, ${minutes}m, ${seconds}s`;
 
       await interaction.reply({
-        embeds: [createEmbed({ title: "â±ï¸ System Uptime", description: `**${uptimeStr}**` })],
+        embeds: [createEmbed({ title: "⏱️ System Uptime", description: `**${uptimeStr}**` })],
       });
     } catch (error) {
       console.error('Uptime command error:', error);
@@ -31,5 +31,7 @@ try {
     }
   },
 };
+
+
 
 

@@ -172,17 +172,17 @@ export async function handleInteractionError(interaction, error, context = {}) {
 
     if (errorType === ErrorTypes.RATE_LIMIT) {
         embed.addFields({
-            name: "ðŸ’¡ Tip",
+            name: "💡 Tip",
             value: "Rate limits help prevent spam. Wait a moment before trying again."
         });
     } else if (errorType === ErrorTypes.PERMISSION) {
         embed.addFields({
-            name: "ðŸ”§ Need Help?",
+            name: "🔧 Need Help?",
             value: "Contact a server administrator if you believe this is an error."
         });
     } else if (errorType === ErrorTypes.CONFIGURATION) {
         embed.addFields({
-            name: "ðŸ“‹ Configuration",
+            name: "📋 Configuration",
             value: "This feature needs to be configured by a server administrator."
         });
     }
@@ -211,15 +211,15 @@ export async function handleInteractionError(interaction, error, context = {}) {
  */
 function getErrorTitle(errorType) {
     const titles = {
-        [ErrorTypes.VALIDATION]: "âŒ Invalid Input",
-        [ErrorTypes.PERMISSION]: "ðŸš« Permission Denied",
-        [ErrorTypes.CONFIGURATION]: "âš™ï¸ Configuration Error",
-        [ErrorTypes.DATABASE]: "ðŸ—„ï¸ Database Error",
-        [ErrorTypes.NETWORK]: "ðŸŒ Network Error",
-        [ErrorTypes.DISCORD_API]: "ðŸ”Œ API Error",
-        [ErrorTypes.USER_INPUT]: "ðŸ’¬ Input Error",
-        [ErrorTypes.RATE_LIMIT]: "â±ï¸ Slow Down!",
-        [ErrorTypes.UNKNOWN]: "â“ Unexpected Error"
+        [ErrorTypes.VALIDATION]: "❌ Invalid Input",
+        [ErrorTypes.PERMISSION]: "🚫 Permission Denied",
+        [ErrorTypes.CONFIGURATION]: "⚙️ Configuration Error",
+        [ErrorTypes.DATABASE]: "🗄️ Database Error",
+        [ErrorTypes.NETWORK]: "🌐 Network Error",
+        [ErrorTypes.DISCORD_API]: "🔌 API Error",
+        [ErrorTypes.USER_INPUT]: "💬 Input Error",
+        [ErrorTypes.RATE_LIMIT]: "⏱️ Slow Down!",
+        [ErrorTypes.UNKNOWN]: "❓ Unexpected Error"
     };
     
     return titles[errorType] || titles[ErrorTypes.UNKNOWN];
@@ -265,4 +265,7 @@ export default {
     withErrorHandling,
     createError
 };
+
+
+
 

@@ -24,7 +24,7 @@ class DatabaseWrapper {
             if (pgConnected) {
                 this.db = pgDb;
                 this.connectionType = 'postgresql';
-                logger.info('âœ… PostgreSQL Database initialized - using persistent database');
+                logger.info('✅ PostgreSQL Database initialized - using persistent database');
                 this.initialized = true;
                 return;
             }
@@ -36,8 +36,8 @@ class DatabaseWrapper {
         this.db = new MemoryStorage();
         this.useFallback = true;
         this.connectionType = 'memory';
-        logger.warn('âš ï¸  DATABASE DEGRADED MODE ENABLED - Using in-memory storage (data will be lost on restart)');
-        logger.warn('âš ï¸  Please check PostgreSQL connection and restart the bot when fixed');
+        logger.warn('⚠️  DATABASE DEGRADED MODE ENABLED - Using in-memory storage (data will be lost on restart)');
+        logger.warn('⚠️  Please check PostgreSQL connection and restart the bot when fixed');
         this.initialized = true;
         this.degradedModeWarningShown = true;
     }
@@ -138,10 +138,10 @@ export async function initializeDatabase() {
     try {
         logger.info("Initializing Database (PostgreSQL > Memory fallback)...");
         await db.initialize();
-        logger.info("âœ… Database initialized");
+        logger.info("✅ Database initialized");
         return { db };
     } catch (error) {
-        logger.error("âŒ Database Initialization Error:", error);
+        logger.error("❌ Database Initialization Error:", error);
         return { db };
     }
 }
@@ -764,7 +764,7 @@ export async function saveLevelingConfig(client, guildId, config) {
         await setInDb(key, config);
         
         if (process.env.NODE_ENV !== 'production') {
-            logger.debug(`ðŸ’¾ Saved leveling config to database (guild: ${guildId})`);
+            logger.debug(`💾 Saved leveling config to database (guild: ${guildId})`);
         }
         return true;
     } catch (error) {
@@ -1924,4 +1924,6 @@ formatted = formatted.substring(0, 100);
 function generateCaseId() {
     return `${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 4)}`;
 }
+
+
 

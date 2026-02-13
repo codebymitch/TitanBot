@@ -183,7 +183,7 @@ userLimit: userLimit === 0 ? undefined : userLimit,
                 
                 try {
                     await member.send({
-                        content: `âŒ Failed to create your temporary voice channel. Please contact a server administrator.`
+                        content: `❌ Failed to create your temporary voice channel. Please contact a server administrator.`
 }).catch(() => {});
                 } catch (dmError) {
                 }
@@ -237,4 +237,6 @@ userLimit: userLimit === 0 ? undefined : userLimit,
         }
     }
 };
+
+
 

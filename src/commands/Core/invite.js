@@ -13,7 +13,7 @@ try {
 
       const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`;
 
-      const embed = createEmbed({ title: "ðŸ”— Invite This Bot", description: "Click the button below to add your customized bot to a server. This link uses your bot's unique ID and requests Administrator permissions.", }).setThumbnail(interaction.client.user.displayAvatarURL());
+      const embed = createEmbed({ title: "🔗 Invite This Bot", description: "Click the button below to add your customized bot to a server. This link uses your bot's unique ID and requests Administrator permissions.", }).setThumbnail(interaction.client.user.displayAvatarURL());
 
       const inviteButton = new ButtonBuilder()
         .setLabel("Invite Bot")
@@ -32,6 +32,8 @@ try {
     }
   },
 };
+
+
 
 
 

@@ -51,7 +51,7 @@ export default {
 
                     return await interaction.editReply({
                         embeds: [errorEmbed(
-                            "â±ï¸ Slow Down!",
+                            "⏱️ Slow Down!",
                             `You're working too fast! Wait **${hours}h ${minutes}m** before working again.`
                         )]
                     });
@@ -67,12 +67,12 @@ export default {
             await setEconomyData(client, guildId, userId, userData);
 
             const embed = successEmbed(
-                "ðŸ’¼ Work Complete!",
+                "💼 Work Complete!",
                 `You worked as a **${job}** and earned **$${earned.toLocaleString()}**!`
             )
                 .addFields(
                     {
-                        name: "ðŸ’° New Balance",
+                        name: "💰 New Balance",
                         value: `$${userData.wallet.toLocaleString()}`,
                         inline: true,
                     },
@@ -93,7 +93,7 @@ export default {
             try {
                 await interaction.editReply({
                     embeds: [errorEmbed(
-                        "âŒ Error",
+                        "❌ Error",
                         "Something went wrong while processing your work request. Please try again."
                     )]
                 });
@@ -103,4 +103,7 @@ export default {
         }
     },
 };
+
+
+
 

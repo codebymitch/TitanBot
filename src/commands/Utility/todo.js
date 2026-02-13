@@ -245,9 +245,9 @@ export default {
                             return await interaction.editReply({
                                     embeds: [
                                         successEmbed(
-                                            `ðŸ“‹ **${listData.name}**\n\n` +
-                                            `ðŸ‘‘ **Owner:** ${ownerName}\n` +
-                                            `ðŸ‘¥ **Members:** ${memberList}\n\n` +
+                                            `📋 **${listData.name}**\n\n` +
+                                            `👑 **Owner:** ${ownerName}\n` +
+                                            `👥 **Members:** ${memberList}\n\n` +
                                             `*This list is currently empty. Use the "Add Task" button to add tasks!*`,
                                             `Shared List (ID: \`${listId}\`)`
                                         )
@@ -269,9 +269,9 @@ export default {
                         
                         const taskList = listData.tasks
                             .map(task => 
-                                `${task.completed ? 'âœ…' : 'ðŸ“'} #${task.id} ${task.text} ` +
+                                `${task.completed ? '✅' : '📝'} #${task.id} ${task.text} ` +
                                 `\`[${new Date(task.createdAt).toLocaleDateString()}]` +
-                                (task.completed ? ` â€¢ Completed by ${task.completedBy}` : '') + '`'
+                                (task.completed ? ` • Completed by ${task.completedBy}` : '') + '`'
                             )
                             .join('\n');
 
@@ -283,9 +283,9 @@ export default {
                         const owner = interaction.guild.members.cache.get(listData.creatorId);
                         const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
 
-                        const fullListDisplay = `ðŸ“‹ **${listData.name}**\n\n` +
-                            `ðŸ‘‘ **Owner:** ${ownerName}\n` +
-                            `ðŸ‘¥ **Members:** ${memberList}\n\n` +
+                        const fullListDisplay = `📋 **${listData.name}**\n\n` +
+                            `👑 **Owner:** ${ownerName}\n` +
+                            `👥 **Members:** ${memberList}\n\n` +
                             `**Tasks:**\n${taskList}`;
 
                         return await interaction.editReply({
@@ -389,7 +389,7 @@ export default {
 
                     const taskList = userData.tasks
                         .map(task => 
-                            `${task.completed ? 'âœ…' : 'ðŸ“'} #${task.id} ${task.text} ` +
+                            `${task.completed ? '✅' : '📝'} #${task.id} ${task.text} ` +
                             `\`[${new Date(task.createdAt).toLocaleDateString()}\``
                         )
                         .join('\n');
@@ -454,4 +454,7 @@ export default {
         }
     },
 };
+
+
+
 

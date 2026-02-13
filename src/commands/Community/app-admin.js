@@ -256,7 +256,7 @@ async function showCurrentSettings(interaction, settings) {
     embed.addFields(
         {
             name: "Status",
-            value: settings.enabled ? "âœ… Enabled" : "âŒ Disabled",
+            value: settings.enabled ? "✅ Enabled" : "❌ Disabled",
             inline: true,
         },
         {
@@ -336,12 +336,12 @@ async function handleView(interaction) {
                 .setCustomId(`app_approve_${application.id}`)
                 .setLabel("Approve")
                 .setStyle(ButtonStyle.Success)
-                .setEmoji("âœ…"),
+                .setEmoji("✅"),
             new ButtonBuilder()
                 .setCustomId(`app_deny_${application.id}`)
                 .setLabel("Deny")
                 .setStyle(ButtonStyle.Danger)
-                .setEmoji("âŒ"),
+                .setEmoji("❌"),
         );
 
         await interaction.editReply({
@@ -528,10 +528,10 @@ async function handleList(interaction) {
         const status = app.status.charAt(0).toUpperCase() + app.status.slice(1);
         const statusEmoji =
             {
-                Pending: "ðŸŸ¡",
-                Approved: "ðŸŸ¢",
-                Denied: "ðŸ”´",
-            }[status] || "âšª";
+                Pending: "🟡",
+                Approved: "🟢",
+                Denied: "🔴",
+            }[status] || "⚪";
 
         embed.addFields({
             name: `${statusEmoji} ${app.roleName} - ${app.username}`,
@@ -881,4 +881,6 @@ export async function handleApplicationReviewModal(interaction) {
         });
     }
 }
+
+
 

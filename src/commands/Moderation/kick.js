@@ -104,7 +104,7 @@ export default {
       await interaction.editReply({
         embeds: [
           successEmbed(
-            `ðŸ‘¢ **Kicked** ${targetUser.tag}\n**Reason:** ${reason}`,
+            `👢 **Kicked** ${targetUser.tag}\n**Reason:** ${reason}`,
           ),
         ],
       });
@@ -120,4 +120,6 @@ export default {
     }
   }
 };
+
+
 

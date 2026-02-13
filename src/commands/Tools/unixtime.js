@@ -12,7 +12,7 @@ export default {
                 const unixTimestamp = Math.floor(now.getTime() / 1000);
                 
                 const embed = successEmbed(
-                    'â±ï¸ Current Unix Timestamp',
+                    '⏱️ Current Unix Timestamp',
                     `**Seconds since Unix Epoch:** \`${unixTimestamp}\`\n` +
                     `**Milliseconds since Unix Epoch:** \`${now.getTime()}\`\n\n` +
                     `**Human-readable (UTC):** ${now.toUTCString()}\n` +
@@ -34,4 +34,6 @@ export default {
         }
     },
 };
+
+
 

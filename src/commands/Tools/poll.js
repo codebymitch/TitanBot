@@ -1,7 +1,7 @@
 ﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-const EMOJIS = ['1ï¸âƒ£', '2ï¸âƒ£', '3ï¸âƒ£', '4ï¸âƒ£', '5ï¸âƒ£', '6ï¸âƒ£', '7ï¸âƒ£', '8ï¸âƒ£', '9ï¸âƒ£', 'ðŸ”Ÿ'];
+const EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 const MAX_OPTIONS = 10;
 export default {
     data: new SlashCommandBuilder()
@@ -83,7 +83,7 @@ export default {
                 }
                 
                 const embed = successEmbed(
-                    `ðŸ“Š ${isAnonymous ? 'Anonymous ' : ''}Poll`,
+                    `📊 ${isAnonymous ? 'Anonymous ' : ''}Poll`,
                     description
                 );
                 
@@ -95,7 +95,7 @@ export default {
                 }
                 
                 await interaction.reply({
-                    content: 'âœ… Poll created successfully!',
+                    content: '✅ Poll created successfully!',
                     flags: MessageFlags.Ephemeral
                 });
         } catch (error) {
@@ -107,4 +107,7 @@ export default {
         }
     },
 };
+
+
+
 

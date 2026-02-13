@@ -105,14 +105,14 @@ const shopPurchaseHandler = {
       // Success message
       await interaction.editReply({
         embeds: [successEmbed(
-          `âœ… **Purchase Successful!**\n\n` +
+          `✅ **Purchase Successful!**\n\n` +
           `You bought **${quantity}x ${item.name}** for **$${totalCost.toLocaleString()}**\n\n` +
           `**New Balance:** $${userData.wallet.toLocaleString()}`,
-          'ðŸ›’ Shop Purchase'
+          '🛒 Shop Purchase'
         )],
       });
 
-      console.log(`âœ… User ${interaction.user.tag} (${userId}) purchased ${quantity}x ${item.id} for $${totalCost} in guild ${guildId}`);
+      console.log(`✅ User ${interaction.user.tag} (${userId}) purchased ${quantity}x ${item.id} for $${totalCost} in guild ${guildId}`);
 
     } catch (error) {
       console.error('Shop purchase button handler error:', error);
@@ -125,4 +125,6 @@ const shopPurchaseHandler = {
 };
 
 export { shopPurchaseHandler };
+
+
 

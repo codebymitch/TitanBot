@@ -21,7 +21,7 @@ try {
 
       if (challenger.id === opponent.id) {
         return interaction.reply({
-          content: `âš”ï¸ **${challenger.username}** can't fight themselves! That's a draw before it even starts.`,
+          content: `⚔️ **${challenger.username}** can't fight themselves! That's a draw before it even starts.`,
         });
       }
 
@@ -32,7 +32,7 @@ const damage = rand(10, 50);
 
       const log = [];
       log.push(
-        `ðŸ’¥ **${challenger.username}** challenges **${opponent.username}** to a duel! (Best of ${rounds} rounds)`,
+        `💥 **${challenger.username}** challenges **${opponent.username}** to a duel! (Best of ${rounds} rounds)`,
       );
 
       for (let i = 1; i <= rounds; i++) {
@@ -52,8 +52,8 @@ const damage = rand(10, 50);
       const outcomeText = log.join("\n");
 
       const embed = successEmbed(
-        `${outcomeText}\n\nðŸ‘‘ **${winner.username}** has defeated ${loser.username} and claims the victory!`,
-        `ðŸ† Duel Complete!`
+        `${outcomeText}\n\n👑 **${winner.username}** has defeated ${loser.username} and claims the victory!`,
+        `🏆 Duel Complete!`
       );
 
       await interaction.editReply({ embeds: [embed] });
@@ -63,4 +63,8 @@ const damage = rand(10, 50);
     }
   },
 };
+
+
+
+
 

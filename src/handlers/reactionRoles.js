@@ -136,7 +136,7 @@ export async function handleReactionRoles(interaction) {
                 await interaction.reply({
                     embeds: [
                         new EmbedBuilder()
-                            .setDescription(`âœ… Added reaction role for ${emoji} to <@&${role.id}>`)
+                            .setDescription(`✅ Added reaction role for ${emoji} to <@&${role.id}>`)
                             .setColor('#00ff00')
                     ],
                     flags: MessageFlags.Ephemeral
@@ -177,5 +177,7 @@ export function setupReactionRoleListeners(client) {
         await handleReactionRemove(client, reaction, user);
     });
 }
+
+
 
 

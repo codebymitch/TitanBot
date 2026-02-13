@@ -16,7 +16,7 @@ export default {
             await client.db.set(configKey, guildConfig);
 
             const embed = successEmbed(
-                'âœ… Ticket Limit Updated',
+                '✅ Ticket Limit Updated',
                 `Maximum tickets per user has been set to **${maxTickets}**.\n\n` +
                 `Users will now be limited to ${maxTickets} open ticket${maxTickets !== 1 ? 's' : ''} at a time.`
             );
@@ -28,4 +28,6 @@ export default {
         }
     }
 };
+
+
 

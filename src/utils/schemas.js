@@ -59,3 +59,4 @@ export function normalizeEconomyData(raw, defaults = {}) {
   return parsed.success ? parsed.data : { ...defaults, ...base };
 }
 
+

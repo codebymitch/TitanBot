@@ -12,7 +12,7 @@ try {
             if (success) {
                 await interaction.reply({
                     embeds: [successEmbed(
-                        "Birthday Removed ðŸ—‘ï¸",
+                        "Birthday Removed 🗑️",
                         "Your birthday has been successfully removed from the server."
                     )]
                 });
@@ -32,4 +32,6 @@ try {
         }
     }
 };
+
+
 

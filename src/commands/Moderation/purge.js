@@ -47,7 +47,7 @@ export default {
       const deletedCount = deleted.size;
 
       const purgeEmbed = createEmbed(
-        "ðŸ—‘ï¸ Messages Purged (Action Log)",
+        "🗑️ Messages Purged (Action Log)",
         `${deletedCount} messages were deleted by ${interaction.user}.`,
       )
 .setColor("#E67E22")
@@ -80,7 +80,7 @@ export default {
 
       await interaction.editReply({
         embeds: [
-          successEmbed(`ðŸ—‘ï¸ Deleted ${deletedCount} messages in ${channel}.`),
+          successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
         ],
 ephemeral: false,
       });
@@ -99,4 +99,6 @@ ephemeral: false,
     }
   }
 };
+
+
 
