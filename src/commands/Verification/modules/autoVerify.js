@@ -156,7 +156,7 @@ async function handleStatus(interaction, guild, client) {
         return await interaction.reply({
             embeds: [infoEmbed(
                 "Auto-Verification Status",
-                "ðŸ”´ **Status:** Disabled\n\nAuto-verification is currently disabled. Users must verify manually.\n\nUse `/autoverify enable` to enable it."
+                "🔴 **Status:** Disabled\n\nAuto-verification is currently disabled. Users must verify manually.\n\nUse `/autoverify enable` to enable it."
             )],
             flags: MessageFlags.Ephemeral
         });
@@ -178,23 +178,23 @@ async function handleStatus(interaction, guild, client) {
     }
 
     const statusEmbed = createEmbed({
-        title: "ðŸ¤– Auto-Verification Status",
+        title: "🤖 Auto-Verification Status",
         description: "Current auto-verification configuration:",
         color: "#00FF00"
     })
     .addFields(
         {
-            name: "ðŸ“Š Status",
-            value: "âœ… Enabled",
+            name: "📊 Status",
+            value: "✅ Enabled",
             inline: true
         },
         {
-            name: "ðŸŽ¯ Criteria",
+            name: "🎯 Criteria",
             value: criteriaDescription,
             inline: true
         },
         {
-            name: "ðŸ“… Account Age Requirement",
+            name: "📅 Account Age Requirement",
             value: autoVerify.accountAgeDays ? `${autoVerify.accountAgeDays} days` : "N/A",
             inline: true
         }
@@ -205,4 +205,6 @@ async function handleStatus(interaction, guild, client) {
         flags: MessageFlags.Ephemeral
     });
 }
+
+
 

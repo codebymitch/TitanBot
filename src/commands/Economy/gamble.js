@@ -64,7 +64,7 @@ export default {
             if (cloverCount > 0) {
                 winChance += CLOVER_WIN_BONUS;
                 userData.inventory["lucky_clover"] -= 1;
-                cloverMessage = `\nðŸ€ **Lucky Clover Consumed:** Your win chance was boosted to **${Math.round(winChance * 100)}%**!`;
+                cloverMessage = `\n🍀 **Lucky Clover Consumed:** Your win chance was boosted to **${Math.round(winChance * 100)}%**!`;
                 usedClover = true;
             }
 
@@ -77,14 +77,14 @@ export default {
 cashChange = amountWon;
 
                 resultEmbed = successEmbed(
-                    "ðŸŽ‰ You Won!",
+                    "🎉 You Won!",
                     `You successfully gambled and turned your **$${betAmount.toLocaleString()}** bet into **$${amountWon.toLocaleString()}**!${cloverMessage}`,
                 );
             } else {
 cashChange = -betAmount;
 
                 resultEmbed = errorEmbed(
-                    "ðŸ’” You Lost...",
+                    "💔 You Lost...",
                     `The dice rolled against you. You lost your **$${betAmount.toLocaleString()}** bet.`,
                 );
             }
@@ -97,7 +97,7 @@ userData.lastGamble = now;
             const newCash = userData.wallet;
 
             resultEmbed.addFields({
-                name: "ðŸ’µ New Cash Balance",
+                name: "💵 New Cash Balance",
                 value: `$${newCash.toLocaleString()}`,
                 inline: true,
             });
@@ -116,4 +116,7 @@ userData.lastGamble = now;
         }, { command: 'gamble' });
     },
 };
+
+
+
 

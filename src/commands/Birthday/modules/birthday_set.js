@@ -24,7 +24,7 @@ try {
                 const monthName = getMonthName(month);
                 await interaction.editReply({
                     embeds: [successEmbed(
-                        "Birthday Set! ðŸŽ‚",
+                        "Birthday Set! 🎂",
                         `Your birthday has been set to **${monthName} ${day}**!`
                     )]
                 });
@@ -41,4 +41,6 @@ try {
         }
     }
 };
+
+
 

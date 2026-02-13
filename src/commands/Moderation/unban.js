@@ -56,7 +56,7 @@ export default {
                 await interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "âœ… User Unbanned",
+                            "✅ User Unbanned",
                             `Successfully unbanned **${targetUser.tag}** from the server.\n\n**Reason:** ${reason}\n**Moderator:** ${interaction.user.tag}`
                         )
                     ]
@@ -67,4 +67,6 @@ export default {
         }
     }
 };
+
+
 

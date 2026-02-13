@@ -28,7 +28,7 @@ export default {
             await interaction.editReply({
                 embeds: [
                     successEmbed(
-                        "âœ… Configuration Saved",
+                        "✅ Configuration Saved",
                         `The **Premium Shop Role** has been successfully set to ${role.toString()}.`,
                     ),
                 ],
@@ -46,4 +46,6 @@ export default {
         }
     }
 };
+
+
 

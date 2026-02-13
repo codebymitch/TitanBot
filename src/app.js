@@ -84,16 +84,16 @@ class TitanBot extends Client {
       const dbStatus = this.db.getStatus();
       if (dbStatus.isDegraded) {
         logger.warn('');
-        logger.warn('â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—');
-        logger.warn('â•‘ âš ï¸  DATABASE RUNNING IN DEGRADED MODE                 â•‘');
-        logger.warn('â•‘                                                       â•‘');
-        logger.warn('â•‘ Connection: In-Memory Storage (PostgreSQL unavailable)â•‘');
-        logger.warn('â•‘ Data Persistence: DISABLED - data lost on restart    â•‘');
-        logger.warn('â•‘ Action Required: Fix PostgreSQL and restart bot      â•‘');
-        logger.warn('â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+        logger.warn('╔═══════════════════════════════════════════════════════╗');
+        logger.warn('║ ⚠️  DATABASE RUNNING IN DEGRADED MODE                 ║');
+        logger.warn('║                                                       ║');
+        logger.warn('║ Connection: In-Memory Storage (PostgreSQL unavailable)║');
+        logger.warn('║ Data Persistence: DISABLED - data lost on restart    ║');
+        logger.warn('║ Action Required: Fix PostgreSQL and restart bot      ║');
+        logger.warn('╚═══════════════════════════════════════════════════════╝');
         logger.warn('');
       } else {
-        logger.info(`âœ… Database Status: ${dbStatus.connectionType} (fully operational)`);
+        logger.info(`✅ Database Status: ${dbStatus.connectionType} (fully operational)`);
       }
       
       logger.info('Starting web server...');
@@ -215,7 +215,7 @@ class TitanBot extends Client {
     });
 
     app.listen(port, () => {
-      logger.info(`âœ… Web Server running on port ${port}`);
+      logger.info(`✅ Web Server running on port ${port}`);
       logger.info(`   Health: http://localhost:${port}/health`);
       logger.info(`   Ready: http://localhost:${port}/ready`);
     });
@@ -341,14 +341,14 @@ const handlers = ['events', 'interactions'];
    */
   async shutdown(reason = 'UNKNOWN') {
     logger.info(`\n${'='.repeat(60)}`);
-    logger.info(`ðŸ›‘ Graceful Shutdown Initiated (${reason})`);
+    logger.info(`🛑 Graceful Shutdown Initiated (${reason})`);
     logger.info(`${'='.repeat(60)}`);
 
     try {
       // Stop all cron jobs
       logger.info('Stopping cron jobs...');
       cron.getTasks().forEach(task => task.stop());
-      logger.info('âœ… Cron jobs stopped');
+      logger.info('✅ Cron jobs stopped');
 
       // Close database connection
       if (this.db && this.db.db) {
@@ -356,7 +356,7 @@ const handlers = ['events', 'interactions'];
         try {
           if (this.db.db.pool) {
             await this.db.db.pool.end();
-            logger.info('âœ… Database connection closed');
+            logger.info('✅ Database connection closed');
           }
         } catch (error) {
           logger.warn('Error closing database pool:', error.message);
@@ -367,10 +367,10 @@ const handlers = ['events', 'interactions'];
       logger.info('Destroying Discord client...');
       if (this.isReady()) {
         await this.destroy();
-        logger.info('âœ… Discord client destroyed');
+        logger.info('✅ Discord client destroyed');
       }
 
-      logger.info('âœ… Graceful shutdown complete');
+      logger.info('✅ Graceful shutdown complete');
       process.exit(0);
     } catch (error) {
       logger.error('Error during graceful shutdown:', error);
@@ -408,3 +408,6 @@ try {
 }
 
 export default TitanBot;
+
+
+

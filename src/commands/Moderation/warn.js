@@ -72,7 +72,7 @@ export default {
                 await interaction.editReply({
                     embeds: [
                         successEmbed(
-                            `âš ï¸ **Warned** ${target.tag}`,
+                            `⚠️ **Warned** ${target.tag}`,
                             `**Reason:** ${reason}\n**Total Warns:** ${totalWarns}`,
                         ),
                     ],
@@ -83,4 +83,6 @@ export default {
         }
     }
 };
+
+
 

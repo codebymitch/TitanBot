@@ -96,9 +96,9 @@ export async function handleUpdate(interaction, client) {
 
         const finalChannel = guild.channels.cache.get(updatedCounter.channelId);
         const typeEmoji = {
-            members: "ðŸ‘¥",
-            bots: "ðŸ¤–", 
-            members_only: "ðŸ‘¤"
+            members: "👥",
+            bots: "🤖", 
+            members_only: "👤"
         };
 
         const typeDisplay = {
@@ -109,14 +109,14 @@ export async function handleUpdate(interaction, client) {
 
         const changes = [];
         if (newType && newType !== oldType) {
-            changes.push(`**Type:** ${typeEmoji[oldType]} ${typeDisplay[oldType]} â†’ ${typeEmoji[newType]} ${typeDisplay[newType]}`);
+            changes.push(`**Type:** ${typeEmoji[oldType]} ${typeDisplay[oldType]} → ${typeEmoji[newType]} ${typeDisplay[newType]}`);
         }
         if (newChannel && newChannel.id !== oldChannelId) {
-            changes.push(`**Channel:** ${oldChannel} â†’ ${finalChannel}`);
+            changes.push(`**Channel:** ${oldChannel} → ${finalChannel}`);
         }
 
         await interaction.editReply({
-            embeds: [successEmbed(`âœ… **Counter Updated Successfully!**\n\n**Counter ID:** \`${counterId}\`\n\n${changes.join('\n')}\n\n**New Settings:**\n**Type:** ${typeEmoji[updatedCounter.type]} ${typeDisplay[updatedCounter.type]}\n**Channel:** ${finalChannel}\n**Channel Name:** ${finalChannel.name}\n\nThe counter will automatically update every 15 minutes.`)]
+            embeds: [successEmbed(`✅ **Counter Updated Successfully!**\n\n**Counter ID:** \`${counterId}\`\n\n${changes.join('\n')}\n\n**New Settings:**\n**Type:** ${typeEmoji[updatedCounter.type]} ${typeDisplay[updatedCounter.type]}\n**Channel:** ${finalChannel}\n**Channel Name:** ${finalChannel.name}\n\nThe counter will automatically update every 15 minutes.`)]
         });
 
     } catch (error) {
@@ -126,4 +126,6 @@ export async function handleUpdate(interaction, client) {
         );
     }
 }
+
+
 

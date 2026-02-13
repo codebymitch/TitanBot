@@ -175,7 +175,7 @@ const panelMessage = interaction.options.getString("panel_message") || "Click th
 const dmOnClose = interaction.options.getBoolean("dm_on_close") !== false;
 
             const setupEmbed = createEmbed({ 
-                title: "ðŸŽ« Support Tickets", 
+                title: "🎫 Support Tickets", 
 description: panelMessage,
                 color: "#3498DB"
             });
@@ -185,7 +185,7 @@ description: panelMessage,
                     .setCustomId("create_ticket")
 .setLabel(buttonLabel)
                     .setStyle(ButtonStyle.Primary)
-                    .setEmoji("ðŸ“©"),
+                    .setEmoji("📩"),
             );
 
             try {
@@ -242,7 +242,7 @@ description: panelMessage,
                 });
 
                 const logEmbed = createEmbed({
-                    title: "ðŸ”§ Ticket System Setup (Configuration Log)",
+                    title: "🔧 Ticket System Setup (Configuration Log)",
                     description: `The ticket panel was set up in ${panelChannel} by ${interaction.user}.`,
                     color: "#F39C12"
                 })
@@ -314,4 +314,6 @@ description: panelMessage,
         }
     }
 };
+
+
 

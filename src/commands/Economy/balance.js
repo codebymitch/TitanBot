@@ -22,7 +22,7 @@ export default {
             if (targetUser.bot) {
                 return await interaction.reply({
                     embeds: [errorEmbed(
-                        "âŒ Invalid Target",
+                        "❌ Invalid Target",
                         "Bots don't have an economy balance."
                     )],
                     flags: MessageFlags.Ephemeral
@@ -36,22 +36,22 @@ export default {
             const bank = typeof userData.bank === 'number' ? userData.bank : 0;
 
             const embed = createEmbed({
-                title: `ðŸ’° ${targetUser.username}'s Balance`,
+                title: `💰 ${targetUser.username}'s Balance`,
                 description: `Here is the current financial status for ${targetUser.username}.`,
             })
                 .addFields(
                     {
-                        name: "ðŸ’µ Cash",
+                        name: "💵 Cash",
                         value: `$${wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "ðŸ¦ Bank",
+                        name: "🏦 Bank",
                         value: `$${bank.toLocaleString()} / $${maxBank.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "ðŸ’Ž Total",
+                        name: "💎 Total",
                         value: `$${(wallet + bank).toLocaleString()}`,
                         inline: true,
                     }
@@ -67,7 +67,7 @@ export default {
             try {
                 await interaction.reply({
                     embeds: [errorEmbed(
-                        "âŒ Error",
+                        "❌ Error",
                         "Something went wrong while checking balance. Please try again."
                     )],
                     flags: MessageFlags.Ephemeral
@@ -78,4 +78,7 @@ export default {
         }
     },
 };
+
+
+
 

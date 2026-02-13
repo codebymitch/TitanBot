@@ -45,7 +45,7 @@ const channel = interaction.channel;
             });
 
             const logEmbed = createEmbed({
-                title: "ðŸ”’ Ticket Closed (Audit Log)",
+                title: "🔒 Ticket Closed (Audit Log)",
                 description: `${channel} was closed by ${interaction.user}.`,
                 color: "#FF0000",
                 fields: [
@@ -87,4 +87,6 @@ const channel = interaction.channel;
         }
     },
 };
+
+
 

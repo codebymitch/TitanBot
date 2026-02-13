@@ -60,7 +60,7 @@ try {
       const modifierText = modifier !== 0 ? ` + (${modifier})` : "";
 
       const embed = successEmbed(
-        `ðŸŽ² Rolling ${numDice}d${numSides}${modifier !== 0 ? match[3] : ""}`,
+        `🎲 Rolling ${numDice}d${numSides}${modifier !== 0 ? match[3] : ""}`,
         `${resultsDetail}**Total Roll:** ${totalRoll}${modifierText} = **${finalTotal}**`,
       );
 
@@ -71,4 +71,6 @@ try {
     }
   },
 };
+
+
 

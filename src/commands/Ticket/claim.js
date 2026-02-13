@@ -37,7 +37,7 @@ const channel = interaction.channel;
             });
 
             const logEmbed = createEmbed({
-                title: "âœ… Ticket Claimed (Audit Log)",
+                title: "✅ Ticket Claimed (Audit Log)",
                 description: `${interaction.user} claimed ticket ${channel}.`,
                 color: "#00FF00",
                 fields: [
@@ -77,4 +77,6 @@ const channel = interaction.channel;
         }
     },
 };
+
+
 

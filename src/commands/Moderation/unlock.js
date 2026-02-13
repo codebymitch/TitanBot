@@ -59,7 +59,7 @@ export default {
             );
 
             const unlockEmbed = createEmbed(
-                "ðŸ”“ Channel Unlocked (Action Log)",
+                "🔓 Channel Unlocked (Action Log)",
                 `${channel} has been unlocked by ${interaction.user}.`,
             )
 .setColor("#2ECC71")
@@ -93,7 +93,7 @@ export default {
             await interaction.editReply({
                 embeds: [
                     successEmbed(
-                        `ðŸ”“ **Channel Unlocked**`,
+                        `🔓 **Channel Unlocked**`,
                         `${channel} is now unlocked. You may speak now.`,
                     ),
                 ],
@@ -110,4 +110,6 @@ export default {
         }
     }
 };
+
+
 

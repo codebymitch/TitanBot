@@ -16,11 +16,11 @@ const currentSetting = guildConfig.dmOnClose !== false;
             await client.db.set(configKey, guildConfig);
 
             const embed = successEmbed(
-                'âœ… DM Notification Setting Updated',
+                '✅ DM Notification Setting Updated',
                 `DM notifications when tickets are closed: **${guildConfig.dmOnClose ? 'Enabled' : 'Disabled'}**\n\n` +
                 (guildConfig.dmOnClose 
-                    ? 'ðŸ“¬ Users will receive a DM when their ticket is closed.' 
-                    : 'ðŸ“­ Users will NOT receive a DM when their ticket is closed.')
+                    ? '📬 Users will receive a DM when their ticket is closed.' 
+                    : '📭 Users will NOT receive a DM when their ticket is closed.')
             );
 
             await interaction.editReply({ embeds: [embed] });
@@ -30,4 +30,7 @@ const currentSetting = guildConfig.dmOnClose !== false;
         }
     }
 };
+
+
+
 

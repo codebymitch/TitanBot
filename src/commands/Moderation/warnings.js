@@ -31,7 +31,7 @@ export default {
                         embeds: [
                             createEmbed({ 
                                 title: `Warnings: ${target.tag}`, 
-                                description: "âœ… This user has no recorded warnings." 
+                                description: "✅ This user has no recorded warnings." 
                             }).setColor("#2ECC71"),
                         ],
                     });
@@ -80,4 +80,6 @@ export default {
         }
     }
 };
+
+
 

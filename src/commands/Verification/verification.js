@@ -137,7 +137,7 @@ async function handleSetup(interaction, guild, client) {
     await interaction.deferReply();
 
     const verifyEmbed = createEmbed({
-        title: "âœ… Server Verification",
+        title: "✅ Server Verification",
         description: message,
         color: "#00FF00"
     });
@@ -147,7 +147,7 @@ async function handleSetup(interaction, guild, client) {
             .setCustomId("verify_user")
             .setLabel(buttonText)
             .setStyle(ButtonStyle.Success)
-            .setEmoji("âœ…")
+            .setEmoji("✅")
     );
 
     const verifyMessage = await verificationChannel.send({
@@ -214,7 +214,7 @@ async function handleVerify(interaction, guild, client) {
     
     await interaction.reply({
         embeds: [MessageTemplates.SUCCESS.ACTION_COMPLETE(
-            `You have been verified and given the **${verifiedRole.name}** role! Welcome to the server! ðŸŽ‰`
+            `You have been verified and given the **${verifiedRole.name}** role! Welcome to the server! 🎉`
         )],
         flags: MessageFlags.Ephemeral
     });
@@ -313,7 +313,7 @@ async function handleStatus(interaction, guild, client) {
         return await interaction.reply({
             embeds: [infoEmbed(
                 "Verification Status",
-                "ðŸ”´ **Status:** Disabled\n\nThe verification system is not currently enabled on this server.\n\nUse `/verification setup` to enable it."
+                "🔴 **Status:** Disabled\n\nThe verification system is not currently enabled on this server.\n\nUse `/verification setup` to enable it."
             )],
             flags: MessageFlags.Ephemeral
         });
@@ -323,33 +323,33 @@ async function handleStatus(interaction, guild, client) {
     const verifiedRole = guild.roles.cache.get(guildConfig.verification.roleId);
 
     const statusEmbed = createEmbed({
-        title: "âœ… Verification System Status",
+        title: "✅ Verification System Status",
         description: "Current verification system configuration:",
         color: "#00FF00"
     })
     .addFields(
         {
-            name: "ðŸ“¢ Verification Channel",
+            name: "📢 Verification Channel",
             value: verificationChannel ? verificationChannel.toString() : "Not found",
             inline: true
         },
         {
-            name: "ðŸ·ï¸ Verified Role",
+            name: "🏷️ Verified Role",
             value: verifiedRole ? verifiedRole.toString() : "Not found",
             inline: true
         },
         {
-            name: "ðŸ”˜ Button Text",
+            name: "🔘 Button Text",
             value: guildConfig.verification.buttonText || "Verify",
             inline: true
         },
         {
-            name: "ðŸ“ Custom Message",
-            value: guildConfig.verification.message ? "âœ… Configured" : "âŒ Not set",
+            name: "📝 Custom Message",
+            value: guildConfig.verification.message ? "✅ Configured" : "❌ Not set",
             inline: true
         },
         {
-            name: "ðŸ‘¥ Verified Users",
+            name: "👥 Verified Users",
             value: verifiedRole ? `${verifiedRole.members.size} users` : "Unknown",
             inline: true
         }
@@ -360,5 +360,7 @@ async function handleStatus(interaction, guild, client) {
         flags: MessageFlags.Ephemeral
     });
 }
+
+
 
 

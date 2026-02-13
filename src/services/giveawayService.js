@@ -56,7 +56,7 @@ export async function checkGiveaways(client) {
         const embed = message.embeds[0]?.data || {};
         const endedEmbed = {
           ...embed,
-          title: 'ðŸŽ‰ Giveaway Ended!',
+          title: '🎉 Giveaway Ended!',
           fields: [
             { name: 'Winners', value: winnerMentions, inline: true },
             { name: 'Entries', value: participants.length.toString(), inline: true },
@@ -82,7 +82,7 @@ export async function checkGiveaways(client) {
         }
 
         if (winners.length > 0) {
-          const winnerAnnouncement = `ðŸŽ‰ Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**!`;
+          const winnerAnnouncement = `🎉 Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**!`;
           await channel.send({ content: winnerAnnouncement });
         }
 
@@ -95,4 +95,6 @@ export async function checkGiveaways(client) {
     logger.error('Error checking giveaways:', error);
   }
 }
+
+
 

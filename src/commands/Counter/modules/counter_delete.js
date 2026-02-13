@@ -42,8 +42,8 @@ export async function handleDelete(interaction, client) {
         const channel = guild.channels.cache.get(counterToDelete.channelId);
 
         const embed = createEmbed({
-            title: "âš ï¸ Delete Counter & Channel",
-            description: `Are you sure you want to delete this counter and its channel?\n\n**ID:** \`${counterToDelete.id}\`\n**Type:** ${getCounterTypeDisplay(counterToDelete.type)}\n**Channel:** ${channel || 'Deleted Channel'}\n\nâš ï¸ **The channel will be permanently deleted!**`,
+            title: "⚠️ Delete Counter & Channel",
+            description: `Are you sure you want to delete this counter and its channel?\n\n**ID:** \`${counterToDelete.id}\`\n**Type:** ${getCounterTypeDisplay(counterToDelete.type)}\n**Channel:** ${channel || 'Deleted Channel'}\n\n⚠️ **The channel will be permanently deleted!**`,
             color: 0xFF0000
         });
 
@@ -76,7 +76,7 @@ time: 30000,
                 } else if (i.customId === `cancel_delete_${counterToDelete.id}`) {
                     await i.update({
                         embeds: [createEmbed({ 
-                            title: "âŒ Cancelled", 
+                            title: "❌ Cancelled", 
                             description: "Counter deletion cancelled.",
                             color: 0xFF0000
                         })],
@@ -92,7 +92,7 @@ time: 30000,
             if (collected.size === 0) {
                 await interaction.editReply({
                     embeds: [createEmbed({ 
-                        title: "âŒ Cancelled", 
+                        title: "❌ Cancelled", 
                         description: "Counter deletion cancelled - no confirmation received.",
                         color: 0xFF0000
                     })],
@@ -143,7 +143,7 @@ async function performDeletion(interaction, client, guild, counter) {
             }
         }
 
-        let message = `âœ… **Counter Deleted Successfully!**\n\n**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}`;
+        let message = `✅ **Counter Deleted Successfully!**\n\n**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}`;
         
         if (channelDeleted) {
             message += `\n**Channel:** ${channel.name} (deleted)`;
@@ -173,10 +173,12 @@ async function performDeletion(interaction, client, guild, counter) {
  */
 function getCounterTypeDisplay(type) {
     const types = {
-        members: "ðŸ‘¥ Members",
-        bots: "ðŸ¤– Bots",
-        members_only: "ðŸ‘¤ Humans"
+        members: "👥 Members",
+        bots: "🤖 Bots",
+        members_only: "👤 Humans"
     };
-    return types[type] || "â“ Unknown";
+    return types[type] || "❓ Unknown";
 }
+
+
 

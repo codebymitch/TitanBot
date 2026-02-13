@@ -126,7 +126,7 @@ export default {
                     .map((id) => `<@${id}>`)
                     .join(", ");
                 await channel.send({
-                    content: `ðŸŽ‰ **GIVEAWAY REROLL** ðŸŽ‰ New winners for **${giveaway.prize}**: ${winnerMentions}!`,
+                    content: `🎉 **GIVEAWAY REROLL** 🎉 New winners for **${giveaway.prize}**: ${winnerMentions}!`,
                 });
                 return interaction.editReply({
                     embeds: [
@@ -149,7 +149,7 @@ giveaway.winnerIds = newWinnerIds;
 const newRow = giveawayButtons(true);
 
             await message.edit({
-                content: "ðŸ”„ **GIVEAWAY REROLLED** ðŸ”„",
+                content: "🔄 **GIVEAWAY REROLLED** 🔄",
                 embeds: [newEmbed],
                 components: [newRow],
             });
@@ -158,7 +158,7 @@ const newRow = giveawayButtons(true);
                 .map((id) => `<@${id}>`)
                 .join(", ");
             await channel.send({
-                content: `ðŸ”„ **REROLL WINNERS** ðŸ”„ CONGRATULATIONS ${winnerMentions}! You are the new winner(s) for the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
+                content: `🔄 **REROLL WINNERS** 🔄 CONGRATULATIONS ${winnerMentions}! You are the new winner(s) for the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
             });
 
             return interaction.editReply({
@@ -182,4 +182,6 @@ const newRow = giveawayButtons(true);
         }
     },
 };
+
+
 

@@ -54,7 +54,7 @@ try {
             const expression = interaction.options.getString("expression");
 
             if (
-                !/^[0-9+\-*/.()^%! ,<>=&|~?:\[\]{}a-zâˆšÏ€âˆžÂ°]+$/i.test(expression)
+                !/^[0-9+\-*/.()^%! ,<>=&|~?:\[\]{}a-z√π∞°]+$/i.test(expression)
             ) {
                 return interaction.reply({
                     embeds: [
@@ -147,11 +147,11 @@ try {
                         .setStyle(ButtonStyle.Primary),
                     new ButtonBuilder()
                         .setCustomId(`calc_${interaction.id}_multiply`)
-                        .setLabel("Ã—")
+                        .setLabel("×")
                         .setStyle(ButtonStyle.Primary),
                     new ButtonBuilder()
                         .setCustomId(`calc_${interaction.id}_divide`)
-                        .setLabel("Ã·")
+                        .setLabel("÷")
                         .setStyle(ButtonStyle.Primary),
                     new ButtonBuilder()
                         .setCustomId(`calc_${interaction.id}_history`)
@@ -160,7 +160,7 @@ try {
                 );
 
                 const embed = successEmbed(
-                    "ðŸ§® Calculation Result",
+                    "🧮 Calculation Result",
                     `**Expression:** \`${expression.replace(/`/g, "\`")}\`\n` +
                         `**Result:** \`${formattedResult}\`\n\n` +
                         `*Use the buttons below to perform operations with the result.*`,
@@ -210,7 +210,7 @@ const BUTTON_TIMEOUT = 300000;
                                 .join("\n\n");
 
                             await i.followUp({
-                                content: `ðŸ“œ **Your Calculation History**\n\n${historyText}`,
+                                content: `📜 **Your Calculation History**\n\n${historyText}`,
                                 flags: ["Ephemeral"],
                             });
                             return;
@@ -306,7 +306,7 @@ time: 300000,
                                 }
 
                                 const updatedEmbed = successEmbed(
-                                    "ðŸ§® Calculation Result",
+                                    "🧮 Calculation Result",
                                     `**Expression:** \`${newExpression.replace(/`/g, "\`")}\`\n` +
                                         `**Result:** \`${formattedNewResult}\`\n\n` +
                                         `*Use the buttons below to perform operations with the result.*`,
@@ -365,7 +365,7 @@ time: 300000,
                             .editReply({
                                 components: [disabledRow],
                                 content:
-                                    "â±ï¸ This calculator has expired. Use the command again to perform more calculations.",
+                                    "⏱️ This calculator has expired. Use the command again to perform more calculations.",
                             })
                             .catch(console.error);
                     } else {
@@ -423,4 +423,8 @@ time: 300000,
         }
     },
 };
+
+
+
+
 

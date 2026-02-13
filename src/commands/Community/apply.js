@@ -153,7 +153,7 @@ export async function handleApplicationModal(interaction) {
             const logChannel = interaction.guild.channels.cache.get(settings.logChannelId);
             if (logChannel) {
                 const logEmbed = createEmbed({
-                    title: 'ðŸ“ New Application',
+                    title: '📝 New Application',
                     description: `**User:** <@${interaction.user.id}> (${interaction.user.tag})\n` +
                         `**Application:** ${applicationRole.name}\n` +
                         `**Role:** ${role.name}\n` +
@@ -345,4 +345,6 @@ async function handleStatus(interaction) {
         return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
     }
 }
+
+
 

@@ -67,7 +67,7 @@ export async function getLeaderboard(client, guildId, limit = 10) {
 
 export function createLeaderboardEmbed(leaderboard, guild) {
   const embed = new EmbedBuilder()
-    .setTitle(`ðŸ† ${guild.name} Leaderboard`)
+    .setTitle(`🏆 ${guild.name} Leaderboard`)
     .setColor('#2ecc71')
     .setTimestamp();
     
@@ -80,7 +80,7 @@ export function createLeaderboardEmbed(leaderboard, guild) {
   const rest = leaderboard.slice(3);
   
   const top3Text = top3.map((user, index) => {
-    const medal = ['ðŸ¥‡', 'ðŸ¥ˆ', 'ðŸ¥‰'][index];
+    const medal = ['🥇', '🥈', '🥉'][index];
     return `${medal} **#${user.rank}** ${user.username} - Level ${user.level} (${user.totalXp} XP)`;
   }).join('\n');
   
@@ -148,4 +148,6 @@ export async function saveLevelingConfig(client, guildId, config) {
     throw error;
   }
 }
+
+
 

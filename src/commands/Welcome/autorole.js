@@ -38,7 +38,7 @@ const { options, guild, client } = interaction;
             
             if (role.position >= guild.members.me.roles.highest.position) {
                 return interaction.reply({
-                    content: "âŒ I can't assign roles that are higher than my highest role.",
+                    content: "❌ I can't assign roles that are higher than my highest role.",
                     flags: ["Ephemeral"]
                 });
             }
@@ -49,7 +49,7 @@ const { options, guild, client } = interaction;
                 
                 if (autoRoles.has(role.id)) {
                     return interaction.editReply({
-                        content: `âŒ The role ${role} is already set to be auto-assigned.`,
+                        content: `❌ The role ${role} is already set to be auto-assigned.`,
                         flags: ["Ephemeral"]
                     });
                 }
@@ -61,12 +61,12 @@ const { options, guild, client } = interaction;
                 });
 
                 await interaction.editReply({
-                    content: `âœ… Added ${role} to auto-assigned roles.`,
+                    content: `✅ Added ${role} to auto-assigned roles.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.editReply({
-                    content: 'âŒ An error occurred while adding the role.',
+                    content: '❌ An error occurred while adding the role.',
                     flags: ["Ephemeral"]
                 });
             }
@@ -81,7 +81,7 @@ const { options, guild, client } = interaction;
                 
                 if (!autoRoles.has(role.id)) {
                     return interaction.editReply({
-                        content: `âŒ The role ${role} is not set to be auto-assigned.`,
+                        content: `❌ The role ${role} is not set to be auto-assigned.`,
                         flags: ["Ephemeral"]
                     });
                 }
@@ -93,12 +93,12 @@ const { options, guild, client } = interaction;
                 });
 
                 await interaction.editReply({
-                    content: `âœ… Removed ${role} from auto-assigned roles.`,
+                    content: `✅ Removed ${role} from auto-assigned roles.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.editReply({
-                    content: 'âŒ An error occurred while removing the role.',
+                    content: '❌ An error occurred while removing the role.',
                     flags: ["Ephemeral"]
                 });
             }
@@ -111,7 +111,7 @@ const { options, guild, client } = interaction;
 
                 if (autoRoles.length === 0) {
                     return interaction.editReply({
-                        content: 'â„¹ï¸ No roles are set to be auto-assigned.',
+                        content: 'ℹ️ No roles are set to be auto-assigned.',
                         flags: ["Ephemeral"]
                     });
                 }
@@ -138,7 +138,7 @@ const { options, guild, client } = interaction;
 
                 if (validRoles.length === 0) {
                     return interaction.editReply({
-                        content: 'â„¹ï¸ No valid auto-assigned roles found. Any invalid roles have been removed.',
+                        content: 'ℹ️ No valid auto-assigned roles found. Any invalid roles have been removed.',
                         flags: ["Ephemeral"]
                     });
                 }
@@ -146,7 +146,7 @@ const { options, guild, client } = interaction;
                 const embed = new EmbedBuilder()
 .setColor(0x0099ff)
                     .setTitle('Auto-Assigned Roles')
-                    .setDescription(validRoles.map(r => `â€¢ ${r}`).join('\n'))
+                    .setDescription(validRoles.map(r => `• ${r}`).join('\n'))
                     .setFooter({ text: `Total: ${validRoles.length} role(s)` });
 
                 await interaction.editReply({
@@ -156,11 +156,13 @@ const { options, guild, client } = interaction;
 
             } catch (error) {
                 await interaction.editReply({
-                    content: 'âŒ An error occurred while listing auto-assigned roles.',
+                    content: '❌ An error occurred while listing auto-assigned roles.',
                     flags: ["Ephemeral"]
                 });
             }
         }
     },
 };
+
+
 

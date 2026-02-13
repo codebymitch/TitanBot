@@ -19,12 +19,12 @@ export default {
             const openTicketCount = ticketChannels.size;
 
             const embed = infoEmbed(
-                `ðŸŽ« Ticket Limit Check: ${user.tag}`,
+                `🎫 Ticket Limit Check: ${user.tag}`,
                 `**Open Tickets:** ${openTicketCount}/${maxTickets}\n` +
                 `**Remaining:** ${Math.max(0, maxTickets - openTicketCount)}\n\n` +
                 (openTicketCount >= maxTickets 
-                    ? 'âš ï¸ This user has reached their ticket limit.' 
-                    : 'âœ… This user can create more tickets.')
+                    ? '⚠️ This user has reached their ticket limit.' 
+                    : '✅ This user can create more tickets.')
             );
 
             await interaction.editReply({ embeds: [embed] });
@@ -34,4 +34,6 @@ export default {
         }
     }
 };
+
+
 

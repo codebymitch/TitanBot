@@ -47,7 +47,7 @@ export default {
       );
 
       const lockEmbed = createEmbed(
-        "ðŸ”’ Channel Locked (Action Log)",
+        "🔒 Channel Locked (Action Log)",
         `${channel} has been locked down by ${interaction.user}.`,
       )
 .setColor("#CC00CC")
@@ -78,7 +78,7 @@ export default {
       await interaction.editReply({
         embeds: [
           successEmbed(
-            `ðŸ”’ **Channel Locked**`,
+            `🔒 **Channel Locked**`,
             `${channel} is now locked down. No one can speak here now.`,
           ),
         ],
@@ -95,4 +95,6 @@ export default {
     }
   }
 };
+
+
 

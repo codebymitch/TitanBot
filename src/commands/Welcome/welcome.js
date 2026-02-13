@@ -61,12 +61,12 @@ const { options, guild, client } = interaction;
 
                 const embed = new EmbedBuilder()
 .setColor(0x00ff00)
-                    .setTitle('âœ… Welcome System Configured')
+                    .setTitle('✅ Welcome System Configured')
                     .setDescription(`Welcome messages will now be sent to ${channel}`)
                     .addFields(
                         { name: 'Message Preview', value: previewMessage },
-                        { name: 'Ping User', value: ping ? 'âœ… Yes' : 'âŒ No' },
-                        { name: 'Status', value: 'âœ… Enabled' }
+                        { name: 'Ping User', value: ping ? '✅ Yes' : '❌ No' },
+                        { name: 'Status', value: '✅ Enabled' }
                     )
                     .setFooter({ text: 'Tip: Use /welcome toggle to enable/disable welcome messages' });
 
@@ -77,7 +77,7 @@ const { options, guild, client } = interaction;
                 await interaction.editReply({ embeds: [embed] });
             } catch (error) {
                 await interaction.editReply({ 
-                    content: 'âŒ An error occurred while setting up the welcome system.', 
+                    content: '❌ An error occurred while setting up the welcome system.', 
                     flags: ["Ephemeral"] 
                 });
             }
@@ -93,16 +93,18 @@ const { options, guild, client } = interaction;
                 });
 
                 await interaction.editReply({
-                    content: `âœ… Welcome messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
+                    content: `✅ Welcome messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.editReply({ 
-                    content: 'âŒ An error occurred while toggling welcome messages.', 
+                    content: '❌ An error occurred while toggling welcome messages.', 
                     flags: ["Ephemeral"] 
                 });
             }
         }
     },
 };
+
+
 

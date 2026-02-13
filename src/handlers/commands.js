@@ -47,3 +47,4 @@ export default async (client) => {
     logger.error('Error loading commands:', error);
   }
 };
+

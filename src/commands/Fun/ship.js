@@ -56,11 +56,11 @@ const score = stringToHash(combination) % 101;
       }
 
       const progressBar =
-        "â–ˆ".repeat(Math.floor(score / 10)) +
-        "â–‘".repeat(10 - Math.floor(score / 10));
+        "█".repeat(Math.floor(score / 10)) +
+        "░".repeat(10 - Math.floor(score / 10));
 
       const embed = successEmbed(
-        `ðŸ’– Ship Score: ${name1} vs ${name2}`,
+        `💖 Ship Score: ${name1} vs ${name2}`,
         `Compatibility: **${score}%**\n\n\`${progressBar}\`\n\n*${description}*`,
       );
 
@@ -71,4 +71,7 @@ const score = stringToHash(combination) % 101;
     }
   },
 };
+
+
+
 

@@ -14,11 +14,11 @@ export default {
                 .setDescription("The priority level for the ticket.")
                 .setRequired(true)
                 .addChoices(
-                    { name: "ðŸ”´ Urgent", value: "urgent" },
-                    { name: "ðŸŸ  High", value: "high" },
-                    { name: "ðŸŸ¡ Medium", value: "medium" },
-                    { name: "ðŸŸ¢ Low", value: "low" },
-                    { name: "âšª None", value: "none" },
+                    { name: "🔴 Urgent", value: "urgent" },
+                    { name: "🟠 High", value: "high" },
+                    { name: "🟡 Medium", value: "medium" },
+                    { name: "🟢 Low", value: "low" },
+                    { name: "⚪ None", value: "none" },
                 ),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
@@ -52,7 +52,7 @@ const priorityLevel = interaction.options.getString("level");
             });
 
             const logEmbed = createEmbed({
-                title: "ðŸ“Š Priority Updated (Audit Log)",
+                title: "📊 Priority Updated (Audit Log)",
                 description: `${interaction.user} updated ticket priority to **${priorityLevel.toUpperCase()}**.`,
                 color: "#F39C12",
                 fields: [
@@ -98,4 +98,7 @@ const priorityLevel = interaction.options.getString("level");
         }
     },
 };
+
+
+
 

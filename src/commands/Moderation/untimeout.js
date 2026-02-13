@@ -55,7 +55,7 @@ export default {
                 await interaction.editReply({
                     embeds: [
                         successEmbed(
-                            `ðŸ”“ **Removed timeout** from ${targetUser.tag}`,
+                            `🔓 **Removed timeout** from ${targetUser.tag}`,
                         ),
                     ],
                 });
@@ -65,4 +65,6 @@ export default {
         }
     }
 };
+
+
 

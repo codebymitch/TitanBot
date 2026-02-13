@@ -123,12 +123,12 @@ export default {
             )
                 .addFields(
                     {
-                        name: "ðŸ’µ New Cash Balance",
+                        name: "💵 New Cash Balance",
                         value: `$${userData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "ðŸ¦ New Bank Balance",
+                        name: "🏦 New Bank Balance",
                         value: `$${userData.bank.toLocaleString()} / $${maxBank.toLocaleString()}`,
                         inline: true,
                     },
@@ -138,5 +138,8 @@ export default {
         }, { command: 'deposit' });
     },
 };
+
+
+
 
 

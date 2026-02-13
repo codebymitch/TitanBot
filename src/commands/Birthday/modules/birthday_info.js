@@ -26,7 +26,7 @@ try {
             
             await interaction.editReply({
                 embeds: [createEmbed(
-                    "ðŸŽ‚ Birthday Information",
+                    "🎂 Birthday Information",
                     targetUser.id === interaction.user.id ? "Your Birthday" : `${targetUser.username}'s Birthday`,
                     `**Date:** ${monthName} ${birthdayData.day}\n**User:** ${targetUser.toString()}`,
                     0xff69b4
@@ -40,4 +40,6 @@ try {
         }
     }
 };
+
+
 

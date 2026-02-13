@@ -1,4 +1,4 @@
-import { DataTypes } from 'sequelize';
+﻿import { DataTypes } from 'sequelize';
 import { sequelize } from '../database.js';
 
 const welcomeSystem = sequelize.define('welcomeSystem', {
@@ -66,3 +66,4 @@ const welcomeSystem = sequelize.define('welcomeSystem', {
 welcomeSystem.sync({ alter: true }).catch(console.error);
 
 module.exports = welcomeSystem;
+

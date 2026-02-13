@@ -6,8 +6,10 @@
  */
 export async function loadVerificationButtons(client) {
     client.buttons.set(verificationButtonHandler.customId, verificationButtonHandler);
-    console.log('âœ… Loaded verification button handler');
+    console.log('✅ Loaded verification button handler');
 }
 
 export default { loadVerificationButtons };
+
+
 

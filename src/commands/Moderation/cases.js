@@ -61,7 +61,7 @@ export default {
                 const pageCases = cases.slice(startIndex, endIndex);
 
                 const embed = createEmbed({
-                    title: 'ðŸ“‹ Moderation Cases',
+                    title: '📋 Moderation Cases',
                     description: `Showing moderation cases for **${interaction.guild.name}**\n\n**Page ${page} of ${totalPages}**`
                 });
 
@@ -88,7 +88,7 @@ export default {
                 
                 const prevButton = new ButtonBuilder()
                     .setCustomId('prev_page')
-                    .setLabel('â¬…ï¸ Previous')
+                    .setLabel('⬅️ Previous')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(page === 1);
 
@@ -100,7 +100,7 @@ export default {
 
                 const nextButton = new ButtonBuilder()
                     .setCustomId('next_page')
-                    .setLabel('Next âž¡ï¸')
+                    .setLabel('Next ➡️')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(page === totalPages);
 
@@ -161,4 +161,7 @@ time: 120000
         }
     }
 };
+
+
+
 

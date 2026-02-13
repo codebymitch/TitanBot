@@ -26,7 +26,7 @@ export default {
                     .replace(/{membercount}/g, guild.memberCount);
                 
                 const embed = new EmbedBuilder()
-                    .setTitle(welcomeConfig.leaveEmbed?.title || 'ðŸ‘‹ Goodbye')
+                    .setTitle(welcomeConfig.leaveEmbed?.title || '👋 Goodbye')
 .setDescription(goodbyeMessage)
                     .setColor(welcomeConfig.leaveEmbed?.color || 0xff0000)
                     .setThumbnail(user.displayAvatarURL())
@@ -69,4 +69,6 @@ export default {
     }
   }
 };
+
+
 

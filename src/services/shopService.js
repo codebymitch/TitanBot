@@ -121,7 +121,7 @@ return 'coins';
         const { category, page = 1 } = options;
         
         const embed = new EmbedBuilder()
-            .setTitle('ðŸ›’ TitanBot Shop')
+            .setTitle('🛒 TitanBot Shop')
             .setColor('#5865F2')
             .setDescription('Browse and purchase items from the shop. Use the buttons to navigate.')
             .setFooter({ text: `Page ${page}` });
@@ -139,9 +139,9 @@ return 'coins';
             { 
                 id: 'all', 
                 name: 'All Items', 
-                emoji: 'ðŸ›ï¸',
+                emoji: '🛍️',
                 description: 'Browse all available items',
-                icon: 'ðŸ›ï¸'
+                icon: '🛍️'
             },
             ...shopConfig.categories
         ];
@@ -176,4 +176,6 @@ return 'coins';
 
 const shopService = new ShopService();
 export default shopService;
+
+
 

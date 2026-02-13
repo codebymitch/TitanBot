@@ -23,7 +23,7 @@ const createTicketHandler = {
         return interaction.reply({
           embeds: [
             errorEmbed(
-              'ðŸŽ« Ticket Limit Reached',
+              '🎫 Ticket Limit Reached',
               `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets before creating a new one.\n\n**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}`
             )
           ],
@@ -285,10 +285,10 @@ const isUserMessage = m.type === 0;
 </head>
 <body>
     <div class="header">
-        <h1>ðŸŽ« Ticket Transcript</h1>
+        <h1>🎫 Ticket Transcript</h1>
         <p><strong>Channel:</strong> ${interaction.channel.name}</p>
         <p><strong>Created:</strong> <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F></p>
-        <p><strong>Generated:</strong> ðŸ“… <t:${Math.floor(Date.now() / 1000)}:F></p>
+        <p><strong>Generated:</strong> 📅 <t:${Math.floor(Date.now() / 1000)}:F></p>
         <p><strong>Messages:</strong> ${sortedMessages.length}</p>
     </div>
 `;
@@ -311,7 +311,7 @@ const isUserMessage = m.type === 0;
         if (message.attachments && message.attachments.size > 0) {
           htmlTranscript += `
         <div class="attachments">
-            ðŸ“Ž Attachments: ${message.attachments.map(a => `<a href="${a.url}">${a.name}</a>`).join(', ')}
+            📎 Attachments: ${message.attachments.map(a => `<a href="${a.url}">${a.name}</a>`).join(', ')}
         </div>`;
         }
         
@@ -324,8 +324,8 @@ const isUserMessage = m.type === 0;
 </html>`;
       
       const transcriptEmbed = createEmbed({
-        title: `ðŸ“œ Ticket Transcript - ${interaction.channel.name}`,
-        description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** ðŸ“… <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}\n\nðŸ“Ž The complete HTML transcript has been attached as a file.`,
+        title: `📜 Ticket Transcript - ${interaction.channel.name}`,
+        description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** 📅 <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}\n\n📎 The complete HTML transcript has been attached as a file.`,
         color: 0x3498db,
         footer: { text: `Ticket ID: ${interaction.channel.id}` }
       });
@@ -335,7 +335,7 @@ const isUserMessage = m.type === 0;
       
       try {
         await interaction.user.send({
-          content: `ðŸ“œ **Ticket Transcript** for \`${interaction.channel.name}\``,
+          content: `📜 **Ticket Transcript** for \`${interaction.channel.name}\``,
           embeds: [transcriptEmbed],
           files: [{
             attachment: buffer,
@@ -345,7 +345,7 @@ const isUserMessage = m.type === 0;
         
         await interaction.editReply({
           embeds: [{
-            title: 'âœ… Transcript Sent',
+            title: '✅ Transcript Sent',
             description: 'The ticket transcript has been sent to your DMs as both an embed and an HTML file.',
 color: 4689679
           }],
@@ -523,5 +523,7 @@ export {
   reopenTicketHandler,
   deleteTicketHandler 
 };
+
+
 
 

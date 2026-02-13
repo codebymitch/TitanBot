@@ -55,13 +55,13 @@ export async function handleVerificationButton(interaction, client) {
         
         await interaction.reply({
             embeds: [successEmbed(
-                "âœ… Verification Successful!",
-                `You have been verified and given the **${verifiedRole.name}** role! Welcome to the server! ðŸŽ‰\n\nYou now have access to all server channels and features.`
+                "✅ Verification Successful!",
+                `You have been verified and given the **${verifiedRole.name}** role! Welcome to the server! 🎉\n\nYou now have access to all server channels and features.`
             )],
             flags: MessageFlags.Ephemeral
         });
 
-        console.log(`âœ… ${member.user.tag} (${member.id}) verified themselves in ${guild.name}`);
+        console.log(`✅ ${member.user.tag} (${member.id}) verified themselves in ${guild.name}`);
 
     } catch (error) {
         console.error("Verification button handler error:", error);
@@ -84,4 +84,6 @@ export default {
     customId: "verify_user",
     execute: handleVerificationButton
 };
+
+
 

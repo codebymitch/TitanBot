@@ -60,11 +60,11 @@ color: 0xff0000,
 
                 const embed = new EmbedBuilder()
 .setColor(0x00ff00)
-                    .setTitle('âœ… Goodbye System Configured')
+                    .setTitle('✅ Goodbye System Configured')
                     .setDescription(`Goodbye messages will now be sent to ${channel}`)
                     .addFields(
                         { name: 'Message Preview', value: previewMessage },
-                        { name: 'Status', value: 'âœ… Enabled' }
+                        { name: 'Status', value: '✅ Enabled' }
                     )
                     .setFooter({ text: 'Tip: Use /goodbye toggle to enable/disable goodbye messages' });
 
@@ -75,7 +75,7 @@ color: 0xff0000,
                 await interaction.editReply({ embeds: [embed] });
             } catch (error) {
                 await interaction.editReply({ 
-                    content: 'âŒ An error occurred while setting up the goodbye system.', 
+                    content: '❌ An error occurred while setting up the goodbye system.', 
                     flags: ["Ephemeral"] 
                 });
             }
@@ -91,16 +91,18 @@ color: 0xff0000,
                 });
 
                 await interaction.editReply({
-                    content: `âœ… Goodbye messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
+                    content: `✅ Goodbye messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
                     flags: ["Ephemeral"]
                 });
             } catch (error) {
                 await interaction.editReply({ 
-                    content: 'âŒ An error occurred while toggling goodbye messages.', 
+                    content: '❌ An error occurred while toggling goodbye messages.', 
                     flags: ["Ephemeral"] 
                 });
             }
         }
     },
 };
+
+
 

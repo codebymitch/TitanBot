@@ -24,12 +24,12 @@ export function getConfirmationButtons(customIdPrefix = 'confirm') {
             .setCustomId(`${customIdPrefix}_yes`)
             .setLabel('Confirm')
             .setStyle(ButtonStyle.Success)
-            .setEmoji('âœ…'),
+            .setEmoji('✅'),
         new ButtonBuilder()
             .setCustomId(`${customIdPrefix}_no`)
             .setLabel('Cancel')
             .setStyle(ButtonStyle.Danger)
-            .setEmoji('âŒ')
+            .setEmoji('❌')
     );
 }
 
@@ -120,4 +120,6 @@ export function createButtonRow(buttons) {
     
     return row;
 }
+
+
 

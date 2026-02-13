@@ -214,7 +214,7 @@ async function handleViewNotes(interaction, targetUser, notes) {
         return interaction.reply({
             embeds: [
                 infoEmbed(
-                    "ðŸ“ No Notes",
+                    "📝 No Notes",
                     `There are no notes for **${targetUser.tag}**.`
                 ),
             ],
@@ -240,7 +240,7 @@ async function handleViewNotes(interaction, targetUser, notes) {
     return interaction.reply({
         embeds: [
             infoEmbed(
-                `ðŸ“ User Notes (${notes.length})`,
+                `📝 User Notes (${notes.length})`,
                 description
             )
         ]
@@ -303,7 +303,7 @@ async function handleClearNotes(interaction, targetUser, notes, guildId) {
     return interaction.reply({
         embeds: [
             successEmbed(
-                "ðŸ—‘ï¸ Notes Cleared",
+                "🗑️ Notes Cleared",
                 `Cleared **${noteCount}** notes from **${targetUser.tag}**.`
             )
         ]
@@ -312,13 +312,16 @@ async function handleClearNotes(interaction, targetUser, notes, guildId) {
 
 function getNoteTypeInfo(type) {
     const types = {
-        warning: { emoji: "âš ï¸", color: "#FF6B6B" },
-        positive: { emoji: "âœ…", color: "#51CF66" },
-        neutral: { emoji: "ðŸ“", color: "#74C0FC" },
-        alert: { emoji: "ðŸš¨", color: "#FFD43B" }
+        warning: { emoji: "⚠️", color: "#FF6B6B" },
+        positive: { emoji: "✅", color: "#51CF66" },
+        neutral: { emoji: "📝", color: "#74C0FC" },
+        alert: { emoji: "🚨", color: "#FFD43B" }
     };
     
     return types[type] || types.neutral;
 }
+
+
+
 
 

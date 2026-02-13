@@ -34,7 +34,7 @@ const userId = interaction.user.id;
                     .join("\n");
             }
 
-            const embed = createEmbed({ title: `ðŸ“¦ ${interaction.user.username}'s Inventory`, description: inventoryDescription, }).setThumbnail(interaction.user.displayAvatarURL());
+            const embed = createEmbed({ title: `📦 ${interaction.user.username}'s Inventory`, description: inventoryDescription, }).setThumbnail(interaction.user.displayAvatarURL());
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {
@@ -50,5 +50,7 @@ const userId = interaction.user.id;
         }
     },
 };
+
+
 
 

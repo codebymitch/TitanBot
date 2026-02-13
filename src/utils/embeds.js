@@ -75,14 +75,14 @@ export function errorEmbed(message, error = null, options = {}) {
   }
 
   return createEmbed({
-    title: 'âŒ Error',
+    title: '❌ Error',
     description,
     color: 'error',
     timestamp: true
   });
 }
 
-export function successEmbed(message, title = 'âœ… Success') {
+export function successEmbed(message, title = '✅ Success') {
   return createEmbed({
     title,
     description: message,
@@ -91,7 +91,7 @@ export function successEmbed(message, title = 'âœ… Success') {
   });
 }
 
-export function infoEmbed(message, title = 'â„¹ï¸ Information') {
+export function infoEmbed(message, title = 'ℹ️ Information') {
   return createEmbed({
     title,
     description: message,
@@ -100,7 +100,7 @@ export function infoEmbed(message, title = 'â„¹ï¸ Information') {
   });
 }
 
-export function warningEmbed(message, title = 'âš ï¸ Warning') {
+export function warningEmbed(message, title = '⚠️ Warning') {
   return createEmbed({
     title,
     description: message,
@@ -155,7 +155,7 @@ export function formatQuote(content) {
 
 export function formatList(items, ordered = false) {
   return items
-    .map((item, index) => (ordered ? `${index + 1}.` : 'â€¢') + ` ${item}`)
+    .map((item, index) => (ordered ? `${index + 1}.` : '•') + ` ${item}`)
     .join('\n');
 }
 
@@ -163,6 +163,8 @@ export function formatProgressBar(current, max, size = 10) {
   const progress = Math.min(Math.max(0, current / max), 1);
   const filled = Math.round(size * progress);
   const empty = size - filled;
-  return `[${'â–ˆ'.repeat(filled)}${'â–‘'.repeat(empty)}] ${Math.round(progress * 100)}%`;
+  return `[${'█'.repeat(filled)}${'░'.repeat(empty)}] ${Math.round(progress * 100)}%`;
 }
+
+
 

@@ -55,7 +55,7 @@ flags: 64
       });
 
       await interaction.reply({
-        embeds: [successEmbed('Success!', 'You have entered the giveaway! ðŸŽ‰')],
+        embeds: [successEmbed('Success!', 'You have entered the giveaway! 🎉')],
 flags: 64
       });
 
@@ -103,7 +103,7 @@ flags: 64
       const updatedRow = giveawayButtons(true);
 
       await interaction.message.edit({
-        content: 'ðŸŽ‰ **GIVEAWAY ENDED** ðŸŽ‰',
+        content: '🎉 **GIVEAWAY ENDED** 🎉',
         embeds: [updatedEmbed],
         components: [updatedRow]
       });
@@ -155,7 +155,7 @@ flags: 64
       const updatedRow = giveawayButtons(true);
 
       await interaction.message.edit({
-        content: 'ðŸ”„ **GIVEAWAY REROLLED** ðŸ”„',
+        content: '🔄 **GIVEAWAY REROLLED** 🔄',
         embeds: [updatedEmbed],
         components: [updatedRow]
       });
@@ -173,4 +173,6 @@ flags: 64
     }
   }
 };
+
+
 

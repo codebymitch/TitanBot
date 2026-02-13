@@ -136,25 +136,25 @@ export default {
             let description = `**Mass Kick Results:**\n\n`;
             
             if (results.successful.length > 0) {
-                description += `âœ… **Successfully Kicked (${results.successful.length}):**\n`;
+                description += `✅ **Successfully Kicked (${results.successful.length}):**\n`;
                 results.successful.forEach(result => {
-                    description += `â€¢ ${result.user} (${result.userId})\n`;
+                    description += `• ${result.user} (${result.userId})\n`;
                 });
                 description += '\n';
             }
 
             if (results.skipped.length > 0) {
-                description += `âš ï¸ **Skipped (${results.skipped.length}):**\n`;
+                description += `⚠️ **Skipped (${results.skipped.length}):**\n`;
                 results.skipped.forEach(result => {
-                    description += `â€¢ ${result.user} - ${result.reason}\n`;
+                    description += `• ${result.user} - ${result.reason}\n`;
                 });
                 description += '\n';
             }
 
             if (results.failed.length > 0) {
-                description += `âŒ **Failed (${results.failed.length}):**\n`;
+                description += `❌ **Failed (${results.failed.length}):**\n`;
                 results.failed.forEach(result => {
-                    description += `â€¢ ${result.userId} - ${result.reason}\n`;
+                    description += `• ${result.userId} - ${result.reason}\n`;
                 });
             }
 
@@ -163,7 +163,7 @@ export default {
             return await interaction.editReply({
                 embeds: [
                     embed(
-                        `ðŸ‘¢ Mass Kick Completed`,
+                        `👢 Mass Kick Completed`,
                         description
                     )
                 ]
@@ -182,4 +182,6 @@ export default {
         }
     }
 };
+
+
 

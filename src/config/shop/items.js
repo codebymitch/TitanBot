@@ -68,7 +68,7 @@ roleId: null,
     },
     {
         id: 'fishing_rod',
-        name: 'ðŸŽ£ Fishing Rod',
+        name: '🎣 Fishing Rod',
         price: 5000,
         description: 'Used for fishing commands',
         type: 'tool',
@@ -80,7 +80,7 @@ roleId: null,
     },
     {
         id: 'pickaxe',
-        name: 'â›ï¸ Pickaxe',
+        name: '⛏️ Pickaxe',
         price: 7500,
         description: 'Used for mining commands',
         type: 'tool',
@@ -92,7 +92,7 @@ roleId: null,
     },
     {
         id: 'laptop',
-        name: 'ðŸ’» Laptop',
+        name: '💻 Laptop',
         price: 15000,
         description: 'Increases work earnings',
         type: 'tool',
@@ -104,7 +104,7 @@ roleId: null,
     },
     {
         id: 'lucky_charm',
-        name: 'ðŸ€ Lucky Charm',
+        name: '🍀 Lucky Charm',
         price: 10000,
         description: 'Increases luck for gambling',
         type: 'consumable',
@@ -116,7 +116,7 @@ roleId: null,
     },
     {
         id: 'bank_note',
-        name: 'ðŸ“œ Bank Note',
+        name: '📜 Bank Note',
         price: 25000,
         description: 'Increases bank capacity by 10,000',
         type: 'upgrade',
@@ -209,4 +209,7 @@ export function validatePurchase(itemId, userData) {
 
     return { valid: true };
 }
+
+
+
 

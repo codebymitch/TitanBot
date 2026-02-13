@@ -52,7 +52,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "ðŸŽ« Ticket Lifecycle Channel Set",
+                            "🎫 Ticket Lifecycle Channel Set",
                             `**Channel:** ${ticketLifecycle}\n**Logs:** Ticket open, close, delete, claim, unclaim, and priority events\n\n**Updated by:** ${interaction.user.tag}`
                         ),
                     ],
@@ -76,7 +76,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "ðŸ“œ Ticket Transcript Channel Set",
+                            "📜 Ticket Transcript Channel Set",
                             `**Channel:** ${ticketTranscript}\n**Logs:** Ticket transcript generation\n\n**Updated by:** ${interaction.user.tag}`
                         ),
                     ],
@@ -91,7 +91,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "Logging Disabled ðŸš«",
+                            "Logging Disabled 🚫",
                             "Server logging has been disabled.",
                         ),
                     ],
@@ -126,7 +126,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 await interaction.editReply({
                     embeds: [
                         successEmbed(
-                            "Log Channel Set ðŸ“",
+                            "Log Channel Set 📝",
                             `Logs will be sent to ${logChannel}.`,
                         ),
                     ],
@@ -172,4 +172,6 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
         }
     }
 };
+
+
 

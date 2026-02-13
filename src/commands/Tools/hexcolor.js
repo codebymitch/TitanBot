@@ -47,7 +47,7 @@ try {
             const colorName = getColorName(hexColor);
             
             const embed = successEmbed(
-                'ðŸŽ¨ Color Information',
+                '🎨 Color Information',
                 `**Hex:** \`${hexColor}\`\n` +
                 `**RGB:** \`rgb(${r}, ${g}, ${b})\`\n` +
                 `**HSL:** \`${rgbToHsl(r, g, b)}\`\n` +
@@ -57,7 +57,7 @@ try {
             .setImage(colorPreviewUrl);
             
             if (isRandom) {
-                embed.setFooter({ text: 'âœ¨ Randomly generated color' });
+                embed.setFooter({ text: '✨ Randomly generated color' });
             }
             
             await interaction.editReply({ embeds: [embed] });
@@ -137,4 +137,6 @@ function getColorName(hex) {
     
     return minDistance < 1000000 ? `Close to ${closestColor}` : null;
 }
+
+
 

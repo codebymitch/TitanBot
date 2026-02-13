@@ -73,7 +73,7 @@ return b.net_worth - a.net_worth;
             const userRank =
                 allUserData.findIndex((u) => u.userId === interaction.user.id) +
                 1;
-            const rankEmoji = ["ðŸ¥‡", "ðŸ¥ˆ", "ðŸ¥‰"];
+            const rankEmoji = ["🥇", "🥈", "🥉"];
             const leaderboardEntries = [];
 
             for (let i = 0; i < topUsers.length; i++) {
@@ -105,7 +105,7 @@ return b.net_worth - a.net_worth;
             };
 
             const embed = createEmbed(
-                `ðŸ‘‘ Economy Leaderboard (${fieldNameMap[sortBy]})`,
+                `👑 Economy Leaderboard (${fieldNameMap[sortBy]})`,
                 leaderboardEntries.join("\n"),
             ).setFooter({
                 text: `Your Rank: ${userRank > 0 ? userRank : "Not Ranked"} | Data sorted by ${fieldNameMap[sortBy]}`,
@@ -125,5 +125,8 @@ return b.net_worth - a.net_worth;
         }
     },
 };
+
+
+
 
 

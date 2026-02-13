@@ -86,7 +86,7 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
     const participants = giveaway.participants || [];
     
     const embed = new EmbedBuilder()
-        .setTitle(`ðŸŽ‰ ${giveaway.prize}`)
+        .setTitle(`🎉 ${giveaway.prize}`)
         .setDescription(giveaway.description || 'Enter this amazing giveaway!')
         .setColor(isEnded ? botConfig.embeds.colors.error : botConfig.embeds.colors.success)
         .addFields(
@@ -153,12 +153,12 @@ export function giveawayButtons(ended) {
         return new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('giveaway_reroll')
-                .setLabel('ðŸŽ² Reroll')
+                .setLabel('🎲 Reroll')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(false),
             new ButtonBuilder()
                 .setCustomId('giveaway_end')
-                .setLabel('âœ… Ended')
+                .setLabel('✅ Ended')
                 .setStyle(ButtonStyle.Success)
                 .setDisabled(true)
         );
@@ -166,13 +166,15 @@ export function giveawayButtons(ended) {
         return new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('giveaway_join')
-                .setLabel('ðŸŽ‰ Join')
+                .setLabel('🎉 Join')
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
                 .setCustomId('giveaway_end')
-                .setLabel('ðŸ›‘ End')
+                .setLabel('🛑 End')
                 .setStyle(ButtonStyle.Danger)
         );
     }
 }
+
+
 

@@ -130,14 +130,14 @@ transcript: 0x1abc9c
       const user = await guild.client.users.fetch(event.userId).catch(() => null);
       if (user) {
         fields.push({
-          name: 'ðŸ‘¤ Ticket User',
+          name: '👤 Ticket User',
           value: `${user.tag} (${event.userId})`,
           inline: true
         });
       }
     } catch (error) {
       fields.push({
-        name: 'ðŸ‘¤ Ticket User',
+        name: '👤 Ticket User',
         value: `<@${event.userId}> (${event.userId})`,
         inline: true
       });
@@ -149,14 +149,14 @@ transcript: 0x1abc9c
       const executor = await guild.client.users.fetch(event.executorId).catch(() => null);
       if (executor) {
         fields.push({
-          name: 'ðŸ”¨ Executed By',
+          name: '🔨 Executed By',
           value: `${executor.tag} (${event.executorId})`,
           inline: true
         });
       }
     } catch (error) {
       fields.push({
-        name: 'ðŸ”¨ Executed By',
+        name: '🔨 Executed By',
         value: `<@${event.executorId}> (${event.executorId})`,
         inline: true
       });
@@ -165,7 +165,7 @@ transcript: 0x1abc9c
   
   if (event.reason) {
     fields.push({
-      name: 'ðŸ“ Reason',
+      name: '📝 Reason',
       value: event.reason,
       inline: false
     });
@@ -173,16 +173,16 @@ transcript: 0x1abc9c
   
   if (event.priority) {
     const priorityEmojis = {
-      none: 'âšª',
-      low: 'ðŸ”µ',
-      medium: 'ðŸŸ¢',
-      high: 'ðŸŸ¡',
-      urgent: 'ðŸ”´'
+      none: '⚪',
+      low: '🔵',
+      medium: '🟢',
+      high: '🟡',
+      urgent: '🔴'
     };
     
     fields.push({
-      name: 'ðŸŽ¯ Priority',
-      value: `${priorityEmojis[event.priority] || 'âšª'} ${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}`,
+      name: '🎯 Priority',
+      value: `${priorityEmojis[event.priority] || '⚪'} ${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}`,
       inline: true
     });
   }
@@ -191,7 +191,7 @@ transcript: 0x1abc9c
     Object.entries(event.metadata).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         fields.push({
-          name: `ðŸ“Š ${key.charAt(0).toUpperCase() + key.slice(1)}`,
+          name: `📊 ${key.charAt(0).toUpperCase() + key.slice(1)}`,
           value: String(value),
           inline: true
         });
@@ -214,37 +214,37 @@ function getEventDisplayInfo(event) {
   
   const eventMessages = {
     open: {
-      title: 'ðŸŽ« Ticket Opened',
+      title: '🎫 Ticket Opened',
       description: `A new ticket has been created: ${ticketRef}`
     },
     close: {
-      title: 'ðŸ”’ Ticket Closed',
+      title: '🔒 Ticket Closed',
       description: `Ticket ${ticketRef} has been closed`
     },
     delete: {
-      title: 'ðŸ—‘ï¸ Ticket Deleted',
+      title: '🗑️ Ticket Deleted',
       description: `Ticket ${ticketRef} has been permanently deleted`
     },
     claim: {
-      title: 'ðŸ™‹ Ticket Claimed',
+      title: '🙋 Ticket Claimed',
       description: `Ticket ${ticketRef} has been claimed`
     },
     unclaim: {
-      title: 'ðŸ”“ Ticket Unclaimed',
+      title: '🔓 Ticket Unclaimed',
       description: `Ticket ${ticketRef} has been unclaimed`
     },
     priority: {
-      title: 'ðŸŽ¯ Priority Updated',
+      title: '🎯 Priority Updated',
       description: `Priority changed for ticket ${ticketRef}`
     },
     transcript: {
-      title: 'ðŸ“œ Transcript Created',
+      title: '📜 Transcript Created',
       description: `Transcript generated for ticket ${ticketRef}`
     }
   };
   
   return eventMessages[event.type] || {
-    title: 'ðŸŽ« Ticket Event',
+    title: '🎫 Ticket Event',
     description: `An event occurred for ticket ${ticketRef}`
   };
 }
@@ -293,4 +293,6 @@ export function validateLogChannel(channel, botMember) {
   
   return { valid: true };
 }
+
+
 

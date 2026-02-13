@@ -140,27 +140,27 @@ export const botConfig = {
     supportRoles: [],
     priorities: {
       none: {
-        emoji: "âšª",
+        emoji: "⚪",
         color: "#95A5A6",
         label: "None",
       },
       low: {
-        emoji: "ðŸŸ¢",
+        emoji: "🟢",
         color: "#2ECC71",
         label: "Low",
       },
       medium: {
-        emoji: "ðŸŸ¡",
+        emoji: "🟡",
         color: "#F1C40F",
         label: "Medium",
       },
       high: {
-        emoji: "ðŸ”´",
+        emoji: "🔴",
         color: "#E74C3C",
         label: "High",
       },
       urgent: {
-        emoji: "ðŸš¨",
+        emoji: "🚨",
         color: "#E91E63",
         label: "Urgent",
       },
@@ -211,24 +211,24 @@ export const botConfig = {
       allow: ["VIEW_CHANNEL", "CONNECT", "SPEAK"],
     },
     messages: {
-      created: "âœ… Created counter **{name}**",
-      deleted: "ðŸ—‘ï¸ Deleted counter **{name}**",
-      updated: "ðŸ”„ Updated counter **{name}**",
+      created: "✅ Created counter **{name}**",
+      deleted: "🗑️ Deleted counter **{name}**",
+      updated: "🔄 Updated counter **{name}**",
     },
     types: {
       members: {
-        name: "ðŸ‘¥ Members",
+        name: "👥 Members",
         description: "Total members in the server",
         getCount: (guild) => guild.memberCount.toString(),
       },
       bots: {
-        name: "ðŸ¤– Bots",
+        name: "🤖 Bots",
         description: "Total bot accounts in the server",
         getCount: (guild) =>
           guild.members.cache.filter((m) => m.user.bot).size.toString(),
       },
       members_only: {
-        name: "ðŸ‘¤ Humans",
+        name: "👤 Humans",
         description: "Total human members (non-bots)",
         getCount: (guild) =>
           guild.members.cache.filter((m) => !m.user.bot).size.toString(),
@@ -328,4 +328,7 @@ export function getRandomColor() {
 }
 
 export default botConfig;
+
+
+
 

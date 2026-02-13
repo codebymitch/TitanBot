@@ -99,7 +99,7 @@ try {
                     }
                     
                     const embed = successEmbed(
-                        'ðŸ”„ Base Conversion Result',
+                        '🔄 Base Conversion Result',
                         `**From ${fromName} (${fromBase}):** \`${fromPrefix}${cleanNumber}\`\n` +
                         `**To ${toName} (${toBase}):** \`${toPrefix}${result}\`\n` +
                         `**Decimal:** \`${decimalValue.toLocaleString()}\``
@@ -142,7 +142,7 @@ try {
                 }
                 
                 const embed = successEmbed(
-                    'ðŸ”„ Base Conversion Results',
+                    '🔄 Base Conversion Results',
                     description
                 );
                 
@@ -158,4 +158,6 @@ try {
         }
     },
 };
+
+
 

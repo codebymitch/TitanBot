@@ -54,7 +54,7 @@ class PostgreSQLDatabase {
                 client.release();
 
                 this.isConnected = true;
-                logger.info('âœ… PostgreSQL Database initialized successfully');
+                logger.info('✅ PostgreSQL Database initialized successfully');
 
                 if (pgConfig.features.autoCreateTables) {
                     await this.createTables();
@@ -71,7 +71,7 @@ class PostgreSQLDatabase {
                                 ALTER TABLE ${pgConfig.tables.guilds} 
                                 ADD COLUMN counters JSONB DEFAULT '[]'
                             `);
-                            logger.info('âœ… Added counters column to guilds table');
+                            logger.info('✅ Added counters column to guilds table');
                         }
                     } catch (error) {
                         logger.warn('Could not add counters column to guilds table:', error.message);
@@ -91,7 +91,7 @@ class PostgreSQLDatabase {
 
                 const isLastAttempt = attempt >= attempts;
                 if (isLastAttempt) {
-                    logger.error('âŒ Failed to initialize PostgreSQL Database:', error);
+                    logger.error('❌ Failed to initialize PostgreSQL Database:', error);
                     this.isConnected = false;
                     return false;
                 }
@@ -280,7 +280,7 @@ class PostgreSQLDatabase {
             }
         }
         
-        logger.info('âœ… Database tables created/verified');
+        logger.info('✅ Database tables created/verified');
         
         await this.createIndexes();
         await this.createAuditTriggers();
@@ -316,7 +316,7 @@ class PostgreSQLDatabase {
             }
         }
         
-        logger.info('âœ… Performance indexes created/verified');
+        logger.info('✅ Performance indexes created/verified');
     }
 
     /**
@@ -398,7 +398,7 @@ class PostgreSQLDatabase {
                 }
             }
             
-            logger.info('âœ… Audit triggers created/verified');
+            logger.info('✅ Audit triggers created/verified');
         } catch (error) {
             logger.warn('Error creating audit triggers:', error.message);
         }
@@ -966,7 +966,7 @@ class PostgreSQLDatabase {
                                 ALTER TABLE ${pgConfig.tables.guilds} 
                                 ADD COLUMN counters JSONB DEFAULT '[]'
                             `);
-                            logger.info('âœ… Added counters column to guilds table');
+                            logger.info('✅ Added counters column to guilds table');
                         } catch (alterError) {
                             logger.error('Failed to add counters column:', alterError);
                             throw new Error(`Counters column missing and could not be created: ${alterError.message}`);
@@ -1111,4 +1111,6 @@ class PostgreSQLDatabase {
 const pgDb = new PostgreSQLDatabase();
 
 export { PostgreSQLDatabase, pgDb };
+
+
 

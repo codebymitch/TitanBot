@@ -109,7 +109,7 @@ export default {
             console.error(`Error in counter ${subcommand}:`, error);
             
             const errorEmbed = createEmbed({ 
-                title: "âŒ Error", 
+                title: "❌ Error", 
                 description: "An error occurred while processing your request.",
                 color: 0xFF0000
             });
@@ -122,5 +122,7 @@ export default {
         }
     }
 };
+
+
 
 

@@ -13,11 +13,11 @@ import { createEmbed, errorEmbed } from '../utils/embeds.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 
 const PRIORITY_MAP = {
-  none: { name: 'âšª NONE', color: '#95a5a6', emoji: 'âšª', label: 'None' },
-  low: { name: 'ðŸ”µ LOW', color: '#3498db', emoji: 'ðŸ”µ', label: 'Low' },
-  medium: { name: 'ðŸŸ¢ MEDIUM', color: '#2ecc71', emoji: 'ðŸŸ¢', label: 'Medium' },
-  high: { name: 'ðŸŸ¡ HIGH', color: '#f1c40f', emoji: 'ðŸŸ¡', label: 'High' },
-  urgent: { name: 'ðŸ”´ URGENT', color: '#e74c3c', emoji: 'ðŸ”´', label: 'Urgent' }
+  none: { name: '⚪ NONE', color: '#95a5a6', emoji: '⚪', label: 'None' },
+  low: { name: '🔵 LOW', color: '#3498db', emoji: '🔵', label: 'Low' },
+  medium: { name: '🟢 MEDIUM', color: '#2ecc71', emoji: '🟢', label: 'Medium' },
+  high: { name: '🟡 HIGH', color: '#f1c40f', emoji: '🟡', label: 'High' },
+  urgent: { name: '🔴 URGENT', color: '#e74c3c', emoji: '🔴', label: 'Urgent' }
 };
 
 /**
@@ -144,7 +144,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       description: `${member.toString()}, thanks for creating a ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`,
       color: priorityInfo.color,
       fields: [
-        { name: 'Status', value: 'ðŸŸ¢ Open', inline: true },
+        { name: 'Status', value: '🟢 Open', inline: true },
         { name: 'Claimed By', value: 'Not claimed', inline: true },
         { name: 'Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
       ],
@@ -155,17 +155,17 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
         .setCustomId('ticket_close')
         .setLabel('Close Ticket')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('ðŸ”’'),
+        .setEmoji('🔒'),
       new ButtonBuilder()
         .setCustomId('ticket_claim')
         .setLabel('Claim')
         .setStyle(ButtonStyle.Primary)
-        .setEmoji('ðŸ™‹'),
+        .setEmoji('🙋'),
       new ButtonBuilder()
         .setCustomId('ticket_transcript')
         .setLabel('Transcript')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('ðŸ“œ')
+        .setEmoji('📜')
     );
     
     if (ticketConfig.enablePriority) {
@@ -174,12 +174,12 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
           .setCustomId('ticket_priority:low')
           .setLabel('Low')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('ðŸ”µ'),
+          .setEmoji('🔵'),
         new ButtonBuilder()
           .setCustomId('ticket_priority:high')
           .setLabel('High')
           .setStyle(ButtonStyle.Danger)
-          .setEmoji('ðŸ”´')
+          .setEmoji('🔴')
       );
     }
     
@@ -242,7 +242,7 @@ const dmOnClose = config.dmOnClose !== false;
         const ticketCreator = await channel.client.users.fetch(ticketData.userId).catch(() => null);
         if (ticketCreator) {
           const dmEmbed = createEmbed({
-            title: 'ðŸŽ« Your Ticket Has Been Closed',
+            title: '🎫 Your Ticket Has Been Closed',
             description: `Your ticket **${channel.name}** has been closed.\n\n**Reason:** ${reason}\n**Closed by:** ${closer.tag}\n**Closed at:** <t:${Math.floor(Date.now() / 1000)}:F>\n\nThank you for using our support system! If you have any further questions, feel free to create a new ticket.`,
             color: '#e74c3c',
             footer: { text: `Ticket ID: ${ticketData.id}` }
@@ -288,7 +288,7 @@ const dmOnClose = config.dmOnClose !== false;
       const statusField = embed.fields?.find(f => f.name === 'Status');
       
       if (statusField) {
-        statusField.value = 'ðŸ”´ Closed';
+        statusField.value = '🔴 Closed';
       }
       
       const updatedEmbed = createEmbed({
@@ -316,7 +316,7 @@ components: []
     
     const closeEmbed = createEmbed({
       title: 'Ticket Closed',
-      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}${dmOnClose ? '\n\nðŸ“© A DM has been sent to the ticket creator.' : ''}`,
+      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}${dmOnClose ? '\n\n📩 A DM has been sent to the ticket creator.' : ''}`,
       color: '#e74c3c',
       footer: { text: `Ticket ID: ${ticketData.id}` }
     });
@@ -326,12 +326,12 @@ components: []
         .setCustomId('ticket_reopen')
         .setLabel('Reopen Ticket')
         .setStyle(ButtonStyle.Success)
-        .setEmoji('ðŸ”“'),
+        .setEmoji('🔓'),
       new ButtonBuilder()
         .setCustomId('ticket_delete')
         .setLabel('Delete Ticket')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('ðŸ—‘ï¸')
+        .setEmoji('🗑️')
     );
     
     await channel.send({ embeds: [closeEmbed], components: [controlRow] });
@@ -402,18 +402,18 @@ export async function claimTicket(channel, claimer) {
           .setCustomId('ticket_close')
           .setLabel('Close Ticket')
           .setStyle(ButtonStyle.Danger)
-          .setEmoji('ðŸ”’'),
+          .setEmoji('🔒'),
         new ButtonBuilder()
           .setCustomId('ticket_claim')
           .setLabel('Claimed')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('ðŸ™‹')
+          .setEmoji('🙋')
           .setDisabled(true),
         new ButtonBuilder()
           .setCustomId('ticket_transcript')
           .setLabel('Transcript')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('ðŸ“œ')
+          .setEmoji('📜')
       );
       
       await ticketMessage.edit({ 
@@ -424,7 +424,7 @@ export async function claimTicket(channel, claimer) {
     
     const claimEmbed = createEmbed({
       title: 'Ticket Claimed',
-      description: `ðŸŽ‰ ${claimer} has claimed this ticket!`,
+      description: `🎉 ${claimer} has claimed this ticket!`,
       color: '#2ecc71'
     });
     
@@ -433,7 +433,7 @@ export async function claimTicket(channel, claimer) {
         .setCustomId('ticket_unclaim')
         .setLabel('Unclaim')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('ðŸ”“')
+        .setEmoji('🔓')
     );
     
     await channel.send({ embeds: [claimEmbed], components: [unclaimRow] });
@@ -510,7 +510,7 @@ export async function reopenTicket(channel, reopener) {
       const statusField = embed.fields?.find(f => f.name === 'Status');
       
       if (statusField) {
-        statusField.value = 'ðŸŸ¢ Open';
+        statusField.value = '🟢 Open';
       }
       
       const row = new ActionRowBuilder().addComponents(
@@ -518,18 +518,18 @@ export async function reopenTicket(channel, reopener) {
           .setCustomId('ticket_close')
           .setLabel('Close Ticket')
           .setStyle(ButtonStyle.Danger)
-          .setEmoji('ðŸ”’'),
+          .setEmoji('🔒'),
         new ButtonBuilder()
           .setCustomId('ticket_claim')
           .setLabel(ticketData.claimedBy ? 'Claimed' : 'Claim')
           .setStyle(ticketData.claimedBy ? ButtonStyle.Secondary : ButtonStyle.Primary)
-          .setEmoji(ticketData.claimedBy ? 'ðŸ™‹' : 'ðŸ”‘')
+          .setEmoji(ticketData.claimedBy ? '🙋' : '🔑')
           .setDisabled(!!ticketData.claimedBy),
         new ButtonBuilder()
           .setCustomId('ticket_transcript')
           .setLabel('Transcript')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('ðŸ“œ')
+          .setEmoji('📜')
       );
       
       await ticketMessage.edit({ 
@@ -540,7 +540,7 @@ export async function reopenTicket(channel, reopener) {
     
     const reopenEmbed = createEmbed({
       title: 'Ticket Reopened',
-      description: `ðŸ”“ ${reopener} has reopened this ticket!`,
+      description: `🔓 ${reopener} has reopened this ticket!`,
       color: '#2ecc71'
     });
     
@@ -566,7 +566,7 @@ export async function deleteTicket(channel, deleter) {
     
     const deleteEmbed = createEmbed({
       title: 'Ticket Deleted',
-      description: `ðŸ—‘ï¸ This ticket will be permanently deleted in 3 seconds.`,
+      description: `🗑️ This ticket will be permanently deleted in 3 seconds.`,
       color: '#e74c3c',
       footer: { text: `Ticket ID: ${ticketData.id}` }
     });
@@ -654,17 +654,17 @@ export async function unclaimTicket(channel, unclaimer) {
           .setCustomId('ticket_close')
           .setLabel('Close Ticket')
           .setStyle(ButtonStyle.Danger)
-          .setEmoji('ðŸ”’'),
+          .setEmoji('🔒'),
         new ButtonBuilder()
           .setCustomId('ticket_claim')
           .setLabel('Claim')
           .setStyle(ButtonStyle.Primary)
-          .setEmoji('ðŸ™‹'),
+          .setEmoji('🙋'),
         new ButtonBuilder()
           .setCustomId('ticket_transcript')
           .setLabel('Transcript')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('ðŸ“œ')
+          .setEmoji('📜')
       );
       
       await ticketMessage.edit({ 
@@ -684,7 +684,7 @@ export async function unclaimTicket(channel, unclaimer) {
     if (claimMessage) {
       const unclaimEmbed = createEmbed({
         title: 'Ticket Unclaimed',
-        description: `ðŸ”“ ${unclaimer} has unclaimed this ticket!`,
+        description: `🔓 ${unclaimer} has unclaimed this ticket!`,
         color: '#f39c12'
       });
       
@@ -695,7 +695,7 @@ components: []
     } else {
       const unclaimEmbed = createEmbed({
         title: 'Ticket Unclaimed',
-        description: `ðŸ”“ ${unclaimer} has unclaimed this ticket!`,
+        description: `🔓 ${unclaimer} has unclaimed this ticket!`,
         color: '#f39c12'
       });
       
@@ -755,7 +755,7 @@ export async function updateTicketPriority(channel, priority, updater) {
       const priorityEmoji = priorityInfo.emoji;
       const currentName = channel.name;
       
-      const cleanName = currentName.replace(/[ðŸ”µðŸŸ¢ðŸŸ¡ðŸ”´âšª]/g, '').trim();
+      const cleanName = currentName.replace(/[🔵🟢🟡🔴⚪]/g, '').trim();
       
       const newName = `${priorityEmoji} ${cleanName}`;
       
@@ -788,7 +788,7 @@ export async function updateTicketPriority(channel, priority, updater) {
     
     const updateEmbed = createEmbed({
       title: 'Priority Updated',
-      description: `ðŸ“Š Ticket priority updated to **${priorityInfo.emoji} ${priorityInfo.label}** by ${updater}`,
+      description: `📊 Ticket priority updated to **${priorityInfo.emoji} ${priorityInfo.label}** by ${updater}`,
       color: priorityInfo.color
     });
     
@@ -821,4 +821,6 @@ export async function updateTicketPriority(channel, priority, updater) {
     };
   }
 }
+
+
 
