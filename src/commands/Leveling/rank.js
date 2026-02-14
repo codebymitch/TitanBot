@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -68,7 +69,7 @@ export default {
                             value: `${progressBar} ${progress}%`,
                         },
                     )
-                    .setColor("#3498db")
+                    .setColor(getColor('info'))
                     .setTimestamp();
 
                 await interaction.editReply({ embeds: [embed]

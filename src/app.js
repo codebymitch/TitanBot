@@ -2,20 +2,9 @@
 import { 
     Client, 
     Collection, 
-    GatewayIntentBits, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    StringSelectMenuBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ChannelType 
+    GatewayIntentBits
 } from 'discord.js';
-import { REST, Routes } from 'discord.js';
-import { fileURLToPath } from 'url';
-import path from 'path';
-import fs from 'fs/promises';
+import { REST } from 'discord.js';
 import express from 'express';
 import cron from 'node-cron';
 
@@ -24,16 +13,10 @@ if (typeof global.ReadableStream === 'undefined') {
     global.ReadableStream = ReadableStream;
 }
 
-import config from './config/index.js';
+import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
-import { getFromDb, setInDb, deleteFromDb } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
-import { giveawayKey, getGuildGiveaways } from './utils/giveaways.js';
-import { handleReactionRoles } from './handlers/reactionRoles.js';
-import { createEmbed, errorEmbed, successEmbed } from './utils/embeds.js';
-import { getLevelingConfig, getUserLevelData, saveUserLevelData, getXpForLevel } from './utils/database.js';
-import { addXp } from './services/xpSystem.js';
-import { getServerCounters, saveServerCounters, updateCounter } from './services/counterService.js';
+import { getServerCounters, updateCounter } from './services/counterService.js';
 import { logger } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
@@ -128,8 +111,8 @@ class TitanBot extends Client {
     const app = express();
     const port = this.config.api?.port || process.env.PORT || 3000;
     const corsOrigin = this.config.api?.cors?.origin || '*';
+    let serverStarted = false;
     
-    // CORS middleware
     app.use((req, res, next) => {
       const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
       const origin = req.headers.origin;
@@ -146,7 +129,6 @@ class TitanBot extends Client {
       next();
     });
 
-    // Simple rate limiting middleware (requests per minute per IP)
     const requestCounts = new Map();
     const windowMs = 60000; // 1 minute
     const maxRequests = this.config.api?.rateLimit?.max || 100;
@@ -171,7 +153,6 @@ class TitanBot extends Client {
       next();
     });
 
-    // Health check endpoint
     app.get('/health', (req, res) => {
       const dbStatus = this.db?.getStatus?.() || { isDegraded: 'unknown' };
       const status = {
@@ -187,7 +168,6 @@ class TitanBot extends Client {
       res.status(200).json(status);
     });
 
-    // Readiness check endpoint (only healthy if DB is available)
     app.get('/ready', (req, res) => {
       const dbStatus = this.db?.getStatus?.() || { isDegraded: true };
       const isReady = this.ready && !dbStatus.isDegraded;
@@ -205,7 +185,6 @@ class TitanBot extends Client {
       });
     });
 
-    // Default endpoint
     app.get('/', (req, res) => {
       res.status(200).json({ 
         message: 'TitanBot System Online',
@@ -214,10 +193,18 @@ class TitanBot extends Client {
       });
     });
 
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
+      serverStarted = true;
       logger.info(`✅ Web Server running on port ${port}`);
       logger.info(`   Health: http://localhost:${port}/health`);
       logger.info(`   Ready: http://localhost:${port}/ready`);
+    });
+
+    server.on('error', (error) => {
+      logger.error(`❌ Failed to start web server on port ${port}:`, error.message);
+      if (!serverStarted) {
+        process.exit(1);
+      }
     });
   }
 
@@ -248,82 +235,41 @@ class TitanBot extends Client {
   }
 
   async loadHandlers() {
-const handlers = ['events', 'interactions'];
-    
+    const handlers = [
+      { path: 'events', type: 'default', required: true },
+      { path: 'interactions', type: 'default', required: true },
+      { path: 'todoButtonLoader', type: 'default', required: false },
+      { path: 'ticketButtonLoader', type: 'default', required: false },
+      { path: 'shopButtonLoader', type: 'default', required: false },
+      { path: 'giveawayButtonLoader', type: 'named:loadGiveawayButtons', required: false },
+      { path: 'helpButtonLoader', type: 'default', required: false },
+      { path: 'helpSelectMenuLoader', type: 'default', required: false },
+      { path: 'loggingButtonLoader', type: 'default', required: false },
+      { path: 'verificationButtonLoader', type: 'named:loadVerificationButtons', required: false },
+      { path: 'wipedataButtonLoader', type: 'default', required: false }
+    ];
+
     for (const handler of handlers) {
       try {
-        const { default: loadHandler } = await import(`./handlers/${handler}.js`);
-        await loadHandler(this);
-        logger.info(`Loaded ${handler} handler`);
+        const module = await import(`./handlers/${handler.path}.js`);
+        const loaderFn = handler.type.startsWith('named:') 
+          ? module[handler.type.split(':')[1]] 
+          : module.default;
+        
+        if (typeof loaderFn === 'function') {
+          await loaderFn(this);
+          logger.info(`✅ Loaded ${handler.path}`);
+        } else {
+          throw new Error(`Invalid loader export from ${handler.path}`);
+        }
       } catch (error) {
-        if (error.code !== 'MODULE_NOT_FOUND') {
-          logger.error(`Error loading ${handler} handler:`, error);
+        if (handler.required) {
+          logger.error(`❌ Failed to load required handler ${handler.path}:`, error.message);
+          throw error;
+        } else if (error.code !== 'MODULE_NOT_FOUND') {
+          logger.warn(`⚠️  Failed to load optional handler ${handler.path}:`, error.message);
         }
       }
-    }
-    
-    try {
-      const { default: loadTodoButtons } = await import('./handlers/todoButtonLoader.js');
-      await loadTodoButtons(this);
-      logger.info('Loaded todo button handlers');
-    } catch (error) {
-      logger.error('Error loading todo button handlers:', error);
-    }
-    
-    try {
-      const { default: loadTicketButtons } = await import('./handlers/ticketButtonLoader.js');
-      await loadTicketButtons(this);
-      logger.info('Loaded ticket button handlers');
-    } catch (error) {
-      logger.error('Error loading ticket button handlers:', error);
-    }
-    
-    try {
-      const { default: loadShopButtons } = await import('./handlers/shopButtonLoader.js');
-      await loadShopButtons(this);
-      logger.info('Loaded shop button handlers');
-    } catch (error) {
-      logger.error('Error loading shop button handlers:', error);
-    }
-    
-    try {
-      const { loadGiveawayButtons } = await import('./handlers/giveawayButtonLoader.js');
-      loadGiveawayButtons(this);
-      logger.info('Loaded giveaway button handlers');
-    } catch (error) {
-      logger.error('Error loading giveaway button handlers:', error);
-    }
-
-    try {
-      const { default: loadHelpButtons } = await import('./handlers/helpButtonLoader.js');
-      loadHelpButtons(this);
-      logger.info('Loaded help button handlers');
-    } catch (error) {
-      logger.error('Error loading help button handlers:', error);
-    }
-
-    try {
-      const { default: loadHelpSelectMenus } = await import('./handlers/helpSelectMenuLoader.js');
-      loadHelpSelectMenus(this);
-      logger.info('Loaded help select menu handlers');
-    } catch (error) {
-      logger.error('Error loading help select menu handlers:', error);
-    }
-    
-    try {
-      const { loadVerificationButtons } = await import('./handlers/verificationButtonLoader.js');
-      await loadVerificationButtons(this);
-      logger.info('Loaded verification button handlers');
-    } catch (error) {
-      logger.error('Error loading verification button handlers:', error);
-    }
-    
-    try {
-      const { default: loadWipedataButtons } = await import('./handlers/wipedataButtonLoader.js');
-      await loadWipedataButtons(this);
-      logger.info('Loaded wipedata button handlers');
-    } catch (error) {
-      logger.error('Error loading wipedata button handlers:', error);
     }
   }
 
@@ -335,10 +281,6 @@ const handlers = ['events', 'interactions'];
     }
   }
 
-  /**
-   * Gracefully shutdown the bot
-   * Stops cron jobs, closes database connection, and destroys Discord client
-   */
   async shutdown(reason = 'UNKNOWN') {
     logger.info(`\n${'='.repeat(60)}`);
     logger.info(`🛑 Graceful Shutdown Initiated (${reason})`);
@@ -382,18 +324,15 @@ const handlers = ['events', 'interactions'];
 try {
   const bot = new TitanBot();
   
-  // Setup graceful shutdown handlers
   const setupShutdown = () => {
     process.on('SIGTERM', () => bot.shutdown('SIGTERM'));
     process.on('SIGINT', () => bot.shutdown('SIGINT'));
     
-    // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
       logger.error('Uncaught Exception:', error);
       bot.shutdown('UNCAUGHT_EXCEPTION');
     });
     
-    // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason, promise) => {
       logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
       bot.shutdown('UNHANDLED_REJECTION');

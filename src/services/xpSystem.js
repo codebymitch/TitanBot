@@ -2,6 +2,7 @@
 import { getLevelingConfig } from '../utils/database.js';
 import { getUserLevelData, saveUserLevelData } from './leveling.js';
 import { getXpForLevel } from '../utils/database.js';
+import { logEvent, EVENT_TYPES } from './loggingService.js';
 
 export async function addXp(client, guild, member, xpToAdd) {
   try {
@@ -55,6 +56,38 @@ export async function addXp(client, guild, member, xpToAdd) {
         } catch (error) {
           logger.error('Failed to send level up message:', error);
         }
+      }
+
+      // Log level up event
+      try {
+        await logEvent({
+          client,
+          guildId: guild.id,
+          eventType: EVENT_TYPES.LEVELING_LEVELUP,
+          data: {
+            description: `${member.user.tag} reached level ${levelData.level}`,
+            userId: member.id,
+            fields: [
+              {
+                name: '👤 Member',
+                value: `${member.user.tag} (${member.id})`,
+                inline: true
+              },
+              {
+                name: '📊 New Level',
+                value: levelData.level.toString(),
+                inline: true
+              },
+              {
+                name: '✨ Total XP',
+                value: levelData.totalXp.toString(),
+                inline: true
+              }
+            ]
+          }
+        });
+      } catch (error) {
+        logger.debug('Error logging level up event:', error);
       }
     }
     

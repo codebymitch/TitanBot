@@ -1,99 +1,71 @@
-📄 Root Files
-├── 📄 package.json              # Dependencies and project configuration
-├── 📄 index.js                  # Bot entry point and initialization
-├── 📄 .env.example              # Environment variables template
-├── 📄 .env                      # Your environment variables (gitignored)
-├── 📄 README.md                 # Project documentation
-├── 📄 roadmap.txt               # This file - project structure guide
-└── 📄 scripts/                  # Utility scripts
-    └── 📄 remove-single-line-comments.js  # Code cleanup utility
+TitanBot Roadmap / Structure Overview 
 
-📁 src/ - Main Application Source Code
-├── 📄 app.js                    # Main bot application and Discord client
-├── 📁 commands/                 # Slash commands organized by category
-│   ├── 📁 Core/                # help.js, ping.js, uptime.js...
-│   ├── 📁 Economy/             # balance.js, work.js, shop.js...
-│   ├── 📁 Fun/                 # meme.js, joke.js, trivia.js...
-│   ├── 📁 JoinToCreate/        # jointocreate.js - voice channel management
-│   ├── 📁 Moderation/          # ban.js, kick.js, mute.js...
-│   ├── 📁 Reaction_roles/      # rsetup.js - reaction role management
-│   ├── 📁 Tickets/             # ticket.js, close.js...
-│   ├── 📁 Tools/               # calculate.js, poll.js, randomuser.js...
-│   ├── 📁 Utility/             # userinfo.js, serverinfo.js...
-│   ├── 📁 Verification/        # verification.js, autoVerify.js...
-│   ├── 📁 Voice/               # activity.js - voice channel activities
-│   └── 📁 Welcome/             # welcome.js, goodbye.js, autorole.js...
-├── 📁 config/                  # Configuration files
-│   ├── 📄 index.js             # Main configuration loader
-│   ├── 📄 bot.js               # Bot settings and appearance
-│   ├── 📄 postgres.js          # PostgreSQL database configuration
-│   └── 📁 shop/                # Shop item configurations
-│       ├── 📄 index.js         # Shop system main
-│       └── 📄 items.js         # Shop items definition
-├── 📁 events/                  # Discord event handlers
-│   ├── 📄 channelDelete.js     # Channel deletion handling
-│   ├── 📄 guildMemberAdd.js    # New member welcome
-│   ├── 📄 guildMemberRemove.js # Member leave handling
-│   ├── 📄 interactionCreate.js # Slash command interactions
-│   ├── 📄 messageCreate.js     # Message events and auto-moderation
-│   ├── 📄 ready.js             # Bot ready event and status setup
-│   └── 📄 voiceStateUpdate.js  # Voice channel state changes
-├── 📁 handlers/                # Command and interaction handlers
-│   ├── 📄 commandLoader.js     # Dynamic command registration
-│   ├── 📄 commands.js          # Command execution logic
-│   ├── 📄 events.js            # Event registration and handling
-│   ├── 📄 giveawayButtonLoader.js # Giveaway button interactions
-│   ├── 📄 giveawayButtons.js   # Giveaway button handlers
-│   ├── 📄 interactions.js      # General interaction handlers
-│   ├── 📁 reactionRoles/       # Reaction role system
-│   │   ├── 📄 reactionRoles.js # Main reaction role logic
-│   │   └── 📄 selectMenus.js   # Reaction role select menus
-│   ├── 📄 ticketButtonLoader.js # Ticket button interactions
-│   ├── 📄 ticketButtons.js     # Ticket button handlers
-│   ├── 📄 todoButtonLoader.js  # Todo system button loader
-│   ├── 📄 todoButtons.js       # Todo system button handlers
-│   └── 📄 verificationButtonLoader.js # Verification button loader
-├── 📁 interactions/            # Select menu and modal handlers
-│   ├── 📁 selectMenus/         # Select menu interactions
-│   │   └── 📄 reaction_roles.js # Reaction role select menu
-│   └── 📄 verificationButtonHandler.js # Verification button handler
-├── 📁 services/                # Business logic and data services
-│   ├── 📄 birthdayService.js   # Birthday reminder system
-│   ├── 📄 counterService.js    # Server counter management
-│   ├── 📄 database.js          # Main database wrapper (PostgreSQL + Memory fallback)
-│   ├── 📄 economy.js           # Economy system logic
-│   ├── 📄 giveawayService.js   # Giveaway management
-│   ├── 📄 guildConfig.js       # Guild configuration management
-│   ├── 📄 leveling.js          # XP and leveling system
-│   ├── 📄 reactionRoleService.js # Reaction role service
-│   ├── 📄 shopService.js       # Shop system service
-│   ├── 📄 ticket.js            # Ticket system service
-│   └── 📄 xpSystem.js          # Experience calculations
-└── 📁 utils/                   # Utility functions and helpers
-    ├── 📄 components.js        # Discord component builders
-    ├── 📄 dateUtils.js         # Date and time utilities
-    ├── 📄 database.js          # Database operations layer
-    ├── 📄 economy.js           # Economy utility functions
-    ├── 📄 embeds.js            # Discord embed utilities
-    ├── 📄 errorHandler.js      # Error handling utilities
-    ├── 📄 giveaways.js         # Giveaway utilities
-    ├── 📄 helpers.js           # General helper functions
-    ├── 📄 interactionHelper.js # Interaction utilities
-    ├── 📄 logger.js            # Winston logging system
-    ├── 📄 memoryStorage.js     # In-memory storage fallback
-    ├── 📄 messageTemplates.js  # Predefined message templates
-    ├── 📄 moderation.js        # Moderation utilities
-    ├── 📄 postgresDatabase.js  # PostgreSQL database implementation
-    ├── 📄 ticketLogging.js     # Ticket logging utilities
-    ├── 📄 tickets.js           # Ticket utilities
-    └── 📄 welcome.js           # Welcome system utilities
+Goal
+- Keep this as a practical map of the codebase.
+- Show main folders and important files only (not every file).
 
-📁 database/ - Database Related Files
-└── 📁 models/                  # Database models and schemas
-    └── 📄 welcomeSystem.js     # Welcome system data models
+Root
+- index.js                    -> process entry point
+- package.json                -> scripts, dependencies, project metadata
+- README.md                   -> setup and usage docs
+- SECURITY.md                 -> security policy
+- scripts/                    -> utility/maintenance scripts
+- database/                   -> database model definitions
+- logs/                       -> runtime log output
+- src/                        -> main bot application code
 
-📁 logs/ - Application Logs
-├── 📄 error-*.log             # Error logs (rotated daily)
-├── 📄 combined-*.log          # General logs (rotated daily)
-└── 📄 exceptions-*.log        # Exception logs (rotated daily)
+src/
+- app.js                      -> creates client, initializes systems
 
+- commands/                   -> slash command categories
+  - Core/                     -> essential bot commands
+    - help.js, ping.js, stats.js, uptime.js, invite.js
+  - Community/                -> application/community commands
+  - Config/                   -> server/bot configuration commands
+  - Counter/                  -> counter channel commands
+  - Economy/                  -> economy system commands
+  - Moderation/               -> moderation/admin commands
+  - Ticket/                   -> ticket system commands
+  - Verification/             -> verification commands
+  - JoinToCreate/             -> dynamic voice channel commands
+  - Reaction_roles/           -> role assignment commands
+  - (Also includes: Birthday, Fun, Giveaway, Leveling, Search, Tools, Utility, Voice, Welcome)
+
+- config/                     -> centralized configuration
+  - index.js                  -> config loader/exports
+  - bot.js                    -> bot settings, embed theme/colors, feature flags
+  - postgres.js               -> PostgreSQL config
+  - shop/                     -> shop config entries
+
+- events/                     -> Discord event listeners
+  - ready.js, interactionCreate.js, messageCreate.js
+  - guildMemberAdd.js, guildMemberRemove.js, voiceStateUpdate.js
+
+- handlers/                   -> loader/router layer for commands/interactions
+  - commandLoader.js, commands.js, events.js, interactions.js
+  - helpSelectMenuLoader.js, helpButtons.js
+  - ticketButtons.js, verificationButtonLoader.js
+
+- interactions/               -> interaction-specific handlers
+  - verificationButtonHandler.js
+  - selectMenus/              -> select menu handlers
+
+- services/                   -> business logic + data operations
+  - database.js               -> storage abstraction
+  - guildConfig.js            -> guild-level settings service
+  - ticket.js, giveawayService.js, reactionRoleService.js
+  - leveling.js, xpSystem.js, economy.js, counterService.js
+
+- utils/                      -> shared helpers/utilities
+  - embeds.js                 -> standardized embed creation
+  - components.js             -> Discord UI component builders
+  - logger.js                 -> logging utility
+  - postgresDatabase.js, memoryStorage.js, schemas.js
+  - errorHandler.js, permissionGuard.js, interactionHelper.js
+
+Database models
+- database/models/welcomeSystem.js -> welcome system schema/model
+
+Notes
+- This project is modular by feature area: commands -> handlers -> services -> utils.
+- bot.js is the single source of truth for embed theming/colors and core bot config.

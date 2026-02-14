@@ -7,6 +7,7 @@ import { MessageTemplates } from '../../utils/messageTemplates.js';
 
 const BASE_WIN_CHANCE = 0.4;
 const CLOVER_WIN_BONUS = 0.1;
+const CHARM_WIN_BONUS = 0.08;
 const PAYOUT_MULTIPLIER = 2.0;
 const GAMBLE_COOLDOWN = 5 * 60 * 1000;
 
@@ -34,6 +35,7 @@ export default {
             const userData = await getEconomyData(client, guildId, userId);
             const lastGamble = userData.lastGamble || 0;
             let cloverCount = userData.inventory["lucky_clover"] || 0;
+            let charmCount = userData.inventory["lucky_charm"] || 0;
 
             if (now < lastGamble + GAMBLE_COOLDOWN) {
                 const remaining = lastGamble + GAMBLE_COOLDOWN - now;
@@ -60,12 +62,21 @@ export default {
             let winChance = BASE_WIN_CHANCE;
             let cloverMessage = "";
             let usedClover = false;
+            let usedCharm = false;
 
+            // Lucky Clover - single use, +10% win chance
             if (cloverCount > 0) {
                 winChance += CLOVER_WIN_BONUS;
                 userData.inventory["lucky_clover"] -= 1;
-                cloverMessage = `\n🍀 **Lucky Clover Consumed:** Your win chance was boosted to **${Math.round(winChance * 100)}%**!`;
+                cloverMessage = `\n🍀 **Lucky Clover Consumed:** Your win chance was boosted!`;
                 usedClover = true;
+            }
+            // Lucky Charm - 3 uses, +8% win chance
+            else if (charmCount > 0) {
+                winChance += CHARM_WIN_BONUS;
+                userData.inventory["lucky_charm"] -= 1;
+                cloverMessage = `\n🍀 **Lucky Charm Used (${charmCount - 1} uses remaining):** Your win chance was boosted!`;
+                usedCharm = true;
             }
 
             const win = Math.random() < winChance;
@@ -104,7 +115,11 @@ userData.lastGamble = now;
 
             if (usedClover) {
                 resultEmbed.setFooter({
-                    text: `You have ${userData.inventory["lucky_clover"]} Lucky Clovers left.`,
+                    text: `You have ${userData.inventory["lucky_clover"]} Lucky Clovers left. Win chance was ${Math.round(winChance * 100)}%.`,
+                });
+            } else if (usedCharm) {
+                resultEmbed.setFooter({
+                    text: `You have ${userData.inventory["lucky_charm"]} Lucky Charm uses left. Win chance was ${Math.round(winChance * 100)}%.`,
                 });
             } else {
                 resultEmbed.setFooter({

@@ -37,16 +37,25 @@ class PostgreSQLDatabase {
                 await new Promise(resolve => setTimeout(resolve, 100));
 
                 this.pool = new pg.Pool({
+                    // Connection settings
                     host: pgConfig.options.host,
                     port: pgConfig.options.port,
                     database: pgConfig.options.database,
                     user: pgConfig.options.user,
                     password: pgConfig.options.password,
                     ssl: pgConfig.options.ssl,
+                    
+                    // Pool settings
                     max: pgConfig.options.max,
                     min: pgConfig.options.min,
                     idleTimeoutMillis: pgConfig.options.idleTimeoutMillis,
                     connectionTimeoutMillis: pgConfig.options.connectionTimeoutMillis,
+                    
+                    // Production settings
+                    application_name: pgConfig.options.application_name,
+                    statement_timeout: pgConfig.options.statement_timeout,
+                    keepalives: pgConfig.options.keepalives,
+                    keepalives_idle: pgConfig.options.keepalives_idle,
                 });
 
                 const client = await this.pool.connect();
@@ -337,64 +346,31 @@ class PostgreSQLDatabase {
             await this.pool.query(functionQuery);
             
             const triggers = [
-                `CREATE TRIGGER update_guilds_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.guilds} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_users_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.users} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_welcome_configs_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.welcome_configs} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_leveling_configs_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.leveling_configs} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_user_levels_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.user_levels} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_economy_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.economy} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_application_roles_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.application_roles} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_invite_tracking_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.invite_tracking} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_guild_users_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.guild_users} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_birthdays_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.birthdays} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_giveaways_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.giveaways} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_tickets_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.tickets} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`,
-                 
-                `CREATE TRIGGER update_afk_status_updated_at 
-                 BEFORE UPDATE ON ${pgConfig.tables.afk_status} 
-                 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`
+                { name: 'update_guilds_updated_at', table: pgConfig.tables.guilds },
+                { name: 'update_users_updated_at', table: pgConfig.tables.users },
+                { name: 'update_welcome_configs_updated_at', table: pgConfig.tables.welcome_configs },
+                { name: 'update_leveling_configs_updated_at', table: pgConfig.tables.leveling_configs },
+                { name: 'update_user_levels_updated_at', table: pgConfig.tables.user_levels },
+                { name: 'update_economy_updated_at', table: pgConfig.tables.economy },
+                { name: 'update_application_roles_updated_at', table: pgConfig.tables.application_roles },
+                { name: 'update_invite_tracking_updated_at', table: pgConfig.tables.invite_tracking },
+                { name: 'update_guild_users_updated_at', table: pgConfig.tables.guild_users },
+                { name: 'update_birthdays_updated_at', table: pgConfig.tables.birthdays },
+                { name: 'update_giveaways_updated_at', table: pgConfig.tables.giveaways },
+                { name: 'update_tickets_updated_at', table: pgConfig.tables.tickets },
+                { name: 'update_afk_status_updated_at', table: pgConfig.tables.afk_status },
             ];
 
             for (const trigger of triggers) {
                 try {
-                    await this.pool.query(trigger);
+                    await this.pool.query(`DROP TRIGGER IF EXISTS ${trigger.name} ON ${trigger.table};`);
+                    await this.pool.query(
+                        `CREATE TRIGGER ${trigger.name}
+                         BEFORE UPDATE ON ${trigger.table}
+                         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`
+                    );
                 } catch (error) {
-                    logger.warn('Error creating trigger:', error.message);
+                    logger.warn(`Error creating trigger ${trigger.name} on ${trigger.table}: ${error.message}`);
                 }
             }
             

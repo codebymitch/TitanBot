@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -23,7 +24,7 @@ export default {
 
                 const embed = new EmbedBuilder()
                     .setTitle("🏆 Level Leaderboard")
-                    .setColor("#3498db")
+                    .setColor(getColor('info'))
                     .setDescription("Top 10 most active members in this server:")
                     .setTimestamp();
 

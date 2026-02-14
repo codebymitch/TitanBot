@@ -1,7 +1,7 @@
 ﻿import { EmbedBuilder } from 'discord.js';
-import { shopConfig, getItemById, validatePurchase, getCurrentPrice, getItemsInCategory } from '../config/shop/index.js';
+import { shopConfig, shopItems, getItemById, validatePurchase, getCurrentPrice, getItemsInCategory } from '../config/shop/index.js';
 import { logger } from '../utils/logger.js';
-import { getUserBalance, updateUserBalance } from './economyService.js';
+import { getEconomyData, setEconomyData } from '../utils/economy.js';
 
 /**
  * Shop service for handling shop-related operations
@@ -21,18 +21,22 @@ class ShopService {
      */
     async purchaseItem(userId, itemId, quantity = 1, options = {}) {
         try {
-            const { guildId } = options;
+            const { guildId, client } = options;
+            
+            if (!client) {
+                throw new Error('Client is required for shop operations');
+            }
             
             const item = getItemById(itemId);
             if (!item) {
                 return { success: false, message: 'Item not found in the shop.' };
             }
 
-            const userBalance = await getUserBalance(userId, guildId);
+            const userData = await getEconomyData(client, guildId, userId);
             
-            const totalCost = getCurrentPrice(itemId, { quantity, userData: userBalance });
+            const totalCost = getCurrentPrice(itemId, { quantity, userData });
             
-            if (userBalance.balance < totalCost) {
+            if (userData.wallet < totalCost) {
                 const currency = this.getCurrencyInfo();
                 return { 
                     success: false, 
@@ -40,19 +44,19 @@ class ShopService {
                 };
             }
 
-            const validation = validatePurchase(itemId, userBalance);
+            const validation = validatePurchase(itemId, userData);
             if (!validation.valid) {
                 return { success: false, message: validation.reason };
             }
 
-            await updateUserBalance(userId, -totalCost, 'shop_purchase', {
-                itemId,
-                itemName: item.name,
-                quantity,
-                unitPrice: totalCost / quantity
-            });
+            // Deduct money from wallet
+            userData.wallet -= totalCost;
 
-            await this.addToUserInventory(userId, itemId, quantity, guildId);
+            // Add item to inventory
+            await this.addToUserInventory(userId, itemId, quantity, guildId, client, userData);
+
+            // Save updated data
+            await setEconomyData(client, guildId, userId, userData);
 
             this.logger.info(`User ${userId} purchased ${quantity}x ${item.name} for ${totalCost} ${this.getCurrencyName()}`);
 
@@ -63,7 +67,7 @@ class ShopService {
                     item,
                     quantity,
                     totalCost,
-                    remainingBalance: userBalance.balance - totalCost
+                    remainingBalance: userData.wallet
                 }
             };
         } catch (error) {
@@ -79,14 +83,16 @@ class ShopService {
      * Get the user's inventory
      * @param {string} userId - The ID of the user
      * @param {string} [guildId] - The ID of the guild (for server-specific items)
-     * @returns {Promise<Array>} The user's inventory
+     * @param {Object} client - The Discord client
+     * @returns {Promise<Object>} The user's inventory
      */
-    async getUserInventory(userId, guildId) {
+    async getUserInventory(userId, guildId, client) {
         try {
-return [];
+            const userData = await getEconomyData(client, guildId, userId);
+            return userData.inventory || {};
         } catch (error) {
             this.logger.error(`Error getting user inventory: ${error.message}`, { error, userId, guildId });
-            return [];
+            return {};
         }
     }
 
@@ -94,8 +100,31 @@ return [];
      * Add an item to the user's inventory
      * @private
      */
-    async addToUserInventory(userId, itemId, quantity = 1, guildId = null) {
+    async addToUserInventory(userId, itemId, quantity = 1, guildId = null, client = null, userData = null) {
         try {
+            // Inventory is an object with itemId as key and quantity as value
+            if (!userData) {
+                userData = await getEconomyData(client, guildId, userId);
+            }
+            
+            if (!userData.inventory) {
+                userData.inventory = {};
+            }
+            
+            const item = getItemById(itemId);
+            
+            // For upgrades, set to true (they're boolean flags)
+            if (item && item.type === 'upgrade') {
+                if (!userData.upgrades) {
+                    userData.upgrades = {};
+                }
+                userData.upgrades[itemId] = true;
+            } else {
+                // For consumables and tools, add to inventory
+                userData.inventory[itemId] = (userData.inventory[itemId] || 0) + quantity;
+            }
+            
+            this.logger.info(`Added ${quantity}x ${itemId} to user ${userId}'s inventory`);
         } catch (error) {
             this.logger.error(`Error adding item to inventory: ${error.message}`, { error, userId, itemId, quantity, guildId });
             throw error;
@@ -107,7 +136,7 @@ return [];
      * @returns {string} The name of the currency
      */
     getCurrencyName() {
-return 'coins';
+        return shopConfig.currencyName || 'coins';
     }
 
     /**

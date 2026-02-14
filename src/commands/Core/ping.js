@@ -29,7 +29,7 @@ try {
         } catch (error) {
             console.error('Ping command error:', error);
             return interaction.editReply({
-                embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.' })],
+                embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.', color: 'error' })],
                 flags: MessageFlags.Ephemeral,
             });
         }

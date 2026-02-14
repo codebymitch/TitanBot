@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 
@@ -111,7 +112,7 @@ export default {
             const errorEmbed = createEmbed({ 
                 title: "❌ Error", 
                 description: "An error occurred while processing your request.",
-                color: 0xFF0000
+                color: getColor('error')
             });
 
             if (!interaction.replied && !interaction.deferred) {

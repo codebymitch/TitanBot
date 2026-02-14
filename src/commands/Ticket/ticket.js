@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -177,7 +178,7 @@ const dmOnClose = interaction.options.getBoolean("dm_on_close") !== false;
             const setupEmbed = createEmbed({ 
                 title: "🎫 Support Tickets", 
 description: panelMessage,
-                color: "#3498DB"
+                color: getColor('info')
             });
 
             const ticketButton = new ActionRowBuilder().addComponents(
@@ -244,7 +245,7 @@ description: panelMessage,
                 const logEmbed = createEmbed({
                     title: "🔧 Ticket System Setup (Configuration Log)",
                     description: `The ticket panel was set up in ${panelChannel} by ${interaction.user}.`,
-                    color: "#F39C12"
+                    color: getColor('warning')
                 })
                     .addFields(
                         {

@@ -1,5 +1,6 @@
 ﻿import { Events, EmbedBuilder, MessageFlags } from 'discord.js';
 import { getReactionRoleMessage, addReactionRole, removeReactionRole } from '../services/reactionRoleService.js';
+import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { errorEmbed } from '../utils/embeds.js';
 
 /**
@@ -37,6 +38,39 @@ async function handleReactionAdd(client, reaction, user) {
         }
 
         await member.roles.add(role);
+
+        // Log reaction role added
+        try {
+            await logEvent({
+                client,
+                guildId: guild.id,
+                eventType: EVENT_TYPES.REACTION_ROLE_ADD,
+                data: {
+                    description: `Reaction role assigned to ${user.tag}`,
+                    userId: user.id,
+                    channelId: message.channel.id,
+                    fields: [
+                        {
+                            name: '👤 Member',
+                            value: `${user.tag} (${user.id})`,
+                            inline: true
+                        },
+                        {
+                            name: '🏷️ Role',
+                            value: role.toString(),
+                            inline: true
+                        },
+                        {
+                            name: '😊 Reaction',
+                            value: reaction.emoji.toString(),
+                            inline: true
+                        }
+                    ]
+                }
+            });
+        } catch (error) {
+            console.debug('Error logging reaction role add:', error);
+        }
 
     } catch (error) {
         console.error('Error in handleReactionAdd:', error);
@@ -78,6 +112,39 @@ async function handleReactionRemove(client, reaction, user) {
         }
 
         await member.roles.remove(role);
+
+        // Log reaction role removed
+        try {
+            await logEvent({
+                client,
+                guildId: guild.id,
+                eventType: EVENT_TYPES.REACTION_ROLE_REMOVE,
+                data: {
+                    description: `Reaction role removed from ${user.tag}`,
+                    userId: user.id,
+                    channelId: message.channel.id,
+                    fields: [
+                        {
+                            name: '👤 Member',
+                            value: `${user.tag} (${user.id})`,
+                            inline: true
+                        },
+                        {
+                            name: '🏷️ Role',
+                            value: role.toString(),
+                            inline: true
+                        },
+                        {
+                            name: '😊 Reaction',
+                            value: reaction.emoji.toString(),
+                            inline: true
+                        }
+                    ]
+                }
+            });
+        } catch (error) {
+            console.debug('Error logging reaction role remove:', error);
+        }
 
     } catch (error) {
         console.error('Error in handleReactionRemove:', error);

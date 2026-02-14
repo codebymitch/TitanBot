@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -92,7 +93,7 @@ emoji: '🎭'
                 embeds: [{
                     title,
                     description,
-                    color: 0x3498DB,
+                    color: getColor('info'),
                     fields: [
                         {
                             name: 'Available Roles',

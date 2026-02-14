@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -47,7 +48,7 @@ const { options, guild, client } = interaction;
                     leaveEmbed: {
                         title: "Goodbye {user.tag}",
                         description: message,
-color: 0xff0000,
+color: getColor('error'),
                         ...(image && { image: { url: image } })
                     }
                 });
@@ -59,7 +60,7 @@ color: 0xff0000,
                     .replace(/{memberCount}/g, guild.memberCount.toLocaleString());
 
                 const embed = new EmbedBuilder()
-.setColor(0x00ff00)
+.setColor(getColor('success'))
                     .setTitle('✅ Goodbye System Configured')
                     .setDescription(`Goodbye messages will now be sent to ${channel}`)
                     .addFields(

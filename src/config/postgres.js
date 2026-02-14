@@ -1,42 +1,38 @@
-﻿/**
- * PostgreSQL Configuration for Titan Bot
- * Centralizes PostgreSQL connection settings and options
- */
+﻿// PostgreSQL Configuration for Titan Bot
+// Centralizes PostgreSQL connection settings and options
 
 export const pgConfig = {
     url: process.env.POSTGRES_URL || 'postgresql://localhost:5432/titanbot',
     
     options: {
+        // Connection settings
         host: process.env.POSTGRES_HOST || 'localhost',
-        
         port: parseInt(process.env.POSTGRES_PORT) || 5432,
-        
         database: process.env.POSTGRES_DB || 'titanbot',
-        
         user: process.env.POSTGRES_USER || 'postgres',
-        
         password: (process.env.POSTGRES_PASSWORD || '').toString(),
         
+        // SSL/TLS Configuration
         ssl: process.env.POSTGRES_SSL === 'true' ? {
             rejectUnauthorized: false
         } : false,
         
-        connectionTimeoutMillis: 10000,
+        // Pool settings (pg.Pool compatible)
+        max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS) || 20,
+        min: parseInt(process.env.POSTGRES_MIN_CONNECTIONS) || 2,
+        idleTimeoutMillis: parseInt(process.env.POSTGRES_IDLE_TIMEOUT) || 30000,
+        connectionTimeoutMillis: parseInt(process.env.POSTGRES_CONNECTION_TIMEOUT) || 10000,
         
-        idleTimeoutMillis: 30000,
+        // Production settings
+        application_name: 'titanbot',
+        statement_timeout: process.env.NODE_ENV === 'production' ? 30000 : 0,
+        keepalives: 1,
+        keepalives_idle: 30,
         
-        max: 20,
-        
-        min: 2,
-        
-        idleTimeoutMillis: 30000,
-        
-        acquireTimeoutMillis: 10000,
-        
-        retries: 3,
-        
-        backoffBase: 100,
-        backoffMultiplier: 2,
+        // Retry configuration (used by postgresDatabase.js)
+        retries: parseInt(process.env.POSTGRES_RETRIES) || 3,
+        backoffBase: parseInt(process.env.POSTGRES_BACKOFF_BASE) || 100,
+        backoffMultiplier: parseInt(process.env.POSTGRES_BACKOFF_MULTIPLIER) || 2,
     },
     
     tables: {

@@ -2,9 +2,11 @@
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logger } from './logger.js';
 import { getFromDb, setInDb } from './database.js';
+import { getColor } from '../config/bot.js';
 
 /**
  * Enhanced moderation logging system with comprehensive tracking
+ * Uses centralized color scheme from bot.js config
  * @param {Object} options - The log options
  * @param {import('discord.js').Client} options.client - The Discord client
  * @param {import('discord.js').Guild} options.guild - The guild object
@@ -28,34 +30,42 @@ export async function logEvent({ client, guild, guildId, event }) {
       return;
     }
     const config = await getGuildConfig(client, guild.id);
-    if (!config?.logChannelId || !config?.enableLogging) {
+    const loggingDisabled = config?.logging?.enabled === false || config?.enableLogging === false;
+    const logChannelId = config?.logging?.channelId || config?.logChannelId;
+    if (!logChannelId || loggingDisabled) {
       logger.debug(`Logging disabled or no log channel configured for guild ${guild.id}`);
       return;
     }
 
-    const logChannel = guild.channels.cache.get(config.logChannelId);
-    if (!logChannel) {
-      logger.warn(`Log channel ${config.logChannelId} not found in guild ${guild.id}`);
+    const ignoredUsers = config.logIgnore?.users || [];
+    if (event.metadata?.userId && ignoredUsers.includes(event.metadata.userId)) {
       return;
     }
 
+    const logChannel = guild.channels.cache.get(logChannelId);
+    if (!logChannel) {
+      logger.warn(`Log channel ${logChannelId} not found in guild ${guild.id}`);
+      return;
+    }
+
+    // Action styles using bot.js color scheme
     const actionStyles = {
-      'Member Banned': { color: '#721919', icon: '🔨' },
-      'Member Kicked': { color: '#FFA500', icon: '👢' },
-      'Member Timed Out': { color: '#F1C40F', icon: '⏳' },
-      'Member Untimeouted': { color: '#2ECC71', icon: '✅' },
-      'User Warned': { color: '#FEE75C', icon: '⚠️' },
-      'Warnings Viewed': { color: '#3498DB', icon: '👁️' },
-      'Messages Purged': { color: '#E67E22', icon: '🗑️' },
-      'Channel Locked': { color: '#CC00CC', icon: '🔒' },
-      'Channel Unlocked': { color: '#2ECC71', icon: '🔓' },
-      'Case Created': { color: '#3498DB', icon: '📋' },
-      'Case Updated': { color: '#9B59B6', icon: '📝' },
-      'DM Sent': { color: '#3498DB', icon: '✉️' },
-      'Log Channel Activated': { color: '#2ECC71', icon: '📝' }
+      'Member Banned': { color: getColor('error'), icon: '🔨' },
+      'Member Kicked': { color: getColor('warning'), icon: '👢' },
+      'Member Timed Out': { color: getColor('warning'), icon: '⏳' },
+      'Member Untimeouted': { color: getColor('success'), icon: '✅' },
+      'User Warned': { color: getColor('warning'), icon: '⚠️' },
+      'Warnings Viewed': { color: getColor('info'), icon: '👁️' },
+      'Messages Purged': { color: getColor('moderation'), icon: '🗑️' },
+      'Channel Locked': { color: getColor('moderation'), icon: '🔒' },
+      'Channel Unlocked': { color: getColor('success'), icon: '🔓' },
+      'Case Created': { color: getColor('info'), icon: '📋' },
+      'Case Updated': { color: getColor('moderation'), icon: '📝' },
+      'DM Sent': { color: getColor('info'), icon: '✉️' },
+      'Log Channel Activated': { color: getColor('success'), icon: '📝' }
     };
 
-    const style = actionStyles[event.action] || { color: '#0099ff', icon: '🔨' };
+    const style = actionStyles[event.action] || { color: getColor('primary'), icon: '🔨' };
 
     const embed = new EmbedBuilder()
       .setColor(event.color || style.color)

@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -159,7 +160,7 @@ export async function handleApplicationModal(interaction) {
                         `**Role:** ${role.name}\n` +
                         `**Application ID:** \`${application.id}\`\n` +
                         `**Status:** Pending`
-                }).setColor('#FFFF00');
+                }).setColor(getColor('warning'));
                 
                 const logMessage = await logChannel.send({ embeds: [logEmbed] });
                 

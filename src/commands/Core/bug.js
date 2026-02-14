@@ -1,4 +1,5 @@
-﻿import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } from 'discord.js';
+﻿import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { createEmbed } from '../../utils/embeds.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -13,20 +14,17 @@ export default {
 
         const row = new ActionRowBuilder().addComponents(githubButton);
 
-        const bugReportEmbed = new EmbedBuilder()
-            .setColor('#ff0000')
-            .setTitle('🐛 Bug Report')
-            .setDescription('Found a bug? Please report it on our GitHub Issues page!\n\n' +
+        const bugReportEmbed = createEmbed({
+            title: '🐛 Bug Report',
+            description: 'Found a bug? Please report it on our GitHub Issues page!\n\n' +
             '**When reporting a bug, please include:**\n' +
             '• 📝 Detailed description of the issue\n' +
             '• 🔄 Steps to reproduce the problem\n' +
             '• 📸 Screenshots if applicable\n' +
             '• 💻 Your bot version and environment\n\n' +
-            'This helps us fix issues faster and more effectively!')
-            .setFooter({ 
-                text: 'TitanBot Bug Reporting System', 
-                iconURL: interaction.client.user.displayAvatarURL() 
-            })
+            'This helps us fix issues faster and more effectively!',
+            color: 'error'
+        })
             .setTimestamp();
 
         await interaction.reply({

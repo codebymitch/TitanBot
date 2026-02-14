@@ -60,6 +60,7 @@ roleId: null,
         price: 10000,
         description: 'Increases the chance of winning a higher payout on `/gamble` once.',
         type: 'consumable',
+        maxQuantity: 10,
         effect: {
             type: 'gamble_boost',
             multiplier: 1.5,
@@ -106,8 +107,9 @@ roleId: null,
         id: 'lucky_charm',
         name: '🍀 Lucky Charm',
         price: 10000,
-        description: 'Increases luck for gambling',
+        description: 'Increases luck for gambling. Has 3 uses before being consumed.',
         type: 'consumable',
+        maxQuantity: 10,
         effect: {
             type: 'gamble_boost',
             multiplier: 1.3,
@@ -118,12 +120,24 @@ roleId: null,
         id: 'bank_note',
         name: '📜 Bank Note',
         price: 25000,
-        description: 'Increases bank capacity by 10,000',
-        type: 'upgrade',
-        maxLevel: 10,
+        description: 'Increases bank capacity by 10,000. Can be purchased multiple times.',
+        type: 'tool',
+        durability: null,
         effect: {
             type: 'bank_capacity',
             increase: 10000
+        }
+    },
+    {
+        id: 'personal_safe',
+        name: '🔒 Personal Safe',
+        price: 30000,
+        description: 'Protects your money from theft. Prevents others from robbing you.',
+        type: 'tool',
+        durability: null,
+        effect: {
+            type: 'robbery_protection',
+            protection: true
         }
     }
 ];
@@ -168,9 +182,13 @@ export function validatePurchase(itemId, userData) {
         return { valid: false, reason: 'Item not found' };
     }
 
+    // Inventory is an object: { itemId: quantity }
+    const inventory = userData.inventory || {};
+    const upgrades = userData.upgrades || {};
+
     if (item.type === 'consumable' && item.maxQuantity) {
-        const userItem = userData.inventory?.find(i => i.id === itemId);
-        if (userItem && userItem.quantity >= item.maxQuantity) {
+        const currentQuantity = inventory[itemId] || 0;
+        if (currentQuantity >= item.maxQuantity) {
             return { 
                 valid: false, 
                 reason: `You can only have a maximum of ${item.maxQuantity} ${item.name}s` 
@@ -179,21 +197,22 @@ export function validatePurchase(itemId, userData) {
     }
 
     if (item.type === 'upgrade' && item.maxLevel) {
-        const userUpgrade = userData.upgrades?.find(u => u.id === itemId);
-        if (userUpgrade && userUpgrade.level >= item.maxLevel) {
+        // Check if user already has max level of this upgrade
+        if (upgrades[itemId]) {
             return { 
                 valid: false, 
-                reason: `You've already reached the maximum level for ${item.name}` 
+                reason: `You've already purchased ${item.name}` 
             };
         }
     }
 
     if (item.type === 'tool') {
-        const userTool = userData.inventory?.find(i => i.id === itemId);
-        if (userTool && userTool.durability > 0) {
+        // Check if user already has this tool (except for bank_note which is stackable)
+        const currentQuantity = inventory[itemId] || 0;
+        if (itemId !== 'bank_note' && currentQuantity > 0) {
             return { 
                 valid: false, 
-                reason: `You already have a ${item.name} in good condition` 
+                reason: `You already have a ${item.name}` 
             };
         }
     }

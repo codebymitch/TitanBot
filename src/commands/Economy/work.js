@@ -6,6 +6,7 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 const WORK_COOLDOWN = 30 * 60 * 1000;
 const MIN_WORK_AMOUNT = 50;
 const MAX_WORK_AMOUNT = 300;
+const LAPTOP_MULTIPLIER = 1.5;
 const WORK_JOBS = [
     "Software Developer",
     "Barista",
@@ -36,6 +37,7 @@ export default {
             const lastWork = userData.lastWork || 0;
             const inventory = userData.inventory || {};
             const extraWorkShifts = inventory["extra_work"] || 0;
+            const hasLaptop = inventory["laptop"] || 0;
 
             let cooldownActive = now < lastWork + WORK_COOLDOWN;
             let usedConsumable = false;
@@ -58,8 +60,15 @@ export default {
                 }
             }
 
-            const earned = Math.floor(Math.random() * (MAX_WORK_AMOUNT - MIN_WORK_AMOUNT + 1)) + MIN_WORK_AMOUNT;
+            let earned = Math.floor(Math.random() * (MAX_WORK_AMOUNT - MIN_WORK_AMOUNT + 1)) + MIN_WORK_AMOUNT;
             const job = WORK_JOBS[Math.floor(Math.random() * WORK_JOBS.length)];
+
+            // Apply laptop multiplier if owned
+            let multiplierMessage = "";
+            if (hasLaptop > 0) {
+                earned = Math.floor(earned * LAPTOP_MULTIPLIER);
+                multiplierMessage = "\n💻 **Laptop Bonus:** +50% earnings!";
+            }
 
             userData.wallet = (userData.wallet || 0) + earned;
             userData.lastWork = now;
@@ -68,7 +77,7 @@ export default {
 
             const embed = successEmbed(
                 "💼 Work Complete!",
-                `You worked as a **${job}** and earned **$${earned.toLocaleString()}**!`
+                `You worked as a **${job}** and earned **$${earned.toLocaleString()}**!${multiplierMessage}`
             )
                 .addFields(
                     {

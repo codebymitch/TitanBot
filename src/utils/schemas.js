@@ -7,6 +7,21 @@ const LogIgnoreSchema = z
   })
   .default({ users: [], channels: [] });
 
+const LoggingConfigSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    channelId: z.string().nullable().optional(),
+    enabledEvents: z.record(z.boolean()).default({})
+  })
+  .default({ enabled: true, enabledEvents: {} });
+
+const TicketLoggingSchema = z
+  .object({
+    lifecycleChannelId: z.string().nullable().optional(),
+    transcriptChannelId: z.string().nullable().optional()
+  })
+  .optional();
+
 export const GuildConfigSchema = z
   .object({
     prefix: z.string().optional(),
@@ -21,7 +36,10 @@ export const GuildConfigSchema = z
     birthdayChannelId: z.string().nullable().optional(),
     premiumRoleId: z.string().nullable().optional(),
     logIgnore: LogIgnoreSchema.optional(),
-    enabledCommands: z.record(z.boolean()).optional()
+    enabledCommands: z.record(z.boolean()).optional(),
+    logging: LoggingConfigSchema.optional(),
+    ticketLogging: TicketLoggingSchema.optional(),
+    enableLogging: z.boolean().optional()
   })
   .passthrough();
 

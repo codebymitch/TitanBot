@@ -1,5 +1,6 @@
 ﻿import { EmbedBuilder, ChannelType } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
+import { EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from './logger.js';
 
 /**
@@ -29,6 +30,19 @@ export async function logTicketEvent({ client, guildId, event }) {
 
     const config = await getGuildConfig(client, guildId);
     
+    const unifiedEventType = mapTicketEventType(event.type);
+    if (config.logging?.enabled === false) {
+      return;
+    }
+    if (unifiedEventType) {
+      if (config.logging?.enabledEvents?.[unifiedEventType] === false) {
+        return;
+      }
+      if (config.logging?.enabledEvents?.['ticket.*'] === false) {
+        return;
+      }
+    }
+
     const logChannelId = getLogChannelForEventType(config, event.type);
     if (!logChannelId) {
       return;
@@ -87,6 +101,26 @@ function getLogChannelForEventType(config, eventType) {
     
     default:
       return config.logChannelId;
+  }
+}
+
+function mapTicketEventType(eventType) {
+  switch (eventType) {
+    case 'open':
+      return EVENT_TYPES.TICKET_CREATE;
+    case 'close':
+      return EVENT_TYPES.TICKET_CLOSE;
+    case 'delete':
+      return EVENT_TYPES.TICKET_DELETE;
+    case 'claim':
+    case 'unclaim':
+      return EVENT_TYPES.TICKET_CLAIM;
+    case 'priority':
+      return EVENT_TYPES.TICKET_PRIORITY;
+    case 'transcript':
+      return EVENT_TYPES.TICKET_TRANSCRIPT;
+    default:
+      return null;
   }
 }
 

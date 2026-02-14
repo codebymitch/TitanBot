@@ -26,7 +26,7 @@ try {
     } catch (error) {
       console.error('Invite command error:', error);
       return interaction.editReply({
-        embeds: [createEmbed({ title: 'System Error', description: 'Could not build the invite link.' })],
+        embeds: [createEmbed({ title: 'System Error', description: 'Could not build the invite link.', color: 'error' })],
         flags: MessageFlags.Ephemeral,
       });
     }

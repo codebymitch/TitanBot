@@ -27,7 +27,7 @@ try {
     } catch (error) {
       console.error('Support command error:', error);
       return interaction.editReply({
-        embeds: [createEmbed({ title: 'System Error', description: 'Could not display support information.' })],
+        embeds: [createEmbed({ title: 'System Error', description: 'Could not display support information.', color: 'error' })],
         flags: MessageFlags.Ephemeral,
       });
     }

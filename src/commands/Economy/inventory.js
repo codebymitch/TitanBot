@@ -24,12 +24,16 @@ const userId = interaction.user.id;
             if (Object.keys(inventory).length > 0) {
                 inventoryDescription = Object.entries(inventory)
                     .filter(
-                        ([itemId, quantity]) =>
-                            quantity > 0 && SHOP_ITEMS[itemId],
-)
+                        ([itemId, quantity]) => {
+                            const item = SHOP_ITEMS.find(i => i.id === itemId);
+                            return quantity > 0 && item;
+                        }
+                    )
                     .map(
-                        ([itemId, quantity]) =>
-                            `**${SHOP_ITEMS[itemId].name}:** ${quantity}x`,
+                        ([itemId, quantity]) => {
+                            const item = SHOP_ITEMS.find(i => i.id === itemId);
+                            return `**${item.name}:** ${quantity}x`;
+                        }
                     )
                     .join("\n");
             }

@@ -1,3 +1,4 @@
+import { getColor } from '../../../config/bot.js';
 ﻿import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters } from '../../../services/counterService.js';
@@ -44,7 +45,7 @@ export async function handleDelete(interaction, client) {
         const embed = createEmbed({
             title: "⚠️ Delete Counter & Channel",
             description: `Are you sure you want to delete this counter and its channel?\n\n**ID:** \`${counterToDelete.id}\`\n**Type:** ${getCounterTypeDisplay(counterToDelete.type)}\n**Channel:** ${channel || 'Deleted Channel'}\n\n⚠️ **The channel will be permanently deleted!**`,
-            color: 0xFF0000
+            color: getColor('error')
         });
 
         const row = new ActionRowBuilder().addComponents(
@@ -78,7 +79,7 @@ time: 30000,
                         embeds: [createEmbed({ 
                             title: "❌ Cancelled", 
                             description: "Counter deletion cancelled.",
-                            color: 0xFF0000
+                            color: getColor('error')
                         })],
                         components: []
                     });
@@ -94,7 +95,7 @@ time: 30000,
                     embeds: [createEmbed({ 
                         title: "❌ Cancelled", 
                         description: "Counter deletion cancelled - no confirmation received.",
-                        color: 0xFF0000
+                        color: getColor('error')
                     })],
                     components: []
                 });
