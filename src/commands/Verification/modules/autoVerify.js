@@ -1,3 +1,4 @@
+import { getColor } from '../../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
@@ -180,7 +181,7 @@ async function handleStatus(interaction, guild, client) {
     const statusEmbed = createEmbed({
         title: "🤖 Auto-Verification Status",
         description: "Current auto-verification configuration:",
-        color: "#00FF00"
+        color: getColor('success')
     })
     .addFields(
         {

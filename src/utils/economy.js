@@ -25,7 +25,11 @@ const DEFAULT_ECONOMY_DATA = {
     lastWork: 0,
     lastCrime: 0,
     lastRob: 0,
+    lastMine: 0,
+    lastGamble: 0,
+    lastFish: 0,
     inventory: {},
+    upgrades: {},
     cooldowns: {}
 };
 
@@ -48,7 +52,22 @@ export function getMaxBankCapacity(userData) {
     if (!userData) return BASE_BANK_CAPACITY;
     
     const bankLevel = userData.bankLevel || 0;
-    return BASE_BANK_CAPACITY + (bankLevel * BANK_CAPACITY_PER_LEVEL);
+    let capacity = BASE_BANK_CAPACITY + (bankLevel * BANK_CAPACITY_PER_LEVEL);
+    
+    // Check for upgrades
+    const upgrades = userData.upgrades || {};
+    const inventory = userData.inventory || {};
+    
+    // Bank Upgrade I - 1.5x multiplier
+    if (upgrades['bank_upgrade_1']) {
+        capacity = Math.floor(capacity * 1.5);
+    }
+    
+    // Bank Note - +10,000 per note owned
+    const bankNotes = inventory['bank_note'] || 0;
+    capacity += (bankNotes * 10000);
+    
+    return capacity;
 }
 
 /**

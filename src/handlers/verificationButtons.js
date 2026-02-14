@@ -1,4 +1,4 @@
-﻿import { ButtonInteraction, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { ButtonInteraction, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../utils/embeds.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 
@@ -84,6 +84,3 @@ export default {
     customId: "verify_user",
     execute: handleVerificationButton
 };
-
-
-

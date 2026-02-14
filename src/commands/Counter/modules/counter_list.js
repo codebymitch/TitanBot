@@ -1,3 +1,4 @@
+import { getColor } from '../../../config/bot.js';
 ﻿import { PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters } from '../../../services/counterService.js';
@@ -27,7 +28,7 @@ export async function handleList(interaction, client) {
             const embed = createEmbed({
                 title: "📋 Server Counters",
                 description: "No counters have been set up for this server yet.\n\nUse `/counter create` to set up your first counter!",
-                color: 0xFFFF00
+                color: getColor('warning')
             });
 
             embed.addFields({
@@ -53,7 +54,7 @@ export async function handleList(interaction, client) {
         const embed = createEmbed({
             title: `📋 Server Counters (${counters.length})`,
             description: "Here are all the active counters for this server.\n\nCounters automatically update every 15 minutes.",
-            color: 0x0099FF
+            color: getColor('info')
         });
 
         for (let i = 0; i < counters.length; i++) {

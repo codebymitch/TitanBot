@@ -8,7 +8,8 @@ import { MessageTemplates } from '../../utils/messageTemplates.js';
 const MINE_COOLDOWN = 60 * 60 * 1000;
 const BASE_MIN_REWARD = 400;
 const BASE_MAX_REWARD = 1200;
-const DIAMOND_PICKAXE_MULTIPLIER = 1.5;
+const PICKAXE_MULTIPLIER = 1.2;
+const DIAMOND_PICKAXE_MULTIPLIER = 2.0;
 
 const MINE_LOCATIONS = [
     "abandoned gold mine",
@@ -33,7 +34,8 @@ export default {
 
             const userData = await getEconomyData(client, guildId, userId);
             const lastMine = userData.lastMine || 0;
-const hasPickaxe = userData.inventory["diamond_pickaxe"] || 0;
+            const hasDiamondPickaxe = userData.inventory["diamond_pickaxe"] || 0;
+            const hasPickaxe = userData.inventory["pickaxe"] || 0;
 
             if (now < lastMine + MINE_COOLDOWN) {
                 const remaining = lastMine + MINE_COOLDOWN - now;
@@ -58,11 +60,12 @@ const hasPickaxe = userData.inventory["diamond_pickaxe"] || 0;
             let finalEarned = baseEarned;
             let multiplierMessage = "";
 
-            if (hasPickaxe > 0) {
-                finalEarned = Math.floor(
-                    baseEarned * DIAMOND_PICKAXE_MULTIPLIER,
-                );
-                multiplierMessage = `\n(💎 Diamond Pickaxe Bonus: **+50%**)`;
+            if (hasDiamondPickaxe > 0) {
+                finalEarned = Math.floor(baseEarned * DIAMOND_PICKAXE_MULTIPLIER);
+                multiplierMessage = `\n💎 **Diamond Pickaxe Bonus: +100%**`;
+            } else if (hasPickaxe > 0) {
+                finalEarned = Math.floor(baseEarned * PICKAXE_MULTIPLIER);
+                multiplierMessage = `\n⛏️ **Pickaxe Bonus: +20%**`;
             }
 
             const location =

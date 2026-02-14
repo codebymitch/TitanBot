@@ -66,7 +66,7 @@ async function createCategorySelectMenu() {
     const embed = createEmbed({
         title: "🤖 TitanBot Help Center",
         description: "Your all-in-one Discord companion for moderation, economy, fun, and server management.\n\nSelect a category below to explore our powerful commands:",
-        color: 0x0099FF
+        color: 'primary'
     });
 
     embed.addFields(
@@ -184,9 +184,9 @@ export const helpBugReportButton = {
                 '• 📋 Steps to reproduce the problem\n' +
                 '• 📸 Screenshots if applicable\n' +
                 '• 💻 Your bot version and environment\n\n' +
-                'This helps us fix issues faster and more effectively!'
+                'This helps us fix issues faster and more effectively!',
+            color: 'error'
         });
-        bugReportEmbed.setColor(0xff0000);
         bugReportEmbed.setFooter({
             text: 'TitanBot Bug Reporting System',
             iconURL: client.user.displayAvatarURL()

@@ -50,19 +50,34 @@ export const botConfig = {
   },
 
   // Embed theming and color scheme
+  // IMPORTANT: This is the SINGLE SOURCE OF TRUTH for all bot colors
+  // Always use getColor() function to access these colors - DO NOT hardcode hex values
+  //
+  // Usage Examples:
+  //   - Primary embeds: getColor('primary')
+  //   - Success messages: getColor('success')
+  //   - Error messages: getColor('error')
+  //   - Warnings: getColor('warning')
+  //   - Info messages: getColor('info')
+  //   - Nested colors: getColor('ticket.open') or getColor('priority.high')
+  //
+  // Use status colors (success, error, warning, info) for most embeds
+  // Use 'primary' for main bot embeds (help, about, general info)
+  // Use 'secondary' for subtle/background embeds
+  // AVOID using grayscale (gray, light, dark) for main content
   embeds: {
     colors: {
       // Primary brand colors
-      primary: "#5865F2", // Discord blurple
-      secondary: "#2F3136", // Dark theme background
+      primary: "#336699", // Discord blurple - use for main bot embeds (help, info pages)
+      secondary: "#2F3136", // Dark theme background - use for subtle/background embeds
 
-      // Status colors
-      success: "#57F287", // Green
-      error: "#ED4245", // Red
-      warning: "#FEE75C", // Yellow/Orange
-      info: "#3498DB", // Blue
+      // Status colors - USE THESE FOR MOST EMBEDS
+      success: "#57F287", // Green - successful operations, confirmations
+      error: "#ED4245", // Red - errors, failures, critical issues
+      warning: "#FEE75C", // Yellow/Orange - warnings, cautions, pending actions
+      info: "#3498DB", // Blue - informational messages, processing
 
-      // Grayscale
+      // Grayscale - AVOID for main embed content, only for specific UI elements
       light: "#FFFFFF",
       dark: "#202225",
       gray: "#99AAB5",
@@ -247,16 +262,36 @@ export const botConfig = {
     maintenanceMode: "The bot is currently in maintenance mode.",
   },
 
-  // Feature toggles
+  // Comprehensive feature toggles - matches application.js
   features: {
-    music: false,
+    // Core systems
     economy: true,
-    tickets: true,
-    giveaways: true,
-    birthday: true,
+    leveling: true,
     moderation: true,
     logging: true,
     welcome: true,
+
+    // Interactive systems
+    tickets: true,
+    giveaways: true,
+    birthday: true,
+    counter: true,
+
+    // Advanced features
+    verification: true,
+    reactionRoles: true,
+    joinToCreate: true,
+
+    // Utility & Communication
+    voice: true,
+    search: true,
+    tools: true,
+    utility: true,
+    community: true,
+    fun: true,
+
+    // Legacy/Disabled
+    music: false,
   },
 };
 
@@ -275,7 +310,7 @@ export function validateConfig(config) {
     logger.debug('TOKEN exists:', !!process.env.TOKEN);
     logger.debug('CLIENT_ID exists:', !!process.env.CLIENT_ID);
     logger.debug('GUILD_ID exists:', !!process.env.GUILD_ID);
-    logger.debug('REDIS_URL exists:', !!process.env.REDIS_URL);
+    logger.debug('POSTGRES_HOST exists:', !!process.env.POSTGRES_HOST);
     logger.debug('NODE_ENV:', process.env.NODE_ENV);
   }
 
@@ -287,7 +322,18 @@ export function validateConfig(config) {
     errors.push("Client ID is required (CLIENT_ID environment variable)");
   }
 
-  // Add more validations as needed
+  // PostgreSQL validation (recommended for production)
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.POSTGRES_HOST) {
+      errors.push("PostgreSQL host is required in production (POSTGRES_HOST environment variable)");
+    }
+    if (!process.env.POSTGRES_USER) {
+      errors.push("PostgreSQL user is required in production (POSTGRES_USER environment variable)");
+    }
+    if (!process.env.POSTGRES_PASSWORD) {
+      errors.push("PostgreSQL password is required in production (POSTGRES_PASSWORD environment variable)");
+    }
+  }
 
   return errors;
 }
@@ -304,7 +350,44 @@ if (configErrors.length > 0) {
 // Export as BotConfig for backward compatibility
 export const BotConfig = botConfig;
 
-// Theme helper functions
+/**
+ * Get a color from the bot's color scheme
+ * 
+ * ALWAYS use this function instead of hardcoding hex values!
+ * This ensures consistent theming across the entire bot.
+ * 
+ * @param {string|number} path - Color path (e.g., 'primary', 'success', 'ticket.open', 'priority.high')
+ *                                or direct hex/number value for backwards compatibility
+ * @param {string} fallback - Fallback color if path not found (default: gray)
+ * @returns {number} Discord.js color integer
+ * 
+ * @example
+ * // Status colors (most common usage)
+ * getColor('success')  // Returns green for success messages
+ * getColor('error')    // Returns red for error messages
+ * getColor('warning')  // Returns yellow for warnings
+ * getColor('info')     // Returns blue for info messages
+ * 
+ * @example
+ * // Primary bot color for main embeds
+ * getColor('primary')  // Use for help menus, about pages, general info
+ * 
+ * @example
+ * // Nested paths for specific systems
+ * getColor('ticket.open')      // Ticket status colors
+ * getColor('priority.high')    // Priority level colors
+ * getColor('giveaway.active')  // Giveaway state colors
+ * 
+ * @example
+ * // In createEmbed utility
+ * createEmbed({ title: 'Success!', description: '...', color: 'success' })
+ * 
+ * @example
+ * // Direct EmbedBuilder usage
+ * const embed = new EmbedBuilder()
+ *   .setTitle('My Embed')
+ *   .setColor(getColor('primary'))
+ */
 export function getColor(path, fallback = "#99AAB5") {
   // If a numeric color or a hex string is provided directly, return it as-is
   if (typeof path === "number") return path;

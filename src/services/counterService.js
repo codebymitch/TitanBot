@@ -1,4 +1,5 @@
 ﻿import { logger } from '../utils/logger.js';
+import { logEvent, EVENT_TYPES } from './loggingService.js';
 
 /**
  * Update a specific counter
@@ -62,6 +63,39 @@ export async function updateCounter(client, guild, counter) {
         if (process.env.NODE_ENV !== 'production') {
           logger.debug(`Updated channel name to: "${newName}"`);
         }
+
+        // Log counter update event (only on significant changes to avoid spam)
+        try {
+          await logEvent({
+            client,
+            guildId: guild.id,
+            eventType: EVENT_TYPES.COUNTER_UPDATE,
+            data: {
+              description: `Counter updated: ${baseName}`,
+              channelId: channel.id,
+              fields: [
+                {
+                  name: '📊 Counter Type',
+                  value: type.charAt(0).toUpperCase() + type.slice(1),
+                  inline: true
+                },
+                {
+                  name: '🔢 New Count',
+                  value: count.toString(),
+                  inline: true
+                },
+                {
+                  name: '📍 Channel',
+                  value: channel.toString(),
+                  inline: true
+                }
+              ]
+            }
+          });
+        } catch (error) {
+          logger.debug('Error logging counter update:', error);
+        }
+
       } catch (error) {
         logger.error(`Failed to update channel name for ${channel.id}:`, error);
         return false;

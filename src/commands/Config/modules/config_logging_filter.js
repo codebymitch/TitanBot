@@ -28,6 +28,9 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
         const guildId = interaction.guildId;
 
         const currentConfig = config;
+        if (!currentConfig.logIgnore) {
+            currentConfig.logIgnore = { users: [], channels: [] };
+        }
 
         let targetArray;
         let entityName = "";

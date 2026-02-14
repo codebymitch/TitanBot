@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -60,7 +61,7 @@ const { options, guild, client } = interaction;
                     .replace(/{memberCount}/g, guild.memberCount.toLocaleString());
 
                 const embed = new EmbedBuilder()
-.setColor(0x00ff00)
+.setColor(getColor('success'))
                     .setTitle('✅ Welcome System Configured')
                     .setDescription(`Welcome messages will now be sent to ${channel}`)
                     .addFields(

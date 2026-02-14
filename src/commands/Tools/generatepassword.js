@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -78,7 +79,7 @@ export default {
             
             let strength = 'Weak';
             let strengthEmoji = '🔴';
-let strengthColor = 0xff0000;
+let strengthColor = getColor('error');
             
             const hasLower = /[a-z]/.test(password);
             const hasUpper = /[A-Z]/.test(password);
@@ -103,19 +104,19 @@ let strengthColor = 0xff0000;
             if (score > 80) {
                 strength = 'Very Strong';
                 strengthEmoji = '🟢';
-strengthColor = 0x00ff00;
+strengthColor = getColor('success');
             } else if (score > 60) {
                 strength = 'Strong';
                 strengthEmoji = '🟢';
-strengthColor = 0x00aa00;
+strengthColor = getColor('success');
             } else if (score > 40) {
                 strength = 'Good';
                 strengthEmoji = '🟡';
-strengthColor = 0xffff00;
+strengthColor = getColor('warning');
             } else if (score > 20) {
                 strength = 'Weak';
                 strengthEmoji = '🟠';
-strengthColor = 0xffa500;
+strengthColor = getColor('warning');
             }
             
             const embed = successEmbed(

@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
@@ -184,7 +185,7 @@ bitrate: 64000,
                 responseEmbed = {
                     title: '⚙️ Join to Create Configuration',
                     description: `Current settings for ${triggerChannel}`,
-                    color: 0x0099ff,
+                    color: getColor('info'),
                     fields: [
                         {
                             name: '📝 Channel Name Template',

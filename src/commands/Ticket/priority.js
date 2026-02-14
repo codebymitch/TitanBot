@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -54,7 +55,7 @@ const priorityLevel = interaction.options.getString("level");
             const logEmbed = createEmbed({
                 title: "📊 Priority Updated (Audit Log)",
                 description: `${interaction.user} updated ticket priority to **${priorityLevel.toUpperCase()}**.`,
-                color: "#F39C12",
+                color: getColor('warning'),
                 fields: [
                     {
                         name: "Updated By",

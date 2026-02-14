@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -144,7 +145,7 @@ const { options, guild, client } = interaction;
                 }
 
                 const embed = new EmbedBuilder()
-.setColor(0x0099ff)
+.setColor(getColor('info'))
                     .setTitle('Auto-Assigned Roles')
                     .setDescription(validRoles.map(r => `• ${r}`).join('\n'))
                     .setFooter({ text: `Total: ${validRoles.length} role(s)` });

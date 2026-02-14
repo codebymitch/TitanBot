@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -41,7 +42,7 @@ export default {
                 const embed = createEmbed({ 
                     title: `Warnings: ${target.tag}`, 
                     description: `Total Warnings: **${totalWarns}**` 
-                }).setColor("#F39C12");
+                }).setColor(getColor('warning'));
 
                 const warningFields = validWarnings
                     .map((w, i) => {

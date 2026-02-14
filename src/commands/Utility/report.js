@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -63,7 +64,7 @@ export default {
             }
 
             const reportEmbed = createEmbed({ title: `🚨 NEW USER REPORT: ${targetUser.tag}`, description: `**Reported By:** ${interaction.user.tag} (\`${interaction.user.id}\`)\n**Reported User:** ${targetUser.tag} (\`${targetUser.id}\`)` })
-.setColor(0xff0000)
+.setColor(getColor('error'))
                 .setThumbnail(targetUser.displayAvatarURL())
                 .addFields(
                     { name: "Reason", value: reason },

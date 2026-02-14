@@ -1,5 +1,6 @@
 ﻿import { pickWinners } from '../utils/giveaways.js';
 import { getEndedGiveaways, markGiveawayEnded } from '../utils/database.js';
+import { logEvent, EVENT_TYPES } from './loggingService.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -84,6 +85,38 @@ export async function checkGiveaways(client) {
         if (winners.length > 0) {
           const winnerAnnouncement = `🎉 Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**!`;
           await channel.send({ content: winnerAnnouncement });
+
+          // Log giveaway winner event
+          try {
+            await logEvent({
+              client,
+              guildId,
+              eventType: EVENT_TYPES.GIVEAWAY_WINNER,
+              data: {
+                description: `Giveaway ended with ${winners.length} winner(s)`,
+                channelId: channel.id,
+                fields: [
+                  {
+                    name: '🎁 Prize',
+                    value: giveaway.prize || 'Mystery Prize!',
+                    inline: true
+                  },
+                  {
+                    name: '🏆 Winners',
+                    value: winners.map(id => `<@${id}>`).join(', '),
+                    inline: false
+                  },
+                  {
+                    name: '👥 Entries',
+                    value: participants.length.toString(),
+                    inline: true
+                  }
+                ]
+              }
+            });
+          } catch (error) {
+            logger.debug('Error logging giveaway winner:', error);
+          }
         }
 
         logger.info(`Ended giveaway ${messageId} in guild ${guildId}`);

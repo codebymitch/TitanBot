@@ -2,6 +2,7 @@
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, saveGiveaway } from '../../utils/giveaways.js';
+import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 const parseDuration = (durationString) => {
     const regex = /(\d+)([hmds])/i;
     const match = durationString.match(regex);
@@ -129,6 +130,44 @@ export default {
                 interaction.guildId,
                 initialGiveawayData,
             );
+
+            // Log giveaway creation
+            try {
+                await logEvent({
+                    client: interaction.client,
+                    guildId: interaction.guildId,
+                    eventType: EVENT_TYPES.GIVEAWAY_CREATE,
+                    data: {
+                        description: `Giveaway created: ${prize}`,
+                        channelId: targetChannel.id,
+                        userId: interaction.user.id,
+                        fields: [
+                            {
+                                name: '🎁 Prize',
+                                value: prize,
+                                inline: true
+                            },
+                            {
+                                name: '🏆 Winners',
+                                value: winnerCount.toString(),
+                                inline: true
+                            },
+                            {
+                                name: '⏰ Duration',
+                                value: durationString,
+                                inline: true
+                            },
+                            {
+                                name: '📍 Channel',
+                                value: targetChannel.toString(),
+                                inline: true
+                            }
+                        ]
+                    }
+                });
+            } catch (error) {
+                console.debug('Error logging giveaway creation:', error);
+            }
 
             await interaction.reply({
                 embeds: [

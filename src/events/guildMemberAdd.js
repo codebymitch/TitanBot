@@ -1,6 +1,7 @@
 ﻿import { Events, EmbedBuilder } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { getWelcomeConfig } from '../utils/database.js';
+import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { successEmbed, errorEmbed } from '../utils/embeds.js';
 
 export default {
@@ -77,6 +78,38 @@ export default {
         
         if (config?.verification?.enabled) {
             await handleVerification(member, guild, config.verification, member.client);
+        }
+
+        // Log member join event
+        try {
+            await logEvent({
+                client: member.client,
+                guildId: guild.id,
+                eventType: EVENT_TYPES.MEMBER_JOIN,
+                data: {
+                    description: `${user.tag} joined the server`,
+                    userId: user.id,
+                    fields: [
+                        {
+                            name: '👤 Member',
+                            value: `${user.tag} (${user.id})`,
+                            inline: true
+                        },
+                        {
+                            name: '👥 Member Count',
+                            value: guild.memberCount.toString(),
+                            inline: true
+                        },
+                        {
+                            name: '📅 Account Created',
+                            value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
+                            inline: true
+                        }
+                    ]
+                }
+            });
+        } catch (error) {
+            console.debug('Error logging member join:', error);
         }
         
     } catch (error) {

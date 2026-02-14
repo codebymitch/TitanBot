@@ -74,7 +74,7 @@ async function createInitialHelpMenu() {
     const embed = createEmbed({ 
         title: "🤖 TitanBot Help Center",
         description: "Your all-in-one Discord companion for moderation, economy, fun, and server management.",
-        color: 0x0099FF
+        color: 'primary'
     });
 
     embed.addFields(
@@ -116,6 +116,36 @@ async function createInitialHelpMenu() {
         {
             name: "🎂 **Birthdays**",
             value: "Birthday tracking and celebration features",
+            inline: true
+        },
+        {
+            name: "👥 **Community**",
+            value: "Community tools, applications, and member engagement",
+            inline: true
+        },
+        {
+            name: "⚙️ **Config**",
+            value: "Server and bot configuration management commands",
+            inline: true
+        },
+        {
+            name: "🔢 **Counter**",
+            value: "Live counter channel setup and counter controls",
+            inline: true
+        },
+        {
+            name: "🎙️ **Join to Create**",
+            value: "Dynamic voice channel creation and management",
+            inline: true
+        },
+        {
+            name: "🎭 **Reaction Roles**",
+            value: "Self-assignable roles using reaction-role systems",
+            inline: true
+        },
+        {
+            name: "✅ **Verification**",
+            value: "Member verification workflows and access gating",
             inline: true
         },
         {
@@ -185,7 +215,7 @@ export default {
                 const closedEmbed = createEmbed({
                     title: "Help menu closed",
                     description: "Help menu has been closed, use /help again.",
-                    color: 0x808080,
+                    color: "secondary",
                 });
 
                 await interaction.editReply({

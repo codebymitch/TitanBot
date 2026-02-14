@@ -86,6 +86,11 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
             if (disableLogging) {
                 currentConfig.logChannelId = null;
                 currentConfig.enableLogging = false;
+                currentConfig.logging = {
+                    ...(currentConfig.logging || {}),
+                    enabled: false,
+                    channelId: null
+                };
                 await setGuildConfig(client, guildId, currentConfig);
 
                 return interaction.editReply({
@@ -120,6 +125,11 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
 
                 currentConfig.logChannelId = logChannel.id;
                 currentConfig.enableLogging = true;
+                currentConfig.logging = {
+                    ...(currentConfig.logging || {}),
+                    enabled: true,
+                    channelId: logChannel.id
+                };
 
                 await setGuildConfig(client, guildId, currentConfig);
 

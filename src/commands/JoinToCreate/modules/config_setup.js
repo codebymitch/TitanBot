@@ -1,3 +1,4 @@
+import { getColor } from '../../../config/bot.js';
 ﻿import { 
     ActionRowBuilder, 
     StringSelectMenuBuilder, 
@@ -32,7 +33,7 @@ export default {
         const embed = new EmbedBuilder()
             .setTitle('⚙️ Join to Create Configuration')
             .setDescription(`Configure settings for ${triggerChannel}`)
-            .setColor('#0099ff')
+            .setColor(getColor('info'))
             .addFields(
                 {
                     name: '📝 Current Channel Name Template',
@@ -160,7 +161,7 @@ async function handleNameTemplateChange(interaction, triggerChannel, currentConf
                 inline: false
             }
         )
-        .setColor('#0099ff')
+        .setColor(getColor('info'))
         .setFooter({ text: 'Type your new template in the chat below' });
 
     await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
@@ -229,7 +230,7 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
                 inline: false
             }
         )
-        .setColor('#0099ff')
+        .setColor(getColor('info'))
         .setFooter({ text: 'Type the new limit in the chat below' });
 
     await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
@@ -303,7 +304,7 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
                 inline: false
             }
         )
-        .setColor('#0099ff')
+        .setColor(getColor('info'))
         .setFooter({ text: 'Type the new bitrate in the chat below' });
 
     await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
@@ -442,7 +443,7 @@ async function handleViewSettings(interaction, triggerChannel, currentConfig, cl
     const embed = new EmbedBuilder()
         .setTitle('📋 Current Settings')
         .setDescription(`Configuration for ${triggerChannel}`)
-        .setColor('#0099ff')
+        .setColor(getColor('info'))
         .addFields(
             {
                 name: '🎯 Trigger Channel',

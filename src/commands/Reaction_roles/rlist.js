@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -20,7 +21,7 @@ export default {
 
             const embed = new EmbedBuilder()
                 .setTitle('Reaction Role Messages')
-                .setColor(0x3498DB)
+                .setColor(getColor('info'))
                 .setDescription('List of all active reaction role messages:');
 
             for (const rr of guildReactionRoles) {

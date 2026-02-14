@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../services/guildConfig.js';
@@ -139,7 +140,7 @@ async function handleSetup(interaction, guild, client) {
     const verifyEmbed = createEmbed({
         title: "✅ Server Verification",
         description: message,
-        color: "#00FF00"
+        color: getColor('success')
     });
 
     const verifyButton = new ActionRowBuilder().addComponents(
@@ -325,7 +326,7 @@ async function handleStatus(interaction, guild, client) {
     const statusEmbed = createEmbed({
         title: "✅ Verification System Status",
         description: "Current verification system configuration:",
-        color: "#00FF00"
+        color: getColor('success')
     })
     .addFields(
         {

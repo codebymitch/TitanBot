@@ -1,7 +1,10 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, EmbedBuilder } from 'discord.js';
+import { getColor } from '../../../config/bot.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
+import { getLoggingStatus } from '../../../services/loggingService.js';
 import { getLevelingConfig, getWelcomeConfig, getApplicationSettings, getModlogSettings } from '../../../utils/database.js';
+import { createStatusIndicatorButtons } from '../../../utils/loggingUi.js';
 
 export default {
     async execute(interaction, config, client) {
@@ -20,6 +23,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             await interaction.deferReply();
 
             const currentConfig = await getGuildConfig(client, interaction.guildId);
+            const loggingStatus = await getLoggingStatus(client, interaction.guildId);
 
             const getStatus = (id, type) => {
                 let status = "❌ Not Set";
@@ -35,7 +39,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             };
 
             const logChannelStatus = getStatus(
-                currentConfig.logChannelId,
+                loggingStatus.channelId || currentConfig.logChannelId,
                 "channel",
             );
             const reportChannelStatus = getStatus(
@@ -59,7 +63,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             const birthdayStatus = currentConfig.birthdayChannelId ? 
                 "✅ **Enabled**" : "❌ **Disabled**";
 
-            const moderationLoggingStatus = currentConfig.enableLogging && currentConfig.logChannelId 
+            const aggregateLoggingStatus = loggingStatus.enabled && (loggingStatus.channelId || currentConfig.logChannelId)
                 ? "✅ **Enabled**" : "❌ **Disabled**";
 
             const applicationConfig = await getApplicationSettings(client, interaction.guildId);
@@ -99,12 +103,36 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 return list.map((id) => `\`${id}\``).join("\n");
             };
 
+            // Build event status
+            let eventStatus = '';
+            const categories = {
+                'moderation': '🔨 Moderation',
+                'ticket': '🎫 Tickets',
+                'message': '❌ Messages',
+                'role': '🏷️ Roles',
+                'member': '👋 Join/Leave',
+                'leveling': '📈 Leveling',
+                'reactionrole': '🎭 Reaction Roles',
+                'giveaway': '🎁 Giveaway',
+                'counter': '📊 Counter'
+            };
+
+            for (const [category, display] of Object.entries(categories)) {
+                const categoryEntries = Object.entries(loggingStatus.enabledEvents)
+                    .filter(([key]) => key.startsWith(category));
+                const isEnabled = categoryEntries.length === 0
+                    ? true
+                    : categoryEntries.some(([, value]) => value !== false);
+                
+                eventStatus += `${isEnabled ? '✅' : '❌'} ${display}\n`;
+            }
+
             const statusEmbed = new EmbedBuilder()
                 .setTitle("⚙️ Server Configuration Status")
                 .setDescription(
                     `Current settings fetched for **${interaction.guild.name}**.`,
                 )
-                .setColor("#3498DB")
+                .setColor(getColor('info'))
                 .setTimestamp()
                 .addFields(
                     {
@@ -138,8 +166,8 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                         inline: true,
                     },
                     {
-                        name: "🔨 Enhanced Moderation Logging",
-                        value: moderationLoggingStatus,
+                        name: "📊 Unified Logging System",
+                        value: aggregateLoggingStatus,
                         inline: true,
                     },
                     {
@@ -161,13 +189,39 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                         inline: false,
                     },
                     {
+                        name: "📋 Event Logging Status",
+                        value: eventStatus,
+                        inline: false,
+                    },
+                    {
                         name: "❌ Log Filters",
                         value: "**Users:** " + formatIdList(ignoredUsers) + "\n**Channels:** " + formatIdList(ignoredChannels),
                         inline: false,
                     },
                 );
 
-            await interaction.editReply({ embeds: [statusEmbed] });
+            // Create interactive buttons
+            const statusButtons = createStatusIndicatorButtons(loggingStatus.enabledEvents);
+            const refreshButton = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('logging_toggle:all')
+                    .setLabel('Toggle All')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId('logging_refresh_status')
+                    .setLabel('🔄 Refresh Status')
+                    .setStyle(ButtonStyle.Primary)
+            );
+
+            const components = [refreshButton];
+            if (statusButtons) {
+                components.unshift(statusButtons);
+            }
+
+            await interaction.editReply({ 
+                embeds: [statusEmbed],
+                components
+            });
         } catch (error) {
             console.error("config_logging_status error:", error);
             await interaction.editReply({

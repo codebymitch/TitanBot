@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -47,7 +48,7 @@ const channel = interaction.channel;
             const logEmbed = createEmbed({
                 title: "🔒 Ticket Closed (Audit Log)",
                 description: `${channel} was closed by ${interaction.user}.`,
-                color: "#FF0000",
+                color: getColor('error'),
                 fields: [
                     {
                         name: "Closed By",

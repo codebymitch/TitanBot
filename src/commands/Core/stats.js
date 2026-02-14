@@ -32,7 +32,7 @@ try {
     } catch (error) {
       console.error('Stats command error:', error);
       return interaction.editReply({
-        embeds: [createEmbed({ title: 'System Error', description: 'Could not fetch system statistics.' })],
+        embeds: [createEmbed({ title: 'System Error', description: 'Could not fetch system statistics.', color: 'error' })],
         flags: MessageFlags.Ephemeral,
       });
     }

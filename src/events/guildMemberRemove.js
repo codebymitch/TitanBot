@@ -1,6 +1,6 @@
 ﻿import { Events, EmbedBuilder } from 'discord.js';
-import { getGuildConfig } from '../services/guildConfig.js';
 import { getWelcomeConfig } from '../utils/database.js';
+import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 
 export default {
   name: Events.GuildMemberRemove,
@@ -9,8 +9,6 @@ export default {
   async execute(member) {
     try {
         const { guild, user } = member;
-        
-        const config = await getGuildConfig(member.client, guild.id);
         
         const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
         
@@ -45,23 +43,36 @@ export default {
             }
         }
         
-        if (config?.logChannelId) {
-            const logChannel = guild.channels.cache.get(config.logChannelId);
-            if (logChannel) {
-                const embed = new EmbedBuilder()
-                    .setTitle('Member Left')
-                    .setColor('#FF0000')
-                    .setThumbnail(user.displayAvatarURL())
-                    .addFields(
-                        { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-                        { name: 'Joined Server', value: `<t:${Math.floor((member.joinedTimestamp || 0) / 1000)}:R>`, inline: true },
-                        { name: 'Member Count', value: guild.memberCount.toString(), inline: true }
-                    )
-                    .setTimestamp()
-                    .setFooter({ text: 'Member Left' });
-                
-                await logChannel.send({ embeds: [embed] });
-            }
+        // Log member leave event using unified logging service
+        try {
+            await logEvent({
+                client: member.client,
+                guildId: guild.id,
+                eventType: EVENT_TYPES.MEMBER_LEAVE,
+                data: {
+                    description: `${user.tag} left the server`,
+                    userId: user.id,
+                    fields: [
+                        {
+                            name: '👤 Member',
+                            value: `${user.tag} (${user.id})`,
+                            inline: true
+                        },
+                        {
+                            name: '👥 Member Count',
+                            value: guild.memberCount.toString(),
+                            inline: true
+                        },
+                        {
+                            name: '📅 Joined',
+                            value: `<t:${Math.floor((member.joinedTimestamp || 0) / 1000)}:R>`,
+                            inline: true
+                        }
+                    ]
+                }
+            });
+        } catch (error) {
+            console.debug('Error logging member leave:', error);
         }
         
     } catch (error) {

@@ -25,7 +25,7 @@ try {
     } catch (error) {
       console.error('Uptime command error:', error);
       return interaction.editReply({
-        embeds: [createEmbed({ title: 'System Error', description: 'Could not compute uptime.' })],
+        embeds: [createEmbed({ title: 'System Error', description: 'Could not compute uptime.', color: 'error' })],
         flags: MessageFlags.Ephemeral,
       });
     }

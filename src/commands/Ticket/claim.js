@@ -1,3 +1,4 @@
+import { getColor } from '../../config/bot.js';
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
@@ -39,7 +40,7 @@ const channel = interaction.channel;
             const logEmbed = createEmbed({
                 title: "✅ Ticket Claimed (Audit Log)",
                 description: `${interaction.user} claimed ticket ${channel}.`,
-                color: "#00FF00",
+                color: getColor('success'),
                 fields: [
                     {
                         name: "Claimed By",

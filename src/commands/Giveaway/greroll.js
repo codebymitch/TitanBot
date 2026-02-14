@@ -2,6 +2,7 @@
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
+import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("greroll")
@@ -128,6 +129,38 @@ export default {
                 await channel.send({
                     content: `🎉 **GIVEAWAY REROLL** 🎉 New winners for **${giveaway.prize}**: ${winnerMentions}!`,
                 });
+
+                try {
+                    await logEvent({
+                        client: interaction.client,
+                        guildId: interaction.guildId,
+                        eventType: EVENT_TYPES.GIVEAWAY_REROLL,
+                        data: {
+                            description: `Giveaway rerolled: ${giveaway.prize}`,
+                            channelId: giveaway.channelId,
+                            userId: interaction.user.id,
+                            fields: [
+                                {
+                                    name: '🎁 Prize',
+                                    value: giveaway.prize || 'Mystery Prize!',
+                                    inline: true
+                                },
+                                {
+                                    name: '🏆 New Winners',
+                                    value: winnerMentions,
+                                    inline: false
+                                },
+                                {
+                                    name: '📍 Channel',
+                                    value: channel.toString(),
+                                    inline: true
+                                }
+                            ]
+                        }
+                    });
+                } catch (error) {
+                    console.debug('Error logging giveaway reroll:', error);
+                }
                 return interaction.editReply({
                     embeds: [
                         successEmbed(
@@ -160,6 +193,38 @@ const newRow = giveawayButtons(true);
             await channel.send({
                 content: `🔄 **REROLL WINNERS** 🔄 CONGRATULATIONS ${winnerMentions}! You are the new winner(s) for the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
             });
+
+            try {
+                await logEvent({
+                    client: interaction.client,
+                    guildId: interaction.guildId,
+                    eventType: EVENT_TYPES.GIVEAWAY_REROLL,
+                    data: {
+                        description: `Giveaway rerolled: ${giveaway.prize}`,
+                        channelId: giveaway.channelId,
+                        userId: interaction.user.id,
+                        fields: [
+                            {
+                                name: '🎁 Prize',
+                                value: giveaway.prize || 'Mystery Prize!',
+                                inline: true
+                            },
+                            {
+                                name: '🏆 New Winners',
+                                value: winnerMentions,
+                                inline: false
+                            },
+                            {
+                                name: '📍 Channel',
+                                value: channel.toString(),
+                                inline: true
+                            }
+                        ]
+                    }
+                });
+            } catch (error) {
+                console.debug('Error logging giveaway reroll:', error);
+            }
 
             return interaction.editReply({
                 embeds: [
