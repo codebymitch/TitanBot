@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.0",
-    "axios": "^1.13.2",
+    "axios": "^1.13.5",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
