@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { getColor } from '../../config/bot.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -63,10 +66,9 @@ try {
             await interaction.editReply({ embeds: [embed] });
             
         } catch (error) {
-            console.error('Hexcolor command error:', error);
-            await interaction.editReply({
-                embeds: [errorEmbed('Error', 'Failed to process the color. Please try again.')],
-                flags: ["Ephemeral"]
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'hexcolor'
             });
         }
     },

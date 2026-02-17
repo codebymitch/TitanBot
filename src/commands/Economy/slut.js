@@ -1,7 +1,10 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SLUT_COOLDOWN = 45 * 60 * 1000;
 const MIN_SLUT_AMOUNT = 100;
@@ -50,25 +53,38 @@ export default {
                 )
         ),
 
-    async execute(interaction, config, client) {
-const userId = interaction.user.id;
-        const guildId = interaction.guildId;
-        const now = Date.now();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
 
-        try {
+            const userId = interaction.user.id;
+            const guildId = interaction.guildId;
+            const now = Date.now();
+
+            logger.debug(`[ECONOMY] Slut command started for ${userId}`, { userId, guildId });
+
             const userData = await getEconomyData(client, guildId, userId);
+
+            if (!userData) {
+                throw createError(
+                    "Failed to load economy data for slut command",
+                    ErrorTypes.DATABASE,
+                    "Failed to load your economy data. Please try again later.",
+                    { userId, guildId }
+                );
+            }
+
             const lastSlut = userData.lastSlut || 0;
 
             if (now - lastSlut < SLUT_COOLDOWN) {
-                const remainingTime = Math.ceil((SLUT_COOLDOWN - (now - lastSlut)) / 60000);
-                return interaction.reply({
-                    embeds: [
-                        warningEmbed(
-                            "â° Cooldown Active",
-                            `You need to wait ${remainingTime} minutes before you can work again!`
-                        )
-                    ]
-                });
+                const remainingTime = lastSlut + SLUT_COOLDOWN - now;
+                logger.warn(`[ECONOMY] Slut cooldown active`, { userId, timeRemaining: remainingTime });
+                throw createError(
+                    "Slut cooldown active",
+                    ErrorTypes.RATE_LIMIT,
+                    `You need to wait before you can work again! Try again in **${Math.ceil(remainingTime / 60000)}** minutes.`,
+                    { timeRemaining: remainingTime, cooldownType: 'slut' }
+                );
             }
 
             const activityType = interaction.options.getString("activity");
@@ -77,14 +93,11 @@ const userId = interaction.user.id;
                 : SLUT_ACTIVITIES[Math.floor(Math.random() * SLUT_ACTIVITIES.length)];
 
             if (!activity) {
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Invalid Activity",
-                            "Please select a valid activity from the choices."
-                        )
-                    ]
-                });
+                throw createError(
+                    "Invalid activity selected",
+                    ErrorTypes.VALIDATION,
+                    "Please select a valid activity from the choices."
+                );
             }
 
             const success = Math.random() > activity.risk;
@@ -100,18 +113,24 @@ const userId = interaction.user.id;
 
                 await setEconomyData(client, guildId, userId, userData);
 
-                const response = SLUT_RESPONSES[Math.floor(Math.random() * SLUT_RESPONSES.length)];
-                return interaction.editReply({
-                    embeds: [
-                        successEmbed(
-                            `💰 ${activity.name} - Success!`,
-                            `${response} **${earnings.toLocaleString()}** coins!\n\n` +
-                            `💳 **New Balance:** ${userData.wallet.toLocaleString()} coins\n` +
-                            `📊 **Total Sessions:** ${userData.totalSluts}\n` +
-                            `💵 **Total Earnings:** ${userData.totalSlutEarnings.toLocaleString()} coins`
-                        )
-                    ]
+                logger.info(`[ECONOMY_TRANSACTION] Slut activity succeeded`, {
+                    userId,
+                    guildId,
+                    activity: activity.name,
+                    earnings,
+                    newWallet: userData.wallet,
+                    timestamp: new Date().toISOString()
                 });
+
+                const response = SLUT_RESPONSES[Math.floor(Math.random() * SLUT_RESPONSES.length)];
+                const embed = successEmbed(
+                    `💰 ${activity.name} - Success!`,
+                    `${response} **$${earnings.toLocaleString()}**!\n\n` +
+                    `💳 **New Balance:** $${userData.wallet.toLocaleString()}\n` +
+                    `📊 **Total Sessions:** ${userData.totalSluts}\n` +
+                    `💵 **Total Earnings:** $${userData.totalSlutEarnings.toLocaleString()}`
+                );
+                await interaction.editReply({ embeds: [embed] });
             } else {
                 userData.lastSlut = now;
                 userData.totalSluts = (userData.totalSluts || 0) + 1;
@@ -119,32 +138,25 @@ const userId = interaction.user.id;
 
                 await setEconomyData(client, guildId, userId, userData);
 
-                const response = FAILURE_RESPONSES[Math.floor(Math.random() * FAILURE_RESPONSES.length)];
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            `❌ ${activity.name} - Failed`,
-                            `${response}\n\n` +
-                            `💳 **Current Balance:** ${userData.wallet.toLocaleString()} coins\n` +
-                            `📊 **Total Sessions:** ${userData.totalSluts}\n` +
-                            `❌ **Failed Sessions:** ${userData.failedSluts}`
-                        )
-                    ]
+                logger.info(`[ECONOMY_TRANSACTION] Slut activity failed`, {
+                    userId,
+                    guildId,
+                    activity: activity.name,
+                    failedCount: userData.failedSluts,
+                    timestamp: new Date().toISOString()
                 });
-            }
 
-        } catch (error) {
-            console.error(`Error in slut command for user ${userId}:`, error);
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "An error occurred while processing your request. Please try again later."
-                    )
-                ]
-            });
-        }
-    },
+                const response = FAILURE_RESPONSES[Math.floor(Math.random() * FAILURE_RESPONSES.length)];
+                const embed = errorEmbed(
+                    `❌ ${activity.name} - Failed`,
+                    `${response}\n\n` +
+                    `💳 **Current Balance:** $${userData.wallet.toLocaleString()}\n` +
+                    `📊 **Total Sessions:** ${userData.totalSluts}\n` +
+                    `❌ **Failed Sessions:** ${userData.failedSluts}`
+                );
+                await interaction.editReply({ embeds: [embed] });
+            }
+    }, { command: 'slut' })
 };
 
 

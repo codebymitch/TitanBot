@@ -1,71 +1,91 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
-import { getUserLevelData, saveUserLevelData, getXpForLevel } from '../../utils/database.js';
+/**
+ * Level Add Command
+ * Adds levels to a user (admin only)
+ */
+
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { checkUserPermissions } from '../../utils/permissionGuard.js';
+import { addLevels } from '../../services/leveling.js';
+import { createEmbed } from '../../utils/embeds.js';
+
 export default {
-    data: new SlashCommandBuilder()
-        .setName("leveladd")
-        .setDescription("Add levels to a user")
-        .addUserOption((option) =>
-            option
-                .setName("user")
-                .setDescription("The user to add levels to")
-                .setRequired(true),
-        )
-        .addIntegerOption((option) =>
-            option
-                .setName("levels")
-                .setDescription("Number of levels to add")
-                .setRequired(true)
-                .setMinValue(1),
-        )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-        .setDMPermission(false),
-    category: "Leveling",
+  data: new SlashCommandBuilder()
+    .setName('leveladd')
+    .setDescription('Add levels to a user')
+    .addUserOption((option) =>
+      option
+        .setName('user')
+        .setDescription('The user to add levels to')
+        .setRequired(true)
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('levels')
+        .setDescription('Number of levels to add')
+        .setRequired(true)
+        .setMinValue(1)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDMPermission(false),
+  category: 'Leveling',
 
-    async execute(interaction, config, client) {
-        try {
-            const targetUser = interaction.options.getUser("user");
-                const levelsToAdd = interaction.options.getInteger("levels");
-                
-                const userData = await getUserLevelData(
-                    client,
-                    interaction.guildId,
-                    targetUser.id,
-                );
+  /**
+   * Execute leveladd command
+   * @param {ChatInputCommandInteraction} interaction - Command interaction
+   * @param {Object} config - Guild configuration
+   * @param {Client} client - Discord client
+   */
+  async execute(interaction, config, client) {
+    try {
+      await interaction.deferReply();
 
-                const newLevel = userData.level + levelsToAdd;
-                const newXp = 0;
-                const newTotalXp =
-                    userData.totalXp +
-                    (getXpForLevel(newLevel) - getXpForLevel(userData.level));
+      // Check permissions
+      const hasPermission = await checkUserPermissions(
+        interaction,
+        PermissionFlagsBits.ManageGuild,
+        'You need ManageGuild permission to use this command.'
+      );
+      if (!hasPermission) return;
 
-                userData.level = newLevel;
-                userData.xp = newXp;
-                userData.totalXp = newTotalXp;
+      const targetUser = interaction.options.getUser('user');
+      const levelsToAdd = interaction.options.getInteger('levels');
 
-                await saveUserLevelData(
-                    client,
-                    interaction.guildId,
-                    targetUser.id,
-                    userData,
-                );
+      // Validate user exists in guild
+      const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+      if (!member) {
+        throw new TitanBotError(
+          `User ${targetUser.id} not found in this guild`,
+          ErrorTypes.USER_INPUT,
+          'The specified user is not in this server.'
+        );
+      }
 
-                await interaction.editReply({
-                    embeds: [
-                        successEmbed("Levels Added", `Successfully added ${levelsToAdd} levels to ${targetUser.tag}.`),
-                    ],
-                },
-                errorEmbed("Level Add Failed", "Could not add levels to that user.")
-            );
-        } catch (error) {
-            console.error('LevelAdd command error:', error);
-            return interaction.reply({
-                embeds: [errorEmbed('System Error', 'Could not add levels at this time.')],
-                flags: MessageFlags.Ephemeral,
-            });
-        }
-    },
+      // Use service to add levels
+      const userData = await addLevels(client, interaction.guildId, targetUser.id, levelsToAdd);
+
+      await interaction.editReply({
+        embeds: [
+          createEmbed({
+            title: '✅ Levels Added',
+            description: `Successfully added ${levelsToAdd} levels to ${targetUser.tag}.\n**New Level:** ${userData.level}`,
+            color: 'success'
+          })
+        ]
+      });
+
+      logger.info(
+        `[ADMIN] User ${interaction.user.tag} added ${levelsToAdd} levels to ${targetUser.tag} in guild ${interaction.guildId}`
+      );
+    } catch (error) {
+      logger.error('LevelAdd command error:', error);
+      await handleInteractionError(interaction, error, {
+        type: 'command',
+        commandName: 'leveladd'
+      });
+    }
+  }
 };
 
 

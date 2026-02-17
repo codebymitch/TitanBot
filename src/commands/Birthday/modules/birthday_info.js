@@ -1,41 +1,59 @@
-﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
-import { getGuildBirthdays, getMonthName } from '../../../utils/database.js';
+import { MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { getUserBirthday } from '../../../services/birthdayService.js';
+import { logger } from '../../../utils/logger.js';
+import { handleInteractionError } from '../../../utils/errorHandler.js';
 
 export default {
     async execute(interaction, config, client) {
-try {
+        try {
+            await interaction.deferReply();
+
             const targetUser = interaction.options.getUser("user") || interaction.user;
             const userId = targetUser.id;
             const guildId = interaction.guildId;
 
-            const birthdays = await getGuildBirthdays(client, guildId);
-            const birthdayData = birthdays[userId];
+            // Use service layer
+            const birthdayData = await getUserBirthday(client, guildId, userId);
 
             if (!birthdayData) {
-                return interaction.reply({
-                    embeds: [errorEmbed(
-                        "No Birthday Found",
-                        targetUser.id === interaction.user.id 
+                return await interaction.editReply({
+                    embeds: [createEmbed({
+                        title: '❌ No Birthday Found',
+                        description: targetUser.id === interaction.user.id 
                             ? "You haven't set your birthday yet. Use `/birthday set` to add it!"
-                            : `${targetUser.username} hasn't set their birthday yet.`
-                    )]
+                            : `${targetUser.username} hasn't set their birthday yet.`,
+                        color: 'error'
+                    })]
                 });
             }
-
-            const monthName = getMonthName(birthdayData.month);
             
-            await interaction.editReply({
-                embeds: [createEmbed(
-                    "🎂 Birthday Information",
-                    targetUser.id === interaction.user.id ? "Your Birthday" : `${targetUser.username}'s Birthday`,
-                    `**Date:** ${monthName} ${birthdayData.day}\n**User:** ${targetUser.toString()}`,
-                    0xff69b4
-                )]
+            const embed = createEmbed({
+                title: "🎂 Birthday Information",
+                description: `**Date:** ${birthdayData.monthName} ${birthdayData.day}\n**User:** ${targetUser.toString()}`,
+                color: 'info',
+                footer: targetUser.id === interaction.user.id ? "Your Birthday" : `${targetUser.username}'s Birthday`
+            });
+            
+            await interaction.editReply({ embeds: [embed] });
+            
+            logger.info('Birthday info retrieved successfully', {
+                userId: interaction.user.id,
+                targetUserId: targetUser.id,
+                guildId,
+                commandName: 'birthday_info'
             });
         } catch (error) {
-            console.error("Birthday info command error:", error);
-            await interaction.editReply({
-                embeds: [errorEmbed("Error", "Failed to fetch birthday information.")]
+            logger.error("Birthday info command execution failed", {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'birthday_info'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'birthday_info',
+                source: 'birthday_info_module'
             });
         }
     }

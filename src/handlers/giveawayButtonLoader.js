@@ -1,4 +1,4 @@
-﻿import { giveawayJoinHandler, giveawayEndHandler, giveawayRerollHandler } from './giveawayButtons.js';
+import { giveawayJoinHandler, giveawayEndHandler, giveawayRerollHandler } from './giveawayButtons.js';
 import { logger } from '../utils/logger.js';
 
 /**

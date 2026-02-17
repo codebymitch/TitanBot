@@ -1,20 +1,20 @@
-﻿/**
+/**
  * Bot Configuration
  * Centralized configuration for Titan Bot
  */
 
-import { ActivityType } from "discord.js";
 import { logger } from '../utils/logger.js';
 
 // Default bot configuration
 export const botConfig = {
   // Bot presence and status
+  // ActivityType values: 0=Playing, 1=Streaming, 2=Listening, 3=Watching, 5=Competing
   presence: {
     status: "online",
     activities: [
       {
         name: "/help | Titan Bot",
-        type: ActivityType.Playing,
+        type: 0, // Playing
       },
     ],
   },
@@ -201,6 +201,47 @@ export const botConfig = {
     defaultRole: null,
     announcementChannel: null,
     timezone: "UTC",
+  },
+
+  // Verification system settings
+  verification: {
+    // Default verification message
+    defaultMessage: "Click the button below to verify yourself and gain access to the server!",
+    
+    // Default button text
+    defaultButtonText: "Verify",
+    
+    // Auto-verification settings
+    autoVerify: {
+      // Default criteria
+      defaultCriteria: "none",
+      
+      // Min/max account age for criteria
+      minAccountAge: 1,      // days
+      maxAccountAge: 365,    // days
+      
+      // DM notification when auto-verified
+      sendDMNotification: true,
+      
+      // Criteria options
+      criteria: {
+        account_age: "Account must be older than specified days",
+        server_size: "All users if server has less than 1000 members",
+        none: "All users immediately"
+      }
+    },
+    
+    // Verification cooldown (milliseconds)
+    // Users cannot verify more than once per this duration
+    verificationCooldown: 5000,  // 5 seconds
+    
+    // Rate limiting settings
+    maxVerificationAttempts: 3,   // max attempts
+    attemptWindow: 60000,          // within 1 minute
+    
+    // Logging and audit
+    logAllVerifications: true,     // Log all verification events
+    keepAuditTrail: true          // Store audit trail in database
   },
 
   // Welcome system settings

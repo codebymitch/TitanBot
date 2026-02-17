@@ -1,8 +1,9 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("firstmsg")
@@ -12,58 +13,67 @@ export default {
     category: "Utility",
 
     async execute(interaction, config, client) {
-        const commandBody = async () => {
-            try {
-                const messages = await interaction.channel.messages.fetch({
-                    limit: 1,
-                    after: '1',
-                    cache: false
+        try {
+            const deferSuccess = await InteractionHelper.safeDefer(interaction);
+            if (!deferSuccess) {
+                logger.warn(`FirstMsg interaction defer failed`, {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'firstmsg'
                 });
-                
-                const firstMessage = messages.first();
-                
-                if (!firstMessage) {
-                    return await interaction.editReply({
-                        embeds: [successEmbed("First Message", "No messages found in this channel!")],
-                    });
-                }
-                
-                const messageLink = `https://discord.com/channels/${interaction.guildId}/${interaction.channelId}/${firstMessage.id}`;
-                
-                await interaction.editReply({
-                    embeds: [
-                        successEmbed(
-                            "First Message in #" + interaction.channel.name,
-                            `[Jump to first message](${messageLink})`
-                        ),
-                    ],
+                return;
+            }
+
+            const messages = await interaction.channel.messages.fetch({
+                limit: 1,
+                after: '1',
+                cache: false
+            });
+            
+            const firstMessage = messages.first();
+            
+            if (!firstMessage) {
+                logger.info(`FirstMsg - no messages found in channel`, {
+                    userId: interaction.user.id,
+                    channelId: interaction.channelId,
+                    guildId: interaction.guildId
                 });
-                
-            } catch (error) {
-                console.error("Error in firstmsg command:", error);
                 return await interaction.editReply({
-                    embeds: [errorEmbed("Error", "Failed to fetch the first message.")],
+                    embeds: [successEmbed("First Message", "No messages found in this channel!")],
                 });
             }
-        };
+            
+            const messageLink = `https://discord.com/channels/${interaction.guildId}/${interaction.channelId}/${firstMessage.id}`;
+            
+            await interaction.editReply({
+                embeds: [
+                    successEmbed(
+                        "First Message in #" + interaction.channel.name,
+                        `[Jump to first message](${messageLink})`
+                    ),
+                ],
+            });
 
-        if (interaction.deferred || interaction.replied) {
-            try {
-                await commandBody();
-            } catch (error) {
-                console.error('FirstMsg execution error when interaction already acknowledged:', error);
-                await interaction.editReply({
-                    embeds: [errorEmbed('System Error', 'Could not complete the command.')],
-                });
-            }
-            return;
+            logger.info(`FirstMsg command executed`, {
+                userId: interaction.user.id,
+                channelId: interaction.channelId,
+                messageId: firstMessage.id,
+                guildId: interaction.guildId
+            });
+        } catch (error) {
+            logger.error(`FirstMsg command execution failed`, {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                channelId: interaction.channelId,
+                guildId: interaction.guildId,
+                commandName: 'firstmsg'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'firstmsg',
+                source: 'firstmsg_command'
+            });
         }
-
-        await InteractionHelper.safeExecute(
-            interaction,
-            commandBody,
-            { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
-        );
     },
 };
 

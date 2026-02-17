@@ -1,7 +1,8 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { getFromDb, setInDb, deleteFromDb } from '../../utils/database.js';
+import { sanitizeInput } from '../../utils/sanitization.js';
 /**
  * Get user notes key for database
  * @param {string} guildId - Guild ID
@@ -166,7 +167,7 @@ export default {
 };
 
 async function handleAddNote(interaction, targetUser, notes, guildId) {
-    const note = interaction.options.getString("note");
+    let note = interaction.options.getString("note").trim();
     const type = interaction.options.getString("type") || "neutral";
 
     if (note.length > 1000) {
@@ -179,6 +180,20 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
             ],
         });
     }
+
+    if (note.length === 0) {
+        return interaction.reply({
+            embeds: [
+                errorEmbed(
+                    "Empty Note",
+                    "Note cannot be empty."
+                ),
+            ],
+        });
+    }
+
+    // Sanitize note to prevent injection attacks
+    note = sanitizeInput(note);
 
     const noteData = {
         id: Date.now(),

@@ -1,4 +1,4 @@
-﻿import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
+import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';

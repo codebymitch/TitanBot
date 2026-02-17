@@ -1,4 +1,4 @@
-﻿import { logger } from './logger.js';
+import { logger } from './logger.js';
 import { createEmbed } from './embeds.js';
 import { MessageFlags } from 'discord.js';
 
@@ -148,9 +148,18 @@ export async function handleInteractionError(interaction, error, context = {}) {
     const errorType = categorizeError(error);
     const userMessage = getUserMessage(error, context);
     
-    logger.error(`Interaction Error [${errorType.toUpperCase()}]`, {
+    // Log at appropriate level based on error type
+    // User errors (expected behavior) = debug/info
+    // System errors (unexpected failures) = error
+    const isUserError = [
+        ErrorTypes.VALIDATION,
+        ErrorTypes.RATE_LIMIT,
+        ErrorTypes.USER_INPUT,
+        ErrorTypes.PERMISSION
+    ].includes(errorType);
+    
+    const logData = {
         error: error.message,
-        stack: error.stack,
         type: errorType,
         interaction: {
             type: interaction.type,
@@ -161,7 +170,18 @@ export async function handleInteractionError(interaction, error, context = {}) {
             channelId: interaction.channelId
         },
         context
-    });
+    };
+    
+    if (isUserError) {
+        // User-facing errors (cooldowns, invalid input, etc.) - expected behavior
+        logger.debug(`User Error [${errorType.toUpperCase()}]: ${error.message}`, logData);
+    } else {
+        // System errors (database, network, etc.) - unexpected failures
+        logger.error(`System Error [${errorType.toUpperCase()}]`, {
+            ...logData,
+            stack: error.stack
+        });
+    }
 
     const embed = createEmbed({
         title: getErrorTitle(errorType),
@@ -188,6 +208,18 @@ export async function handleInteractionError(interaction, error, context = {}) {
     }
 
     try {
+        // Check if interaction is still valid
+        if (!interaction || !interaction.id) {
+            logger.warn('Interaction was null or invalid when handling error');
+            return;
+        }
+
+        // Check if interaction has expired (older than 14 minutes)
+        if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
+            logger.warn('Interaction expired before error handler could send response');
+            return;
+        }
+
         const errorMessage = { 
             embeds: [embed]
         };
@@ -202,6 +234,11 @@ export async function handleInteractionError(interaction, error, context = {}) {
             await interaction.reply(errorMessage);
         }
     } catch (replyError) {
+        // Check if this is an "interaction already acknowledged" error
+        if (replyError.code === 40060 || replyError.code === 10062) {
+            logger.warn('Interaction already acknowledged or expired, cannot send error response:', replyError.code);
+            return;
+        }
         logger.error('Failed to send error response:', replyError);
     }
 }

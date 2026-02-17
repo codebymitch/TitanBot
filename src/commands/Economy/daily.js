@@ -1,9 +1,12 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { formatDuration } from '../../utils/helpers.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
 const DAILY_AMOUNT = 1000;
@@ -14,35 +17,38 @@ export default {
         .setName('daily')
         .setDescription('Claim your daily cash reward'),
 
-    async execute(interaction, config, client) {
-        try {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
             const now = Date.now();
 
+            logger.debug(`[ECONOMY] Daily claimed started for ${userId}`, { userId, guildId });
+
             const userData = await getEconomyData(client, guildId, userId);
             
             if (!userData) {
-                return await interaction.editReply({
-                    embeds: [errorEmbed(
-                        "❌ Data Error",
-                        "Failed to load your economy data. Please try again later."
-                    )]
-                });
+                throw createError(
+                    "Failed to load economy data for daily",
+                    ErrorTypes.DATABASE,
+                    "Failed to load your economy data. Please try again later.",
+                    { userId, guildId }
+                );
             }
             
             const lastDaily = userData.lastDaily || 0;
 
             if (now < lastDaily + DAILY_COOLDOWN) {
                 const timeRemaining = lastDaily + DAILY_COOLDOWN - now;
-                return await interaction.editReply({
-                    embeds: [errorEmbed(
-                        "⏱️ Slow Down!",
-                        `You need to wait before claiming daily again. Try again in ${formatDuration(timeRemaining)}.`
-                    )]
-                });
+                logger.warn(`[ECONOMY] Daily cooldown active`, { userId, timeRemaining });
+                throw createError(
+                    "Daily cooldown active",
+                    ErrorTypes.RATE_LIMIT,
+                    `You need to wait before claiming daily again. Try again in ${formatDuration(timeRemaining)}.`,
+                    { timeRemaining, cooldownType: 'daily' }
+                );
             }
 
             const guildConfig = await getGuildConfig(client, guildId);
@@ -66,9 +72,18 @@ export default {
             }
 
             userData.wallet = (userData.wallet || 0) + earned;
-userData.lastDaily = now;
+            userData.lastDaily = now;
 
             await setEconomyData(client, guildId, userId, userData);
+
+            logger.info(`[ECONOMY_TRANSACTION] Daily claimed`, {
+                userId,
+                guildId,
+                amount: earned,
+                newWallet: userData.wallet,
+                hasPremium: hasPremiumRole,
+                timestamp: new Date().toISOString()
+            });
 
             const embed = successEmbed(
                 "✅ Daily Claimed!",
@@ -86,20 +101,7 @@ userData.lastDaily = now;
                 });
 
             await interaction.editReply({ embeds: [embed] });
-        } catch (error) {
-            console.error('Daily command error:', error);
-            try {
-                await interaction.editReply({
-                    embeds: [errorEmbed(
-                        "❌ Error",
-                        "Something went wrong while claiming daily. Please try again."
-                    )]
-                });
-            } catch (replyError) {
-                console.error('Failed to send error response:', replyError);
-            }
-        }
-    },
+    }, { command: 'daily' })
 };
 
 

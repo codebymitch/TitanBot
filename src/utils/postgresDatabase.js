@@ -1,4 +1,4 @@
-﻿import pg from 'pg';
+import pg from 'pg';
 import { pgConfig } from '../config/postgres.js';
 import { logger } from './logger.js';
 
@@ -243,6 +243,17 @@ class PostgreSQLDatabase {
                 FOREIGN KEY (guild_id) REFERENCES ${pgConfig.tables.guilds}(id) ON DELETE CASCADE,
                 FOREIGN KEY (user_id) REFERENCES ${pgConfig.tables.users}(id) ON DELETE CASCADE
             )`,
+
+            `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.verification_audit} (
+                id SERIAL PRIMARY KEY,
+                guild_id VARCHAR(20) NOT NULL,
+                user_id VARCHAR(20) NOT NULL,
+                action VARCHAR(50) NOT NULL,
+                source VARCHAR(50),
+                moderator_id VARCHAR(20),
+                metadata JSONB DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
             
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.invite_tracking} (
                 guild_id VARCHAR(20),
@@ -313,6 +324,9 @@ class PostgreSQLDatabase {
             `CREATE INDEX IF NOT EXISTS idx_user_levels_guild_id ON ${pgConfig.tables.user_levels}(guild_id)`,
             `CREATE INDEX IF NOT EXISTS idx_user_levels_xp ON ${pgConfig.tables.user_levels}(xp)`,
             `CREATE INDEX IF NOT EXISTS idx_economy_guild_id ON ${pgConfig.tables.economy}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_verification_audit_guild_id ON ${pgConfig.tables.verification_audit}(guild_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_verification_audit_user_id ON ${pgConfig.tables.verification_audit}(user_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_verification_audit_created_at ON ${pgConfig.tables.verification_audit}(created_at)`,
             `CREATE INDEX IF NOT EXISTS idx_temp_data_expires_at ON ${pgConfig.tables.temp_data}(expires_at)`,
             `CREATE INDEX IF NOT EXISTS idx_cache_data_expires_at ON ${pgConfig.tables.cache_data}(expires_at)`
         ];
@@ -523,6 +537,42 @@ class PostgreSQLDatabase {
         } catch (error) {
             logger.error(`Error listing keys with prefix ${prefix}:`, error);
             return [];
+        }
+    }
+
+    /**
+     * Insert a verification audit record
+     * @param {Object} record - Audit record details
+     * @returns {Promise<boolean>} Success status
+     */
+    async insertVerificationAudit(record) {
+        try {
+            if (!this.isAvailable()) {
+                return false;
+            }
+
+            const {
+                guildId,
+                userId,
+                action,
+                source = null,
+                moderatorId = null,
+                metadata = {},
+                createdAt = new Date()
+            } = record;
+
+            const timestamp = createdAt instanceof Date ? createdAt : new Date(createdAt);
+
+            await this.pool.query(
+                `INSERT INTO ${pgConfig.tables.verification_audit} (guild_id, user_id, action, source, moderator_id, metadata, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [guildId, userId, action, source, moderatorId, metadata, timestamp]
+            );
+
+            return true;
+        } catch (error) {
+            logger.error('Error inserting verification audit:', error);
+            return false;
         }
     }
 

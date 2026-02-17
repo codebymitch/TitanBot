@@ -1,7 +1,9 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
+import { sanitizeMarkdown } from '../../utils/sanitization.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -35,15 +37,44 @@ export default {
         const anonymous = interaction.options.getBoolean("anonymous") || false;
 
         try {
+            // Validate message length
+            if (message.length > 2000) {
+                return await interaction.editReply({
+                    embeds: [
+                        errorEmbed(
+                            "Message Too Long",
+                            "Messages must be under 2000 characters."
+                        ),
+                    ],
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
+
+            // Check if user is a bot
+            if (targetUser.bot) {
+                return await interaction.editReply({
+                    embeds: [
+                        errorEmbed(
+                            "Cannot DM Bot",
+                            "You cannot send DMs to bot accounts."
+                        ),
+                    ],
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
+
+            // Sanitize the message to prevent markdown injection
+            const sanitized = sanitizeMarkdown(message);
+
             const dmChannel = await targetUser.createDM();
             
             await dmChannel.send({
                 embeds: [
                     successEmbed(
                         anonymous ? "Message from the Staff Team" : `Message from ${interaction.user.tag}`,
-                        message
+                        sanitized
                     ).setFooter({
-                        text: `You cannot reply to this message.`
+                        text: `You cannot reply to this message. | Logger ID: ${interaction.id}`
                     })
                 ]
             });
@@ -55,12 +86,12 @@ export default {
                     action: "DM Sent",
                     target: `${targetUser.tag} (${targetUser.id})`,
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}\nMessage: ${message}`,
+                    reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}`,
                     metadata: {
                         userId: targetUser.id,
                         moderatorId: interaction.user.id,
                         anonymous,
-                        messageLength: message.length
+                        messageLength: sanitized.length
                     }
                 }
             });
@@ -74,7 +105,7 @@ export default {
                 ],
             });
         } catch (error) {
-            console.error("Error in dm command:", error);
+            logger.error('DM command error:', error);
             
 if (error.code === 50007) {
                 return await interaction.editReply({

@@ -1,8 +1,11 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { shopItems } from '../../config/shop/items.js';
 import { getEconomyData } from '../../utils/economy.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
 
@@ -11,12 +14,26 @@ export default {
         .setName('inventory')
         .setDescription('View your economy inventory'),
 
-    async execute(interaction, config, client) {
-const userId = interaction.user.id;
-        const guildId = interaction.guildId;
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
 
-        try {
+            const userId = interaction.user.id;
+            const guildId = interaction.guildId;
+
+            logger.debug(`[ECONOMY] Inventory requested for ${userId}`, { userId, guildId });
+
             const userData = await getEconomyData(client, guildId, userId);
+
+            if (!userData) {
+                throw createError(
+                    "Failed to load economy data for inventory",
+                    ErrorTypes.DATABASE,
+                    "Failed to load your economy data. Please try again later.",
+                    { userId, guildId }
+                );
+            }
+
             const inventory = userData.inventory || {};
 
             let inventoryDescription = "Your inventory is currently empty.";
@@ -38,21 +55,19 @@ const userId = interaction.user.id;
                     .join("\n");
             }
 
-            const embed = createEmbed({ title: `📦 ${interaction.user.username}'s Inventory`, description: inventoryDescription, }).setThumbnail(interaction.user.displayAvatarURL());
+            logger.info(`[ECONOMY] Inventory retrieved`, { 
+                userId, 
+                guildId,
+                itemCount: Object.keys(inventory).length
+            });
+
+            const embed = createEmbed({ 
+                title: `📦 ${interaction.user.username}'s Inventory`, 
+                description: inventoryDescription, 
+            }).setThumbnail(interaction.user.displayAvatarURL());
 
             await interaction.editReply({ embeds: [embed] });
-        } catch (error) {
-            console.error("Inventory command error:", error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "Could not fetch inventory data.",
-                    ),
-                ],
-            });
-        }
-    },
+    }, { command: 'inventory' })
 };
 
 

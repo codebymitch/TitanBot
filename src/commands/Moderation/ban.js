@@ -1,9 +1,11 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { ModerationService } from '../../services/moderationService.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ban")
@@ -22,10 +24,6 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
-                throw new Error("You do not have permission to ban members.");
-            }
-
             const user = interaction.options.getUser("target");
             const reason = interaction.options.getString("reason") || "No reason provided";
 
@@ -36,50 +34,25 @@ export default {
                 throw new Error("You cannot ban the bot.");
             }
 
-            const targetMember = await interaction.guild.members
-                .fetch(user.id)
-                .catch(() => null);
-
-            if (targetMember && interaction.member.roles.highest.position <= targetMember.roles.highest.position) {
-                throw new Error("You cannot ban a user with an equal or higher role than you.");
-            }
-            if (targetMember && interaction.guild.members.me.roles.highest.position <= targetMember.roles.highest.position) {
-                throw new Error("I cannot ban a user with an equal or higher role than me.");
-            }
-
-            await interaction.guild.members.ban(user, { reason });
-
-            await logModerationAction({
-                client,
+            // Use ModerationService for ban operation
+            const result = await ModerationService.banUser({
                 guild: interaction.guild,
-                event: {
-                    action: "Member Banned",
-                    target: `${user.tag} (${user.id})`,
-                    executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason,
-                    metadata: {
-                        userId: user.id,
-                        moderatorId: interaction.user.id,
-                        permanent: true
-                    }
-                }
+                user,
+                moderator: interaction.member,
+                reason
             });
 
             await InteractionHelper.universalReply(interaction, {
                 embeds: [
                     successEmbed(
                         `🚫 **Banned** ${user.tag}`,
-                        `**Reason:** ${reason}`,
+                        `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
                     ),
                 ],
             });
         } catch (error) {
             logger.error('Ban command error:', error);
-            const errorMessage = {
-                embeds: [errorEmbed("Ban Failed", error.message || "Could not ban that user. They might have a higher role or insufficient permissions.")]
-            };
-            
-            await InteractionHelper.universalReply(interaction, errorMessage);
+            await handleInteractionError(interaction, error, { subtype: 'ban_failed' });
         }
     },
 };

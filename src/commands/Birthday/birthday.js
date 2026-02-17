@@ -1,5 +1,7 @@
-﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 
 import birthdaySet from './modules/birthday_set.js';
 import birthdayInfo from './modules/birthday_info.js';
@@ -60,20 +62,20 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-try {
+        try {
             const subcommand = interaction.options.getSubcommand();
             
             switch (subcommand) {
                 case 'set':
-                    return birthdaySet.execute(interaction, config, client);
+                    return await birthdaySet.execute(interaction, config, client);
                 case 'info':
-                    return birthdayInfo.execute(interaction, config, client);
+                    return await birthdayInfo.execute(interaction, config, client);
                 case 'list':
-                    return birthdayList.execute(interaction, config, client);
+                    return await birthdayList.execute(interaction, config, client);
                 case 'remove':
-                    return birthdayRemove.execute(interaction, config, client);
+                    return await birthdayRemove.execute(interaction, config, client);
                 case 'next':
-                    return nextBirthdays.execute(interaction, config, client);
+                    return await nextBirthdays.execute(interaction, config, client);
                 default:
                     return interaction.reply({
                         embeds: [errorEmbed('Error', 'Unknown subcommand')],
@@ -81,18 +83,18 @@ try {
                     });
             }
         } catch (error) {
-            console.error('Birthday command error:', error);
-            
-            const errorMessage = {
-                embeds: [errorEmbed('System Error', 'Could not process birthday command at this time.')],
-                flags: MessageFlags.Ephemeral
-            };
-            
-            if (interaction.deferred || interaction.replied) {
-                return interaction.editReply(errorMessage);
-            } else {
-                return interaction.editReply(errorMessage);
-            }
+            logger.error('Birthday command execution failed', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'birthday',
+                subcommand: interaction.options.getSubcommand()
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'birthday',
+                source: 'birthday_command'
+            });
         }
     }
 };

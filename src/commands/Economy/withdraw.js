@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
@@ -17,9 +17,8 @@ export default {
                 .setMinValue(1)
         ),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        await interaction.deferReply();
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -83,10 +82,5 @@ export default {
                 );
 
             await interaction.editReply({ embeds: [embed] });
-        }, { command: 'withdraw' });
-    },
+    }, { command: 'withdraw' })
 };
-
-
-
-

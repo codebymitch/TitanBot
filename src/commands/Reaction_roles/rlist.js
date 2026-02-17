@@ -1,8 +1,12 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName('rlist')
@@ -11,37 +15,75 @@ export default {
 
     async execute(interaction) {
         try {
+            // Defer the interaction
+            const deferSuccess = await InteractionHelper.safeDefer(interaction);
+            if (!deferSuccess) return;
+            
+            logger.info(`Reaction role list requested by ${interaction.user.tag} in guild ${interaction.guild.name}`);
+            
+            // Get all reaction role messages using service layer
             const guildReactionRoles = await getAllReactionRoleMessages(interaction.client, interaction.guildId);
 
             if (guildReactionRoles.length === 0) {
-                return interaction.reply({
-                    embeds: [errorEmbed('No Reaction Roles', 'There are no reaction role messages in this server.')]
+                logger.debug(`No reaction role messages found in guild ${interaction.guild.name}`);
+                return interaction.editReply({
+                    embeds: [infoEmbed('No Reaction Roles', 'There are no reaction role messages in this server.')]
                 });
             }
 
             const embed = new EmbedBuilder()
-                .setTitle('Reaction Role Messages')
+                .setTitle('🎭 Reaction Role Messages')
                 .setColor(getColor('info'))
-                .setDescription('List of all active reaction role messages:');
+                .setDescription(`Found **${guildReactionRoles.length}** active reaction role message${guildReactionRoles.length !== 1 ? 's' : ''}:`)
+                .setFooter({ text: `Total: ${guildReactionRoles.length} message${guildReactionRoles.length !== 1 ? 's' : ''}` })
+                .setTimestamp();
 
             for (const rr of guildReactionRoles) {
-                const channel = await interaction.guild.channels.fetch(rr.channelId).catch(() => null);
-                const message = channel ? await channel.messages.fetch(rr.messageId).catch(() => null) : null;
-                
-                embed.addFields({
-                    name: `Message ID: ${rr.messageId}`,
-                    value: `Channel: ${channel || 'Unknown'}\n` +
-                           `Message: ${message ? `[Jump to Message](${message.url})` : 'Message not found'}\n` +
-                           `Roles: ${rr.roles ? Object.keys(rr.roles).length : rr.roles?.length || 0} roles configured`
-                });
+                try {
+                    const channel = await interaction.guild.channels.fetch(rr.channelId).catch(() => null);
+                    const message = channel ? await channel.messages.fetch(rr.messageId).catch(() => null) : null;
+                    
+                    // Count roles
+                    let roleCount = 0;
+                    if (Array.isArray(rr.roles)) {
+                        roleCount = rr.roles.length;
+                    } else if (typeof rr.roles === 'object') {
+                        roleCount = Object.keys(rr.roles).length;
+                    }
+                    
+                    // Build field value
+                    let fieldValue = '';
+                    fieldValue += `📍 **Channel:** ${channel ? channel.toString() : '❌ Not found'}\n`;
+                    fieldValue += `🔗 **Message:** ${message ? `[Jump to Message](${message.url})` : '❌ Message not found'}\n`;
+                    fieldValue += `🏷️ **Roles:** ${roleCount} role${roleCount !== 1 ? 's' : ''} configured`;
+                    
+                    // Add created date if available
+                    if (rr.createdAt) {
+                        fieldValue += `\n📅 **Created:** <t:${Math.floor(new Date(rr.createdAt).getTime() / 1000)}:R>`;
+                    }
+                    
+                    embed.addFields({
+                        name: `Message ID: \`${rr.messageId}\``,
+                        value: fieldValue,
+                        inline: false
+                    });
+                } catch (fieldError) {
+                    logger.warn(`Error processing reaction role message ${rr.messageId}:`, fieldError);
+                    embed.addFields({
+                        name: `Message ID: \`${rr.messageId}\``,
+                        value: '⚠️ Error loading message details',
+                        inline: false
+                    });
+                }
             }
 
             await interaction.editReply({ embeds: [embed] });
+            logger.info(`Reaction role list displayed to ${interaction.user.tag}, showing ${guildReactionRoles.length} messages`);
 
         } catch (error) {
-            console.error('Error listing reaction roles:', error);
-            interaction.editReply({
-                embeds: [errorEmbed('Error', 'An error occurred while listing reaction roles.')]
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'rlist'
             });
         }
     }

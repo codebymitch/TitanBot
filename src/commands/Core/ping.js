@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -8,8 +7,7 @@ export default {
         .setDescription("Checks the bot's latency and API speed"),
 
     async execute(interaction) {
-try {
-
+        try {
             const reply = await interaction.reply({
                 content: "Pinging...",
             });
@@ -28,10 +26,14 @@ try {
             });
         } catch (error) {
             console.error('Ping command error:', error);
-            return interaction.editReply({
-                embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.', color: 'error' })],
-                flags: MessageFlags.Ephemeral,
-            });
+            try {
+                return await interaction.reply({
+                    embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.', color: 'error' })],
+                    flags: MessageFlags.Ephemeral,
+                });
+            } catch (replyError) {
+                console.error('Failed to send error reply:', replyError);
+            }
         }
     },
 };

@@ -1,9 +1,10 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const ROB_COOLDOWN = 4 * 60 * 60 * 1000;
 const BASE_ROB_SUCCESS_CHANCE = 0.25;
@@ -21,9 +22,9 @@ export default {
                 .setRequired(true)
         ),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
             
             const robberId = interaction.user.id;
             const victimUser = interaction.options.getUser("user");
@@ -149,8 +150,7 @@ export default {
                 .setFooter({ text: `Next robbery available in 4 hours.` });
 
             await interaction.editReply({ embeds: [resultEmbed] });
-        }, { command: 'rob' });
-    },
+    }, { command: 'rob' })
 };
 
 

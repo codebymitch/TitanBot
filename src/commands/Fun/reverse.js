@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { sanitizeInput } from '../../utils/sanitization.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -10,24 +13,41 @@ export default {
       option
         .setName("text")
         .setDescription("The text to reverse.")
-        .setRequired(true),
+        .setRequired(true)
+        .setMaxLength(1000),
     ),
+  category: 'Fun',
 
-  async execute(interaction) {
-try {
+  async execute(interaction, config, client) {
+    try {
       const originalText = interaction.options.getString("text");
+      
+      // Validate input length
+      if (!originalText || originalText.trim().length === 0) {
+        throw new TitanBotError(
+          'Empty text provided to reverse command',
+          ErrorTypes.USER_INPUT,
+          'Please provide some text to reverse!'
+        );
+      }
 
-      const reversedText = originalText.split("").reverse().join("");
+      // Sanitize input to prevent injection
+      const sanitizedText = sanitizeInput(originalText, 1000);
+      const reversedText = sanitizedText.split("").reverse().join("");
 
       const embed = successEmbed(
         "Backwards Text",
-        `Original: **${originalText}**\nReversed: **${reversedText}**`,
+        `Original: **${sanitizedText}**\nReversed: **${reversedText}**`,
       );
 
       await interaction.reply({ embeds: [embed] });
+      logger.debug(`Reverse command executed by user ${interaction.user.id} in guild ${interaction.guildId}`);
     } catch (error) {
-      console.error("Reverse command error:", error);
-      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not reverse text right now.")] });
+      logger.error('Reverse command error:', error);
+      await handleInteractionError(interaction, error, {
+        commandName: 'reverse',
+        source: 'reverse_command'
+      });
     }
   },
 };

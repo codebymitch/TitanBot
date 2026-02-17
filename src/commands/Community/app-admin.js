@@ -1,6 +1,10 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { getColor } from '../../config/bot.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import ApplicationService from '../../services/applicationService.js';
 import { 
     getApplicationSettings, 
     saveApplicationSettings, 
@@ -148,74 +152,60 @@ export default {
 
     category: "Community",
 
-    async execute(interaction) {
+    execute: withErrorHandling(async (interaction) => {
         if (!interaction.inGuild()) {
             return interaction.reply({
                 embeds: [errorEmbed("This command can only be used in a server.")],
                 flags: ["Ephemeral"],
             });
         }
-const { options, guild, member } = interaction;
+
+        await interaction.deferReply({ flags: ["Ephemeral"] });
+
+        const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
 
-        const settings = await getApplicationSettings(interaction.client, guild.id);
-        const isManager =
-            member.permissions.has(PermissionFlagsBits.ManageGuild) ||
-            (settings.managerRoles &&
-                settings.managerRoles.some((roleId) =>
-                    member.roles.cache.has(roleId),
-                ));
+        logger.info(`App-admin command executed: ${subcommand}`, {
+            userId: interaction.user.id,
+            guildId: guild.id,
+            subcommand
+        });
 
-        if (!isManager) {
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "You do not have permission to manage applications.",
-                    ),
-                ],
-                flags: ["Ephemeral"],
-            });
-        }
+        // Check permissions using ApplicationService
+        await ApplicationService.checkManagerPermission(interaction.client, guild.id, member);
 
-        try {
-            if (subcommand === "setup") {
-                await handleSetup(interaction, settings);
-            } else if (subcommand === "view") {
-                await handleView(interaction);
-            } else if (subcommand === "review") {
-                await handleReview(interaction);
-            } else if (subcommand === "list") {
-                await handleList(interaction);
-            } else if (subcommand === "roles") {
-                await handleRoles(interaction);
-            } else if (subcommand === "questions") {
-                await handleQuestions(interaction, settings);
-            }
-        } catch (error) {
-            console.error("Error in app-admin command:", error);
-            interaction.editReply({
-                embeds: [
-                    errorEmbed("An error occurred while processing your request."),
-                ],
-                flags: ["Ephemeral"],
-            });
+        if (subcommand === "setup") {
+            await handleSetup(interaction);
+        } else if (subcommand === "view") {
+            await handleView(interaction);
+        } else if (subcommand === "review") {
+            await handleReview(interaction);
+        } else if (subcommand === "list") {
+            await handleList(interaction);
+        } else if (subcommand === "roles") {
+            await handleRoles(interaction);
+        } else if (subcommand === "questions") {
+            await handleQuestions(interaction);
         }
-    }
+    }, { type: 'command', commandName: 'app-admin' })
 };
 
-async function handleSetup(interaction, settings) {
+async function handleSetup(interaction) {
     const logChannel = interaction.options.getChannel("log-channel");
     const managerRole = interaction.options.getRole("manager-role");
     const enabled = interaction.options.getBoolean("enabled");
 
+    const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
     const updates = {};
 
     if (logChannel) {
         if (!logChannel.isTextBased()) {
-            return interaction.editReply({
-                embeds: [errorEmbed("The log channel must be a text channel.")],
-                flags: ["Ephemeral"],
-            });
+            throw createError(
+                'Invalid channel type',
+                ErrorTypes.VALIDATION,
+                'The log channel must be a text channel.',
+                { channelId: logChannel.id }
+            );
         }
         updates.logChannelId = logChannel.id;
     }
@@ -239,15 +229,13 @@ async function handleSetup(interaction, settings) {
         return showCurrentSettings(interaction, settings);
     }
 
-    await saveApplicationSettings(
+    const updatedSettings = await ApplicationService.updateSettings(
         interaction.client,
         interaction.guild.id,
-        updates,
+        updates
     );
-    const updatedSettings = { ...settings, ...updates };
 
     await showCurrentSettings(interaction, updatedSettings);
-
 }
 
 async function showCurrentSettings(interaction, settings) {
@@ -304,7 +292,7 @@ async function handleView(interaction) {
         });
     }
 
-    const statusColor = application.status === "approved" ? "#00FF00" : (application.status === "denied" ? "#FF0000" : "#FFFF00");
+    const statusColor = application.status === "approved" ? getColor('success') : (application.status === "denied" ? getColor('error') : getColor('warning'));
     const embed = createEmbed({ title: `Application #${application.id} - ${application.roleName}`, description: `**User:** <@${application.userId}> (${application.userId})\n         **Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}\n` +
             (application.reviewer
                 ? `**Reviewed by:** <@${application.reviewer}>\n`
@@ -385,32 +373,42 @@ async function handleReview(interaction) {
     }
 
     const status = action === "approve" ? "approved" : "denied";
-    const statusColor = status === "approved" ? "#00FF00" : "#FF0000";
 
-    await updateApplication(interaction.client, interaction.guild.id, appId, {
-        status,
-        reviewer: interaction.user.id,
-        reviewMessage: reason,
-        reviewedAt: new Date().toISOString(),
-    });
+    const updatedApplication = await ApplicationService.reviewApplication(
+        interaction.client,
+        interaction.guild.id,
+        appId,
+        {
+            action,
+            reason,
+            reviewerId: interaction.user.id
+        }
+    );
 
+    // Notify user via DM
     try {
         const user = await interaction.client.users.fetch(application.userId);
+        const statusColor = status === "approved" ? getColor('success') : getColor('error');
         const dmEmbed = createEmbed(
             `Application ${status.charAt(0).toUpperCase() + status.slice(1)}`,
             `Your application for **${application.roleName}** has been **${status}**.\n` +
                 `**Note:** ${reason}\n\n` +
-                `Use \`/apply status id:${appId}\` to view details.`,
-            statusColor,
-        );
+                `Use \`/apply status id:${appId}\` to view details.`
+        ).setColor(statusColor);
 
         await user.send({ embeds: [dmEmbed] });
     } catch (error) {
-        console.error("Error sending DM to user:", error);
+        logger.warn('Failed to send DM to user for application review', {
+            error: error.message,
+            userId: application.userId,
+            applicationId: appId
+        });
     }
 
+    // Update log message
     if (application.logMessageId && application.logChannelId) {
         try {
+            const statusColor = status === "approved" ? getColor('success') : getColor('error');
             const logChannel = interaction.guild.channels.cache.get(
                 application.logChannelId,
             );
@@ -438,7 +436,11 @@ components: [],
                 }
             }
         } catch (error) {
-            console.error("Error updating log message:", error);
+            logger.warn('Failed to update log message for application', {
+                error: error.message,
+                applicationId: appId,
+                logMessageId: application.logMessageId
+            });
         }
     }
 
@@ -449,7 +451,12 @@ components: [],
             );
             await member.roles.add(application.role);
         } catch (error) {
-            console.error("Error assigning role:", error);
+            logger.error('Failed to assign role to approved applicant', {
+                error: error.message,
+                userId: application.userId,
+                roleId: application.roleId,
+                applicationId: appId
+            });
         }
     }
 
@@ -549,7 +556,8 @@ async function handleList(interaction) {
     });
 }
 
-async function handleQuestions(interaction, settings) {
+async function handleQuestions(interaction) {
+    const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
     const modal = new ModalBuilder()
         .setCustomId("edit_questions")
         .setTitle("Edit Application Questions");
@@ -596,12 +604,10 @@ time: 30 * 60 * 1000,
             });
         }
 
-        await saveApplicationSettings(
+        await ApplicationService.updateSettings(
             interaction.client,
             interaction.guild.id,
-            {
-                questions: newQuestions,
-            },
+            { questions: newQuestions }
         );
 
         await modalResponse.reply({
@@ -618,7 +624,11 @@ time: 30 * 60 * 1000,
         if (error.message.includes("timeout")) {
             return;
         }
-        console.error("Error processing questions:", error);
+        logger.error('Error processing questions modal', {
+            error: error.message,
+            guildId: interaction.guild.id,
+            stack: error.stack
+        });
     }
 }
 
@@ -627,98 +637,55 @@ async function handleRoles(interaction) {
     const role = interaction.options.getRole("role");
     const name = interaction.options.getString("name");
 
-    try {
-        const currentRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
+    const currentRoles = await ApplicationService.manageApplicationRoles(
+        interaction.client,
+        interaction.guild.id,
+        { action, roleId: role?.id, name }
+    );
 
-        if (action === "list") {
-            if (currentRoles.length === 0) {
-                return interaction.editReply({
-                    embeds: [errorEmbed("No application roles have been configured.")],
-                    flags: ["Ephemeral"],
-                });
-            }
-
-            const embed = createEmbed({
-                title: "Application Roles",
-                description: "Here are the configured application roles:"
-            });
-
-            currentRoles.forEach((appRole, index) => {
-                const roleObj = interaction.guild.roles.cache.get(appRole.roleId);
-                embed.addFields({
-                    name: `${index + 1}. ${appRole.name}`,
-                    value: `**Role:** ${roleObj ? `<@&${appRole.roleId}>` : 'Role not found'}\n**ID:** \`${appRole.roleId}\``,
-                    inline: false
-                });
-            });
-
-            return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
-        }
-
-        if (action === "add") {
-            if (!role) {
-                return interaction.editReply({
-                    embeds: [errorEmbed("You must specify a role to add.")],
-                    flags: ["Ephemeral"],
-                });
-            }
-
-            const customName = name || role.name;
-            
-            if (currentRoles.some(appRole => appRole.roleId === role.id)) {
-                return interaction.editReply({
-                    embeds: [errorEmbed("This role is already configured for applications.")],
-                    flags: ["Ephemeral"],
-                });
-            }
-
-            currentRoles.push({
-                roleId: role.id,
-                name: customName
-            });
-
-            await saveApplicationRoles(interaction.client, interaction.guild.id, currentRoles);
-
+    if (action === "list") {
+        if (currentRoles.length === 0) {
             return interaction.editReply({
-                embeds: [successEmbed(
-                    "Role Added",
-                    `**${customName}** has been added to the application system.\nUsers can now apply for this role using \`/apply submit\`.`
-                )],
+                embeds: [errorEmbed("No application roles have been configured.")],
                 flags: ["Ephemeral"],
             });
         }
 
-        if (action === "remove") {
-            if (!role) {
-                return interaction.editReply({
-                    embeds: [errorEmbed("You must specify a role to remove.")],
-                    flags: ["Ephemeral"],
-                });
-            }
+        const embed = createEmbed({
+            title: "Application Roles",
+            description: "Here are the configured application roles:"
+        });
 
-            const roleIndex = currentRoles.findIndex(appRole => appRole.roleId === role.id);
-            if (roleIndex === -1) {
-                return interaction.editReply({
-                    embeds: [errorEmbed("This role is not configured for applications.")],
-                    flags: ["Ephemeral"],
-                });
-            }
-
-            const removedRole = currentRoles.splice(roleIndex, 1)[0];
-            await saveApplicationRoles(interaction.client, interaction.guild.id, currentRoles);
-
-            return interaction.editReply({
-                embeds: [successEmbed(
-                    "Role Removed",
-                    `**${removedRole.name}** has been removed from the application system.`
-                )],
-                flags: ["Ephemeral"],
+        currentRoles.forEach((appRole, index) => {
+            const roleObj = interaction.guild.roles.cache.get(appRole.roleId);
+            embed.addFields({
+                name: `${index + 1}. ${appRole.name}`,
+                value: `**Role:** ${roleObj ? `<@&${appRole.roleId}>` : 'Role not found'}\n**ID:** \`${appRole.roleId}\``,
+                inline: false
             });
-        }
-    } catch (error) {
-        console.error("Error handling roles command:", error);
+        });
+
+        return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
+    }
+
+    if (action === "add") {
+        const customName = name || role.name;
         return interaction.editReply({
-            embeds: [errorEmbed("An error occurred while managing application roles.")],
+            embeds: [successEmbed(
+                "Role Added",
+                `**${customName}** has been added to the application system.\nUsers can now apply for this role using \`/apply submit\`.`
+            )],
+            flags: ["Ephemeral"],
+        });
+    }
+
+    if (action === "remove") {
+        const removedRole = currentRoles.find(r => r.roleId === role.id);
+        return interaction.editReply({
+            embeds: [successEmbed(
+                "Role Removed",
+                `**${removedRole?.name || 'Role'}** has been removed from the application system.`
+            )],
             flags: ["Ephemeral"],
         });
     }

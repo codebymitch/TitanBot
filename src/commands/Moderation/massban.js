@@ -1,7 +1,8 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
+import { checkRateLimit } from '../../utils/rateLimiter.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -46,6 +47,21 @@ export default {
         const deleteDays = interaction.options.getInteger("delete_days") || 0;
 
         try {
+            // Check rate limit - 3 mass bans per minute
+            const rateLimitKey = `massban_${interaction.user.id}`;
+            const isAllowed = await checkRateLimit(rateLimitKey, 3, 60000);
+            if (!isAllowed) {
+                return await interaction.editReply({
+                    embeds: [
+                        warningEmbed(
+                            "You're performing mass bans too fast. Please wait a minute before trying again.",
+                            "⏳ Rate Limited"
+                        ),
+                    ],
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
+
             const userIds = usersInput
 .replace(/<@!?(\d+)>/g, '$1')
 .split(/[\s,]+/)

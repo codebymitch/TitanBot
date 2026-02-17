@@ -1,9 +1,12 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { updateTicketPriority } from '../../services/ticket.js';
 import { logEvent } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -27,13 +30,24 @@ export default {
     category: "Ticket",
 
     async execute(interaction, guildConfig, client) {
-const priorityLevel = interaction.options.getString("level");
-
         try {
+            // Defer the interaction to allow time for database and channel operations
+            const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            if (!deferred) {
+                return;
+            }
+
+            const priorityLevel = interaction.options.getString("level");
             const result = await updateTicketPriority(interaction.channel, priorityLevel, interaction.user);
             
             if (!result.success) {
-                return interaction.reply({
+                logger.warn('Priority update failed - not a valid ticket channel', {
+                    userId: interaction.user.id,
+                    channelId: interaction.channel.id,
+                    guildId: interaction.guildId,
+                    error: result.error
+                });
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Not a Ticket Channel",
@@ -52,27 +66,14 @@ const priorityLevel = interaction.options.getString("level");
                 ],
             });
 
-            const logEmbed = createEmbed({
-                title: "📊 Priority Updated (Audit Log)",
-                description: `${interaction.user} updated ticket priority to **${priorityLevel.toUpperCase()}**.`,
-                color: getColor('warning'),
-                fields: [
-                    {
-                        name: "Updated By",
-                        value: interaction.user.tag,
-                        inline: true,
-                    },
-                    {
-                        name: "Channel",
-                        value: interaction.channel.toString(),
-                        inline: true,
-                    },
-                    {
-                        name: "Priority",
-                        value: priorityLevel.toUpperCase(),
-                        inline: true,
-                    },
-                ]
+            logger.info('Ticket priority updated successfully', {
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                channelId: interaction.channel.id,
+                channelName: interaction.channel.name,
+                guildId: interaction.guildId,
+                priority: priorityLevel,
+                commandName: 'priority'
             });
 
             await logEvent({
@@ -87,14 +88,17 @@ const priorityLevel = interaction.options.getString("level");
             });
 
         } catch (error) {
-            console.error(`Error setting priority for ticket ${interaction.channel.id}:`, error);
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Action Failed",
-                        "Could not update ticket priority. Please check the bot's console for details.",
-                    ),
-                ],
+            logger.error('Error executing priority command', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                channelId: interaction.channel?.id,
+                guildId: interaction.guildId,
+                commandName: 'priority'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'priority',
+                source: 'ticket_priority_command'
             });
         }
     },

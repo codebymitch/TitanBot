@@ -1,9 +1,12 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, addMoney, removeMoney, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
+import EconomyService from '../../services/economyService.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -23,14 +26,21 @@ export default {
                 .setMinValue(1)
         ),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
             
             const senderId = interaction.user.id;
             const receiver = interaction.options.getUser("user");
             const amount = interaction.options.getInteger("amount");
             const guildId = interaction.guildId;
+
+            logger.debug(`[ECONOMY] Pay command initiated`, { 
+                senderId, 
+                receiverId: receiver.id,
+                amount,
+                guildId
+            });
 
             if (receiver.bot) {
                 throw createError(
@@ -82,22 +92,19 @@ export default {
                 );
             }
 
-            if (senderData.wallet < amount) {
-                throw createError(
-                    "Insufficient funds for payment",
-                    ErrorTypes.VALIDATION,
-                    `You only have $${senderData.wallet.toLocaleString()} in cash.`,
-                    { amount, walletBalance: senderData.wallet, senderId }
-                );
-            }
+            // Use EconomyService for transaction safety
+            // The service handles validation, locking, and logging
+            const result = await EconomyService.transferMoney(
+                client, 
+                guildId, 
+                senderId, 
+                receiver.id, 
+                amount
+            );
 
-            senderData.wallet -= amount;
-            receiverData.wallet += amount;
-
-            await Promise.all([
-                setEconomyData(client, guildId, senderId, senderData),
-                setEconomyData(client, guildId, receiver.id, receiverData)
-            ]);
+            // Get updated balances after transfer
+            const updatedSenderData = await getEconomyData(client, guildId, senderId);
+            const updatedReceiverData = await getEconomyData(client, guildId, receiver.id);
 
             const embed = MessageTemplates.SUCCESS.DATA_UPDATED(
                 "payment",
@@ -111,7 +118,7 @@ export default {
                     },
                     {
                         name: "💵 Your New Balance",
-                        value: `$${senderData.wallet.toLocaleString()}`,
+                        value: `$${updatedSenderData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                 )
@@ -122,21 +129,28 @@ export default {
 
             await interaction.editReply({ embeds: [embed] });
 
+            logger.info(`[ECONOMY] Payment sent successfully`, {
+                senderId,
+                receiverId: receiver.id,
+                amount,
+                senderBalance: updatedSenderData.wallet,
+                receiverBalance: updatedReceiverData.wallet
+            });
+
             try {
                 const receiverEmbed = createEmbed({ 
                     title: "💰 Incoming Payment!", 
                     description: `${interaction.user.username} paid you **$${amount.toLocaleString()}**.` 
                 }).addFields({
                     name: "Your New Cash",
-                    value: `$${receiverData.wallet.toLocaleString()}`,
+                    value: `$${updatedReceiverData.wallet.toLocaleString()}`,
                     inline: true,
                 });
                 await receiver.send({ embeds: [receiverEmbed] });
             } catch (e) {
                 console.log(`Could not DM user ${receiver.id}:`, e.message);
             }
-        }, { command: 'pay' });
-    },
+    }, { command: 'pay' })
 };
 
 

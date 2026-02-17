@@ -1,4 +1,4 @@
-﻿import { shopPurchaseHandler } from './shopButtons.js';
+import { shopPurchaseHandler } from './shopButtons.js';
 import { logger } from '../utils/logger.js';
 
 /**

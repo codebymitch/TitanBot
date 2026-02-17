@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 

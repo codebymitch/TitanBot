@@ -1,6 +1,8 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -8,7 +10,7 @@ export default {
     .setDescription("Get detailed information about the server"),
 
   async execute(interaction) {
-try {
+    try {
       const guild = interaction.guild;
       const owner = await guild.fetchOwner();
 
@@ -38,11 +40,23 @@ try {
         );
 
       await interaction.editReply({ embeds: [embed] });
+      logger.info(`ServerInfo command executed`, {
+        userId: interaction.user.id,
+        guildId: guild.id,
+        guildName: guild.name,
+        memberCount: guild.memberCount
+      });
     } catch (error) {
-      console.error('ServerInfo command error:', error);
-      return interaction.editReply({
-        embeds: [createEmbed({ title: 'System Error', description: 'Could not retrieve server information.' })],
-        flags: MessageFlags.Ephemeral,
+      logger.error(`ServerInfo command execution failed`, {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        commandName: 'serverinfo'
+      });
+      await handleInteractionError(interaction, error, {
+        commandName: 'serverinfo',
+        source: 'serverinfo_command'
       });
     }
   },

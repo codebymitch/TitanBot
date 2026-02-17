@@ -1,6 +1,5 @@
-﻿import { SlashCommandBuilder, version, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, version, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -8,7 +7,9 @@ export default {
     .setDescription("View bot statistics"),
 
   async execute(interaction) {
-try {
+    try {
+      await interaction.deferReply();
+      
       const totalGuilds = interaction.client.guilds.cache.size;
       const totalMembers = interaction.client.guilds.cache.reduce(
         (acc, guild) => acc + guild.memberCount,
@@ -16,7 +17,7 @@ try {
       );
       const nodeVersion = process.version;
 
-      const embed = createEmbed({ title: "📊 System Statistics", description: "Real-time performance metrics.", }).addFields(
+      const embed = createEmbed({ title: "📊 System Statistics", description: "Real-time performance metrics." }).addFields(
         { name: "Servers", value: `${totalGuilds}`, inline: true },
         { name: "Users", value: `${totalMembers}`, inline: true },
         { name: "Node.js", value: `${nodeVersion}`, inline: true },

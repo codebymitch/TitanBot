@@ -1,68 +1,39 @@
-﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
-import { getGuildBirthdays, getMonthName } from '../../../utils/database.js';
+import { MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { getUpcomingBirthdays } from '../../../services/birthdayService.js';
+import { logger } from '../../../utils/logger.js';
+import { handleInteractionError } from '../../../utils/errorHandler.js';
 
 export default {
     async execute(interaction, config, client) {
-try {
-            const birthdays = await getGuildBirthdays(client, interaction.guildId);
-
-            if (!birthdays || Object.keys(birthdays).length === 0) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            'No Birthdays Found',
-                            'No birthdays have been set up in this server yet. Use `/birthday set` to add birthdays!'
-                        )
-                    ]
-                });
-            }
-
-            const today = new Date();
-            const currentYear = today.getFullYear();
-
-            const upcomingBirthdays = [];
+        try {
+            await interaction.deferReply();
             
-            for (const [userId, userData] of Object.entries(birthdays)) {
-                let nextBirthday = new Date(currentYear, userData.month - 1, userData.day);
-                
-                if (nextBirthday < today) {
-                    nextBirthday = new Date(currentYear + 1, userData.month - 1, userData.day);
-                }
-                
-                upcomingBirthdays.push({
-                    userId,
-                    month: userData.month,
-                    day: userData.day,
-                    date: nextBirthday,
-                    daysUntil: Math.ceil((nextBirthday - today) / (1000 * 60 * 60 * 24))
-                });
-            }
-
-            upcomingBirthdays.sort((a, b) => a.daysUntil - b.daysUntil);
-
-            const next5 = upcomingBirthdays.slice(0, 5);
+            // Use service layer - returns sorted, limited results
+            const next5 = await getUpcomingBirthdays(client, interaction.guildId, 5);
 
             if (next5.length === 0) {
-                return interaction.editReply({
+                return await interaction.editReply({
                     embeds: [
-                        errorEmbed(
-                            'No Upcoming Birthdays',
-                            'No upcoming birthdays found in the next year.'
-                        )
+                        createEmbed({
+                            title: '❌ No Birthdays Found',
+                            description: 'No birthdays have been set up in this server yet. Use `/birthday set` to add birthdays!',
+                            color: 'error'
+                        })
                     ]
                 });
             }
 
-            const embed = createEmbed(
-                '🎂 Next 5 Upcoming Birthdays',
-                `Here are the next 5 birthdays in ${interaction.guild.name}:`
-            );
+            const embed = createEmbed({
+                title: '🎂 Next 5 Upcoming Birthdays',
+                description: `Here are the next 5 birthdays in ${interaction.guild.name}:`,
+                color: 'info'
+            });
 
             for (let i = 0; i < next5.length; i++) {
                 const birthday = next5[i];
                 const member = await interaction.guild.members.fetch(birthday.userId).catch(() => null);
                 const userName = member ? member.user.username : `User ${birthday.userId}`;
-                const monthName = getMonthName(birthday.month);
                 
                 let timeUntil = '';
                 if (birthday.daysUntil === 0) {
@@ -75,7 +46,7 @@ try {
 
                 embed.addFields({
                     name: `${i + 1}. ${userName}`,
-                    value: `📅 **Date:** ${monthName} ${birthday.day}\nâ° **Time:** ${timeUntil}`,
+                    value: `📅 **Date:** ${birthday.monthName} ${birthday.day}\n⏰ **Time:** ${timeUntil}`,
                     inline: false
                 });
             }
@@ -86,9 +57,25 @@ try {
             });
 
             await interaction.editReply({ embeds: [embed] });
+            
+            logger.info('Next birthdays retrieved successfully', {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                upcomingCount: next5.length,
+                commandName: 'next_birthdays'
+            });
         } catch (error) {
-            console.error('Next birthdays command error:', error);
-            await interaction.editReply({ embeds: [errorEmbed('Error', 'Failed to fetch upcoming birthdays.')] });
+            logger.error('Next birthdays command execution failed', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'next_birthdays'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'next_birthdays',
+                source: 'next_birthdays_module'
+            });
         }
     }
 };

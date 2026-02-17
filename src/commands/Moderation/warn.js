@@ -1,8 +1,10 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
+import { WarningService } from '../../services/warningService.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("warn")
@@ -38,19 +40,20 @@ export default {
                     throw new Error("The target user is not currently in this server.");
                 }
 
-                const warningsKey = `warnings-${guildId}-${target.id}`;
-                const userWarns = await client.db.get(warningsKey);
-                const warningsArray = Array.isArray(userWarns) ? userWarns : [];
-
-                const newWarning = {
-                    reason: reason,
+                // Use WarningService for persistent storage
+                const result = await WarningService.addWarning({
+                    guildId,
+                    userId: target.id,
                     moderatorId: moderator.id,
-                    date: Date.now(),
-                };
-                warningsArray.push(newWarning);
-                await client.db.set(warningsKey, warningsArray);
+                    reason,
+                    timestamp: Date.now()
+                });
 
-                const totalWarns = warningsArray.length;
+                if (!result.success) {
+                    throw new Error("Failed to store warning in database");
+                }
+
+                const totalWarns = result.totalCount;
 
                 await logModerationAction({
                     client,
@@ -64,7 +67,8 @@ export default {
                             userId: target.id,
                             moderatorId: moderator.id,
                             totalWarns,
-                            warningNumber: totalWarns
+                            warningNumber: totalWarns,
+                            warningId: result.id
                         }
                     }
                 });
@@ -79,7 +83,7 @@ export default {
                 });
         } catch (error) {
             logger.error('Warn command error:', error);
-            throw error;
+            await handleInteractionError(interaction, error, { subtype: 'warn_failed' });
         }
     }
 };

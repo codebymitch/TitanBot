@@ -1,8 +1,15 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
-import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
+import { TitanBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { getGuildGiveaways, saveGiveaway } from '../../utils/giveaways.js';
+import { 
+    endGiveaway as endGiveawayService,
+    createGiveawayEmbed, 
+    createGiveawayButtons 
+} from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("gend")
@@ -15,99 +22,110 @@ export default {
                 .setDescription("The message ID of the giveaway to end.")
                 .setRequired(true),
         )
-.setDefaultMemberPermissions(0x0000000000000008n),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
     async execute(interaction) {
         try {
+            // Validate guild context
             if (!interaction.inGuild()) {
-                throw new Error("This command can only be used in a server.");
+                throw new TitanBotError(
+                    'Giveaway command used outside guild',
+                    ErrorTypes.VALIDATION,
+                    'This command can only be used in a server.',
+                    { userId: interaction.user.id }
+                );
             }
 
-            if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-                throw new Error("You need the 'Manage Server' permission to end a giveaway.");
+            // Validate permissions
+            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+                throw new TitanBotError(
+                    'User lacks ManageGuild permission',
+                    ErrorTypes.PERMISSION,
+                    "You need the 'Manage Server' permission to end a giveaway.",
+                    { userId: interaction.user.id, guildId: interaction.guildId }
+                );
             }
+
+            logger.info(`Giveaway end initiated by ${interaction.user.tag} in guild ${interaction.guildId}`);
 
             const messageId = interaction.options.getString("messageid");
+
+            // Validate message ID format
+            if (!messageId || !/^\d+$/.test(messageId)) {
+                throw new TitanBotError(
+                    'Invalid message ID format',
+                    ErrorTypes.VALIDATION,
+                    'Please provide a valid message ID.',
+                    { providedId: messageId }
+                );
+            }
+
             const giveaways = await getGuildGiveaways(interaction.client, interaction.guildId);
             const giveaway = giveaways.find(g => g.messageId === messageId);
 
             if (!giveaway) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            "Giveaway Not Found",
-                            "No giveaway was found with that message ID in the database.",
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                });
-            }
-
-            if (giveaway.isEnded) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            "Giveaway Already Ended",
-                            "This giveaway has already finished.",
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                });
-            }
-
-            const winners = pickWinners(giveaway.participants || [], giveaway.winnerCount);
-const winnerIds = winners.map((w) => w);
-
-            const channel = await interaction.client.channels.fetch(
-                giveaway.channelId,
-            );
-            if (!channel || !channel.isTextBased()) {
-                await deleteGiveaway(
-                    interaction.client,
-                    interaction.guildId,
-                    messageId,
+                throw new TitanBotError(
+                    `Giveaway not found: ${messageId}`,
+                    ErrorTypes.VALIDATION,
+                    "No giveaway was found with that message ID in the database.",
+                    { messageId, guildId: interaction.guildId }
                 );
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            "Channel Error",
-                            "Could not find the channel where the giveaway was hosted. The giveaway has been removed from the database.",
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                });
+            }
+
+            // Use service layer to end giveaway (handles state management atomically)
+            const endResult = await endGiveawayService(
+                interaction.client,
+                giveaway,
+                interaction.guildId,
+                interaction.user.id
+            );
+
+            const updatedGiveaway = endResult.giveaway;
+            const winners = endResult.winners;
+
+            // Fetch and update the message
+            const channel = await interaction.client.channels.fetch(
+                updatedGiveaway.channelId,
+            ).catch(err => {
+                logger.warn(`Could not fetch channel ${updatedGiveaway.channelId}:`, err.message);
+                return null;
+            });
+
+            if (!channel || !channel.isTextBased()) {
+                throw new TitanBotError(
+                    `Channel not found: ${updatedGiveaway.channelId}`,
+                    ErrorTypes.VALIDATION,
+                    "Could not find the channel where the giveaway was hosted. The giveaway state has been updated.",
+                    { channelId: updatedGiveaway.channelId, messageId }
+                );
             }
 
             const message = await channel.messages
                 .fetch(messageId)
-                .catch(() => null);
-            if (!message) {
-                await deleteGiveaway(
-                    interaction.client,
-                    interaction.guildId,
-                    messageId,
-                );
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            "Message Error",
-                            "Could not find the giveaway message. The giveaway has been removed from the database.",
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
+                .catch(err => {
+                    logger.warn(`Could not fetch message ${messageId}:`, err.message);
+                    return null;
                 });
+
+            if (!message) {
+                throw new TitanBotError(
+                    `Message not found: ${messageId}`,
+                    ErrorTypes.VALIDATION,
+                    "Could not find the giveaway message. The giveaway state has been updated.",
+                    { messageId, channelId: updatedGiveaway.channelId }
+                );
             }
 
-            giveaway.isEnded = true;
-giveaway.winnerIds = winnerIds;
+            // Save updated giveaway to database
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
-                giveaway,
+                updatedGiveaway,
             );
 
-            const newEmbed = giveawayEmbed(giveaway, "ended", winnerIds);
-            const newRow = giveawayButtons(true);
+            // Update the original message with ended embed
+            const newEmbed = createGiveawayEmbed(updatedGiveaway, "ended", winners);
+            const newRow = createGiveawayButtons(true);
 
             await message.edit({
                 content: "🎉 **GIVEAWAY ENDED** 🎉",
@@ -115,27 +133,31 @@ giveaway.winnerIds = winnerIds;
                 components: [newRow],
             });
 
-            if (winnerIds.length > 0) {
-                const winnerMentions = winnerIds
+            // Announce winners
+            if (winners.length > 0) {
+                const winnerMentions = winners
                     .map((id) => `<@${id}>`)
                     .join(", ");
                 await channel.send({
-                    content: `CONGRATULATIONS ${winnerMentions}! You won the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
+                    content: `🎉 CONGRATULATIONS ${winnerMentions}! You won the **${updatedGiveaway.prize}** giveaway! Please contact the host <@${updatedGiveaway.hostId}> to claim your prize.`,
                 });
 
+                logger.info(`Giveaway ended with ${winners.length} winner(s): ${messageId}`);
+
+                // Log giveaway winner event
                 try {
                     await logEvent({
                         client: interaction.client,
                         guildId: interaction.guildId,
                         eventType: EVENT_TYPES.GIVEAWAY_WINNER,
                         data: {
-                            description: `Giveaway ended with ${winnerIds.length} winner(s)`,
-                            channelId: giveaway.channelId,
+                            description: `Giveaway ended with ${winners.length} winner(s)`,
+                            channelId: channel.id,
                             userId: interaction.user.id,
                             fields: [
                                 {
                                     name: '🎁 Prize',
-                                    value: giveaway.prize || 'Mystery Prize!',
+                                    value: updatedGiveaway.prize || 'Mystery Prize!',
                                     inline: true
                                 },
                                 {
@@ -144,42 +166,41 @@ giveaway.winnerIds = winnerIds;
                                     inline: false
                                 },
                                 {
-                                    name: '📍 Channel',
-                                    value: channel.toString(),
+                                    name: '👥 Entries',
+                                    value: endResult.participantCount.toString(),
                                     inline: true
                                 }
                             ]
                         }
                     });
-                } catch (error) {
-                    console.debug('Error logging giveaway end:', error);
+                } catch (logError) {
+                    logger.debug('Error logging giveaway winner event:', logError);
                 }
             } else {
                 await channel.send({
-                    content: `The giveaway for **${giveaway.prize}** has ended with no valid entries.`,
+                    content: `The giveaway for **${updatedGiveaway.prize}** has ended with no valid entries.`,
                 });
+                logger.info(`Giveaway ended with no winners: ${messageId}`);
             }
+
+            logger.info(`Giveaway successfully ended by ${interaction.user.tag}: ${messageId}`);
 
             return interaction.reply({
                 embeds: [
                     successEmbed(
-                        "Giveaway Ended",
-                        `Successfully ended the giveaway for **${giveaway.prize}** in ${channel}.`,
+                        "Giveaway Ended ✅",
+                        `Successfully ended the giveaway for **${updatedGiveaway.prize}** in ${channel}. Selected ${winners.length} winner(s) from ${endResult.participantCount} entries.`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,
             });
+
         } catch (error) {
-            console.error("Error ending giveaway:", error);
-            const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
-            return interaction[replyMethod]({
-                embeds: [
-                    errorEmbed(
-                        "Giveaway Failed",
-                        "An error occurred while trying to end the giveaway and update the message.",
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
+            logger.error('Error in gend command:', error);
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'gend',
+                context: 'giveaway_end'
             });
         }
     },

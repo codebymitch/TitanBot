@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shop Configuration Module
  * Centralized configuration for the shop system
  */

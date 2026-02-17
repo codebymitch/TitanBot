@@ -1,4 +1,4 @@
-﻿import { 
+import { 
     getJoinToCreateConfig, 
     removeJoinToCreateTrigger,
     unregisterTemporaryChannel

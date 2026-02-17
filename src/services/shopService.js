@@ -1,4 +1,4 @@
-﻿import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { shopConfig, shopItems, getItemById, validatePurchase, getCurrentPrice, getItemsInCategory } from '../config/shop/index.js';
 import { logger } from '../utils/logger.js';
 import { getEconomyData, setEconomyData } from '../utils/economy.js';

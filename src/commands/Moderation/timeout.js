@@ -1,8 +1,9 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
+import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 
 const durationChoices = [
@@ -39,60 +40,51 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-        if (
-            !interaction.member.permissions.has(
-                PermissionFlagsBits.ModerateMembers,
-            )
-        )
-            return await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Permission Denied",
-                        "You need the `Moderate Members` permission to set a timeout.",
-                    ),
-                ],
-            });
-
-        const targetUser = interaction.options.getUser("target");
-        const member = interaction.options.getMember("target");
-        const durationMinutes = interaction.options.getInteger("duration");
-        const reason =
-            interaction.options.getString("reason") || "No reason provided";
-
-        if (targetUser.id === interaction.user.id) {
-            return await interaction.editReply({
-                embeds: [errorEmbed("You cannot timeout yourself.")],
-            });
-        }
-        if (targetUser.id === client.user.id) {
-            return await interaction.editReply({
-                embeds: [errorEmbed("You cannot timeout the bot.")],
-            });
-        }
-        if (!member) {
-            return await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Target Not Found",
-                        "The target user is not currently in this server.",
-                    ),
-                ],
-            });
-        }
-
-        if (!member.moderatable)
-            return await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Cannot Timeout",
-                        "I cannot timeout this user. They might have a higher role than me or you.",
-                    ),
-                ],
-            });
-
         try {
-            const durationMs = durationMinutes * 60 * 1000;
+            if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+                throw new TitanBotError(
+                    "User lacks permission",
+                    ErrorTypes.PERMISSION,
+                    "You need the `Moderate Members` permission to set a timeout."
+                );
+            }
 
+            const targetUser = interaction.options.getUser("target");
+            const member = interaction.options.getMember("target");
+            const durationMinutes = interaction.options.getInteger("duration");
+            const reason = interaction.options.getString("reason") || "No reason provided";
+
+            if (targetUser.id === interaction.user.id) {
+                throw new TitanBotError(
+                    "Cannot timeout self",
+                    ErrorTypes.VALIDATION,
+                    "You cannot timeout yourself."
+                );
+            }
+            if (targetUser.id === client.user.id) {
+                throw new TitanBotError(
+                    "Cannot timeout bot",
+                    ErrorTypes.VALIDATION,
+                    "You cannot timeout the bot."
+                );
+            }
+            if (!member) {
+                throw new TitanBotError(
+                    "Target not found",
+                    ErrorTypes.USER_INPUT,
+                    "The target user is not currently in this server."
+                );
+            }
+
+            if (!member.moderatable) {
+                throw new TitanBotError(
+                    "Cannot timeout member",
+                    ErrorTypes.PERMISSION,
+                    "I cannot timeout this user. They might have a higher role than me or you."
+                );
+            }
+
+            const durationMs = durationMinutes * 60 * 1000;
             await member.timeout(durationMs, reason);
 
             const durationDisplay =
@@ -121,16 +113,16 @@ export default {
                 embeds: [
                     successEmbed(
                         `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
-                        `**Reason:** ${reason}`,
+                        `**Reason:** ${reason}\n**Case ID:** #${caseId}`,
                     ),
                 ],
             });
         } catch (error) {
-            logger.error("Timeout Error:", error);
+            logger.error('Timeout command error:', error);
             await interaction.editReply({
                 embeds: [
                     errorEmbed(
-                        "An unexpected error occurred during the timeout action. Please check my role permissions.",
+                        error.userMessage || "An unexpected error occurred during the timeout action. Please check my role permissions.",
                     ),
                 ],
             });

@@ -1,4 +1,4 @@
-﻿import { helpBackButton, helpBugReportButton, helpPaginationButton } from './helpButtons.js';
+import { helpBackButton, helpBugReportButton, helpPaginationButton } from './helpButtons.js';
 import { logger } from '../utils/logger.js';
 
 /**

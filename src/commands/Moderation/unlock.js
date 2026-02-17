@@ -1,7 +1,9 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
+import { getColor } from '../../config/bot.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -62,7 +64,7 @@ export default {
                 "🔓 Channel Unlocked (Action Log)",
                 `${channel} has been unlocked by ${interaction.user}.`,
             )
-.setColor("#2ECC71")
+.setColor(getColor('success'))
                 .addFields(
                     {
                         name: "Channel",
@@ -99,7 +101,7 @@ export default {
                 ],
             });
         } catch (error) {
-            console.error("Unlock Error:", error);
+            logger.error('Unlock command error:', error);
             await interaction.editReply({
                 embeds: [
                     errorEmbed(

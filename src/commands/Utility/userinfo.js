@@ -1,6 +1,8 @@
-﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("userinfo")
@@ -53,15 +55,23 @@ export default {
         );
 
       await interaction.editReply({ embeds: [embed] });
+      logger.info(`UserInfo command executed`, {
+        userId: interaction.user.id,
+        targetUserId: user.id,
+        guildId: interaction.guildId
+      });
     } catch (error) {
-      console.error('UserInfo command error:', error);
-      const errEmbed = createEmbed({ title: 'System Error', description: 'Could not retrieve user information.' });
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ embeds: [errEmbed] });
-      } else {
-        await interaction.reply({ embeds: [errEmbed], flags: MessageFlags.Ephemeral });
-      }
-      return;
+      logger.error(`UserInfo command execution failed`, {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        commandName: 'userinfo'
+      });
+      await handleInteractionError(interaction, error, {
+        commandName: 'userinfo',
+        source: 'userinfo_command'
+      });
     }
   },
 };

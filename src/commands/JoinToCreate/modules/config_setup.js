@@ -1,8 +1,8 @@
 import { getColor } from '../../../config/bot.js';
-﻿import { 
-    ActionRowBuilder, 
-    StringSelectMenuBuilder, 
-    StringSelectMenuOptionBuilder, 
+import {
+    ActionRowBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
     ChannelType,
     MessageFlags,
     ComponentType,

@@ -1,8 +1,9 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed } from '../../utils/embeds.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
+import { formatWelcomeMessage } from '../../utils/welcome.js';
+import { logger } from '../../utils/logger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -32,13 +33,35 @@ export default {
                 .setDescription('Enable or disable goodbye messages')),
 
     async execute(interaction) {
-const { options, guild, client } = interaction;
+        const { options, guild, client } = interaction;
         const subcommand = options.getSubcommand();
 
         if (subcommand === 'setup') {
             const channel = options.getChannel('channel');
             const message = options.getString('message');
             const image = options.getString('image');
+
+            // Validate message is not empty
+            if (!message || message.trim().length === 0) {
+                logger.warn(`[Goodbye] Empty message provided by ${interaction.user.tag} in ${guild.name}`);
+                return await interaction.editReply({
+                    embeds: [errorEmbed('Invalid Input', 'Goodbye message cannot be empty')],
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+
+            // Validate image URL if provided
+            if (image) {
+                try {
+                    new URL(image);
+                } catch (e) {
+                    logger.warn(`[Goodbye] Invalid image URL provided by ${interaction.user.tag}: ${image}`);
+                    return await interaction.editReply({
+                        embeds: [errorEmbed('Invalid Image URL', 'Please provide a valid image URL (must start with http:// or https://')],
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+            }
 
             try {
                 await updateWelcomeConfig(client, guild.id, {
@@ -48,19 +71,21 @@ const { options, guild, client } = interaction;
                     leaveEmbed: {
                         title: "Goodbye {user.tag}",
                         description: message,
-color: getColor('error'),
+                        color: getColor('error'),
+                        footer: `Goodbye from ${guild.name}!`,
                         ...(image && { image: { url: image } })
                     }
                 });
 
-                const previewMessage = message
-                    .replace(/{user}/g, interaction.user.tag)
-                    .replace(/{username}/g, interaction.user.username)
-                    .replace(/{server}/g, guild.name)
-                    .replace(/{memberCount}/g, guild.memberCount.toLocaleString());
+                logger.info(`[Goodbye] Setup configured by ${interaction.user.tag} for guild ${guild.name} (${guild.id})`);
+
+                const previewMessage = formatWelcomeMessage(message, {
+                    user: interaction.user,
+                    guild
+                });
 
                 const embed = new EmbedBuilder()
-.setColor(getColor('success'))
+                    .setColor(getColor('success'))
                     .setTitle('✅ Goodbye System Configured')
                     .setDescription(`Goodbye messages will now be sent to ${channel}`)
                     .addFields(
@@ -75,9 +100,14 @@ color: getColor('error'),
 
                 await interaction.editReply({ embeds: [embed] });
             } catch (error) {
-                await interaction.editReply({ 
-                    content: '❌ An error occurred while setting up the goodbye system.', 
-                    flags: ["Ephemeral"] 
+                logger.error(`[Goodbye] Failed to setup goodbye system for guild ${guild.id}:`, error);
+                await interaction.editReply({
+                    embeds: [errorEmbed(
+                        'Setup Failed',
+                        'An error occurred while configuring the goodbye system. Please try again.',
+                        { showDetails: true }
+                    )],
+                    flags: MessageFlags.Ephemeral
                 });
             }
         } 
@@ -91,14 +121,20 @@ color: getColor('error'),
                     goodbyeEnabled: newStatus
                 });
 
+                logger.info(`[Goodbye] Toggled to ${newStatus ? 'enabled' : 'disabled'} by ${interaction.user.tag} in guild ${guild.name} (${guild.id})`);
                 await interaction.editReply({
                     content: `✅ Goodbye messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
-                    flags: ["Ephemeral"]
+                    flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
-                await interaction.editReply({ 
-                    content: '❌ An error occurred while toggling goodbye messages.', 
-                    flags: ["Ephemeral"] 
+                logger.error(`[Goodbye] Failed to toggle goodbye system for guild ${guild.id}:`, error);
+                await interaction.editReply({
+                    embeds: [errorEmbed(
+                        'Toggle Failed',
+                        'An error occurred while toggling goodbye messages. Please try again.',
+                        { showDetails: true }
+                    )],
+                    flags: MessageFlags.Ephemeral
                 });
             }
         }

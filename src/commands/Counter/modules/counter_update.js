@@ -1,6 +1,7 @@
-﻿import { PermissionFlagsBits, ChannelType } from 'discord.js';
+import { PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter } from '../../../services/counterService.js';
+import { logger } from '../../../utils/logger.js';
 
 /**
  * Handle counter update subcommand
@@ -120,7 +121,7 @@ export async function handleUpdate(interaction, client) {
         });
 
     } catch (error) {
-        console.error("Error updating counter:", error);
+        logger.error("Error updating counter:", error);
         await interaction.editReply({
             embeds: [errorEmbed("An error occurred while updating the counter. Please try again.")]}
         );

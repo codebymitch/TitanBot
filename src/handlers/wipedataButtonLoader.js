@@ -1,4 +1,4 @@
-﻿import { wipedataConfirmHandler, wipedataCancelHandler } from './wipedataButtons.js';
+import { wipedataConfirmHandler, wipedataCancelHandler } from './wipedataButtons.js';
 import { logger } from '../utils/logger.js';
 
 /**

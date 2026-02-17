@@ -1,14 +1,17 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
     .setName("flip")
     .setDescription("Flips a coin (Heads or Tails)."),
+  category: 'Fun',
 
-  async execute(interaction) {
-try {
+  async execute(interaction, config, client) {
+    try {
       const result = Math.random() < 0.5 ? "Heads" : "Tails";
       const emoji = result === "Heads" ? "🪙" : "🔮";
 
@@ -18,9 +21,13 @@ try {
       );
 
       await interaction.reply({ embeds: [embed] });
+      logger.debug(`Flip command executed by user ${interaction.user.id} in guild ${interaction.guildId}`);
     } catch (error) {
-      console.error("Flip command error:", error);
-      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not flip a coin right now.")] });
+      logger.error('Flip command error:', error);
+      await handleInteractionError(interaction, error, {
+        commandName: 'flip',
+        source: 'flip_command'
+      });
     }
   },
 };

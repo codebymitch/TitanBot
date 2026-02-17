@@ -1,7 +1,10 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
+import { checkRateLimit } from '../../utils/rateLimiter.js';
+import { getColor } from '../../config/bot.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -42,6 +45,21 @@ export default {
       });
 
     try {
+      // Check rate limit - 5 purges per minute
+      const rateLimitKey = `purge_${interaction.user.id}`;
+      const isAllowed = await checkRateLimit(rateLimitKey, 5, 60000);
+      if (!isAllowed) {
+        return await interaction.editReply({
+          embeds: [
+            warningEmbed(
+              "You're purging messages too fast. Please wait a minute before trying again.",
+              "⏳ Rate Limited"
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
       const fetched = await channel.messages.fetch({ limit: amount });
       const deleted = await channel.bulkDelete(fetched, true);
       const deletedCount = deleted.size;
@@ -50,7 +68,7 @@ export default {
         "🗑️ Messages Purged (Action Log)",
         `${deletedCount} messages were deleted by ${interaction.user}.`,
       )
-.setColor("#E67E22")
+.setColor(getColor('moderation'))
         .addFields(
           { name: "Channel", value: channel.toString(), inline: true },
           {
@@ -82,19 +100,23 @@ export default {
         embeds: [
           successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
         ],
-ephemeral: false,
+flags: MessageFlags.Ephemeral,
       });
 
-      setTimeout(() => interaction.deleteReply().catch(() => {}), 3000);
+      setTimeout(() => {
+        interaction.deleteReply().catch(err => 
+          logger.debug('Failed to auto-delete purge response:', err)
+        );
+      }, 3000);
     } catch (error) {
-      console.error("Purge Error:", error);
+      logger.error('Purge command error:', error);
       await interaction.editReply({
         embeds: [
           errorEmbed(
             "An unexpected error occurred during message deletion. Note: Messages older than 14 days cannot be bulk deleted.",
           ),
         ],
-        flags: ["Ephemeral"],
+        flags: MessageFlags.Ephemeral,
       });
     }
   }

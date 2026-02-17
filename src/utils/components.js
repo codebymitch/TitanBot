@@ -1,4 +1,4 @@
-﻿import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
 import { getColor } from '../config/bot.js';
 
 export function getPromoRow() {

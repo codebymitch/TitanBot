@@ -1,6 +1,10 @@
-﻿import { Events, EmbedBuilder } from 'discord.js';
+import { Events, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
+import { getColor } from '../config/bot.js';
 import { getWelcomeConfig } from '../utils/database.js';
+import { formatWelcomeMessage } from '../utils/welcome.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
+import { getServerCounters, updateCounter } from '../services/counterService.js';
+import { logger } from '../utils/logger.js';
 
 export default {
   name: Events.GuildMemberRemove,
@@ -12,34 +16,56 @@ export default {
         
         const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
         
-        if (welcomeConfig?.goodbyeEnabled && welcomeConfig?.goodbyeChannelId) {
-            const channel = guild.channels.cache.get(welcomeConfig.goodbyeChannelId);
-            if (channel) {
-                let goodbyeMessage = welcomeConfig.leaveMessage || '{user.tag} has left the server.';
-                goodbyeMessage = goodbyeMessage
-                    .replace(/{user}/g, user.toString())
-                    .replace(/{user\.tag}/g, user.tag)
-                    .replace(/{username}/g, user.username)
-                    .replace(/{server}/g, guild.name)
-                    .replace(/{membercount}/g, guild.memberCount);
-                
-                const embed = new EmbedBuilder()
-                    .setTitle(welcomeConfig.leaveEmbed?.title || '👋 Goodbye')
-.setDescription(goodbyeMessage)
-                    .setColor(welcomeConfig.leaveEmbed?.color || 0xff0000)
-                    .setThumbnail(user.displayAvatarURL())
-                    .addFields(
-                        { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-                        { name: 'Member Count', value: guild.memberCount.toString(), inline: true }
-                    )
-                    .setTimestamp()
-                    .setFooter({ text: `Goodbye from ${guild.name}!` });
-                
-                if (welcomeConfig.leaveEmbed?.image) {
-                    embed.setImage(welcomeConfig.leaveEmbed.image.url);
+        const goodbyeChannelId = welcomeConfig?.goodbyeChannelId;
+
+        if (welcomeConfig?.goodbyeEnabled && goodbyeChannelId) {
+            const channel = guild.channels.cache.get(goodbyeChannelId);
+            if (channel?.isTextBased?.()) {
+                const me = guild.members.me;
+                const permissions = me ? channel.permissionsFor(me) : null;
+                if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
+                    return;
                 }
-                
-                await channel.send({ embeds: [embed] });
+
+                const formatData = { user, guild, member };
+                const goodbyeMessage = formatWelcomeMessage(
+                    welcomeConfig.leaveMessage || welcomeConfig.leaveEmbed?.description || '{user.tag} has left the server.',
+                    formatData
+                );
+
+                const embedTitle = formatWelcomeMessage(
+                    welcomeConfig.leaveEmbed?.title || '👋 Goodbye',
+                    formatData
+                );
+                const embedFooter = welcomeConfig.leaveEmbed?.footer
+                    ? formatWelcomeMessage(welcomeConfig.leaveEmbed.footer, formatData)
+                    : `Goodbye from ${guild.name}!`;
+
+                const canEmbed = permissions.has(PermissionFlagsBits.EmbedLinks);
+
+                if (!canEmbed) {
+                    await channel.send({ content: goodbyeMessage });
+                } else {
+                    const embed = new EmbedBuilder()
+                        .setTitle(embedTitle)
+                        .setDescription(goodbyeMessage)
+                        .setColor(welcomeConfig.leaveEmbed?.color || getColor('error'))
+                        .setThumbnail(user.displayAvatarURL())
+                        .addFields(
+                            { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
+                            { name: 'Member Count', value: guild.memberCount.toString(), inline: true }
+                        )
+                        .setTimestamp()
+                        .setFooter({ text: embedFooter });
+
+                    if (typeof welcomeConfig.leaveEmbed?.image === 'string') {
+                        embed.setImage(welcomeConfig.leaveEmbed.image);
+                    } else if (welcomeConfig.leaveEmbed?.image?.url) {
+                        embed.setImage(welcomeConfig.leaveEmbed.image.url);
+                    }
+                    
+                    await channel.send({ embeds: [embed] });
+                }
             }
         }
         
@@ -72,11 +98,23 @@ export default {
                 }
             });
         } catch (error) {
-            console.debug('Error logging member leave:', error);
+            logger.debug('Error logging member leave:', error);
+        }
+        
+        // Update counters in real-time when member leaves
+        try {
+            const counters = await getServerCounters(member.client, guild.id);
+            for (const counter of counters) {
+                if (counter && counter.type && counter.channelId && counter.enabled !== false) {
+                    await updateCounter(member.client, guild, counter);
+                }
+            }
+        } catch (error) {
+            logger.debug('Error updating counters on member leave:', error);
         }
         
     } catch (error) {
-        console.error('Error in guildMemberRemove event:', error);
+        logger.error('Error in guildMemberRemove event:', error);
     }
   }
 };

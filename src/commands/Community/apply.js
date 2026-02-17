@@ -1,7 +1,10 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import ApplicationService from '../../services/applicationService.js';
 import { 
     getApplicationSettings, 
     getUserApplications, 
@@ -45,49 +48,47 @@ export default {
 
     category: "Community",
 
-    async execute(interaction) {
+    execute: withErrorHandling(async (interaction) => {
         if (!interaction.inGuild()) {
             return interaction.reply({
                 embeds: [errorEmbed("This command can only be used in a server.")],
                 flags: ["Ephemeral"],
             });
         }
-const { options, guild, member } = interaction;
+
+        await interaction.deferReply({ flags: ["Ephemeral"] });
+
+        const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
 
-        try {
-            const settings = await getApplicationSettings(
-                interaction.client,
-                guild.id,
-            );
-            if (!settings.enabled) {
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Applications are currently disabled in this server.",
-                        ),
-                    ],
-                    flags: ["Ephemeral"],
-                });
-            }
+        logger.info(`Apply command executed: ${subcommand}`, {
+            userId: interaction.user.id,
+            guildId: guild.id,
+            subcommand
+        });
 
-            if (subcommand === "submit") {
-                await handleSubmit(interaction, settings);
-            } else if (subcommand === "status") {
-                await handleStatus(interaction);
-            } else if (subcommand === "list") {
-                await handleList(interaction);
-            }
-        } catch (error) {
-            console.error("Error in apply command:", error);
-            interaction.editReply({
-                embeds: [
-                    errorEmbed("An error occurred while processing your request."),
-                ],
-                flags: ["Ephemeral"],
-            });
+        const settings = await getApplicationSettings(
+            interaction.client,
+            guild.id,
+        );
+        
+        if (!settings.enabled) {
+            throw createError(
+                'Applications are disabled',
+                ErrorTypes.CONFIGURATION,
+                'Applications are currently disabled in this server.',
+                { guildId: guild.id }
+            );
         }
-    }
+
+        if (subcommand === "submit") {
+            await handleSubmit(interaction, settings);
+        } else if (subcommand === "status") {
+            await handleStatus(interaction);
+        } else if (subcommand === "list") {
+            await handleList(interaction);
+        }
+    }, { type: 'command', commandName: 'apply' })
 };
 
 export async function handleApplicationModal(interaction) {
@@ -130,7 +131,7 @@ export async function handleApplicationModal(interaction) {
     }
     
     try {
-        const application = await createApplication(interaction.client, {
+        const application = await ApplicationService.submitApplication(interaction.client, {
             guildId: interaction.guild.id,
             userId: interaction.user.id,
             roleId: roleId,
@@ -172,18 +173,18 @@ export async function handleApplicationModal(interaction) {
         }
         
     } catch (error) {
-        console.error('Error creating application:', error);
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({
-                embeds: [errorEmbed('Failed to submit application. Please try again later.')],
-                flags: ["Ephemeral"]
-            });
-        } else {
-            await interaction.editReply({
-                embeds: [errorEmbed('Failed to submit application. Please try again later.')],
-                flags: ["Ephemeral"]
-            });
-        }
+        logger.error('Error creating application:', {
+            error: error.message,
+            userId: interaction.user.id,
+            guildId: interaction.guild.id,
+            roleId,
+            stack: error.stack
+        });
+        
+        await handleInteractionError(interaction, error, {
+            type: 'modal',
+            handler: 'application_submission'
+        });
     }
 }
 
@@ -219,11 +220,18 @@ async function handleList(interaction) {
 
         return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
     } catch (error) {
-        console.error('Error listing applications:', error);
-        return interaction.editReply({
-            embeds: [errorEmbed('Failed to load applications. Please try again later.')],
-            flags: ["Ephemeral"]
+        logger.error('Error listing applications:', {
+            error: error.message,
+            guildId: interaction.guild.id,
+            stack: error.stack
         });
+        
+        throw createError(
+            'Failed to load applications',
+            ErrorTypes.DATABASE,
+            'Failed to load applications. Please try again later.',
+            { guildId: interaction.guild.id }
+        );
     }
 }
 

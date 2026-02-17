@@ -1,4 +1,4 @@
-﻿import todoAddHandler, { sharedTodoCompleteHandler, sharedTodoAddModalHandler, sharedTodoCompleteModalHandler } from './todoButtons.js';
+import todoAddHandler, { sharedTodoCompleteHandler, sharedTodoAddModalHandler, sharedTodoCompleteModalHandler } from './todoButtons.js';
 import { logger } from '../utils/logger.js';
 
 export default async function loadTodoButtons(client) {

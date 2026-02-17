@@ -1,82 +1,89 @@
 import { ButtonInteraction, PermissionFlagsBits, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../utils/embeds.js';
-import { getGuildConfig } from '../services/guildConfig.js';
+import { createEmbed, successEmbed, errorEmbed } from '../utils/embeds.js';
+import { verifyUser } from '../services/verificationService.js';
+import { handleInteractionError } from '../utils/errorHandler.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Handle verification button clicks
+ * Uses centralized verification service for consistency
+ * 
  * @param {ButtonInteraction} interaction - The button interaction
  * @param {Client} client - Discord client
  */
 export async function handleVerificationButton(interaction, client) {
-    const guild = interaction.guild;
-    const member = interaction.member;
-
     try {
-        const guildConfig = await getGuildConfig(client, guild.id);
-        
-        if (!guildConfig.verification?.enabled) {
+        // Verify button can only be used in guilds
+        if (!interaction.guild) {
             return await interaction.reply({
-                embeds: [errorEmbed("Verification Disabled", "The verification system is not enabled on this server.")],
+                embeds: [errorEmbed("Guild Only", "This button can only be used in a server.")],
                 flags: MessageFlags.Ephemeral
             });
         }
 
-        const verifiedRole = guild.roles.cache.get(guildConfig.verification.roleId);
-        if (!verifiedRole) {
+        const guild = interaction.guild;
+        const userId = interaction.user.id;
+
+        logger.debug('User clicked verify button', {
+            guildId: guild.id,
+            userId,
+            userTag: interaction.user.tag
+        });
+
+        // Use service layer for verification
+        const result = await verifyUser(client, guild.id, userId, {
+            source: 'button_click',
+            moderatorId: null
+        });
+
+        if (!result.success) {
+            if (result.alreadyVerified) {
+                return await interaction.reply({
+                    embeds: [errorEmbed(
+                        "Already Verified",
+                        "You are already verified and have access to all server channels."
+                    )],
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+
             return await interaction.reply({
-                embeds: [errorEmbed("Configuration Error", "Verified role not found. Please contact an administrator.")],
+                embeds: [errorEmbed(
+                    "Verification Failed",
+                    "An error occurred during verification. Please try again or contact an administrator."
+                )],
                 flags: MessageFlags.Ephemeral
             });
         }
 
-        if (member.roles.cache.has(verifiedRole.id)) {
-            return await interaction.reply({
-                embeds: [infoEmbed("Already Verified", "You are already verified and have access to the server.")],
-                flags: MessageFlags.Ephemeral
-            });
-        }
+        // Success response
+        logger.info('User verified via button', {
+            guildId: guild.id,
+            userId,
+            roleName: result.roleName
+        });
 
-        if (!guild.members.me.permissions.has("ManageRoles")) {
-            return await interaction.reply({
-                embeds: [errorEmbed("Bot Permission Error", "I don't have permission to manage roles. Please contact an administrator.")],
-                flags: MessageFlags.Ephemeral
-            });
-        }
-
-        const botRole = guild.members.me.roles.highest;
-        if (verifiedRole.position >= botRole.position) {
-            return await interaction.reply({
-                embeds: [errorEmbed("Role Hierarchy Error", "The verified role is higher than or equal to my highest role. Please contact an administrator.")],
-                flags: MessageFlags.Ephemeral
-            });
-        }
-
-        await member.roles.add(verifiedRole.id, "User verified themselves");
-        
         await interaction.reply({
             embeds: [successEmbed(
                 "✅ Verification Successful!",
-                `You have been verified and given the **${verifiedRole.name}** role! Welcome to the server! 🎉\n\nYou now have access to all server channels and features.`
+                `You have been verified and given the **${result.roleName}** role!\n\nYou now have access to all server channels and features. Welcome! 🎉`
             )],
             flags: MessageFlags.Ephemeral
         });
 
-        console.log(`✅ ${member.user.tag} (${member.id}) verified themselves in ${guild.name}`);
-
     } catch (error) {
-        console.error("Verification button handler error:", error);
-        
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({
-                embeds: [errorEmbed("Verification Failed", "Failed to assign verified role. Please contact an administrator.")],
-                flags: MessageFlags.Ephemeral
-            });
-        } else {
-            await interaction.reply({
-                embeds: [errorEmbed("Verification Failed", "Failed to assign verified role. Please contact an administrator.")],
-                flags: MessageFlags.Ephemeral
-            });
-        }
+        logger.error('Error in verification button handler', {
+            error: error.message,
+            guildId: interaction.guild?.id,
+            userId: interaction.user.id
+        });
+
+        // Use centralized error handler
+        await handleInteractionError(
+            interaction,
+            error,
+            { command: 'verify_button', action: 'verification' }
+        );
     }
 }
 

@@ -1,6 +1,7 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
 
 import { handleCreate } from './modules/counter_create.js';
 import { handleList } from './modules/counter_list.js';
@@ -107,18 +108,18 @@ export default {
                     });
             }
         } catch (error) {
-            console.error(`Error in counter ${subcommand}:`, error);
+            logger.error(`Error in counter ${subcommand}:`, error);
             
-            const errorEmbed = createEmbed({ 
+            const errorEmbedMsg = createEmbed({ 
                 title: "❌ Error", 
                 description: "An error occurred while processing your request.",
                 color: getColor('error')
             });
 
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral }).catch(console.error);
+                await interaction.reply({ embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
             } else {
-                await interaction.followUp({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral }).catch(console.error);
+                await interaction.followUp({ embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
             }
         }
     }

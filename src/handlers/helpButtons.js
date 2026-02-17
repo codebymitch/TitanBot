@@ -1,4 +1,4 @@
-﻿import { createEmbed } from '../utils/embeds.js';
+import { createEmbed } from '../utils/embeds.js';
 import { createButton, createSelectMenu, getPaginationRow } from '../utils/components.js';
 import { createAllCommandsMenu } from './helpSelectMenus.js';
 import fs from 'fs/promises';

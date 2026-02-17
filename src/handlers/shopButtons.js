@@ -1,4 +1,4 @@
-﻿import { shopItems } from '../config/shop/items.js';
+import { shopItems } from '../config/shop/items.js';
 import { errorEmbed, successEmbed } from '../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../utils/economy.js';
 import { getGuildConfig } from '../services/guildConfig.js';

@@ -1,6 +1,8 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
 
@@ -16,7 +18,7 @@ export default {
         ),
 
     async execute(interaction) {
-try {
+        try {
             const city = interaction.options.getString("city");
 
             const geoResponse = await fetch(
@@ -25,6 +27,11 @@ try {
             const geoData = await geoResponse.json();
 
             if (!geoData.results || geoData.results.length === 0) {
+                logger.info(`Weather command - city not found`, {
+                    userId: interaction.user.id,
+                    city: city,
+                    guildId: interaction.guildId
+                });
                 await interaction.editReply({
                     embeds: [
                         errorEmbed(
@@ -45,7 +52,12 @@ try {
             const weatherData = await weatherResponse.json();
 
             if (weatherData.error) {
-                console.error("Open-Meteo API Error:", weatherData.reason);
+                logger.error(`Weather API error`, {
+                    error: weatherData.reason,
+                    city: city,
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId
+                });
                 await interaction.editReply({
                     embeds: [
                         errorEmbed(
@@ -88,15 +100,24 @@ try {
                 });
 
             await interaction.editReply({ embeds: [embed] });
+            logger.info(`Weather command executed`, {
+                userId: interaction.user.id,
+                city: cityDisplay,
+                country: country,
+                temperature: temperature,
+                guildId: interaction.guildId
+            });
         } catch (error) {
-            console.error("Weather command general error:", error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "An unexpected error occurred while processing the weather request.",
-                    ),
-                ],
+            logger.error(`Weather command execution failed`, {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'weather'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'weather',
+                source: 'weather_command'
             });
         }
     },

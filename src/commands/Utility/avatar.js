@@ -1,6 +1,8 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -15,21 +17,36 @@ export default {
     ),
 
   async execute(interaction) {
-try {
+    try {
       const user = interaction.options.getUser("target") || interaction.user;
+      const avatarUrl = user.displayAvatarURL({ size: 2048, dynamic: true });
 
-      const embed = createEmbed({ title: `${user.username}'s Avatar`, description: `[Download Link](${user.displayAvatarURL({ size: 2048, dynamic: true })})` })
-        .setImage(user.displayAvatarURL({ size: 2048, dynamic: true }));
+      const embed = createEmbed({ 
+        title: `${user.username}'s Avatar`, 
+        description: `[Download Link](${avatarUrl})` 
+      })
+        .setImage(avatarUrl);
 
       await interaction.reply({ embeds: [embed] });
+      logger.info(`Avatar command executed`, {
+        userId: interaction.user.id,
+        targetUserId: user.id,
+        guildId: interaction.guildId
+      });
     } catch (error) {
-      console.error('Avatar command error:', error);
-      return interaction.editReply({
-        embeds: [createEmbed({ title: 'System Error', description: 'Could not display avatar at this time.' })],
-        flags: MessageFlags.Ephemeral,
+      logger.error(`Avatar command execution failed`, {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        commandName: 'avatar'
+      });
+      await handleInteractionError(interaction, error, {
+        commandName: 'avatar',
+        source: 'avatar_command'
       });
     }
-  },
+  }
 };
 
 

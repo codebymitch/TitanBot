@@ -1,6 +1,12 @@
-﻿import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import botConfig from '../config/bot.js';
-import { getGuildGiveaways as getGuildGiveawaysDb, saveGiveaway as saveGiveawayDb, deleteGiveaway as deleteGiveawayDb, unwrapReplitData } from './database.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { logger } from './logger.js';
+import { TitanBotError, ErrorTypes } from './errorHandler.js';
+import { unwrapReplitData } from './database.js';
+import { 
+    createGiveawayEmbed as createGiveawayEmbedService,
+    createGiveawayButtons as createGiveawayButtonsService,
+    selectWinners as selectWinnersService
+} from '../services/giveawayService.js';
 
 /**
  * Generate a consistent key for giveaways in the database
@@ -15,17 +21,27 @@ export function giveawayKey(guildId) {
  * Get all giveaways for a guild
  * @param {Object} client - The Discord client
  * @param {string} guildId - The guild ID
- * @returns {Promise<Object>} Object mapping message IDs to giveaway data
+ * @returns {Promise<Array>} Array of giveaway data objects
  */
 export async function getGuildGiveaways(client, guildId) {
     try {
+        if (!client.db) {
+            logger.warn('Database not available for getGuildGiveaways');
+            return [];
+        }
+
         const key = giveawayKey(guildId);
         const giveaways = await client.db.get(key, {});
         const unwrappedGiveaways = unwrapReplitData(giveaways);
-        return unwrappedGiveaways || {};
+        
+        // Convert object to array for consistency
+        if (typeof unwrappedGiveaways === 'object' && !Array.isArray(unwrappedGiveaways)) {
+            return Object.values(unwrappedGiveaways || {});
+        }
+        return Array.isArray(unwrappedGiveaways) ? unwrappedGiveaways : [];
     } catch (error) {
-        console.error(`Error getting giveaways for guild ${guildId}:`, error);
-        return {};
+        logger.error(`Error getting giveaways for guild ${guildId}:`, error);
+        return [];
     }
 }
 
@@ -38,13 +54,39 @@ export async function getGuildGiveaways(client, guildId) {
  */
 export async function saveGiveaway(client, guildId, giveawayData) {
     try {
+        if (!client.db) {
+            logger.warn('Database not available for saveGiveaway');
+            return false;
+        }
+
+        if (!giveawayData || !giveawayData.messageId) {
+            throw new TitanBotError(
+                'Invalid giveaway data: missing messageId',
+                ErrorTypes.VALIDATION,
+                'Cannot save giveaway without a message ID.',
+                { giveawayData }
+            );
+        }
+
         const key = giveawayKey(guildId);
         const giveaways = await getGuildGiveaways(client, guildId);
-        giveaways[giveawayData.messageId] = giveawayData;
-        await client.db.set(key, giveaways);
+        
+        // Convert array back to object for storage
+        const giveawayMap = {};
+        for (const ga of giveaways) {
+            giveawayMap[ga.messageId] = ga;
+        }
+        
+        giveawayMap[giveawayData.messageId] = giveawayData;
+        await client.db.set(key, giveawayMap);
+        
+        logger.debug(`Saved giveaway ${giveawayData.messageId} in guild ${guildId}`);
         return true;
     } catch (error) {
-        console.error(`Error saving giveaway in guild ${guildId}:`, error);
+        logger.error(`Error saving giveaway in guild ${guildId}:`, error);
+        if (error instanceof TitanBotError) {
+            throw error;
+        }
         return false;
     }
 }
@@ -58,55 +100,63 @@ export async function saveGiveaway(client, guildId, giveawayData) {
  */
 export async function deleteGiveaway(client, guildId, messageId) {
     try {
+        if (!client.db) {
+            logger.warn('Database not available for deleteGiveaway');
+            return false;
+        }
+
+        if (!messageId) {
+            throw new TitanBotError(
+                'Missing messageId parameter',
+                ErrorTypes.VALIDATION,
+                'Cannot delete giveaway without a message ID.',
+                { messageId }
+            );
+        }
+
         const key = giveawayKey(guildId);
         const giveaways = await getGuildGiveaways(client, guildId);
         
-        if (!giveaways[messageId]) {
+        // Convert array to object
+        const giveawayMap = {};
+        for (const ga of giveaways) {
+            giveawayMap[ga.messageId] = ga;
+        }
+        
+        if (!giveawayMap[messageId]) {
+            logger.debug(`Giveaway not found for deletion: ${messageId} in guild ${guildId}`);
             return false;
         }
         
-        delete giveaways[messageId];
-        await client.db.set(key, giveaways);
+        delete giveawayMap[messageId];
+        await client.db.set(key, giveawayMap);
+        
+        logger.debug(`Deleted giveaway ${messageId} from guild ${guildId}`);
         return true;
     } catch (error) {
-        console.error(`Error deleting giveaway ${messageId} in guild ${guildId}:`, error);
+        logger.error(`Error deleting giveaway ${messageId} in guild ${guildId}:`, error);
+        if (error instanceof TitanBotError) {
+            throw error;
+        }
         return false;
     }
 }
 
 /**
  * Create an embed for a giveaway
+ * Delegates to service layer for consistency
  * @param {Object} giveaway - The giveaway data
- * @param {string} status - The status of the giveaway ('active' or 'ended')
+ * @param {string} status - The status of the giveaway ('active', 'ended', 'reroll')
  * @param {Array<string>} [winners=[]] - Array of winner user IDs
  * @returns {EmbedBuilder} The formatted embed
  */
 export function createGiveawayEmbed(giveaway, status, winners = []) {
-    const isEnded = status === 'ended';
-    const participants = giveaway.participants || [];
-    
-    const embed = new EmbedBuilder()
-        .setTitle(`🎉 ${giveaway.prize}`)
-        .setDescription(giveaway.description || 'Enter this amazing giveaway!')
-        .setColor(isEnded ? botConfig.embeds.colors.error : botConfig.embeds.colors.success)
-        .addFields(
-            { name: 'Hosted by', value: `<@${giveaway.hostId}>`, inline: true },
-            { name: 'Winners', value: `${giveaway.winnerCount}`, inline: true },
-            { name: 'Entries', value: `${participants.length}`, inline: true }
-        );
-
-    if (isEnded) {
-        embed.addFields(
-            { name: 'Winners', value: winners.length > 0 ? winners.map(id => `<@${id}>`).join(', ') : 'No winners' }
-        );
-    } else {
-        const endTime = giveaway.endsAt || giveaway.endTime;
-        embed.addFields(
-            { name: 'Ends at', value: `<t:${Math.floor(endTime / 1000)}:R>` }
-        );
+    try {
+        return createGiveawayEmbedService(giveaway, status, winners);
+    } catch (error) {
+        logger.error('Error creating giveaway embed:', error);
+        throw error;
     }
-
-    return embed;
 }
 
 /**
@@ -115,21 +165,33 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
  * @returns {boolean} Whether the giveaway has ended
  */
 export function isGiveawayEnded(giveaway) {
+    if (!giveaway) return true;
     const endTime = giveaway.endsAt || giveaway.endTime;
     return Date.now() > endTime;
 }
 
 /**
  * Pick random winners from the entrants
+ * Delegates to service layer for consistency
  * @param {Array<string>} entrants - Array of user IDs
  * @param {number} count - Number of winners to pick
  * @returns {Array<string>} Array of winner user IDs
  */
 export function pickWinners(entrants, count) {
-    if (!entrants || entrants.length === 0) return [];
-    
-    const shuffled = [...entrants].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, Math.min(count, shuffled.length));
+    try {
+        return selectWinnersService(entrants, count);
+    } catch (error) {
+        logger.error('Error picking winners:', error);
+        // Fallback to simple selection
+        if (!entrants || entrants.length === 0) return [];
+        const requested = Math.min(count, entrants.length);
+        const shuffled = [...entrants];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled.slice(0, requested);
+    }
 }
 
 /**
@@ -145,34 +207,41 @@ export function giveawayEmbed(giveaway, status, winners = []) {
 
 /**
  * Create action row with giveaway buttons
+ * Delegates to service layer for consistency
  * @param {boolean} ended - Whether the giveaway has ended
  * @returns {ActionRowBuilder} The action row with buttons
  */
-export function giveawayButtons(ended) {
-    if (ended) {
-        return new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('giveaway_reroll')
-                .setLabel('🎲 Reroll')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(false),
-            new ButtonBuilder()
-                .setCustomId('giveaway_end')
-                .setLabel('✅ Ended')
-                .setStyle(ButtonStyle.Success)
-                .setDisabled(true)
-        );
-    } else {
-        return new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('giveaway_join')
-                .setLabel('🎉 Join')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId('giveaway_end')
-                .setLabel('🛑 End')
-                .setStyle(ButtonStyle.Danger)
-        );
+export function giveawayButtons(ended = false) {
+    try {
+        return createGiveawayButtonsService(ended);
+    } catch (error) {
+        logger.error('Error creating giveaway buttons:', error);
+        // Fallback button creation
+        const row = new ActionRowBuilder();
+        if (ended) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId('giveaway_reroll')
+                    .setLabel('🎲 Reroll')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('giveaway_view')
+                    .setLabel('👁️ View')
+                    .setStyle(ButtonStyle.Primary)
+            );
+        } else {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId('giveaway_join')
+                    .setLabel('🎉 Join')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('giveaway_end')
+                    .setLabel('🛑 End')
+                    .setStyle(ButtonStyle.Danger)
+            );
+        }
+        return row;
     }
 }
 

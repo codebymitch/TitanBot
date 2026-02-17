@@ -1,6 +1,8 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 const facts = [
   "A day on Venus is longer than a year on Venus.",
@@ -15,17 +17,22 @@ export default {
     data: new SlashCommandBuilder()
     .setName("fact")
     .setDescription("Shares a random, interesting fact."),
+  category: 'Fun',
 
-  async execute(interaction) {
-try {
+  async execute(interaction, config, client) {
+    try {
       const randomFact = facts[Math.floor(Math.random() * facts.length)];
 
       const embed = successEmbed("🧠 Did You Know?", `💡 **${randomFact}**`);
 
       await interaction.reply({ embeds: [embed] });
+      logger.debug(`Fact command executed by user ${interaction.user.id} in guild ${interaction.guildId}`);
     } catch (error) {
-      console.error("Fact command error:", error);
-      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not fetch a fact right now.")] });
+      logger.error('Fact command error:', error);
+      await handleInteractionError(interaction, error, {
+        commandName: 'fact',
+        source: 'fact_command'
+      });
     }
   },
 };

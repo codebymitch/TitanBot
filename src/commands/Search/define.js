@@ -1,7 +1,11 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import axios from 'axios';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getColor } from '../../config/bot.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -12,13 +16,24 @@ export default {
                 .setDescription('The word to look up')
                 .setRequired(true)),
     async execute(interaction) {
-try {
+        try {
+            // Defer the interaction to allow time for API call
+            const deferred = await InteractionHelper.safeDefer(interaction);
+            if (!deferred) {
+                return;
+            }
+
             const word = interaction.options.getString('word');
             
             if (word.length < 2) {
-                return await interaction.reply({
+                logger.warn('Define command - word too short', {
+                    userId: interaction.user.id,
+                    word: word,
+                    guildId: interaction.guildId
+                });
+                return await interaction.editReply({
                     embeds: [errorEmbed('Error', 'Please enter a word with at least 2 characters.')],
-                    flags: ["Ephemeral"]
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -34,10 +49,11 @@ try {
             }
             
             const data = response.data[0];
-            const embed = successEmbed(
-                data.word,
-                data.phonetic ? `*${data.phonetic}*` : ''
-            );
+            const embed = createEmbed({
+                title: data.word,
+                description: data.phonetic ? `*${data.phonetic}*` : '',
+                color: 'success'
+            });
             
             data.meanings.slice(0, 5).forEach(meaning => {
                 const definitions = meaning.definitions
@@ -64,24 +80,34 @@ try {
             
             await interaction.editReply({ embeds: [embed] });
             
-        } catch (error) {
-            console.error('Dictionary lookup error:', error);
-            
-            let errorMessage = 'Failed to look up the word. ';
-            if (error.response) {
-                if (error.response.status === 404) {
-                    errorMessage = `No definitions found for "${interaction.options.getString('word')}".`;
-                } else {
-                    errorMessage += `API Error: ${error.response.status} ${error.response.statusText}`;
-                }
-            } else if (error.code === 'ECONNABORTED') {
-                errorMessage += 'The request timed out. Please try again later.';
-            }
-            
-            await interaction.editReply({
-                embeds: [errorEmbed('Error', errorMessage)],
-                flags: ["Ephemeral"]
+            logger.info('Dictionary definition retrieved', {
+                userId: interaction.user.id,
+                word: word,
+                guildId: interaction.guildId,
+                commandName: 'define'
             });
+            
+        } catch (error) {
+            logger.error('Dictionary lookup error', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                word: interaction.options.getString('word'),
+                guildId: interaction.guildId,
+                commandName: 'define'
+            });
+            
+            
+            if (error.response?.status === 404) {
+                await interaction.editReply({
+                    embeds: [errorEmbed('Not Found', `No definitions found for "${interaction.options.getString('word')}".`)]
+                });
+            } else {
+                await handleInteractionError(interaction, error, {
+                    commandName: 'define',
+                    source: 'dictionary_api'
+                });
+            }
         }
     },
 };

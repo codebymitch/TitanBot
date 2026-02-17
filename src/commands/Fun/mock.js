@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { sanitizeInput } from '../../utils/sanitization.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -10,16 +13,30 @@ export default {
       option
         .setName("text")
         .setDescription("The text to mock.")
-        .setRequired(true),
+        .setRequired(true)
+        .setMaxLength(1000),
     ),
+  category: 'Fun',
 
-  async execute(interaction) {
-try {
+  async execute(interaction, config, client) {
+    try {
       const originalText = interaction.options.getString("text");
-      let mockedText = "";
+      
+      // Validate input length
+      if (!originalText || originalText.trim().length === 0) {
+        throw new TitanBotError(
+          'Empty text provided to mock command',
+          ErrorTypes.USER_INPUT,
+          'Please provide some text to mock!'
+        );
+      }
 
-      for (let i = 0; i < originalText.length; i++) {
-        const char = originalText[i];
+      // Sanitize input to prevent injection
+      const sanitizedText = sanitizeInput(originalText, 1000);
+
+      let mockedText = "";
+      for (let i = 0; i < sanitizedText.length; i++) {
+        const char = sanitizedText[i];
         if (i % 2 === 0) {
           mockedText += char.toLowerCase();
         } else {
@@ -29,10 +46,14 @@ try {
 
       const embed = successEmbed("sPoNgEbOb cAsE", `"${mockedText}"`);
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
+      logger.debug(`Mock command executed by user ${interaction.user.id} in guild ${interaction.guildId}`);
     } catch (error) {
-      console.error("Mock command error:", error);
-      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not mock text right now.")] });
+      logger.error('Mock command error:', error);
+      await handleInteractionError(interaction, error, {
+        commandName: 'mock',
+        source: 'mock_command'
+      });
     }
   },
 };

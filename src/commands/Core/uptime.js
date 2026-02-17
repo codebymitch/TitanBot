@@ -1,6 +1,5 @@
-﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -8,7 +7,9 @@ export default {
     .setDescription("Check how long the bot has been online"),
 
   async execute(interaction) {
-try {
+    try {
+      await interaction.deferReply();
+      
       let totalSeconds = interaction.client.uptime / 1000;
       let days = Math.floor(totalSeconds / 86400);
       totalSeconds %= 86400;
@@ -17,17 +18,25 @@ try {
       let minutes = Math.floor(totalSeconds / 60);
       let seconds = Math.floor(totalSeconds % 60);
 
-      const uptimeStr = `${days}d, ${hours}h, ${minutes}m, ${seconds}s`;
+      const uptimeStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
-      await interaction.reply({
-        embeds: [createEmbed({ title: "⏱️ System Uptime", description: `**${uptimeStr}**` })],
+      await interaction.editReply({
+        embeds: [createEmbed({ 
+          title: "⏱️ System Uptime", 
+          description: `\`\`\`${uptimeStr}\`\`\`` 
+        })],
       });
     } catch (error) {
       console.error('Uptime command error:', error);
-      return interaction.editReply({
-        embeds: [createEmbed({ title: 'System Error', description: 'Could not compute uptime.', color: 'error' })],
-        flags: MessageFlags.Ephemeral,
-      });
+      
+      try {
+        return await interaction.editReply({
+          embeds: [createEmbed({ title: 'System Error', description: 'Could not compute uptime.', color: 'error' })],
+          flags: MessageFlags.Ephemeral,
+        });
+      } catch (replyError) {
+        console.error('Failed to send error reply:', replyError);
+      }
     }
   },
 };

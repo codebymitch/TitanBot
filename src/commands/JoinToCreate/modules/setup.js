@@ -1,4 +1,4 @@
-﻿import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
 import { addJoinToCreateTrigger, getJoinToCreateConfig } from '../../../utils/database.js';
 

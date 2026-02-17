@@ -1,9 +1,12 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { claimTicket } from '../../services/ticket.js';
 import { logEvent } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("claim")
@@ -12,13 +15,24 @@ export default {
         .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
 
     async execute(interaction, guildConfig, client) {
-const channel = interaction.channel;
-
         try {
+            // Defer the interaction to allow time for database and channel operations
+            const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            if (!deferred) {
+                return;
+            }
+
+            const channel = interaction.channel;
             const result = await claimTicket(channel, interaction.user);
             
             if (!result.success) {
-                return interaction.reply({
+                logger.warn('Ticket claim failed - not a valid ticket channel', {
+                    userId: interaction.user.id,
+                    channelId: channel.id,
+                    guildId: interaction.guildId,
+                    error: result.error
+                });
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Not a Ticket Channel",
@@ -37,22 +51,13 @@ const channel = interaction.channel;
                 ],
             });
 
-            const logEmbed = createEmbed({
-                title: "✅ Ticket Claimed (Audit Log)",
-                description: `${interaction.user} claimed ticket ${channel}.`,
-                color: getColor('success'),
-                fields: [
-                    {
-                        name: "Claimed By",
-                        value: interaction.user.tag,
-                        inline: true,
-                    },
-                    {
-                        name: "Channel",
-                        value: channel.toString(),
-                        inline: true,
-                    },
-                ]
+            logger.info('Ticket claimed successfully', {
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                channelId: channel.id,
+                channelName: channel.name,
+                guildId: interaction.guildId,
+                commandName: 'claim'
             });
 
             await logEvent({
@@ -66,14 +71,17 @@ const channel = interaction.channel;
             });
 
         } catch (error) {
-            console.error(`Error claiming ticket ${channel.id}:`, error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Claim Failed",
-                        "Could not claim the ticket due to an internal error.",
-                    ),
-                ],
+            logger.error('Error executing claim command', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                channelId: interaction.channel?.id,
+                guildId: interaction.guildId,
+                commandName: 'claim'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'claim',
+                source: 'ticket_claim_command'
             });
         }
     },

@@ -1,9 +1,10 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const BASE_WIN_CHANCE = 0.4;
 const CLOVER_WIN_BONUS = 0.1;
@@ -23,9 +24,9 @@ export default {
                 .setMinValue(1)
         ),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -128,8 +129,7 @@ userData.lastGamble = now;
             }
 
             await interaction.editReply({ embeds: [resultEmbed] });
-        }, { command: 'gamble' });
-    },
+    }, { command: 'gamble' })
 };
 
 
