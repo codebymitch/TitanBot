@@ -1,4 +1,4 @@
-﻿import { helpCategorySelectMenu } from './helpSelectMenus.js';
+import { helpCategorySelectMenu } from './helpSelectMenus.js';
 import { logger } from '../utils/logger.js';
 
 /**

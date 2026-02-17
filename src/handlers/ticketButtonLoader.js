@@ -1,4 +1,4 @@
-﻿import createTicketHandler, { 
+import createTicketHandler, { 
   createTicketModalHandler, 
   closeTicketHandler, 
   claimTicketHandler, 

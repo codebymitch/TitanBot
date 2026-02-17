@@ -1,9 +1,10 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -16,11 +17,11 @@ export default {
                 .setRequired(true)
         ),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
-            
-            const userId = interaction.user.id;
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
+        
+        const userId = interaction.user.id;
             const guildId = interaction.guildId;
             const amountInput = interaction.options.getString("amount");
 
@@ -135,8 +136,7 @@ export default {
                 );
 
             await interaction.editReply({ embeds: [embed] });
-        }, { command: 'deposit' });
-    },
+    }, { command: 'deposit' })
 };
 
 

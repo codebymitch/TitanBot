@@ -1,4 +1,4 @@
-﻿import verificationButtonHandler from './verificationButtons.js';
+import verificationButtonHandler from './verificationButtons.js';
 
 /**
  * Load verification button handlers

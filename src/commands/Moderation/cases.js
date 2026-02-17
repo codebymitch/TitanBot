@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getModerationCases } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -124,7 +124,7 @@ time: 120000
                 if (buttonInteraction.user.id !== interaction.user.id) {
                     await buttonInteraction.followUp({
                         content: 'You cannot use these buttons. Run `/cases` to get your own case view.',
-                        flags: ["Ephemeral"]
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -157,7 +157,15 @@ time: 120000
 
         } catch (error) {
             logger.error('Error in cases command:', error);
-            throw error;
+            return interaction.reply({
+                embeds: [
+                    errorEmbed(
+                        'System Error',
+                        'An error occurred while retrieving moderation cases. Please try again later.'
+                    )
+                ],
+                flags: MessageFlags.Ephemeral
+            });
         }
     }
 };

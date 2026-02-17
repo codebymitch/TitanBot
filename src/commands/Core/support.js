@@ -1,6 +1,5 @@
-﻿import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 
 const SUPPORT_SERVER_URL = "https://discord.gg/QnWNz2dKCE";
 export default {
@@ -9,7 +8,7 @@ export default {
     .setDescription("Get link to the support server"),
 
   async execute(interaction) {
-try {
+    try {
       const supportButton = new ButtonBuilder()
         .setLabel("Join Support Server")
         .setStyle(ButtonStyle.Link)
@@ -22,14 +21,19 @@ try {
           createEmbed({ title: "🚑 Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!" }),
         ],
         components: [actionRow],
-        flags: ["Ephemeral"],
+        flags: MessageFlags.Ephemeral,
       });
     } catch (error) {
       console.error('Support command error:', error);
-      return interaction.editReply({
-        embeds: [createEmbed({ title: 'System Error', description: 'Could not display support information.', color: 'error' })],
-        flags: MessageFlags.Ephemeral,
-      });
+      
+      try {
+        return await interaction.reply({
+          embeds: [createEmbed({ title: 'System Error', description: 'Could not display support information.', color: 'error' })],
+          flags: MessageFlags.Ephemeral,
+        });
+      } catch (replyError) {
+        console.error('Failed to send error reply:', replyError);
+      }
     }
   },
 };

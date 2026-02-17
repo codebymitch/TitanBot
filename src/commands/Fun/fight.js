@@ -1,8 +1,11 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
 export default {
     data: new SlashCommandBuilder()
     .setName("fight")
@@ -13,22 +16,37 @@ export default {
         .setDescription("The user to fight.")
         .setRequired(true),
     ),
+  category: 'Fun',
 
-  async execute(interaction) {
-try {
+  async execute(interaction, config, client) {
+    try {
+      await interaction.deferReply();
+
       const challenger = interaction.user;
       const opponent = interaction.options.getUser("opponent");
 
+      // Validate opponent is not the challenger
       if (challenger.id === opponent.id) {
-        return interaction.reply({
-          content: `⚔️ **${challenger.username}** can't fight themselves! That's a draw before it even starts.`,
-        });
+        const embed = warningEmbed(
+          "⚔️ Invalid Challenge",
+          `**${challenger.username}**, you can't fight yourself! That's a draw before it even starts.`
+        );
+        return await interaction.editReply({ embeds: [embed] });
+      }
+
+      // Validate opponent is not a bot
+      if (opponent.bot) {
+        throw new TitanBotError(
+          `User tried to fight a bot: ${opponent.id}`,
+          ErrorTypes.USER_INPUT,
+          "You can't fight bots! Challenge a real person instead."
+        );
       }
 
       const winner = rand(0, 1) === 0 ? challenger : opponent;
       const loser = winner.id === challenger.id ? opponent : challenger;
-const rounds = rand(3, 7);
-const damage = rand(10, 50);
+      const rounds = rand(3, 7);
+      const damage = rand(10, 50);
 
       const log = [];
       log.push(
@@ -52,14 +70,18 @@ const damage = rand(10, 50);
       const outcomeText = log.join("\n");
 
       const embed = successEmbed(
-        `${outcomeText}\n\n👑 **${winner.username}** has defeated ${loser.username} and claims the victory!`,
-        `🏆 Duel Complete!`
+        "🏆 Duel Complete!",
+        `${outcomeText}\n\n👑 **${winner.username}** has defeated ${loser.username} and claims the victory!`
       );
 
       await interaction.editReply({ embeds: [embed] });
+      logger.debug(`Fight command executed between ${challenger.id} and ${opponent.id} in guild ${interaction.guildId}`);
     } catch (error) {
-      console.error("Fight command error:", error);
-      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not run the fight command.")] });
+      logger.error('Fight command error:', error);
+      await handleInteractionError(interaction, error, {
+        commandName: 'fight',
+        source: 'fight_command'
+      });
     }
   },
 };

@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { getColor } from '../../config/bot.js';
 const EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 const MAX_OPTIONS = 10;
 export default {
@@ -99,10 +102,9 @@ export default {
                     flags: MessageFlags.Ephemeral
                 });
         } catch (error) {
-            console.error('Poll command error:', error);
-            return interaction.reply({
-                embeds: [errorEmbed('System Error', 'Could not create poll at this time.')],
-                flags: MessageFlags.Ephemeral,
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'poll'
             });
         }
     },

@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import { pgDb } from '../utils/postgresDatabase.js';
 import { logger } from '../utils/logger.js';
 

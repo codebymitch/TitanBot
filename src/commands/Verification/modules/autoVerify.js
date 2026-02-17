@@ -1,7 +1,10 @@
 import { getColor } from '../../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { validateAutoVerifyCriteria } from '../../../services/verificationService.js';
+import { logger } from '../../../utils/logger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -44,10 +47,10 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        const subcommand = interaction.options.getSubcommand();
-        const guild = interaction.guild;
+        return withErrorHandling(async () => {
+            const subcommand = interaction.options.getSubcommand();
+            const guild = interaction.guild;
 
-        try {
             switch (subcommand) {
                 case "enable":
                     return await handleEnable(interaction, guild, client);
@@ -56,18 +59,14 @@ export default {
                 case "status":
                     return await handleStatus(interaction, guild, client);
                 default:
-                    return await interaction.reply({
-                        embeds: [errorEmbed("Invalid Subcommand", "Please select a valid subcommand.")],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    throw createError(
+                        `Unknown subcommand: ${subcommand}`,
+                        ErrorTypes.VALIDATION,
+                        "Invalid subcommand selected.",
+                        { subcommand }
+                    );
             }
-        } catch (error) {
-            console.error("AutoVerify command error:", error);
-            return await interaction.reply({
-                embeds: [errorEmbed("System Error", "An error occurred while processing your request.")],
-                flags: MessageFlags.Ephemeral
-            });
-        }
+        }, { command: 'autoverify', subcommand: interaction.options.getSubcommand() });
     }
 };
 
@@ -78,6 +77,9 @@ async function handleEnable(interaction, guild, client) {
     await interaction.deferReply();
 
     try {
+        // Validate criteria using service
+        validateAutoVerifyCriteria(criteria, criteria === 'account_age' ? accountAgeDays : 1);
+
         const guildConfig = await getGuildConfig(client, guild.id);
         
         if (!guildConfig.verification) {
@@ -105,6 +107,12 @@ async function handleEnable(interaction, guild, client) {
                 break;
         }
 
+        logger.info('Auto-verify enabled', {
+            guildId: guild.id,
+            criteria,
+            accountAgeDays: criteria === 'account_age' ? accountAgeDays : null
+        });
+
         await interaction.editReply({
             embeds: [successEmbed(
                 "Auto-Verification Enabled",
@@ -113,41 +121,33 @@ async function handleEnable(interaction, guild, client) {
         });
 
     } catch (error) {
-        console.error("Auto-verification enable error:", error);
-        await interaction.editReply({
-            embeds: [errorEmbed("Failed to Enable", "Could not enable auto-verification. Please try again.")],
-        });
+        // Error already handled by withErrorHandling wrapper
+        throw error;
     }
 }
 
 async function handleDisable(interaction, guild, client) {
     await interaction.deferReply();
 
-    try {
-        const guildConfig = await getGuildConfig(client, guild.id);
-        
-        if (!guildConfig.verification?.autoVerify?.enabled) {
-            return await interaction.editReply({
-                embeds: [infoEmbed("Already Disabled", "Auto-verification is already disabled.")],
-            });
-        }
-
-        guildConfig.verification.autoVerify.enabled = false;
-        await setGuildConfig(client, guild.id, guildConfig);
-
-        await interaction.editReply({
-            embeds: [successEmbed(
-                "Auto-Verification Disabled",
-                "Automatic verification has been disabled. Users will now need to verify manually."
-            )]
-        });
-
-    } catch (error) {
-        console.error("Auto-verification disable error:", error);
-        await interaction.editReply({
-            embeds: [errorEmbed("Failed to Disable", "Could not disable auto-verification. Please try again.")],
+    const guildConfig = await getGuildConfig(client, guild.id);
+    
+    if (!guildConfig.verification?.autoVerify?.enabled) {
+        return await interaction.editReply({
+            embeds: [infoEmbed("Already Disabled", "Auto-verification is already disabled.")],
         });
     }
+
+    guildConfig.verification.autoVerify.enabled = false;
+    await setGuildConfig(client, guild.id, guildConfig);
+
+    logger.info('Auto-verify disabled', { guildId: guild.id });
+
+    await interaction.editReply({
+        embeds: [successEmbed(
+            "Auto-Verification Disabled",
+            "Automatic verification has been disabled. Users will now need to verify manually."
+        )]
+    });
 }
 
 async function handleStatus(interaction, guild, client) {
@@ -184,20 +184,12 @@ async function handleStatus(interaction, guild, client) {
         color: getColor('success')
     })
     .addFields(
-        {
-            name: "📊 Status",
-            value: "✅ Enabled",
-            inline: true
-        },
-        {
-            name: "🎯 Criteria",
-            value: criteriaDescription,
-            inline: true
-        },
-        {
-            name: "📅 Account Age Requirement",
+        { name: "📊 Status", value: "✅ Enabled", inline: true },
+        { name: "🎯 Criteria", value: criteriaDescription, inline: true },
+        { 
+            name: "📅 Account Age Requirement", 
             value: autoVerify.accountAgeDays ? `${autoVerify.accountAgeDays} days` : "N/A",
-            inline: true
+            inline: true 
         }
     );
 

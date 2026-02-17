@@ -1,8 +1,9 @@
-import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } from 'discord.js';
+import { botConfig, getColor } from '../../config/bot.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../services/guildConfig.js';
 import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { removeVerification, verifyUser } from '../../services/verificationService.js';
 import { ContextualMessages, MessageTemplates } from '../../utils/messageTemplates.js';
 import { logger } from '../../utils/logger.js';
 
@@ -99,8 +100,8 @@ export default {
 async function handleSetup(interaction, guild, client) {
     const verificationChannel = interaction.options.getChannel("verification_channel");
     const verifiedRole = interaction.options.getRole("verified_role");
-    const message = interaction.options.getString("message") || "Click the button below to verify yourself and gain access to the server!";
-    const buttonText = interaction.options.getString("button_text") || "Verify";
+    const message = interaction.options.getString("message") || botConfig.verification.defaultMessage;
+    const buttonText = interaction.options.getString("button_text") || botConfig.verification.defaultButtonText;
 
     const requiredPermissions = ["SendMessages", "EmbedLinks"];
     const missingChannelPerms = requiredPermissions.filter(perm => 
@@ -181,41 +182,31 @@ async function handleSetup(interaction, guild, client) {
 }
 
 async function handleVerify(interaction, guild, client) {
-    const guildConfig = await getGuildConfig(client, guild.id);
-    
-    if (!guildConfig.verification?.enabled) {
-        throw createError(
-            "Verification system is disabled",
-            ErrorTypes.CONFIGURATION,
-            "The verification system is not enabled on this server.",
-            { feature: 'verification', status: 'disabled' }
-        );
-    }
+    const result = await verifyUser(client, guild.id, interaction.user.id, {
+        source: 'command_self',
+        moderatorId: null
+    });
 
-    const verifiedRole = guild.roles.cache.get(guildConfig.verification.roleId);
-    if (!verifiedRole) {
-        throw createError(
-            "Verified role not found",
-            ErrorTypes.CONFIGURATION,
-            "Verified role not found. Please contact an administrator.",
-            { roleId: guildConfig.verification.roleId }
-        );
-    }
+    if (!result.success) {
+        if (result.alreadyVerified) {
+            return await interaction.reply({
+                embeds: [MessageTemplates.INFO.ALREADY_CONFIGURED("verified")],
+                flags: MessageFlags.Ephemeral
+            });
+        }
 
-    const member = interaction.member;
-
-    if (member.roles.cache.has(verifiedRole.id)) {
         return await interaction.reply({
-            embeds: [MessageTemplates.INFO.ALREADY_CONFIGURED("verified")],
+            embeds: [errorEmbed(
+                "Verification Failed",
+                "An error occurred during verification. Please try again or contact an administrator."
+            )],
             flags: MessageFlags.Ephemeral
         });
     }
 
-    await member.roles.add(verifiedRole.id, "User verified themselves");
-    
     await interaction.reply({
         embeds: [MessageTemplates.SUCCESS.ACTION_COMPLETE(
-            `You have been verified and given the **${verifiedRole.name}** role! Welcome to the server! 🎉`
+            `You have been verified and given the **${result.roleName}** role! Welcome to the server! 🎉`
         )],
         flags: MessageFlags.Ephemeral
     });
@@ -223,52 +214,41 @@ async function handleVerify(interaction, guild, client) {
 
 async function handleRemove(interaction, guild, client) {
     const targetUser = interaction.options.getUser("user");
-    const targetMember = guild.members.cache.get(targetUser.id);
-
-    if (!targetMember) {
-        throw createError(
-            `User ${targetUser.tag} not found in guild`,
-            ErrorTypes.USER_INPUT,
-            `The specified user is not in this server.`,
-            { userId: targetUser.id, userTag: targetUser.tag }
-        );
-    }
-
-    const guildConfig = await getGuildConfig(client, guild.id);
     
-    if (!guildConfig.verification?.enabled) {
-        throw createError(
-            "Verification system is disabled",
-            ErrorTypes.CONFIGURATION,
-            "The verification system is not enabled on this server.",
-            { feature: 'verification', status: 'disabled' }
-        );
-    }
-
-    const verifiedRole = guild.roles.cache.get(guildConfig.verification.roleId);
-    if (!verifiedRole) {
-        throw createError(
-            "Verified role not found",
-            ErrorTypes.CONFIGURATION,
-            "Verified role not found. Please contact an administrator.",
-            { roleId: guildConfig.verification.roleId }
-        );
-    }
-
-    if (!targetMember.roles.cache.has(verifiedRole.id)) {
-        return await interaction.reply({
-            embeds: [MessageTemplates.INFO.NO_DATA("verification role on this user")],
-            flags: MessageFlags.Ephemeral
+    try {
+        const result = await removeVerification(client, guild.id, targetUser.id, {
+            moderatorId: interaction.user.id,
+            reason: 'admin_removal'
         });
-    }
 
-    await targetMember.roles.remove(verifiedRole.id, `Verification removed by ${interaction.user.tag}`);
-    
-    await interaction.reply({
-        embeds: [MessageTemplates.SUCCESS.OPERATION_COMPLETE(
-            `Successfully removed verification from ${targetUser.tag}.`
-        )]
-    });
+        if (!result.success) {
+            if (result.notVerified) {
+                return await interaction.reply({
+                    embeds: [MessageTemplates.INFO.NO_DATA("verified role")],
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+        }
+
+        logger.info('Verification removed via command', {
+            guildId: guild.id,
+            targetUserId: targetUser.id,
+            moderatorId: interaction.user.id
+        });
+
+        return await interaction.reply({
+            embeds: [MessageTemplates.SUCCESS.OPERATION_COMPLETE(
+                `Verification removed from ${targetUser.tag}.`
+            )]
+        });
+
+    } catch (error) {
+        await handleInteractionError(
+            interaction,
+            error,
+            { command: 'verification', subcommand: 'remove' }
+        );
+    }
 }
 
 async function handleDisable(interaction, guild, client) {

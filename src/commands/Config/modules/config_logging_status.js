@@ -1,5 +1,5 @@
 import { getColor } from '../../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getLoggingStatus } from '../../../services/loggingService.js';
@@ -213,10 +213,8 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                     .setStyle(ButtonStyle.Primary)
             );
 
-            const components = [refreshButton];
-            if (statusButtons) {
-                components.unshift(statusButtons);
-            }
+            // Combine all button rows (status buttons + refresh row)
+            const components = [...statusButtons, refreshButton];
 
             await interaction.editReply({ 
                 embeds: [statusEmbed],

@@ -1,9 +1,12 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { closeTicket } from '../../services/ticket.js';
 import { logEvent } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("close")
@@ -17,16 +20,28 @@ export default {
         ),
 
     async execute(interaction, guildConfig, client) {
-const channel = interaction.channel;
-        const reason =
-            interaction.options?.getString("reason") ||
-            "Closed via command without a specific reason.";
-
         try {
+            // Defer the interaction to allow time for database and channel operations
+            const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            if (!deferred) {
+                return;
+            }
+
+            const channel = interaction.channel;
+            const reason =
+                interaction.options?.getString("reason") ||
+                "Closed via command without a specific reason.";
+
             const result = await closeTicket(channel, interaction.user, reason);
             
             if (!result.success) {
-                return interaction.reply({
+                logger.warn('Ticket close failed - not a valid ticket channel', {
+                    userId: interaction.user.id,
+                    channelId: channel.id,
+                    guildId: interaction.guildId,
+                    error: result.error
+                });
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Not a Ticket Channel",
@@ -45,23 +60,14 @@ const channel = interaction.channel;
                 ],
             });
 
-            const logEmbed = createEmbed({
-                title: "🔒 Ticket Closed (Audit Log)",
-                description: `${channel} was closed by ${interaction.user}.`,
-                color: getColor('error'),
-                fields: [
-                    {
-                        name: "Closed By",
-                        value: interaction.user.tag,
-                        inline: true,
-                    },
-                    { name: "Reason", value: reason, inline: false },
-                    {
-                        name: "Channel",
-                        value: channel.toString(),
-                        inline: true,
-                    },
-                ]
+            logger.info('Ticket closed successfully', {
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                channelId: channel.id,
+                channelName: channel.name,
+                guildId: interaction.guildId,
+                reason: reason,
+                commandName: 'close'
             });
 
             await logEvent({
@@ -76,14 +82,17 @@ const channel = interaction.channel;
             });
 
         } catch (error) {
-            console.error(`Error closing ticket ${channel.id}:`, error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Close Failed",
-                        "Could not close the ticket due to an internal error.",
-                    ),
-                ],
+            logger.error('Error executing close command', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                channelId: interaction.channel?.id,
+                guildId: interaction.guildId,
+                commandName: 'close'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'close',
+                source: 'ticket_close_command'
             });
         }
     },

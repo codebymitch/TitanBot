@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
+import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { getColor } from '../../config/bot.js';
 
 function evaluate(expression) {
     let expr = expression.replace(/\s/g, '').toLowerCase();
@@ -383,42 +386,38 @@ time: 300000,
                     }
                 });
             } catch (error) {
-                console.error("Calculation error:", error);
+                logger.error('Calculation error:', error);
 
-                let errorMessage = "Failed to evaluate the expression. ";
+                let errorMessage = 'Failed to evaluate the expression. ';
 
-                if (error.message.includes("Unexpected type")) {
+                if (error.message.includes('Unexpected type')) {
                     errorMessage +=
-                        "The expression contains an unsupported operation or function.";
-                } else if (error.message.includes("Undefined symbol")) {
+                        'The expression contains an unsupported operation or function.';
+                } else if (error.message.includes('Undefined symbol')) {
                     errorMessage +=
-                        "The expression contains an undefined variable or function.";
-                } else if (error.message.includes("Brackets not balanced")) {
-                    errorMessage += "The expression has unbalanced brackets.";
+                        'The expression contains an undefined variable or function.';
+                } else if (error.message.includes('Brackets not balanced')) {
+                    errorMessage += 'The expression has unbalanced brackets.';
                 } else if (
-                    error.message.includes("Unexpected operator") ||
-                    error.message.includes("Unexpected character")
+                    error.message.includes('Unexpected operator') ||
+                    error.message.includes('Unexpected character')
                 ) {
                     errorMessage +=
-                        "The expression contains an invalid operator or character.";
+                        'The expression contains an invalid operator or character.';
                 } else {
-                    errorMessage += "Please check the syntax and try again.";
+                    errorMessage += 'Please check the syntax and try again.';
                 }
 
+                const embed = errorEmbed('Calculation Error', errorMessage);
+                embed.setColor(getColor('error'));
                 await interaction.editReply({
-                    embeds: [errorEmbed("Calculation Error", errorMessage)],
+                    embeds: [embed],
                 });
             }
         } catch (error) {
-            console.error("Calculate command error:", error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Error",
-                        "An error occurred while processing your calculation.",
-                    ),
-                ],
-                flags: ["Ephemeral"],
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'calculate'
             });
         }
     },

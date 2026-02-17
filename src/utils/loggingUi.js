@@ -77,9 +77,9 @@ export function getButtonStatusStyle(isEnabled) {
 }
 
 /**
- * Create an action row with status indicators
+ * Create action rows with status indicators for all event categories
  * @param {Object} enabledEvents - Map of event types to their enabled status
- * @returns {ActionRowBuilder|null} Button row or null if too many events
+ * @returns {ActionRowBuilder[]} Array of button rows (up to 2 rows for all categories)
  */
 export function createStatusIndicatorButtons(enabledEvents) {
   const eventCategories = ['moderation', 'ticket', 'message', 'role', 'member', 'leveling', 'reactionrole', 'giveaway', 'counter'];
@@ -110,18 +110,20 @@ export function createStatusIndicatorButtons(enabledEvents) {
         .setLabel(`${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`)
         .setStyle(isEnabled ? ButtonStyle.Success : ButtonStyle.Danger)
     );
-
-    // Discord has a max of 5 buttons per row
-    if (buttons.length === 5) {
-      break;
-    }
   }
 
   if (buttons.length === 0) {
-    return null;
+    return [];
   }
 
-  return new ActionRowBuilder().addComponents(buttons);
+  // Split buttons into rows of 5 max (Discord limit)
+  const rows = [];
+  for (let i = 0; i < buttons.length; i += 5) {
+    const rowButtons = buttons.slice(i, i + 5);
+    rows.push(new ActionRowBuilder().addComponents(rowButtons));
+  }
+
+  return rows;
 }
 
 /**

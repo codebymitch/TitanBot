@@ -1,7 +1,9 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
+import { getColor } from '../../config/bot.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -50,7 +52,7 @@ export default {
         "🔒 Channel Locked (Action Log)",
         `${channel} has been locked down by ${interaction.user}.`,
       )
-.setColor("#CC00CC")
+.setColor(getColor('moderation'))
         .addFields(
           { name: "Channel", value: channel.toString(), inline: true },
           {
@@ -84,7 +86,7 @@ export default {
         ],
       });
     } catch (error) {
-      console.error("Lock Error:", error);
+      logger.error('Lock command error:', error);
       await interaction.editReply({
         embeds: [
           errorEmbed(

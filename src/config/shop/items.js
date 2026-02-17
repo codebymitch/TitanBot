@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shop items configuration
  * Defines all items available in the shop with their properties
  */

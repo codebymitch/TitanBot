@@ -1,7 +1,10 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const WORK_COOLDOWN = 30 * 60 * 1000;
 const MIN_WORK_AMOUNT = 50;
@@ -25,15 +28,27 @@ export default {
         .setName('work')
         .setDescription('Work to earn some money'),
 
-    async execute(interaction, config, client) {
-        try {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
             const now = Date.now();
 
             const userData = await getEconomyData(client, guildId, userId);
+
+            if (!userData) {
+                throw createError(
+                    "Failed to load economy data for work",
+                    ErrorTypes.DATABASE,
+                    "Failed to load your economy data. Please try again later.",
+                    { userId, guildId }
+                );
+            }
+
+            logger.debug(`[ECONOMY] Work command started for ${userId}`, { userId, guildId });
+
             const lastWork = userData.lastWork || 0;
             const inventory = userData.inventory || {};
             const extraWorkShifts = inventory["extra_work"] || 0;
@@ -48,15 +63,13 @@ export default {
                     usedConsumable = true;
                 } else {
                     const remaining = lastWork + WORK_COOLDOWN - now;
-                    const hours = Math.floor(remaining / (1000 * 60 * 60));
-                    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-
-                    return await interaction.editReply({
-                        embeds: [errorEmbed(
-                            "⏱️ Slow Down!",
-                            `You're working too fast! Wait **${hours}h ${minutes}m** before working again.`
-                        )]
-                    });
+                    logger.warn(`[ECONOMY] Work cooldown active`, { userId, timeRemaining: remaining });
+                    throw createError(
+                        "Work cooldown active",
+                        ErrorTypes.RATE_LIMIT,
+                        `You're working too fast! Wait **${Math.floor(remaining / 3600000)}h ${Math.floor((remaining % 3600000) / 60000)}m** before working again.`,
+                        { timeRemaining: remaining, cooldownType: 'work' }
+                    );
                 }
             }
 
@@ -74,6 +87,17 @@ export default {
             userData.lastWork = now;
 
             await setEconomyData(client, guildId, userId, userData);
+
+            logger.info(`[ECONOMY_TRANSACTION] Work completed`, {
+                userId,
+                guildId,
+                amount: earned,
+                job,
+                usedConsumable,
+                hasLaptop: hasLaptop > 0,
+                newWallet: userData.wallet,
+                timestamp: new Date().toISOString()
+            });
 
             const embed = successEmbed(
                 "💼 Work Complete!",
@@ -97,20 +121,7 @@ export default {
                 });
 
             await interaction.editReply({ embeds: [embed] });
-        } catch (error) {
-            console.error('Work command error:', error);
-            try {
-                await interaction.editReply({
-                    embeds: [errorEmbed(
-                        "❌ Error",
-                        "Something went wrong while processing your work request. Please try again."
-                    )]
-                });
-            } catch (replyError) {
-                console.error('Failed to send error response:', replyError);
-            }
-        }
-    },
+    }, { command: 'work' })
 };
 
 

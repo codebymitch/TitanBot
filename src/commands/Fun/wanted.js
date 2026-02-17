@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { sanitizeInput } from '../../utils/sanitization.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -19,19 +22,40 @@ export default {
         .setRequired(false)
         .setMaxLength(100),
     ),
-  async execute(interaction) {
-try {
+  category: 'Fun',
+
+  async execute(interaction, config, client) {
+    try {
+      await interaction.deferReply();
+
       const targetUser = interaction.options.getUser("user");
-      const crime =
-        interaction.options.getString("crime") || "Too adorable for this server.";
+      const crimeRaw = interaction.options.getString("crime");
+
+      // Validate and sanitize crime input
+      let crime = "Too adorable for this server.";
+      if (crimeRaw) {
+        const sanitizedCrime = sanitizeInput(crimeRaw.trim(), 100);
+        if (sanitizedCrime.length > 0) {
+          crime = sanitizedCrime;
+        }
+      }
+
+      // Validate user exists and is accessible
+      if (!targetUser) {
+        throw new TitanBotError(
+          'Target user not found for wanted command',
+          ErrorTypes.USER_INPUT,
+          'Could not find the specified user.'
+        );
+      }
 
       const bountyAmount = Math.floor(
         Math.random() * (100000000 - 1000000) + 1000000,
       );
       const bounty = `$${bountyAmount.toLocaleString()} USD`;
 
-      const embed = {
-color: 0x964b00,
+      const embed = createEmbed({
+        color: 0x964b00,
         title: `💥 ððˆð† ððŽð”ðð“ð˜: WANTED! 💥`,
         description: `**CRIMINAL:** ${targetUser.tag}\n**CRIME:** ${crime}`,
         fields: [
@@ -42,17 +66,21 @@ color: 0x964b00,
           },
         ],
         image: {
-          url: targetUser.displayAvatarURL({ size: 1024, format: "png" }),
+          url: targetUser.displayAvatarURL({ size: 1024, extension: 'png' }),
         },
         footer: {
           text: `Last seen in ${interaction.guild.name}`,
         },
-      };
+      });
 
       await interaction.editReply({ embeds: [embed] });
+      logger.debug(`Wanted command executed by user ${interaction.user.id} for ${targetUser.id} in guild ${interaction.guildId}`);
     } catch (error) {
-      console.error("Wanted command error:", error);
-      await interaction.editReply({ embeds: [createEmbed({ title: "System Error", description: "Could not create wanted poster." })] });
+      logger.error('Wanted command error:', error);
+      await handleInteractionError(interaction, error, {
+        commandName: 'wanted',
+        source: 'wanted_command'
+      });
     }
   },
 };

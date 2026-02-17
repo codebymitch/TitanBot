@@ -1,12 +1,23 @@
-﻿import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
+import { logger } from '../../../utils/logger.js';
+import { handleInteractionError } from '../../../utils/errorHandler.js';
 
 export default {
     async execute(interaction, config, client) {
-        const user = interaction.options.getUser('user');
-        const guildId = interaction.guild.id;
-
         try {
+            // Ensure interaction is deferred before proceeding
+            if (!interaction.deferred && !interaction.replied) {
+                const deferred = await InteractionHelper.safeDefer(interaction);
+                if (!deferred) {
+                    return;
+                }
+            }
+
+            const user = interaction.options.getUser('user');
+            const guildId = interaction.guild.id;
+
             const guildConfig = await getGuildConfig(client, guildId);
             const maxTickets = guildConfig.maxTicketsPerUser || 3;
 
@@ -28,9 +39,28 @@ export default {
             );
 
             await interaction.editReply({ embeds: [embed] });
+            
+            logger.info('Ticket limit check completed', {
+                userId: interaction.user.id,
+                targetUserId: user.id,
+                targetUserTag: user.tag,
+                guildId: guildId,
+                openTickets: openTicketCount,
+                maxTickets: maxTickets,
+                commandName: 'ticket_limits_check'
+            });
         } catch (error) {
-            console.error('Error checking ticket limits:', error);
-            throw new Error('Failed to check ticket limits. Please try again.');
+            logger.error('Error checking ticket limits', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guild?.id,
+                commandName: 'ticket_limits_check'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'ticket_limits_check',
+                source: 'ticket_limits_module'
+            });
         }
     }
 };

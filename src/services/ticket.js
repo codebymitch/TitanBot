@@ -1,8 +1,8 @@
-﻿import { 
-  ChannelType, 
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle, 
+import {
+  ChannelType,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   EmbedBuilder,
   PermissionFlagsBits
 } from 'discord.js';
@@ -11,14 +11,35 @@ import { getTicketData, saveTicketData, deleteTicketData, getFromDb, setInDb } f
 import { logger } from '../utils/logger.js';
 import { createEmbed, errorEmbed } from '../utils/embeds.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
+import { BotConfig } from '../config/bot.js';
 
-const PRIORITY_MAP = {
-  none: { name: '⚪ NONE', color: '#95a5a6', emoji: '⚪', label: 'None' },
-  low: { name: '🔵 LOW', color: '#3498db', emoji: '🔵', label: 'Low' },
-  medium: { name: '🟢 MEDIUM', color: '#2ecc71', emoji: '🟢', label: 'Medium' },
-  high: { name: '🟡 HIGH', color: '#f1c40f', emoji: '🟡', label: 'High' },
-  urgent: { name: '🔴 URGENT', color: '#e74c3c', emoji: '🔴', label: 'Urgent' }
-};
+/**
+ * Generates priority map from centralized BotConfig
+ * This ensures the ticket system uses consistent priority definitions
+ * @returns {Object} Priority map with name, color, emoji, and label
+ */
+function getPriorityMap() {
+  const priorities = BotConfig.tickets?.priorities || {
+    none: { emoji: "⚪", color: "#95A5A6", label: "None" },
+    low: { emoji: "🟢", color: "#2ECC71", label: "Low" },
+    medium: { emoji: "🟡", color: "#F1C40F", label: "Medium" },
+    high: { emoji: "🔴", color: "#E74C3C", label: "High" },
+    urgent: { emoji: "🚨", color: "#E91E63", label: "Urgent" },
+  };
+  
+  const map = {};
+  for (const [key, config] of Object.entries(priorities)) {
+    map[key] = {
+      name: `${config.emoji} ${config.label.toUpperCase()}`,
+      color: config.color,
+      emoji: config.emoji,
+      label: config.label,
+    };
+  }
+  return map;
+}
+
+const PRIORITY_MAP = getPriorityMap();
 
 /**
  * Count the number of open tickets for a user in a guild

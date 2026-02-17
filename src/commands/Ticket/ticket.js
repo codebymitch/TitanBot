@@ -1,9 +1,12 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { logEvent } from '../../utils/moderation.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 
 import ticketLimitsSet from './modules/ticket_limits_set.js';
 import ticketLimitsCheck from './modules/ticket_limits_check.js';
@@ -124,23 +127,35 @@ export default {
     category: "ticket",
 
     async execute(interaction, config, client) {
+        try {
+            // Defer the interaction to allow time for database and channel operations
+            const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            if (!deferred) {
+                return;
+            }
 
-        if (
-            !interaction.member.permissions.has(
-                PermissionFlagsBits.ManageChannels,
-            )
-        )
-            return await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Permission Denied",
-                        "You need the `Manage Channels` permission for this action.",
-                    ),
-                ],
-            });
+            if (
+                !interaction.member.permissions.has(
+                    PermissionFlagsBits.ManageChannels,
+                )
+            ) {
+                logger.warn('Ticket command permission denied', {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'ticket'
+                });
+                return await interaction.editReply({
+                    embeds: [
+                        errorEmbed(
+                            "Permission Denied",
+                            "You need the `Manage Channels` permission for this action.",
+                        ),
+                    ],
+                });
+            }
 
-        const subcommand = interaction.options.getSubcommand();
-        const subcommandGroup = interaction.options.getSubcommandGroup();
+            const subcommand = interaction.options.getSubcommand();
+            const subcommandGroup = interaction.options.getSubcommandGroup();
 
         if (subcommandGroup === "limits") {
             switch (subcommand) {
@@ -207,13 +222,18 @@ description: panelMessage,
                     currentConfig.maxTicketsPerUser = maxTicketsPerUser;
                     currentConfig.dmOnClose = dmOnClose;
 
-                    const { getGuildConfigKey } = await import('../../utils/database.js');
-                    const configKey = getGuildConfigKey(interaction.guildId);
-                    await client.db.set(configKey, currentConfig);
-                    console.log(
-                        `[DB] Saved ticketCategoryId, ticketClosedCategoryId, ticketStaffRoleId, ticketPanelChannelId, maxTicketsPerUser, and dmOnClose for guild ${interaction.guildId}`,
-                    );
-                }
+                const { getGuildConfigKey } = await import('../../utils/database.js');
+                const configKey = getGuildConfigKey(interaction.guildId);
+                await client.db.set(configKey, currentConfig);
+                logger.info('Ticket configuration saved', {
+                    guildId: interaction.guildId,
+                    categoryId: categoryChannel?.id,
+                    closedCategoryId: closedCategoryChannel?.id,
+                    staffRoleId: staffRole?.id,
+                    maxTickets: maxTicketsPerUser,
+                    dmOnClose: dmOnClose
+                });
+            }
 
                 let successMessage = `The ticket creation panel has been sent to ${panelChannel}. `;
                 
@@ -240,6 +260,19 @@ description: panelMessage,
                             successMessage,
                         ),
                     ],
+                });
+
+                logger.info('Ticket panel setup completed', {
+                    userId: interaction.user.id,
+                    userTag: interaction.user.tag,
+                    guildId: interaction.guildId,
+                    panelChannelId: panelChannel.id,
+                    categoryId: categoryChannel?.id,
+                    closedCategoryId: closedCategoryChannel?.id,
+                    staffRoleId: staffRole?.id,
+                    maxTickets: maxTicketsPerUser,
+                    dmOnClose: dmOnClose,
+                    commandName: 'ticket_setup'
                 });
 
                 const logEmbed = createEmbed({
@@ -302,16 +335,47 @@ description: panelMessage,
                     }
                 });
             } catch (error) {
-                console.error("Ticket Setup Error:", error);
-                await interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Setup Failed",
-                            "Could not send the ticket panel or save configuration. Check the bot's permissions (especially the ability to send messages in the target channel) and database connection.",
-                        ),
-                    ],
+                logger.error('Ticket setup error', {
+                    error: error.message,
+                    stack: error.stack,
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'ticket_setup'
                 });
+                if (interaction.deferred || interaction.replied) {
+                    await interaction.editReply({
+                        embeds: [
+                            errorEmbed(
+                                "Setup Failed",
+                                "Could not send the ticket panel or save configuration. Check the bot's permissions (especially the ability to send messages in the target channel) and database connection.",
+                            ),
+                        ],
+                    }).catch(err => {
+                        logger.error('Failed to send error reply', {
+                            error: err.message,
+                            guildId: interaction.guildId
+                        });
+                    });
+                } else {
+                    await handleInteractionError(interaction, error, {
+                        commandName: 'ticket_setup',
+                        source: 'ticket_setup_command'
+                    });
+                }
             }
+        }
+        } catch (error) {
+            logger.error('Error executing ticket command', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'ticket'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'ticket',
+                source: 'ticket_command_main'
+            });
         }
     }
 };

@@ -1,5 +1,6 @@
-﻿import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } from 'discord.js';
 import { shopItems } from '../../config/shop/items.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -110,7 +111,8 @@ export default {
                 }
 
                 if (customId.startsWith('shop_buy:')) {
-                    await buttonInteraction.deferReply({ flags: 64 });
+                    const deferred = await InteractionHelper.safeDefer(buttonInteraction, { flags: 64 });
+                    if (!deferred) return;
 
                     const itemId = customId.split(':')[1];
                     const item = shopItems.find(i => i.id === itemId);

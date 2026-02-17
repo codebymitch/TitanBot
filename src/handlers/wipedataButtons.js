@@ -1,4 +1,4 @@
-﻿import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { MessageFlags } from 'discord.js';
 

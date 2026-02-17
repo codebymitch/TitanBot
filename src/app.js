@@ -1,10 +1,6 @@
 ﻿import 'dotenv/config';
-import { 
-    Client, 
-    Collection, 
-    GatewayIntentBits
-} from 'discord.js';
-import { REST } from 'discord.js';
+import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
 
@@ -27,19 +23,18 @@ class TitanBot extends Client {
     super({
       intents: [
         // Core functionality
-        GatewayIntentBits.Guilds,                    // Basic guild events (required)
-        GatewayIntentBits.GuildMembers,              // Member join/leave (welcome system)
+        GatewayIntentBits.Guilds,                        // Basic guild events (required)
+        GatewayIntentBits.GuildMembers,                 // Member join/leave (welcome system)
         
         // Message handling
-        GatewayIntentBits.GuildMessages,             // Message create (leveling, commands)
-        GatewayIntentBits.MessageContent,            // Required to read message content for leveling
-        GatewayIntentBits.GuildMessageReactions,     // Reaction tracking for giveaways
+        GatewayIntentBits.GuildMessages,                // Message create (leveling, commands)
+        GatewayIntentBits.GuildMessageReactions,        // Reaction tracking for giveaways
         
         // Voice
-        GatewayIntentBits.GuildVoiceStates,          // Voice channel tracking
+        GatewayIntentBits.GuildVoiceStates,             // Voice channel tracking
         
         // Moderation & Logging
-        GatewayIntentBits.GuildModeration,           // Moderation audit logging
+        GatewayIntentBits.GuildBans,                    // Moderation (ban/unban)
       ],
     });
 
@@ -223,8 +218,8 @@ class TitanBot extends Client {
     for (const [guildId, guild] of this.guilds.cache) {
       try {
         const counters = await getServerCounters(this, guildId);
-        for (const [counterName, counter] of Object.entries(counters)) {
-          if (counter && counter.enabled) {
+        for (const counter of counters) {
+          if (counter && counter.type && counter.channelId && counter.enabled !== false) {
             await updateCounter(this, guild, counter);
           }
         }
@@ -308,8 +303,14 @@ class TitanBot extends Client {
       // Destroy Discord client
       logger.info('Destroying Discord client...');
       if (this.isReady()) {
-        await this.destroy();
-        logger.info('✅ Discord client destroyed');
+        try {
+          this.destroy();
+          logger.info('✅ Discord client destroyed');
+        } catch (error) {
+          // Discord.js version compatibility issue with clearHashSweeper
+          // The client is being destroyed anyway during shutdown
+          logger.warn('Discord client destroy warning (non-critical):', error.message);
+        }
       }
 
       logger.info('✅ Graceful shutdown complete');

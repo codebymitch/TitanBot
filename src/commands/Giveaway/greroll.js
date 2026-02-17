@@ -1,8 +1,15 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
-import { giveawayEmbed, giveawayButtons, getGuildGiveaways, saveGiveaway, pickWinners, deleteGiveaway } from '../../utils/giveaways.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
+import { TitanBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { getGuildGiveaways, saveGiveaway } from '../../utils/giveaways.js';
+import { 
+    selectWinners,
+    createGiveawayEmbed, 
+    createGiveawayButtons 
+} from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("greroll")
@@ -13,122 +20,150 @@ export default {
                 .setDescription("The message ID of the ended giveaway.")
                 .setRequired(true),
         )
-.setDefaultMemberPermissions(0x0000000000000008n),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
     async execute(interaction) {
-        if (!interaction.inGuild()) {
-            return interaction.reply({
-                embeds: [
-                    errorEmbed(
-                        "Command Failed",
-                        "This command can only be used in a server.",
-                    ),
-                ],
-                flags: ["Ephemeral"],
-            });
-        }
-
-        if (
-            !interaction.member.permissions.has(
-                PermissionsBitField.Flags.ManageGuild,
-            )
-        ) {
-            return interaction.reply({
-                embeds: [
-                    errorEmbed(
-                        "Permission Denied",
-                        "You need the 'Manage Server' permission to reroll a giveaway.",
-                    ),
-                ],
-                flags: ["Ephemeral"],
-            });
-        }
-
-        const messageId = interaction.options.getString("messageid");
-        const giveaways = await getGuildGiveaways(
-            interaction.client,
-            interaction.guildId,
-        );
-        let giveaway = giveaways[messageId];
-
-        if (!giveaway) {
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Giveaway Not Found",
-                        "No giveaway was found with that message ID in the database.",
-                    ),
-                ],
-            });
-        }
-
-        if (!giveaway.isEnded) {
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Giveaway Not Ended",
-                        "This giveaway is still active. Please use `/gend` to end it first.",
-                    ),
-                ],
-            });
-        }
-
-        const participants = giveaway.participants || [];
-        
-        if (participants.length < giveaway.winnerCount) {
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Reroll Failed",
-                        "Not enough entries to pick the required number of winners.",
-                    ),
-                ],
-            });
-        }
-
         try {
-            const newWinners = pickWinners(
+            // Validate guild context
+            if (!interaction.inGuild()) {
+                throw new TitanBotError(
+                    'Giveaway command used outside guild',
+                    ErrorTypes.VALIDATION,
+                    'This command can only be used in a server.',
+                    { userId: interaction.user.id }
+                );
+            }
+
+            // Validate permissions
+            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+                throw new TitanBotError(
+                    'User lacks ManageGuild permission',
+                    ErrorTypes.PERMISSION,
+                    "You need the 'Manage Server' permission to reroll a giveaway.",
+                    { userId: interaction.user.id, guildId: interaction.guildId }
+                );
+            }
+
+            logger.info(`Giveaway reroll initiated by ${interaction.user.tag} in guild ${interaction.guildId}`);
+
+            const messageId = interaction.options.getString("messageid");
+
+            // Validate message ID format
+            if (!messageId || !/^\d+$/.test(messageId)) {
+                throw new TitanBotError(
+                    'Invalid message ID format',
+                    ErrorTypes.VALIDATION,
+                    'Please provide a valid message ID.',
+                    { providedId: messageId }
+                );
+            }
+
+            const giveaways = await getGuildGiveaways(
+                interaction.client,
+                interaction.guildId,
+            );
+
+            // Use find() for consistent lookup (not direct object access)
+            const giveaway = giveaways.find(g => g.messageId === messageId);
+
+            if (!giveaway) {
+                throw new TitanBotError(
+                    `Giveaway not found: ${messageId}`,
+                    ErrorTypes.VALIDATION,
+                    "No giveaway was found with that message ID in the database.",
+                    { messageId, guildId: interaction.guildId }
+                );
+            }
+
+            // Verify giveaway is ended
+            if (!giveaway.isEnded && !giveaway.ended) {
+                throw new TitanBotError(
+                    `Giveaway still active: ${messageId}`,
+                    ErrorTypes.VALIDATION,
+                    "This giveaway is still active. Please use `/gend` to end it first.",
+                    { messageId, status: 'active' }
+                );
+            }
+
+            const participants = giveaway.participants || [];
+            
+            if (participants.length < giveaway.winnerCount) {
+                throw new TitanBotError(
+                    `Insufficient participants for reroll: ${participants.length} < ${giveaway.winnerCount}`,
+                    ErrorTypes.VALIDATION,
+                    "Not enough entries to pick the required number of winners.",
+                    { participantsCount: participants.length, winnersNeeded: giveaway.winnerCount }
+                );
+            }
+
+            // Select new winners using service function
+            const newWinners = selectWinners(
                 participants,
                 giveaway.winnerCount,
             );
-            const newWinnerIds = newWinners.map((w) => w);
 
+            // Update giveaway with new winners
+            const updatedGiveaway = {
+                ...giveaway,
+                winnerIds: newWinners,
+                rerolledAt: new Date().toISOString(),
+                rerolledBy: interaction.user.id
+            };
+
+            // Fetch channel
             const channel = await interaction.client.channels.fetch(
                 giveaway.channelId,
-            );
+            ).catch(err => {
+                logger.warn(`Could not fetch channel ${giveaway.channelId}:`, err.message);
+                return null;
+            });
+
             if (!channel || !channel.isTextBased()) {
-                giveaway.winnerIds = newWinnerIds;
+                // Still save to database even if channel not found
                 await saveGiveaway(
                     interaction.client,
                     interaction.guildId,
-                    giveaway,
+                    updatedGiveaway,
                 );
-                return interaction.editReply({
+                
+                logger.warn(`Could not find channel for giveaway ${messageId}, but saved new winners to database`);
+                
+                return interaction.reply({
                     embeds: [
                         successEmbed(
                             "Reroll Complete",
                             "The new winners have been selected and saved to the database. Could not find channel to announce.",
                         ),
                     ],
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
+            // Try to fetch and update the message
             const message = await channel.messages
                 .fetch(messageId)
-                .catch(() => null);
+                .catch(err => {
+                    logger.warn(`Could not fetch message ${messageId}:`, err.message);
+                    return null;
+                });
+
             if (!message) {
-                giveaway.winnerIds = newWinnerIds;
+                // Save new winners to database
                 await saveGiveaway(
                     interaction.client,
                     interaction.guildId,
-                    giveaway,
+                    updatedGiveaway,
                 );
-                const winnerMentions = newWinnerIds
+
+                const winnerMentions = newWinners
                     .map((id) => `<@${id}>`)
                     .join(", ");
+                
                 await channel.send({
-                    content: `🎉 **GIVEAWAY REROLL** 🎉 New winners for **${giveaway.prize}**: ${winnerMentions}!`,
+                    content: `🔄 **GIVEAWAY REROLL** 🔄 New winners for **${giveaway.prize}**: ${winnerMentions}!`,
                 });
+
+                logger.info(`Giveaway rerolled (message not found, but announced): ${messageId}`);
 
                 try {
                     await logEvent({
@@ -151,35 +186,37 @@ export default {
                                     inline: false
                                 },
                                 {
-                                    name: '📍 Channel',
-                                    value: channel.toString(),
+                                    name: '👥 Total Entries',
+                                    value: participants.length.toString(),
                                     inline: true
                                 }
                             ]
                         }
                     });
-                } catch (error) {
-                    console.debug('Error logging giveaway reroll:', error);
+                } catch (logError) {
+                    logger.debug('Error logging giveaway reroll:', logError);
                 }
-                return interaction.editReply({
+
+                return interaction.reply({
                     embeds: [
                         successEmbed(
                             "Reroll Complete",
                             `The new winners have been announced in ${channel}. (Original message not found).`,
                         ),
                     ],
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
-giveaway.winnerIds = newWinnerIds;
+            // Update original message with new embed
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
-                giveaway,
+                updatedGiveaway,
             );
 
-            const newEmbed = giveawayEmbed(giveaway, "reroll", newWinnerIds);
-const newRow = giveawayButtons(true);
+            const newEmbed = createGiveawayEmbed(updatedGiveaway, "reroll", newWinners);
+            const newRow = createGiveawayButtons(true);
 
             await message.edit({
                 content: "🔄 **GIVEAWAY REROLLED** 🔄",
@@ -187,12 +224,15 @@ const newRow = giveawayButtons(true);
                 components: [newRow],
             });
 
-            const winnerMentions = newWinnerIds
+            const winnerMentions = newWinners
                 .map((id) => `<@${id}>`)
                 .join(", ");
+            
             await channel.send({
                 content: `🔄 **REROLL WINNERS** 🔄 CONGRATULATIONS ${winnerMentions}! You are the new winner(s) for the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
             });
+
+            logger.info(`Giveaway successfully rerolled: ${messageId} with ${newWinners.length} new winners`);
 
             try {
                 await logEvent({
@@ -215,34 +255,33 @@ const newRow = giveawayButtons(true);
                                 inline: false
                             },
                             {
-                                name: '📍 Channel',
-                                value: channel.toString(),
+                                name: '👥 Total Entries',
+                                value: participants.length.toString(),
                                 inline: true
                             }
                         ]
                     }
                 });
-            } catch (error) {
-                console.debug('Error logging giveaway reroll:', error);
+            } catch (logError) {
+                logger.debug('Error logging giveaway reroll event:', logError);
             }
 
-            return interaction.editReply({
+            return interaction.reply({
                 embeds: [
                     successEmbed(
-                        "Reroll Successful",
-                        `Successfully rerolled the giveaway for **${giveaway.prize}** in ${channel}.`,
+                        "Reroll Successful ✅",
+                        `Successfully rerolled the giveaway for **${giveaway.prize}** in ${channel}. Selected ${newWinners.length} new winner(s).`,
                     ),
                 ],
+                flags: MessageFlags.Ephemeral,
             });
+
         } catch (error) {
-            console.error("Error rerolling giveaway:", error);
-            return interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "Reroll Failed",
-                        "An unexpected error occurred while trying to reroll the giveaway.",
-                    ),
-                ],
+            logger.error('Error in greroll command:', error);
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'greroll',
+                context: 'giveaway_reroll'
             });
         }
     },

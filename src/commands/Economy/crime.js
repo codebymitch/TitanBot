@@ -1,9 +1,10 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const CRIME_COOLDOWN = 60 * 60 * 1000;
 const MIN_CRIME_AMOUNT = 100;
@@ -37,9 +38,8 @@ export default {
                 )
         ),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        await interaction.deferReply();
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -117,8 +117,7 @@ export default {
                 
                 await interaction.editReply({ embeds: [embed] });
             }
-        }, { command: 'crime' });
-    },
+    }, { command: 'crime' })
 };
 
 

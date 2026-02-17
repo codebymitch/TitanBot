@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { getColor } from '../../config/bot.js';
 const activeCountdowns = new Map();
 
 const createControlButtons = (countdownId, isPaused = false) => {
@@ -187,16 +190,9 @@ export default {
                 flags: MessageFlags.Ephemeral,
             });
         } catch (error) {
-            console.error("Countdown command error:", error);
-            const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
-            await interaction[replyMethod]({
-                embeds: [
-                    errorEmbed(
-                        "Error",
-                        "Failed to start the countdown. Please try again.",
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'countdown'
             });
         }
     },
@@ -298,6 +294,8 @@ function startCountdown(countdownId, countdownData) {
         remaining: countdownData.endTime - Date.now(),
     });
 
+    logger.info(`Countdown started: ${countdownData.title} (${countdownData.remainingTime / 1000}s remaining)`);
+
     countdownData.interval = setInterval(async () => {
         try {
             if (countdownData.isPaused) return;
@@ -325,7 +323,7 @@ function startCountdown(countdownId, countdownData) {
                         ],
                     });
                 } catch (error) {
-                    console.error("Error updating countdown message:", error);
+                    logger.error("Error updating countdown message:", error);
                 }
             }
 
@@ -345,7 +343,7 @@ function startCountdown(countdownId, countdownData) {
                 cleanupCountdown(countdownId);
             }
         } catch (error) {
-            console.error("Countdown update error:", error);
+            logger.error("Countdown update error:", error);
             cleanupCountdown(countdownId);
         }
     }, 100);

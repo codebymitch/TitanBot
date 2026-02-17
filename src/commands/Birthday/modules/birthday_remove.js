@@ -1,33 +1,47 @@
-﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
-import { deleteBirthday } from '../../../utils/database.js';
+import { MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { deleteBirthday } from '../../../services/birthdayService.js';
+import { logger } from '../../../utils/logger.js';
+import { handleInteractionError } from '../../../utils/errorHandler.js';
 
 export default {
     async execute(interaction, config, client) {
-try {
+        try {
+            await interaction.deferReply();
+
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            const success = await deleteBirthday(client, guildId, userId);
+            // Use service layer
+            const result = await deleteBirthday(client, guildId, userId);
 
-            if (success) {
-                await interaction.reply({
+            if (result.success) {
+                await interaction.editReply({
                     embeds: [successEmbed(
-                        "Birthday Removed 🗑️",
-                        "Your birthday has been successfully removed from the server."
+                        "Your birthday has been successfully removed from the server.",
+                        "Birthday Removed 🗑️"
                     )]
                 });
-            } else {
+            } else if (result.notFound) {
                 await interaction.editReply({
-                    embeds: [errorEmbed(
-                        "No Birthday Found",
-                        "You don't have a birthday set to remove."
-                    )]
+                    embeds: [createEmbed({
+                        title: '❌ No Birthday Found',
+                        description: "You don't have a birthday set to remove.",
+                        color: 'error'
+                    })]
                 });
             }
         } catch (error) {
-            console.error("Forgot birthday command error:", error);
-            await interaction.editReply({
-                embeds: [errorEmbed("Error", "Failed to remove your birthday.")]
+            logger.error("Birthday remove command execution failed", {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'birthday_remove'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'birthday_remove',
+                source: 'birthday_remove_module'
             });
         }
     }

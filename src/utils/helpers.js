@@ -1,4 +1,4 @@
-﻿import { BotConfig } from "../config/bot.js";
+import { BotConfig } from "../config/bot.js";
 
 /**
  * Generates priority map from BotConfig for ticket priorities.

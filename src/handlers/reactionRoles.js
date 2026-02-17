@@ -1,4 +1,4 @@
-﻿import { Events, EmbedBuilder, MessageFlags } from 'discord.js';
+import { Events, EmbedBuilder, MessageFlags } from 'discord.js';
 import { getReactionRoleMessage, addReactionRole, removeReactionRole } from '../services/reactionRoleService.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { errorEmbed } from '../utils/embeds.js';

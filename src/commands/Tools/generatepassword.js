@@ -1,7 +1,9 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('generatepassword')
@@ -132,10 +134,9 @@ strengthColor = getColor('warning');
                 flags: MessageFlags.Ephemeral
             });
         } catch (error) {
-            console.error('GeneratePassword command error:', error);
-            return interaction.reply({
-                embeds: [errorEmbed('System Error', 'Could not generate a password at this time.')],
-                flags: MessageFlags.Ephemeral,
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'generatepassword'
             });
         }
     },

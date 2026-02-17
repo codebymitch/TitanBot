@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { getColor } from '../../config/bot.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -161,10 +164,10 @@ const collector = response.createMessageComponentCollector({ filter, time: 30000
                     });
                     
                 } catch (error) {
-                    console.error('Button interaction error:', error);
+                    logger.error('Button interaction error:', error);
                     await i.reply({
                         content: 'An error occurred while selecting another user.',
-                        flags: ["Ephemeral"]
+                        flags: ['Ephemeral']
                     });
                 }
             });
@@ -178,10 +181,9 @@ const collector = response.createMessageComponentCollector({ filter, time: 30000
             });
             
         } catch (error) {
-            console.error('RandomUser command error:', error);
-            await interaction.editReply({
-                embeds: [errorEmbed('Error', 'Failed to select a random user. Please try again.')],
-                flags: ["Ephemeral"]
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'randomuser'
             });
         }
     },

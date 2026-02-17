@@ -1,6 +1,10 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getColor } from '../../config/bot.js';
 
 const ACTIVITIES = {
     'youtube': '880218394199220334',
@@ -111,51 +115,106 @@ export default {
                 .setDescription('Play Know What I Mean')
         ),
 
-    category: "Fun",
+    category: "Voice",
 
     async execute(interaction, config, client) {
-    const { member, options } = interaction;
-        const activity = options.getSubcommand();
-        const activityId = ACTIVITIES[activity];
-        const activityName = ACTIVITY_NAMES[activity] || activity;
-
-        if (!member.voice.channel) {
-            return await interaction.editReply({
-                embeds: [errorEmbed('You need to be in a voice channel to start an activity!')]
-            });
-        }
-
-        const permissions = member.voice.channel.permissionsFor(interaction.guild.members.me);
-        if (!permissions.has('CreateInstantInvite')) {
-            return await interaction.editReply({
-                embeds: [errorEmbed('I need the `Create Invite` permission to start an activity!')]
-            });
-        }
-
         try {
+            // Defer the interaction to allow time for Discord API call
+            const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            if (!deferred) {
+                return;
+            }
+
+            const { member, options } = interaction;
+            const activity = options.getSubcommand();
+            const activityId = ACTIVITIES[activity];
+            const activityName = ACTIVITY_NAMES[activity] || activity;
+
+            if (!member.voice.channel) {
+                logger.warn('Activity command - user not in voice channel', {
+                    userId: interaction.user.id,
+                    userTag: interaction.user.tag,
+                    guildId: interaction.guildId,
+                    activity: activity
+                });
+                return await interaction.editReply({
+                    embeds: [errorEmbed('Not in Voice Channel', 'You need to be in a voice channel to start an activity!')]
+                });
+            }
+
+            logger.debug('Activity command - validating permissions', {
+                userId: interaction.user.id,
+                voiceChannelId: member.voice.channel.id,
+                voiceChannelName: member.voice.channel.name,
+                activity: activity
+            });
+
+            const permissions = member.voice.channel.permissionsFor(interaction.guild.members.me);
+            if (!permissions.has('CreateInstantInvite')) {
+                logger.warn('Activity command - missing permissions', {
+                    userId: interaction.user.id,
+                    voiceChannelId: member.voice.channel.id,
+                    guildId: interaction.guildId,
+                    activity: activity,
+                    missingPermission: 'CreateInstantInvite'
+                });
+                return await interaction.editReply({
+                    embeds: [errorEmbed('Missing Permissions', 'I need the `Create Invite` permission to start an activity!')]
+                });
+            }
+
             const invite = await interaction.client.rest.post(
                 `/channels/${member.voice.channel.id}/invites`,
                 {
                     body: {
-max_age: 86400,
-target_type: 2,
+                        max_age: 86400,
+                        target_type: 2,
                         target_application_id: activityId,
                     },
                 }
             );
 
+            logger.info('Activity invite created successfully', {
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                voiceChannelId: member.voice.channel.id,
+                voiceChannelName: member.voice.channel.name,
+                guildId: interaction.guildId,
+                activity: activity,
+                activityName: activityName,
+                inviteCode: invite.code,
+                commandName: 'activity'
+            });
+
             await interaction.editReply({
-                embeds: [successEmbed(
-                    `Click the link below to start **${activityName}** in ${member.voice.channel.name}!\n` +
-                    `[Join ${activityName} Activity](https://discord.gg/${invite.code})`
-                )]
+                embeds: [createEmbed({
+                    title: `🎮 ${activityName}`,
+                    description: `Click the link below to start **${activityName}** in ${member.voice.channel.name}!\n\n[Join ${activityName} Activity](https://discord.gg/${invite.code})`,
+                    color: 'success'
+                })]
             });
 
         } catch (error) {
-            console.error('Error creating activity invite:', error);
-            await interaction.editReply({
-                embeds: [errorEmbed('Failed to create the activity. Please try again later.')]
+            logger.error('Error creating activity invite', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                voiceChannelId: interaction.member?.voice.channel?.id,
+                guildId: interaction.guildId,
+                activity: options.getSubcommand(),
+                commandName: 'activity'
             });
+            
+            if (!interaction.deferred && !interaction.replied) {
+                await handleInteractionError(interaction, error, {
+                    commandName: 'activity',
+                    source: 'discord_activity_api'
+                });
+            } else {
+                await interaction.editReply({
+                    embeds: [errorEmbed('Failed to Create Activity', 'An error occurred while trying to create the activity. Please try again later.')]
+                });
+            }
         }
     },
 };

@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { getColor } from '../../config/bot.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('unixtime')
@@ -9,27 +12,25 @@ export default {
     async execute(interaction) {
         try {
             const now = new Date();
-                const unixTimestamp = Math.floor(now.getTime() / 1000);
-                
-                const embed = successEmbed(
-                    '⏱️ Current Unix Timestamp',
-                    `**Seconds since Unix Epoch:** \`${unixTimestamp}\`\n` +
-                    `**Milliseconds since Unix Epoch:** \`${now.getTime()}\`\n\n` +
-                    `**Human-readable (UTC):** ${now.toUTCString()}\n` +
-                    `**ISO String:** ${now.toISOString()}`
-                );
-                
-                await interaction.editReply({ 
-                    embeds: [embed],
-                    flags: ["Ephemeral"]
-                },
-                errorEmbed('Failed to get Unix timestamp. Please try again later.')
+            const unixTimestamp = Math.floor(now.getTime() / 1000);
+            
+            const embed = successEmbed(
+                '⏱️ Current Unix Timestamp',
+                `**Seconds since Unix Epoch:** \`${unixTimestamp}\`\n` +
+                `**Milliseconds since Unix Epoch:** \`${now.getTime()}\`\n\n` +
+                `**Human-readable (UTC):** ${now.toUTCString()}\n` +
+                `**ISO String:** ${now.toISOString()}`
             );
+            embed.setColor(getColor('success'));
+            
+            await interaction.reply({ 
+                embeds: [embed],
+                flags: ['Ephemeral']
+            });
         } catch (error) {
-            console.error('Unixtime command error:', error);
-            return interaction.reply({
-                embeds: [errorEmbed('System Error', 'Could not get Unix timestamp at this time.')],
-                flags: MessageFlags.Ephemeral,
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'unixtime'
             });
         }
     },

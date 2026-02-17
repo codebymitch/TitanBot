@@ -1,42 +1,39 @@
-﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
-import { getGuildBirthdays, setBirthday, deleteBirthday, getMonthName } from '../../../utils/database.js';
+import { MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { setBirthday } from '../../../services/birthdayService.js';
+import { logger } from '../../../utils/logger.js';
+import { handleInteractionError } from '../../../utils/errorHandler.js';
 
 export default {
     async execute(interaction, config, client) {
-try {
+        try {
+            await interaction.deferReply();
+
             const month = interaction.options.getInteger("month");
             const day = interaction.options.getInteger("day");
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            const currentYear = new Date().getFullYear();
-            const date = new Date(currentYear, month - 1, day);
+            // Use service layer - includes validation
+            const result = await setBirthday(client, guildId, userId, month, day);
             
-            if (isNaN(date.getTime()) || date.getMonth() !== month - 1 || date.getDate() !== day) {
-                return interaction.reply({
-                    embeds: [errorEmbed("Invalid Date", "Please enter a valid date (e.g., February 29th only exists in leap years).")]
-                });
-            }
-
-            const success = await setBirthday(client, guildId, userId, month, day);
-            
-            if (success) {
-                const monthName = getMonthName(month);
-                await interaction.editReply({
-                    embeds: [successEmbed(
-                        "Birthday Set! 🎂",
-                        `Your birthday has been set to **${monthName} ${day}**!`
-                    )]
-                });
-            } else {
-                await interaction.editReply({
-                    embeds: [errorEmbed("Error", "Failed to set your birthday. Please try again.")]
-                });
-            }
-        } catch (error) {
-            console.error("Birthday command error:", error);
             await interaction.editReply({
-                embeds: [errorEmbed("Error", "An error occurred while setting your birthday.")]
+                embeds: [successEmbed(
+                    `Your birthday has been set to **${result.data.monthName} ${result.data.day}**!`,
+                    "Birthday Set! 🎂"
+                )]
+            });
+        } catch (error) {
+            logger.error("Birthday set command execution failed", {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'birthday_set'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'birthday_set',
+                source: 'birthday_set_module'
             });
         }
     }

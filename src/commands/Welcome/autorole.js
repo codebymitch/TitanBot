@@ -1,8 +1,8 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } from 'discord.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
+import { logger } from '../../utils/logger.js';
+import { errorEmbed } from '../../utils/embeds.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -38,37 +38,47 @@ const { options, guild, client } = interaction;
             const role = options.getRole('role');
             
             if (role.position >= guild.members.me.roles.highest.position) {
+                logger.warn(`[Autorole] User ${interaction.user.tag} tried to add role ${role.name} (${role.id}) higher than bot's highest role in ${guild.name}`);
                 return interaction.reply({
-                    content: "❌ I can't assign roles that are higher than my highest role.",
-                    flags: ["Ephemeral"]
+                    embeds: [errorEmbed('Role Too High', "I can't assign roles that are higher than my highest role.")],
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             try {
                 const config = await getWelcomeConfig(client, guild.id);
-                const autoRoles = new Set(config.roleIds || []);
+                const existingRoles = config.roleIds || [];
                 
-                if (autoRoles.has(role.id)) {
+                // Check if role already exists (deduplication)
+                if (existingRoles.includes(role.id)) {
+                    logger.info(`[Autorole] User ${interaction.user.tag} tried to add duplicate role ${role.name} (${role.id}) in ${guild.name}`);
                     return interaction.editReply({
-                        content: `❌ The role ${role} is already set to be auto-assigned.`,
-                        flags: ["Ephemeral"]
+                        embeds: [errorEmbed('Already Added', `The role ${role} is already set to be auto-assigned.`)],
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
-                autoRoles.add(role.id);
+                // Add unique role
+                const updatedRoles = [...new Set([...existingRoles, role.id])];
                 
                 await updateWelcomeConfig(client, guild.id, {
-                    roleIds: Array.from(autoRoles)
+                    roleIds: updatedRoles
                 });
 
+                logger.info(`[Autorole] Added role ${role.name} (${role.id}) to auto-assign in ${guild.name} by ${interaction.user.tag}`);
                 await interaction.editReply({
                     content: `✅ Added ${role} to auto-assigned roles.`,
-                    flags: ["Ephemeral"]
+                    flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
+                logger.error(`[Autorole] Failed to add role for guild ${guild.id}:`, error);
                 await interaction.editReply({
-                    content: '❌ An error occurred while adding the role.',
-                    flags: ["Ephemeral"]
+                    embeds: [errorEmbed(
+                        'Add Failed',
+                        'An error occurred while adding the role. Please try again.',
+                        { showDetails: true }
+                    )],
+                    flags: MessageFlags.Ephemeral
                 });
             }
         } 
@@ -78,29 +88,36 @@ const { options, guild, client } = interaction;
 
             try {
                 const config = await getWelcomeConfig(client, guild.id);
-                const autoRoles = new Set(config.roleIds || []);
+                const existingRoles = config.roleIds || [];
                 
-                if (!autoRoles.has(role.id)) {
+                if (!existingRoles.includes(role.id)) {
+                    logger.info(`[Autorole] User ${interaction.user.tag} tried to remove non-existent role ${role.name} (${role.id}) in ${guild.name}`);
                     return interaction.editReply({
-                        content: `❌ The role ${role} is not set to be auto-assigned.`,
-                        flags: ["Ephemeral"]
+                        embeds: [errorEmbed('Not Found', `The role ${role} is not set to be auto-assigned.`)],
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
-                autoRoles.delete(role.id);
+                const updatedRoles = existingRoles.filter(id => id !== role.id);
                 
                 await updateWelcomeConfig(client, guild.id, {
-                    roleIds: Array.from(autoRoles)
+                    roleIds: updatedRoles
                 });
 
+                logger.info(`[Autorole] Removed role ${role.name} (${role.id}) from auto-assign in ${guild.name} by ${interaction.user.tag}`);
                 await interaction.editReply({
                     content: `✅ Removed ${role} from auto-assigned roles.`,
-                    flags: ["Ephemeral"]
+                    flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
+                logger.error(`[Autorole] Failed to remove role for guild ${guild.id}:`, error);
                 await interaction.editReply({
-                    content: '❌ An error occurred while removing the role.',
-                    flags: ["Ephemeral"]
+                    embeds: [errorEmbed(
+                        'Remove Failed',
+                        'An error occurred while removing the role. Please try again.',
+                        { showDetails: true }
+                    )],
+                    flags: MessageFlags.Ephemeral
                 });
             }
         }
@@ -113,7 +130,7 @@ const { options, guild, client } = interaction;
                 if (autoRoles.length === 0) {
                     return interaction.editReply({
                         content: 'ℹ️ No roles are set to be auto-assigned.',
-                        flags: ["Ephemeral"]
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
@@ -131,6 +148,7 @@ const { options, guild, client } = interaction;
                 }
 
                 if (invalidRoleIds.length > 0) {
+                    logger.info(`[Autorole] Cleaning up ${invalidRoleIds.length} invalid role(s) from guild ${interaction.guild.name}`);
                     const updatedRoles = autoRoles.filter(id => !invalidRoleIds.includes(id));
                     await updateWelcomeConfig(client, guild.id, {
                         roleIds: updatedRoles
@@ -140,25 +158,30 @@ const { options, guild, client } = interaction;
                 if (validRoles.length === 0) {
                     return interaction.editReply({
                         content: 'ℹ️ No valid auto-assigned roles found. Any invalid roles have been removed.',
-                        flags: ["Ephemeral"]
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
                 const embed = new EmbedBuilder()
-.setColor(getColor('info'))
+                    .setColor(getColor('info'))
                     .setTitle('Auto-Assigned Roles')
                     .setDescription(validRoles.map(r => `• ${r}`).join('\n'))
                     .setFooter({ text: `Total: ${validRoles.length} role(s)` });
 
                 await interaction.editReply({
                     embeds: [embed],
-                    flags: ["Ephemeral"]
+                    flags: MessageFlags.Ephemeral
                 });
 
             } catch (error) {
+                logger.error(`[Autorole] Failed to list roles for guild ${guild.id}:`, error);
                 await interaction.editReply({
-                    content: '❌ An error occurred while listing auto-assigned roles.',
-                    flags: ["Ephemeral"]
+                    embeds: [errorEmbed(
+                        'List Failed',
+                        'An error occurred while listing auto-assigned roles. Please try again.',
+                        { showDetails: true }
+                    )],
+                    flags: MessageFlags.Ephemeral
                 });
             }
         }

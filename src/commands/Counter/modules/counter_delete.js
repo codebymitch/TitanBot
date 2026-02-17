@@ -1,7 +1,8 @@
 import { getColor } from '../../../config/bot.js';
-﻿import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
+import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters } from '../../../services/counterService.js';
+import { logger } from '../../../utils/logger.js';
 
 /**
  * Handle counter deletion subcommand
@@ -85,7 +86,7 @@ time: 30000,
                     });
                 }
             } catch (error) {
-                console.error("Error in button interaction:", error);
+                logger.error("Error in button interaction:", error);
             }
         });
 
@@ -103,7 +104,7 @@ time: 30000,
         });
 
     } catch (error) {
-        console.error("Error in handleDelete:", error);
+        logger.error("Error in handleDelete:", error);
         await interaction.editReply({
             embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]}
         );
@@ -140,7 +141,7 @@ async function performDeletion(interaction, client, guild, counter) {
                 await channel.delete(`Counter deleted - removing channel: ${counter.id}`);
                 channelDeleted = true;
             } catch (error) {
-                console.error("Error deleting channel:", error);
+                logger.error("Error deleting channel:", error);
             }
         }
 
@@ -159,7 +160,7 @@ async function performDeletion(interaction, client, guild, counter) {
         });
 
     } catch (error) {
-        console.error("Error deleting counter:", error);
+        logger.error("Error deleting counter:", error);
         await interaction.followUp({
             embeds: [errorEmbed("An error occurred while deleting the counter. Please try again.")],
             flags: MessageFlags.Ephemeral

@@ -1,33 +1,35 @@
-﻿import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
-import { getGuildBirthdays, getMonthName } from '../../../utils/database.js';
+import { MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { getAllBirthdays } from '../../../services/birthdayService.js';
+import { logger } from '../../../utils/logger.js';
+import { handleInteractionError } from '../../../utils/errorHandler.js';
 
 export default {
     async execute(interaction, config, client) {
-try {
-            const guildId = interaction.guildId;
-            const birthdays = await getGuildBirthdays(client, guildId);
+        try {
+            await interaction.deferReply();
 
-            if (!birthdays || Object.keys(birthdays).length === 0) {
-                return interaction.reply({
-                    embeds: [errorEmbed("No Birthdays", "No birthdays have been set in this server yet.")]
+            const guildId = interaction.guildId;
+            
+            // Use service layer - returns sorted array
+            const sortedBirthdays = await getAllBirthdays(client, guildId);
+
+            if (sortedBirthdays.length === 0) {
+                return await interaction.editReply({
+                    embeds: [createEmbed({
+                        title: '❌ No Birthdays',
+                        description: 'No birthdays have been set in this server yet.',
+                        color: 'error'
+                    })]
                 });
             }
 
-            const embed = createEmbed("🎂 Server Birthdays", `Found ${Object.keys(birthdays).length} birthdays in ${interaction.guild.name}`);
+            const embed = createEmbed({
+                title: "🎂 Server Birthdays",
+                color: 'info'
+            });
 
-            const sortedBirthdays = Object.entries(birthdays)
-                .map(([userId, data]) => ({
-                    userId,
-                    month: data.month,
-                    day: data.day,
-                    monthName: getMonthName(data.month)
-                }))
-                .sort((a, b) => {
-                    if (a.month !== b.month) return a.month - b.month;
-                    return a.day - b.day;
-                });
-
-            let birthdayList = "";
+            let birthdayList = `**${sortedBirthdays.length} birthdays in ${interaction.guild.name}**\n\n`;
             sortedBirthdays.forEach((birthday, index) => {
                 const member = interaction.guild.members.cache.get(birthday.userId);
                 const userName = member ? member.user.username : `User ${birthday.userId}`;
@@ -38,10 +40,24 @@ try {
             embed.setFooter({ text: `Total: ${sortedBirthdays.length} birthdays` });
 
             await interaction.editReply({ embeds: [embed] });
+            
+            logger.info('Birthday list retrieved successfully', {
+                userId: interaction.user.id,
+                guildId,
+                birthdayCount: sortedBirthdays.length,
+                commandName: 'birthday_list'
+            });
         } catch (error) {
-            console.error("Birthday list command error:", error);
-            await interaction.editReply({
-                embeds: [errorEmbed("Error", "Failed to fetch birthday list.")]
+            logger.error("Birthday list command execution failed", {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'birthday_list'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'birthday_list',
+                source: 'birthday_list_module'
             });
         }
     }

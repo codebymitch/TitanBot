@@ -1,7 +1,12 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import axios from 'axios';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
+import { getColor } from '../../config/bot.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -13,21 +18,37 @@ export default {
                 .setRequired(true)),
     
     async execute(interaction) {
-try {
+        try {
+            // Defer the interaction to allow time for API call
+            const deferred = await InteractionHelper.safeDefer(interaction);
+            if (!deferred) {
+                return;
+            }
+
             const term = interaction.options.getString('term');
             
             if (term.length < 2) {
-                return await interaction.reply({
+                logger.warn('Urban command - term too short', {
+                    userId: interaction.user.id,
+                    term: term,
+                    guildId: interaction.guildId
+                });
+                return await interaction.editReply({
                     embeds: [errorEmbed('Error', 'Please enter a term with at least 2 characters.')],
-                    flags: ["Ephemeral"]
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
-            const guildConfig = await getGuildConfig(interaction.client, interaction.guild.id);
+            const guildConfig = await getGuildConfig(interaction.client, interaction.guild?.id);
             if (guildConfig?.disabledCommands?.includes('urban')) {
+                logger.warn('Urban command disabled in guild', {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'urban'
+                });
                 return await interaction.editReply({
                     embeds: [errorEmbed('Command Disabled', 'The Urban Dictionary command is disabled in this server.')],
-                    flags: ["Ephemeral"]
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -54,10 +75,11 @@ try {
                 ? `*"${cleanExample.replace(/\n/g, ' ').slice(0, 500)}..."*`
                 : '*No example provided*';
             
-            const embed = successEmbed(
-                definition.word,
-                formattedDefinition
-            )
+            const embed = createEmbed({
+                title: definition.word,
+                description: formattedDefinition,
+                color: 'info'
+            })
             .setURL(definition.permalink)
             .addFields(
                 { 
@@ -83,33 +105,42 @@ try {
                 
             await interaction.editReply({ embeds: [embed] });
             
-        } catch (error) {
-            console.error('Urban Dictionary error:', error);
-            
-            let errorMessage = 'Failed to fetch from Urban Dictionary. ';
-            if (error.code === 'ECONNABORTED') {
-                errorMessage = 'The request to Urban Dictionary timed out. Please try again later.';
-            } else if (error.response?.status === 429) {
-                errorMessage = 'Too many requests to Urban Dictionary. Please try again in a few minutes.';
-            }
-            
-            await interaction.editReply({
-                embeds: [errorEmbed('Error', errorMessage)],
-                flags: ["Ephemeral"]
+            logger.info('Urban Dictionary definition retrieved', {
+                userId: interaction.user.id,
+                term: term,
+                guildId: interaction.guildId,
+                commandName: 'urban'
             });
+            
+        } catch (error) {
+            logger.error('Urban Dictionary error', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                term: interaction.options.getString('term'),
+                guildId: interaction.guildId,
+                apiStatus: error.response?.status,
+                commandName: 'urban'
+            });
+            
+            
+            if (error.response?.status === 404 || !error.response) {
+                await interaction.editReply({
+                    embeds: [errorEmbed('Not Found', `No definitions found for "${interaction.options.getString('term')}" on Urban Dictionary.`)]
+                });
+            } else if (error.response?.status === 429) {
+                await interaction.editReply({
+                    embeds: [errorEmbed('Rate Limited', 'Too many requests to Urban Dictionary. Please try again in a few minutes.')]
+                });
+            } else {
+                await handleInteractionError(interaction, error, {
+                    commandName: 'urban',
+                    source: 'urban_dictionary_api'
+                });
+            }
         }
     },
 };
-
-async function getGuildConfig(client, guildId) {
-    try {
-        const config = await client.db.get(`guild_${guildId}_config`);
-        return config || {};
-    } catch (error) {
-        console.error('Error fetching guild config:', error);
-        return {};
-    }
-}
 
 
 

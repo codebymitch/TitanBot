@@ -1,6 +1,8 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -10,38 +12,49 @@ export default {
       option
         .setName("notation")
         .setDescription("The dice notation (e.g., 2d6, 1d20 + 4)")
-        .setRequired(true),
+        .setRequired(true)
+        .setMaxLength(50),
     ),
+  category: 'Fun',
 
-  async execute(interaction) {
-try {
+  async execute(interaction, config, client) {
+    try {
+      await interaction.deferReply();
+
       const notation = interaction.options
         .getString("notation")
         .toLowerCase()
-.replace(/\s/g, "");
+        .replace(/\s/g, "");
 
       const match = notation.match(/^(\d*)d(\d+)([\+\-]\d+)?$/);
 
       if (!match) {
-        return interaction.reply({
-          embeds: [
-            errorEmbed("Invalid notation. Use format like `1d20` or `3d6+5`."),
-          ],
-        });
+        throw new TitanBotError(
+          `Invalid dice notation: ${notation}`,
+          ErrorTypes.USER_INPUT,
+          'Invalid notation. Use format like `1d20` or `3d6+5`.'
+        );
       }
 
       const numDice = parseInt(match[1] || "1", 10);
       const numSides = parseInt(match[2], 10);
       const modifier = parseInt(match[3] || "0", 10);
 
-      if (numDice > 20 || numSides > 1000 || numSides < 1) {
-        return interaction.editReply({
-          embeds: [
-            errorEmbed(
-              "Please keep the number of dice under 20 and sides under 1000.",
-            ),
-          ],
-        });
+      // Validate dice parameters
+      if (numDice < 1 || numDice > 20) {
+        throw new TitanBotError(
+          `Too many dice requested: ${numDice}`,
+          ErrorTypes.VALIDATION,
+          'Please keep the number of dice between 1 and 20.'
+        );
+      }
+
+      if (numSides < 1 || numSides > 1000) {
+        throw new TitanBotError(
+          `Invalid number of sides: ${numSides}`,
+          ErrorTypes.VALIDATION,
+          'Please keep the number of sides between 1 and 1000.'
+        );
       }
 
       let rolls = [];
@@ -65,9 +78,13 @@ try {
       );
 
       await interaction.editReply({ embeds: [embed] });
+      logger.debug(`Roll command executed by user ${interaction.user.id} with notation ${notation} in guild ${interaction.guildId}`);
     } catch (error) {
-      console.error("Roll command error:", error);
-      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not roll dice right now.")] });
+      logger.error('Roll command error:', error);
+      await handleInteractionError(interaction, error, {
+        commandName: 'roll',
+        source: 'roll_command'
+      });
     }
   },
 };

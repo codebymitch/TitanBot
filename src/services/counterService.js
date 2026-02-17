@@ -1,4 +1,4 @@
-﻿import { logger } from '../utils/logger.js';
+import { logger } from '../utils/logger.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
 /**

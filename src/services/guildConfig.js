@@ -1,4 +1,4 @@
-﻿import { getGuildConfig as getGuildConfigDb, setGuildConfig as setGuildConfigDb } from '../utils/database.js';
+import { getGuildConfig as getGuildConfigDb, setGuildConfig as setGuildConfigDb } from '../utils/database.js';
 import { BotConfig } from '../config/bot.js';
 import { normalizeGuildConfig } from '../utils/schemas.js';
 

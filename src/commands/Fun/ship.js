@@ -1,13 +1,16 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { sanitizeInput } from '../../utils/sanitization.js';
 
 function stringToHash(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-hash |= 0;
+    hash |= 0;
   }
   return Math.abs(hash);
 }
@@ -20,25 +23,50 @@ export default {
       option
         .setName("name1")
         .setDescription("The first name or user.")
-        .setRequired(true),
+        .setRequired(true)
+        .setMaxLength(100),
     )
     .addStringOption((option) =>
       option
         .setName("name2")
         .setDescription("The second name or user.")
-        .setRequired(true),
+        .setRequired(true)
+        .setMaxLength(100),
     ),
+  category: 'Fun',
 
-  async execute(interaction) {
-try {
-      const name1 = interaction.options.getString("name1").trim();
-      const name2 = interaction.options.getString("name2").trim();
+  async execute(interaction, config, client) {
+    try {
+      await interaction.deferReply();
+
+      const name1Raw = interaction.options.getString("name1");
+      const name2Raw = interaction.options.getString("name2");
+
+      // Validate inputs
+      if (!name1Raw || name1Raw.trim().length === 0 || !name2Raw || name2Raw.trim().length === 0) {
+        throw new TitanBotError(
+          'Empty names provided to ship command',
+          ErrorTypes.USER_INPUT,
+          'Please provide valid names for both people!'
+        );
+      }
+
+      // Sanitize inputs
+      const name1 = sanitizeInput(name1Raw.trim(), 100);
+      const name2 = sanitizeInput(name2Raw.trim(), 100);
+
+      // Prevent shipping the same name
+      if (name1.toLowerCase() === name2.toLowerCase()) {
+        const embed = warningEmbed(
+          "💖 Ship Score",
+          `**${name1}** can't be shipped with themselves! Please choose two different people.`
+        );
+        return await interaction.editReply({ embeds: [embed] });
+      }
 
       const sortedNames = [name1, name2].sort();
-
       const combination = sortedNames.join("-").toLowerCase();
-
-const score = stringToHash(combination) % 101;
+      const score = stringToHash(combination) % 101;
 
       let description;
       if (score === 100) {
@@ -65,9 +93,13 @@ const score = stringToHash(combination) % 101;
       );
 
       await interaction.editReply({ embeds: [embed] });
+      logger.debug(`Ship command executed by user ${interaction.user.id} in guild ${interaction.guildId}`);
     } catch (error) {
-      console.error("Ship command error:", error);
-      await interaction.editReply({ embeds: [errorEmbed("System Error", "Could not calculate compatibility right now.")] });
+      logger.error('Ship command error:', error);
+      await handleInteractionError(interaction, error, {
+        commandName: 'ship',
+        source: 'ship_command'
+      });
     }
   },
 };

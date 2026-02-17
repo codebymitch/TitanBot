@@ -1,6 +1,8 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getConfirmationButtons } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -30,11 +32,22 @@ export default {
                 components: [confirmButtons],
                 flags: MessageFlags.Ephemeral
             });
+
+            logger.info(`Wipedata command executed - confirmation prompt shown`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId
+            });
         } catch (error) {
-            console.error('Wipedata command error:', error);
-            await interaction.reply({
-                embeds: [errorEmbed('Error', 'Could not process wipedata command.')],
-                flags: MessageFlags.Ephemeral
+            logger.error(`Wipedata command execution failed`, {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'wipedata'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'wipedata',
+                source: 'wipedata_command'
             });
         }
     }

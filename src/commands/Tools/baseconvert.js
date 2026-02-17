@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { getColor } from '../../config/bot.js';
 
 const BASE_ALPHABETS = {
     'BIN': { base: 2, prefix: '0b', name: 'Binary', alphabet: '01' },
@@ -47,9 +50,11 @@ try {
                 : numberStr;
             
             if (!cleanNumber) {
+                const embed = errorEmbed('Error', 'Please provide a valid number to convert.');
+                embed.setColor(getColor('error'));
                 return interaction.reply({
-                    embeds: [errorEmbed('Error', 'Please provide a valid number to convert.')],
-                    flags: ["Ephemeral"]
+                    embeds: [embed],
+                    flags: ['Ephemeral']
                 });
             }
             
@@ -57,13 +62,16 @@ try {
             const regex = new RegExp(`^[${alphabet}]+$`, 'i');
             
             if (!regex.test(cleanNumber)) {
+                const embed = errorEmbed(
+                    'Invalid Input', 
+                    `The input is not a valid ${fromName} number. ` +
+                    `Valid characters for ${fromBase} (${fromName}): ${alphabet}`
+                );
+                embed.setColor(getColor('error'));
+                logger.warn(`Invalid base conversion input: ${cleanNumber} for base ${fromBase}`);
                 return interaction.editReply({
-                    embeds: [errorEmbed(
-                        'Invalid Input', 
-                        `The input is not a valid ${fromName} number. ` +
-                        `Valid characters for ${fromBase} (${fromName}): ${alphabet}`
-                    )],
-                    flags: ["Ephemeral"]
+                    embeds: [embed],
+                    flags: ['Ephemeral']
                 });
             }
             
@@ -75,9 +83,12 @@ try {
                     decimalValue = BigInt(cleanNumber, fromBaseValue);
                 }
             } catch (error) {
+                logger.error('Base conversion parse error:', error);
+                const embed = errorEmbed('Conversion Error', 'Failed to parse the input number. It may be too large or invalid.');
+                embed.setColor(getColor('error'));
                 return interaction.editReply({
-                    embeds: [errorEmbed('Conversion Error', 'Failed to parse the input number. It may be too large or invalid.')],
-                    flags: ["Ephemeral"]
+                    embeds: [embed],
+                    flags: ['Ephemeral']
                 });
             }
             
@@ -104,13 +115,16 @@ try {
                         `**To ${toName} (${toBase}):** \`${toPrefix}${result}\`\n` +
                         `**Decimal:** \`${decimalValue.toLocaleString()}\``
                     );
+                    embed.setColor(getColor('success'));
                     
                     await interaction.editReply({ embeds: [embed] });
                     
                 } catch (error) {
-                    console.error('Base conversion error:', error);
+                    logger.error(`Base conversion error to ${toName}:`, error);
+                    const embed = errorEmbed('Conversion Error', `Failed to convert to ${toName}. The number might be too large.`);
+                    embed.setColor(getColor('error'));
                     await interaction.editReply({
-                        embeds: [errorEmbed('Conversion Error', `Failed to convert to ${toName}. The number might be too large.`)]
+                        embeds: [embed]
                     });
                 }
                 
@@ -145,15 +159,15 @@ try {
                     '🔄 Base Conversion Results',
                     description
                 );
+                embed.setColor(getColor('primary'));
                 
                 await interaction.editReply({ embeds: [embed] });
             }
             
         } catch (error) {
-            console.error('Baseconvert command error:', error);
-            await interaction.editReply({
-                embeds: [errorEmbed('Error', 'An error occurred while converting the number. Please try again.')],
-                flags: ["Ephemeral"]
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'baseconvert'
             });
         }
     },

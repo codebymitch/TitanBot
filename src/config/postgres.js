@@ -1,4 +1,4 @@
-﻿// PostgreSQL Configuration for Titan Bot
+// PostgreSQL Configuration for Titan Bot
 // Centralizes PostgreSQL connection settings and options
 
 export const pgConfig = {
@@ -49,6 +49,7 @@ export const pgConfig = {
         economy: 'economy',
         invite_tracking: 'invite_tracking',
         application_roles: 'application_roles',
+        verification_audit: 'verification_audit',
         temp_data: 'temp_data',
         cache_data: 'cache_data',
     },

@@ -4,6 +4,7 @@ import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const FISH_COOLDOWN = 45 * 60 * 1000; // 45 minutes
 const BASE_MIN_REWARD = 300;
@@ -35,9 +36,9 @@ export default {
         .setName('fish')
         .setDescription('Go fishing to catch fish and earn money'),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -131,6 +132,5 @@ export default {
                 .setFooter({ text: `Next fishing trip available in 45 minutes.` });
 
             await interaction.editReply({ embeds: [embed] });
-        }, { command: 'fish' });
-    },
+    }, { command: 'fish' })
 };

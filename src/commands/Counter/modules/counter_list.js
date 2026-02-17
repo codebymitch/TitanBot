@@ -1,7 +1,8 @@
 import { getColor } from '../../../config/bot.js';
-﻿import { PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters } from '../../../services/counterService.js';
+import { logger } from '../../../utils/logger.js';
 
 /**
  * Handle counter listing subcommand
@@ -103,7 +104,7 @@ export async function handleList(interaction, client) {
         await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
-        console.error("Error displaying counters:", error);
+        logger.error("Error displaying counters:", error);
         await interaction.editReply({
             embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]
         });

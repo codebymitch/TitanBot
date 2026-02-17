@@ -45,6 +45,9 @@ const EVENT_TYPES = {
   // Reaction Roles
   REACTION_ROLE_ADD: 'reactionrole.add',
   REACTION_ROLE_REMOVE: 'reactionrole.remove',
+  REACTION_ROLE_CREATE: 'reactionrole.create',
+  REACTION_ROLE_DELETE: 'reactionrole.delete',
+  REACTION_ROLE_UPDATE: 'reactionrole.update',
   
   // Giveaway
   GIVEAWAY_CREATE: 'giveaway.create',
@@ -80,6 +83,9 @@ const EVENT_COLORS = {
   'member.namechange': 0x3498db,
   'reactionrole.add': 0x2ecc71,
   'reactionrole.remove': 0xe74c3c,
+  'reactionrole.create': 0x3498db,
+  'reactionrole.delete': 0x8b0000,
+  'reactionrole.update': 0xFFA500,
   'giveaway.create': 0x57F287,
   'giveaway.winner': 0xFEE75C,
   'giveaway.reroll': 0x3498DB,
@@ -111,6 +117,9 @@ const EVENT_ICONS = {
   'member.namechange': '🏷️',
   'reactionrole.add': '✅',
   'reactionrole.remove': '❌',
+  'reactionrole.create': '🎭',
+  'reactionrole.delete': '🗑️',
+  'reactionrole.update': '🔄',
   'giveaway.create': '🎁',
   'giveaway.winner': '🎉',
   'giveaway.reroll': '🔄',

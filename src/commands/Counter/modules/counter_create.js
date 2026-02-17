@@ -1,6 +1,7 @@
-﻿import { PermissionFlagsBits, ChannelType } from 'discord.js';
+import { PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter } from '../../../services/counterService.js';
+import { logger } from '../../../utils/logger.js';
 
 /**
  * Handle counter creation subcommand
@@ -54,7 +55,8 @@ export async function handleCreate(interaction, client) {
             type: type,
             channelId: targetChannel.id,
             guildId: guild.id,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            enabled: true
         };
 
         counters.push(newCounter);
@@ -86,7 +88,7 @@ export async function handleCreate(interaction, client) {
         });
 
     } catch (error) {
-        console.error("Error creating counter:", error);
+        logger.error("Error creating counter:", error);
         await interaction.editReply({
             embeds: [errorEmbed("An error occurred while creating the counter. Please try again.")]
         });

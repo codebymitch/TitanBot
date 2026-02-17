@@ -1,6 +1,9 @@
-﻿import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { getColor } from '../../config/bot.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('time')
@@ -28,8 +31,11 @@ export default {
                             timeZoneName: 'short'
                         });
                     } catch (error) {
+                        logger.warn(`Invalid timezone requested: ${timezone}`);
+                        const embed = errorEmbed('Invalid Timezone', 'Invalid timezone. Please use a valid timezone identifier (e.g., UTC, America/New_York, Europe/London)');
+                        embed.setColor(getColor('error'));
                         await interaction.reply({
-                            embeds: [errorEmbed('Error', 'Invalid timezone. Please use a valid timezone identifier (e.g., UTC, America/New_York, Europe/London)')],
+                            embeds: [embed],
                             flags: MessageFlags.Ephemeral
                         });
                         return;
@@ -47,11 +53,9 @@ export default {
                     
                     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         } catch (error) {
-            console.error('Time command error:', error);
-            const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
-            await interaction[replyMethod]({
-                embeds: [errorEmbed('Error', 'Failed to get the current time.')],
-                flags: MessageFlags.Ephemeral
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'time'
             });
         }
     },

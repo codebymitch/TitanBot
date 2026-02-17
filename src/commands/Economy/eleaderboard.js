@@ -1,8 +1,11 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyKey } from '../../utils/database.js';
 import { botConfig } from '../../config/bot.js';
+import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -22,11 +25,15 @@ export default {
         .setDMPermission(false),
     
     
-    async execute(interaction, config, client) {
-const guildId = interaction.guildId;
-        const sortBy = interaction.options.getString("sort_by") || "net_worth";
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
 
-        try {
+            const guildId = interaction.guildId;
+            const sortBy = interaction.options.getString("sort_by") || "net_worth";
+
+            logger.debug(`[ECONOMY] Leaderboard requested`, { guildId, sortBy });
+
             const prefix = `guild:${guildId}:economy:`;
 
             let allKeys = await client.db.list(prefix);
@@ -36,14 +43,11 @@ const guildId = interaction.guildId;
             }
 
             if (allKeys.length === 0) {
-                return interaction.editReply({
-                    embeds: [
-                        errorEmbed(
-                            "Leaderboard Empty",
-                            "No economy data found for this server.",
-                        ),
-                    ],
-                });
+                throw createError(
+                    "No economy data found",
+                    ErrorTypes.VALIDATION,
+                    "No economy data found for this server."
+                );
             }
 
             let allUserData = [];
@@ -104,6 +108,13 @@ return b.net_worth - a.net_worth;
                 bank: "Bank Balance",
             };
 
+            logger.info(`[ECONOMY] Leaderboard generated`, { 
+                guildId, 
+                sortBy, 
+                userCount: allUserData.length,
+                userRank 
+            });
+
             const embed = createEmbed(
                 `👑 Economy Leaderboard (${fieldNameMap[sortBy]})`,
                 leaderboardEntries.join("\n"),
@@ -112,18 +123,7 @@ return b.net_worth - a.net_worth;
             });
 
             await interaction.editReply({ embeds: [embed] });
-        } catch (error) {
-            console.error("Leaderboard command error:", error);
-            await interaction.editReply({
-                embeds: [
-                    errorEmbed(
-                        "System Error",
-                        "Could not generate the leaderboard.",
-                    ),
-                ],
-            });
-        }
-    },
+    }, { command: 'eleaderboard' })
 };
 
 

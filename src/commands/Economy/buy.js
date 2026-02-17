@@ -1,12 +1,12 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { MessageFlags } from 'discord.js';
 import { getPromoRow } from '../../utils/components.js';
 import { shopItems } from '../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
 
@@ -29,9 +29,9 @@ export default {
                 .setMaxValue(10)
         ),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
 
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -155,8 +155,7 @@ export default {
             });
 
             await interaction.editReply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
-        }, { command: 'buy' });
-    },
+    }, { command: 'buy' })
 };
 
 

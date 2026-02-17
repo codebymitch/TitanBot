@@ -1,9 +1,10 @@
-﻿import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const MINE_COOLDOWN = 60 * 60 * 1000;
 const BASE_MIN_REWARD = 400;
@@ -24,9 +25,9 @@ export default {
         .setName('mine')
         .setDescription('Go mining to earn money'),
 
-    async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
-            await interaction.deferReply();
+    execute: withErrorHandling(async (interaction, config, client) => {
+        const deferred = await InteractionHelper.safeDefer(interaction);
+        if (!deferred) return;
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -90,8 +91,7 @@ userData.lastMine = now;
                 .setFooter({ text: `Next mine available in 1 hour.` });
 
             await interaction.editReply({ embeds: [embed] });
-        }, { command: 'mine' });
-    },
+    }, { command: 'mine' })
 };
 
 

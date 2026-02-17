@@ -1,9 +1,13 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
 import { getFromDb, setInDb } from '../../utils/database.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import crypto from 'crypto';
+
 function generateShareId() {
-    return Math.random().toString(36).substring(2, 9);
+    return crypto.randomBytes(16).toString('hex');
 }
 
 export default {
@@ -447,9 +451,16 @@ export default {
                     });
             }
         } catch (error) {
-            console.error("Error in todo command:", error);
-            await interaction.editReply({
-                embeds: [errorEmbed("Error", "An error occurred while processing your request.")],
+            logger.error(`Todo command execution failed`, {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'todo'
+            });
+            await handleInteractionError(interaction, error, {
+                commandName: 'todo',
+                source: 'todo_command'
             });
         }
     },

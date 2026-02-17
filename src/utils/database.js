@@ -1,4 +1,4 @@
-﻿import { pgDb } from './postgresDatabase.js';
+import { pgDb } from './postgresDatabase.js';
 import { MemoryStorage } from './memoryStorage.js';
 import { logger } from './logger.js';
 import { BotConfig } from '../config/bot.js';
@@ -172,6 +172,33 @@ export async function deleteFromDb(key) {
         return true;
     } catch (error) {
         logger.error(`Error deleting key ${key}:`, error);
+        return false;
+    }
+}
+
+export async function insertVerificationAudit(record) {
+    try {
+        if (!db.initialized) {
+            await db.initialize();
+        }
+
+        if (db.isAvailable() && typeof pgDb.insertVerificationAudit === 'function') {
+            return await pgDb.insertVerificationAudit(record);
+        }
+
+        const key = `verification:audit:${record.guildId}`;
+        const existing = await getFromDb(key, []);
+        const auditEntries = Array.isArray(existing) ? existing : [];
+
+        auditEntries.push({
+            ...record,
+            createdAt: record.createdAt || new Date().toISOString()
+        });
+
+        await setInDb(key, auditEntries);
+        return true;
+    } catch (error) {
+        logger.error('Error storing verification audit:', error);
         return false;
     }
 }
@@ -547,6 +574,53 @@ export function getWelcomeConfigKey(guildId) {
     return `guild:${guildId}:welcome`;
 }
 
+function normalizeWelcomeConfig(raw = {}) {
+    const base = typeof raw === "object" && raw !== null ? raw : {};
+
+    const channelId = base.channelId ?? null;
+    const goodbyeChannelId = base.goodbyeChannelId ?? null;
+
+    const welcomeMessage = base.welcomeMessage ?? "Welcome {user} to {server}!";
+    const leaveMessage = base.leaveMessage ?? "{user.tag} has left the server.";
+
+    const welcomeEmbed = base.welcomeEmbed ?? {
+        title: "🎉 Welcome!",
+        description: "Welcome {user} to {server}!",
+        color: getColor("success"),
+        thumbnail: true,
+        footer: "Welcome to {server}!"
+    };
+
+    const leaveEmbed = base.leaveEmbed ?? {
+        title: "👋 Goodbye",
+        description: "{user.tag} has left the server.",
+        color: getColor("error"),
+        thumbnail: true,
+        footer: "Goodbye from {server}!"
+    };
+
+    const roleIds = Array.isArray(base.roleIds) ? base.roleIds : [];
+
+    return {
+        ...base,
+        enabled: Boolean(base.enabled),
+        channelId,
+        welcomeMessage,
+        welcomeEmbed,
+        welcomePing: Boolean(base.welcomePing),
+        welcomeImage: base.welcomeImage ?? null,
+        goodbyeEnabled: Boolean(base.goodbyeEnabled),
+        goodbyeChannelId,
+        leaveMessage,
+        leaveEmbed,
+        dmMessage: base.dmMessage ?? "",
+        roleIds,
+        autoRoleDelay: base.autoRoleDelay ?? 0,
+        joinLogs: base.joinLogs ?? { enabled: false, channelId: null },
+        leaveLogs: base.leaveLogs ?? { enabled: false, channelId: null }
+    };
+}
+
 /**
  * Get welcome system configuration for a guild
  * @param {Object} client - The Discord client
@@ -556,99 +630,17 @@ export function getWelcomeConfigKey(guildId) {
 export async function getWelcomeConfig(client, guildId) {
     if (!client.db) {
         console.warn('Database not available for getWelcomeConfig');
-        return {
-            enabled: false,
-            channelId: null,
-            welcomeMessage: "Welcome {user.mention} to {server.name}!",
-            welcomeEmbed: {
-                title: "Welcome to {server.name}!",
-                description: "We're glad to have you here, {user.mention}!",
-                color: getColor('primary'),
-                thumbnail: true,
-                footer: "Enjoy your stay!"
-            },
-            goodbyeEnabled: false,
-            goodbyeChannelId: null,
-            goodbyeMessage: "Goodbye {user.mention}! We'll miss you.",
-            goodbyeEmbed: {
-                title: "Goodbye!",
-                description: "{user.mention} has left the server.",
-                color: getColor('error'),
-                footer: "Come back soon!"
-            },
-            autoRole: null,
-            delay: 1000
-        };
+        return normalizeWelcomeConfig();
     }
     
     const key = getWelcomeConfigKey(guildId);
     try {
         const config = await client.db.get(key, {});
         const unwrapped = unwrapReplitData(config);
-        
-        return {
-            enabled: unwrapped.enabled || false,
-            channelId: unwrapped.channelId || null,
-            welcomeMessage: unwrapped.welcomeMessage || "Welcome {user.mention} to {server.name}!",
-            welcomeEmbed: unwrapped.welcomeEmbed || {
-                title: "Welcome to {server.name}!",
-                description: "We're glad to have you here, {user.mention}!",
-                color: getColor('primary'),
-                thumbnail: true,
-                footer: `You are member #{memberCount}`
-            },
-            goodbyeEnabled: unwrapped.goodbyeEnabled || false,
-            goodbyeChannelId: unwrapped.goodbyeChannelId || null,
-            leaveMessage: unwrapped.leaveMessage || "{user.tag} has left the server.",
-            leaveEmbed: unwrapped.leaveEmbed || {
-                title: "Goodbye {user.tag}",
-                description: "We're sorry to see you go!",
-                color: getColor('error'),
-                thumbnail: true,
-                footer: "We now have {memberCount} members"
-            },
-            dmMessage: unwrapped.dmMessage || "",
-            roleIds: unwrapped.roleIds || [],
-            autoRoleDelay: unwrapped.autoRoleDelay || 0,
-            joinLogs: unwrapped.joinLogs || {
-                enabled: false,
-                channelId: null
-            },
-            leaveLogs: unwrapped.leaveLogs || {
-                enabled: false,
-                channelId: null
-            },
-            ...unwrapped
-        };
+        return normalizeWelcomeConfig(unwrapped);
     } catch (error) {
         console.error(`Error getting welcome config for guild ${guildId}:`, error);
-        return {
-            enabled: false,
-            channelId: null,
-            welcomeMessage: "Welcome {user.mention} to {server.name}!",
-            welcomeEmbed: {
-                title: "Welcome to {server.name}!",
-                description: "We're glad to have you here, {user.mention}!",
-                color: getColor('primary'),
-                thumbnail: true,
-                footer: `You are member #{memberCount}`
-            },
-            goodbyeEnabled: false,
-            goodbyeChannelId: null,
-            leaveMessage: "{user.tag} has left the server.",
-            leaveEmbed: {
-                title: "Goodbye {user.tag}",
-                description: "We're sorry to see you go!",
-                color: getColor('error'),
-                thumbnail: true,
-                footer: "We now have {memberCount} members"
-            },
-            dmMessage: "",
-            roleIds: [],
-            autoRoleDelay: 0,
-            joinLogs: { enabled: false, channelId: null },
-            leaveLogs: { enabled: false, channelId: null }
-        };
+        return normalizeWelcomeConfig();
     }
 }
 

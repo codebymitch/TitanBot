@@ -1,7 +1,12 @@
-﻿import axios from 'axios';
-import { SlashCommandBuilder } from 'discord.js';
+import axios from 'axios';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
+import { getColor } from '../../config/bot.js';
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '4e44d9029b1270a757cddc766a1bcb63';
     "4e44d9029b1270a757cddc766a1bcb63";
@@ -30,25 +35,39 @@ export default {
                 .setRequired(false),
         ),
     async execute(interaction) {
-try {
+        try {
+            // Defer the interaction to allow time for API calls
+            const deferred = await InteractionHelper.safeDefer(interaction);
+            if (!deferred) {
+                return;
+            }
+
             const guildConfig = await getGuildConfig(
                 interaction.client,
                 interaction.guild?.id,
             );
             if (guildConfig?.disabledCommands?.includes("movie")) {
-                return await interaction.reply({
+                logger.warn('Movie command disabled in guild', {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'movie'
+                });
+                return await interaction.editReply({
                     embeds: [
                         errorEmbed(
                             "Command Disabled",
                             "The movie/TV show search command is disabled in this server.",
                         ),
                     ],
-                    flags: ["Ephemeral"],
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             if (!TMDB_API_KEY) {
-                console.error("TMDB API key is not configured");
+                logger.error('TMDB API key not configured', {
+                    guildId: interaction.guildId,
+                    commandName: 'movie'
+                });
                 return await interaction.editReply({
                     embeds: [
                         errorEmbed(
@@ -56,13 +75,19 @@ try {
                             "Movie/TV show search is not properly configured.",
                         ),
                     ],
-                    flags: ["Ephemeral"],
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             const title = interaction.options.getString("title");
             const type = interaction.options.getString("type") || "movie";
 
+            logger.debug('Movie search initiated', {
+                userId: interaction.user.id,
+                title: title,
+                type: type,
+                guildId: interaction.guildId
+            });
 
             const searchResponse = await axios.get(
                 `https://api.themoviedb.org/3/search/${type}`,
@@ -146,10 +171,11 @@ timeout: 8000,
                     .map((p) => p.name)
                     .join(", ") || "N/A";
 
-            const embed = successEmbed(
-                details.overview || "No overview available.",
-                `${mediaTitle} (${year})`
-            )
+            const embed = createEmbed({
+                title: `${mediaTitle} (${year})`,
+                description: details.overview || "No overview available.",
+                color: 'info'
+            })
                 .setURL(`https://www.themoviedb.org/${type}/${result.id}`)
                 .setThumbnail(
                     result.poster_path
@@ -194,52 +220,43 @@ timeout: 8000,
             }
 
             await interaction.editReply({ embeds: [embed] });
+            
+            logger.info('Movie information retrieved', {
+                userId: interaction.user.id,
+                title: title,
+                type: type,
+                resultTitle: mediaTitle,
+                guildId: interaction.guildId,
+                commandName: 'movie'
+            });
         } catch (error) {
-            console.error("Movie/TV show search error:", error);
+            logger.error('Movie/TV show search error', {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                apiStatus: error.response?.status,
+                commandName: 'movie'
+            });
 
-            let errorMessage = "Failed to fetch movie/TV show information. ";
-            if (error.code === "ECONNABORTED") {
-                errorMessage =
-                    "The request to TMDB timed out. Please try again later.";
-            } else if (error.response?.status === 401) {
-                errorMessage =
-                    "Invalid TMDB API key. Please contact the bot administrator.";
-            } else if (error.response?.status === 404) {
-                errorMessage =
-                    "The requested movie/TV show could not be found.";
-            } else if (error.response?.status === 429) {
-                errorMessage =
-                    "Too many requests to TMDB. Please try again in a few minutes.";
-            } else if (error.response?.data?.status_message) {
-                errorMessage += `API Error: ${error.response.data.status_message}`;
-            }
-
-            await interaction
-                .editReply({
-                    embeds: [errorEmbed("Error", errorMessage)],
-                    flags: ["Ephemeral"],
-                })
-                .catch(() => {
-                    interaction
-                        .followUp({
-                            embeds: [errorEmbed("Error", errorMessage)],
-                            flags: ["Ephemeral"],
-                        })
-                        .catch(console.error);
+            
+            if (error.response?.status === 404) {
+                await interaction.editReply({
+                    embeds: [errorEmbed('Not Found', 'The requested movie/TV show could not be found.')]
                 });
+            } else if (error.response?.status === 401) {
+                await interaction.editReply({
+                    embeds: [errorEmbed('Configuration Error', 'Invalid TMDB API key. Please contact the bot administrator.')],
+                    flags: MessageFlags.Ephemeral
+                });
+            } else {
+                await handleInteractionError(interaction, error, {
+                    commandName: 'movie',
+                    source: 'tmdb_api'
+                });
+            }
         }
     },
 };
-
-async function getGuildConfig(client, guildId) {
-    if (!guildId) return {};
-    try {
-        const config = await client.db?.get(`guild_${guildId}_config`);
-        return config || {};
-    } catch (error) {
-        console.error("Error fetching guild config:", error);
-        return {};
-    }
-}
 
 

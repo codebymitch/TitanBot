@@ -1,7 +1,13 @@
 import { getColor } from '../../config/bot.js';
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getPromoRow } from '../../utils/components.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { createReactionRoleMessage, hasDangerousPermissions } from '../../services/reactionRoleService.js';
+import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName('rsetup')
@@ -50,29 +56,111 @@ export default {
 
     async execute(interaction) {
         try {
-const channel = interaction.options.getChannel('channel');
+            // Defer the interaction
+            const deferSuccess = await InteractionHelper.safeDefer(interaction);
+            if (!deferSuccess) return;
+            
+            logger.info(`Reaction role setup initiated by ${interaction.user.tag} in guild ${interaction.guild.name}`);
+            
+            const channel = interaction.options.getChannel('channel');
             const title = interaction.options.getString('title');
             const description = interaction.options.getString('description');
             
+            // Validate channel type
+            if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildAnnouncement) {
+                throw createError(
+                    `Invalid channel type: ${channel.type}`,
+                    ErrorTypes.VALIDATION,
+                    'Please select a text or announcement channel.',
+                    { channelType: channel.type }
+                );
+            }
+            
+            // Check bot permissions
+            if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
+                throw createError(
+                    'Bot missing ManageRoles permission',
+                    ErrorTypes.PERMISSION,
+                    'I need the "Manage Roles" permission to set up reaction roles.',
+                    { permission: 'ManageRoles' }
+                );
+            }
+            
+            // Check channel send permissions
+            if (!channel.permissionsFor(interaction.guild.members.me).has(PermissionFlagsBits.SendMessages)) {
+                throw createError(
+                    `Bot cannot send messages in ${channel.name}`,
+                    ErrorTypes.PERMISSION,
+                    `I don't have permission to send messages in ${channel}.`,
+                    { channelId: channel.id }
+                );
+            }
+            
+            // Collect and validate roles
             const roles = [];
+            const roleValidationErrors = [];
+            
             for (let i = 1; i <= 5; i++) {
                 const role = interaction.options.getRole(`role${i}`);
                 if (role) {
+                    // Check role hierarchy
                     if (role.position >= interaction.guild.members.me.roles.highest.position) {
-                        return interaction.reply({
-                            embeds: [errorEmbed('Error', `I don't have permission to manage the role ${role.name}. Please move my role higher in the role hierarchy.`)]
-                        });
+                        roleValidationErrors.push(`**${role.name}** - My role is not high enough in the hierarchy`);
+                        continue;
                     }
+                    
+                    // Check for dangerous permissions
+                    if (hasDangerousPermissions(role)) {
+                        roleValidationErrors.push(`**${role.name}** - This role has dangerous permissions (Administrator, Manage Server, etc.)`);
+                        continue;
+                    }
+                    
+                    // Check if role is managed (bot role, integration role)
+                    if (role.managed) {
+                        roleValidationErrors.push(`**${role.name}** - This is a managed role (integration/bot role)`);
+                        continue;
+                    }
+                    
+                    // Check if role is @everyone
+                    if (role.id === interaction.guild.id) {
+                        roleValidationErrors.push(`**${role.name}** - Cannot use the @everyone role`);
+                        continue;
+                    }
+                    
                     roles.push(role);
                 }
             }
-
-            if (roles.length < 1) {
-                return interaction.editReply({
-                    embeds: [errorEmbed('Error', 'You must provide at least one role.')]
+            
+            // Show validation errors if any
+            if (roleValidationErrors.length > 0) {
+                const errorMsg = `The following roles cannot be added:\n${roleValidationErrors.join('\n')}`;
+                
+                if (roles.length === 0) {
+                    throw createError(
+                        'No valid roles provided',
+                        ErrorTypes.VALIDATION,
+                        errorMsg,
+                        { errors: roleValidationErrors }
+                    );
+                }
+                
+                // If some roles are valid, show warning
+                await interaction.followUp({
+                    embeds: [warningEmbed('Role Validation Warning', errorMsg)],
+                    ephemeral: true
                 });
             }
 
+            if (roles.length < 1) {
+                throw createError(
+                    'No roles provided',
+                    ErrorTypes.VALIDATION,
+                    'You must provide at least one valid role.',
+                    {}
+                );
+            }
+
+            // Create the select menu
             const row = new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId('reaction_roles')
@@ -84,11 +172,12 @@ const channel = interaction.options.getChannel('channel');
                             label: role.name,
                             description: `Add/remove the ${role.name} role`,
                             value: role.id,
-emoji: '🎭'
+                            emoji: '🎭'
                         }))
                     )
             );
 
+            // Send the message
             const message = await channel.send({
                 embeds: [{
                     title,
@@ -99,43 +188,77 @@ emoji: '🎭'
                             name: 'Available Roles',
                             value: roles.map(role => `• ${role}`).join('\n')
                         }
-                    ]
+                    ],
+                    footer: {
+                        text: 'Select roles from the dropdown menu below'
+                    }
                 }],
                 components: [row]
             });
 
-            const reactionRoleData = {
-                guildId: interaction.guildId,
-                channelId: channel.id,
-                messageId: message.id,
-                roles: roles.map(role => role.id)
-            };
+            // Save to database using service layer
+            const roleIds = roles.map(role => role.id);
+            await createReactionRoleMessage(
+                interaction.client,
+                interaction.guildId,
+                channel.id,
+                message.id,
+                roleIds
+            );
+            
+            logger.info(`Reaction role message created: ${message.id} with ${roles.length} roles by ${interaction.user.tag}`);
 
-            const key = `reaction_roles:${interaction.guildId}:${message.id}`;
-            console.log(`[ReactionRole] Saving reaction role data for message ${message.id}:`, reactionRoleData);
+            // Log to audit system
             try {
-                await interaction.client.db.set(key, reactionRoleData);
-                console.log(`[ReactionRole] Successfully saved reaction role data for message ${message.id}`);
-                
-                const savedData = await interaction.client.db.get(key);
-                console.log(`[ReactionRole] Verified saved data for message ${message.id}:`, savedData);
-                
-                if (!savedData) {
-                    throw new Error('Failed to verify saved reaction role data');
-                }
-            } catch (error) {
-                console.error(`[ReactionRole] Error saving reaction role data:`, error);
-throw error;
+                await logEvent({
+                    client: interaction.client,
+                    guildId: interaction.guildId,
+                    eventType: EVENT_TYPES.REACTION_ROLE_CREATE,
+                    data: {
+                        description: `Reaction role message created by ${interaction.user.tag}`,
+                        userId: interaction.user.id,
+                        channelId: channel.id,
+                        fields: [
+                            {
+                                name: '📝 Title',
+                                value: title,
+                                inline: false
+                            },
+                            {
+                                name: '📍 Channel',
+                                value: channel.toString(),
+                                inline: true
+                            },
+                            {
+                                name: '📊 Roles',
+                                value: `${roles.length} roles`,
+                                inline: true
+                            },
+                            {
+                                name: '🏷️ Role List',
+                                value: roles.map(r => r.toString()).join(', '),
+                                inline: false
+                            },
+                            {
+                                name: '🔗 Message Link',
+                                value: `[Jump to Message](${message.url})`,
+                                inline: false
+                            }
+                        ]
+                    }
+                });
+            } catch (logError) {
+                logger.warn('Failed to log reaction role creation:', logError);
             }
 
             await interaction.editReply({
-                embeds: [successEmbed('Success', `Reaction role message created in ${channel}!`)]
+                embeds: [successEmbed('Success', `✅ Reaction role message created in ${channel}!\n\n[Jump to Message](${message.url})`)]
             });
 
         } catch (error) {
-            console.error('Error setting up reaction roles:', error);
-            await interaction.editReply({
-                embeds: [errorEmbed('Error', 'An error occurred while setting up reaction roles.')]
+            await handleInteractionError(interaction, error, {
+                type: 'command',
+                commandName: 'rsetup'
             });
         }
     }
