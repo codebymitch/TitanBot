@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -34,7 +33,7 @@ export default {
                 throw new Error("You cannot ban the bot.");
             }
 
-            // Use ModerationService for ban operation
+            
             const result = await ModerationService.banUser({
                 guild: interaction.guild,
                 user,

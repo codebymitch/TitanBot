@@ -4,11 +4,11 @@ import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js'
 import { getServerCounters } from '../../../services/counterService.js';
 import { logger } from '../../../utils/logger.js';
 
-/**
- * Handle counter listing subcommand
- * @param {CommandInteraction} interaction - The command interaction
- * @param {Client} client - Discord client
- */
+
+
+
+
+
 export async function handleList(interaction, client) {
     const guild = interaction.guild;
     
@@ -111,11 +111,11 @@ export async function handleList(interaction, client) {
     }
 }
 
-/**
- * Get display name for counter type
- * @param {string} type - Counter type
- * @returns {string} Display name
- */
+
+
+
+
+
 function getCounterTypeDisplay(type) {
     const types = {
         members: "👥 Members",
@@ -125,11 +125,11 @@ function getCounterTypeDisplay(type) {
     return types[type] || "❓ Unknown";
 }
 
-/**
- * Get emoji for counter type
- * @param {string} type - Counter type
- * @returns {string} Emoji
- */
+
+
+
+
+
 function getCounterEmoji(type) {
     const emojis = {
         members: "👥",
@@ -139,12 +139,12 @@ function getCounterEmoji(type) {
     return emojis[type] || "❓";
 }
 
-/**
- * Get current count for a counter type
- * @param {Guild} guild - The guild
- * @param {string} type - Counter type
- * @returns {number} Current count
- */
+
+
+
+
+
+
 function getCurrentCount(guild, type) {
     switch (type) {
         case "members":

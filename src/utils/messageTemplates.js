@@ -1,10 +1,10 @@
 import { EmbedBuilder } from 'discord.js';
 import { getColor } from '../config/bot.js';
 
-/**
- * Message templates for consistent bot responses
- * Uses centralized color scheme from bot.js config
- */
+
+
+
+
 export const MessageTemplates = {
     SUCCESS: {
         DATA_UPDATED: (action, description) => new EmbedBuilder()

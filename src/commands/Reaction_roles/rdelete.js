@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -20,7 +19,7 @@ export default {
 
     async execute(interaction) {
         try {
-            // Defer the interaction
+            
             const deferSuccess = await InteractionHelper.safeDefer(interaction);
             if (!deferSuccess) return;
             
@@ -28,7 +27,7 @@ export default {
             
             logger.info(`Reaction role deletion requested by ${interaction.user.tag} for message ${messageId} in guild ${interaction.guild.name}`);
             
-            // Validate message ID format
+            
             if (!/^\d{17,19}$/.test(messageId)) {
                 throw createError(
                     `Invalid message ID format: ${messageId}`,
@@ -38,7 +37,7 @@ export default {
                 );
             }
             
-            // Get the reaction role data before deleting
+            
             const reactionRoleData = await getReactionRoleMessage(interaction.client, interaction.guildId, messageId);
             
             if (!reactionRoleData) {
@@ -50,7 +49,7 @@ export default {
                 );
             }
 
-            // Try to delete the actual Discord message
+            
             let messageDeleted = false;
             try {
                 const channel = await interaction.guild.channels.fetch(reactionRoleData.channelId).catch(() => null);
@@ -69,15 +68,15 @@ export default {
                 }
             } catch (deleteError) {
                 logger.warn(`Failed to delete Discord message ${messageId}:`, deleteError);
-                // Continue to delete from database even if Discord message deletion fails
+                
             }
 
-            // Delete from database using service layer
+            
             await deleteReactionRoleMessage(interaction.client, interaction.guildId, messageId);
             
             logger.info(`Reaction role message ${messageId} deleted from database by ${interaction.user.tag}`);
             
-            // Log to audit system
+            
             try {
                 await logEvent({
                     client: interaction.client,
@@ -114,7 +113,7 @@ export default {
                 logger.warn('Failed to log reaction role deletion:', logError);
             }
 
-            // Send success message
+            
             const responseMessage = messageDeleted 
                 ? '✅ Reaction role message has been deleted from both Discord and the database.'
                 : '✅ Reaction role message has been deleted from the database.\n⚠️ The Discord message could not be found or deleted.';

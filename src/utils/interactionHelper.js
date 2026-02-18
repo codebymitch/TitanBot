@@ -2,31 +2,40 @@ import { logger } from './logger.js';
 import { MessageFlags } from 'discord.js';
 import { handleInteractionError } from './errorHandler.js';
 
-/**
- * Helper class for handling Discord interactions with proper error handling
- */
+
+const INTERACTION_TIMEOUT_MS = 15 * 60 * 1000; 
+const DEFAULT_DEFER_OPTIONS = { flags: MessageFlags.Ephemeral };
+
+
+
+
 export class InteractionHelper {
-    /**
-     * Check if interaction is still valid (not expired)
-     * @param {Interaction} interaction - Discord interaction
-     * @returns {boolean} - Whether interaction is still valid
-     */
+    
+
+
+
+
     static isInteractionValid(interaction) {
-        if (!interaction || !interaction.id) return false;
+        if (!interaction || typeof interaction !== 'object') return false;
+        if (!interaction.id || typeof interaction.id !== 'string') return false;
         
-        if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
+        
+        if (!interaction.user || typeof interaction.user !== 'object') return false;
+        
+        
+        if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > INTERACTION_TIMEOUT_MS) {
             return false;
         }
         
         return true;
     }
 
-    /**
-     * Ensure interaction is in a state that can be replied to
-     * @param {Interaction} interaction - Discord interaction
-     * @param {Object} deferOptions - Options for deferReply if needed
-     * @returns {Promise<boolean>} - Whether interaction is ready for replies
-     */
+    
+
+
+
+
+
     static async ensureReady(interaction, deferOptions = { flags: MessageFlags.Ephemeral }) {
         if (!this.isInteractionValid(interaction)) {
             return false;
@@ -39,12 +48,12 @@ export class InteractionHelper {
         return await this.safeDefer(interaction, deferOptions);
     }
 
-    /**
-     * Safely defer a reply with error handling
-     * @param {Interaction} interaction - Discord interaction
-     * @param {Object} options - Options forwarded to deferReply (optional)
-     * @returns {Promise<boolean>} - Whether defer was successful
-     */
+    
+
+
+
+
+
     static async safeDefer(interaction, options = {}) {
         try {
             if (interaction.deferred || interaction.replied) {
@@ -72,12 +81,12 @@ if (error.code === 10062) {
         }
     }
 
-    /**
-     * Safely edit a reply with error handling
-     * @param {Interaction} interaction - Discord interaction
-     * @param {Object} options - Reply options
-     * @returns {Promise<boolean>} - Whether edit was successful
-     */
+    
+
+
+
+
+
     static async safeEditReply(interaction, options) {
         try {
             if (!this.isInteractionValid(interaction)) {
@@ -110,12 +119,12 @@ if (error.code === 40060) {
         }
     }
 
-    /**
-     * Safely reply to an interaction with error handling
-     * @param {Interaction} interaction - Discord interaction
-     * @param {Object} options - Reply options
-     * @returns {Promise<boolean>} - Whether reply was successful
-     */
+    
+
+
+
+
+
     static async safeReply(interaction, options) {
         try {
             if (!this.isInteractionValid(interaction)) {
@@ -139,14 +148,14 @@ if (error.code === 40060) {
         }
     }
 
-    /**
-     * Safely handle command execution with comprehensive error handling
-     * @param {Interaction} interaction - Discord interaction
-     * @param {Function} commandFunction - The command function to execute
-     * @param {Object|string} errorEmbed - Error embed to use for failures
-     * @param {Object} options - Additional options (autoDefer, deferOptions)
-     * @returns {Promise<void>}
-     */
+    
+
+
+
+
+
+
+
     static async safeExecute(interaction, commandFunction, errorEmbed, options = {}) {
         const { autoDefer = true, deferOptions = { flags: MessageFlags.Ephemeral } } = options;
         
@@ -197,12 +206,12 @@ if (Date.now() - deferStartTime > 3000) {
         }
     }
 
-    /**
-     * Universal reply method that handles all interaction states
-     * @param {Interaction} interaction - Discord interaction
-     * @param {Object} options - Reply options
-     * @returns {Promise<boolean>} - Whether reply was successful
-     */
+    
+
+
+
+
+
     static async universalReply(interaction, options) {
         const isReady = await this.ensureReady(interaction, options.flags ? { flags: options.flags } : {});
         if (!isReady) {
@@ -217,12 +226,12 @@ if (Date.now() - deferStartTime > 3000) {
     }
 }
 
-/**
- * Decorator for wrapping command execute methods with error handling
- * @param {Function} target - The command method
- * @param {string} propertyName - The method name
- * @param {PropertyDescriptor} descriptor - The method descriptor
- */
+
+
+
+
+
+
 export function withErrorHandling(target, propertyName, descriptor) {
     const originalMethod = descriptor.value;
 

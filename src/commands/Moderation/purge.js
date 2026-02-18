@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { checkRateLimit } from '../../utils/rateLimiter.js';
@@ -45,7 +44,7 @@ export default {
       });
 
     try {
-      // Check rate limit - 5 purges per minute
+      
       const rateLimitKey = `purge_${interaction.user.id}`;
       const isAllowed = await checkRateLimit(rateLimitKey, 5, 60000);
       if (!isAllowed) {

@@ -74,7 +74,7 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            // Validate member permissions
+            
             if (!hasManageGuildPermission(interaction.member)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
@@ -142,7 +142,7 @@ async function handleSetupSubcommand(interaction, client) {
         if (existingJoinToCreate.size > 0) {
             triggerChannel = existingJoinToCreate.first();
 
-            // Update existing configuration
+            
             const config = await updateChannelConfig(client, guildId, triggerChannel.id, {
                 nameTemplate: nameTemplate,
                 userLimit: userLimit,
@@ -170,7 +170,7 @@ async function handleSetupSubcommand(interaction, client) {
             return await interaction.editReply({ embeds: [responseEmbed] });
 
         } else {
-            // Create new trigger channel
+            
             triggerChannel = await interaction.guild.channels.create({
                 name: 'Join to Create',
                 type: ChannelType.GuildVoice,
@@ -185,7 +185,7 @@ async function handleSetupSubcommand(interaction, client) {
                 ],
             });
 
-            // Initialize configuration
+            
             const config = await initializeJoinToCreate(client, guildId, triggerChannel.id, {
                 nameTemplate: nameTemplate,
                 userLimit: userLimit,
@@ -232,11 +232,11 @@ async function handleConfigSubcommand(interaction, client) {
         const triggerChannel = interaction.options.getChannel('trigger_channel');
         const guildId = interaction.guild.id;
 
-        // Retrieve and validate configuration
+        
         const currentConfig = await getChannelConfiguration(client, guildId, triggerChannel.id);
         const channelConfig = currentConfig.channelConfig || {};
 
-        // Build configuration embed
+        
         const configEmbed = {
             title: '⚙️ Join to Create Configuration',
             description: `Configuration for ${triggerChannel}`,
@@ -262,7 +262,7 @@ async function handleConfigSubcommand(interaction, client) {
             timestamp: new Date()
         };
 
-        // Build configuration buttons
+        
         const nameButton = new ButtonBuilder()
             .setCustomId(`jtc_config_name_${triggerChannel.id}`)
             .setLabel('📝 Name Template')
@@ -290,7 +290,7 @@ async function handleConfigSubcommand(interaction, client) {
             components: [row]
         });
 
-        // Create collector for button interactions
+        
         const collector = message.createMessageComponentCollector({
             componentType: ComponentType.Button,
             time: 300000
@@ -298,7 +298,7 @@ async function handleConfigSubcommand(interaction, client) {
 
         collector.on('collect', async (buttonInteraction) => {
             try {
-                // Verify permission
+                
                 if (!hasManageGuildPermission(buttonInteraction.member)) {
                     await buttonInteraction.reply({
                         content: '❌ You need **Manage Server** permission to use these controls.',
@@ -550,23 +550,23 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
         deleteCollector.on('collect', async (buttonInteraction) => {
             try {
                 if (buttonInteraction.customId === `jtc_delete_confirm_${triggerChannel.id}`) {
-                    // Remove the trigger
+                    
                     await removeTriggerChannel(client, interaction.guild.id, triggerChannel.id);
 
-                    // Log the action
+                    
                     await logConfigurationChange(client, interaction.guild.id, interaction.user.id, 'Removed Join to Create trigger', {
                         channelId: triggerChannel.id,
                         channelName: triggerChannel.name
                     });
 
-                    // Try to delete the actual channel if it's empty
+                    
                     try {
                         if (triggerChannel.members.size === 0) {
                             await triggerChannel.delete('Join to Create trigger removed by administrator');
                         }
                     } catch (deleteError) {
                         logger.warn(`Could not delete channel ${triggerChannel.id}: ${deleteError.message}`);
-                        // Don't throw - the configuration removal was successful
+                        
                     }
 
                     await buttonInteraction.update({

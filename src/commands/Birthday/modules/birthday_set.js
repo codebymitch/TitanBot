@@ -14,7 +14,7 @@ export default {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            // Use service layer - includes validation
+            
             const result = await setBirthday(client, guildId, userId, month, day);
             
             await interaction.editReply({

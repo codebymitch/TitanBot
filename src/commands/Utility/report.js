@@ -1,7 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -25,11 +24,11 @@ export default {
         .setDMPermission(false),
     category: "Utility",
 
-    /**
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction
-     * @param {object} config
-     * @param {import('discord.js').Client} client
-     */
+    
+
+
+
+
     async execute(interaction, config, client) {
         try {
             const targetUser = interaction.options.getUser("user");

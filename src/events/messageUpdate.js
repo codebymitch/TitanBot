@@ -2,6 +2,8 @@ import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 
+const MAX_LOGGED_EDIT_CONTENT_LENGTH = 512;
+
 export default {
   name: Events.MessageUpdate,
   once: false,
@@ -10,12 +12,12 @@ export default {
     try {
       if (!newMessage.guild || newMessage.author?.bot) return;
 
-      // Only log if content actually changed
+      
       if (oldMessage.content === newMessage.content) return;
 
       const fields = [];
 
-      // Add message author info
+      
       if (newMessage.author) {
         fields.push({
           name: '👤 Author',
@@ -24,17 +26,17 @@ export default {
         });
       }
 
-      // Add channel info
+      
       fields.push({
         name: '💬 Channel',
         value: `${newMessage.channel.toString()} (${newMessage.channel.id})`,
         inline: true
       });
 
-      // Add old content
+      
       const oldContent = oldMessage.content || '*(empty message)*';
-      const oldContentTruncated = oldContent.length > 512 
-        ? oldContent.substring(0, 509) + '...' 
+      const oldContentTruncated = oldContent.length > MAX_LOGGED_EDIT_CONTENT_LENGTH 
+        ? oldContent.substring(0, MAX_LOGGED_EDIT_CONTENT_LENGTH - 3) + '...' 
         : oldContent;
       fields.push({
         name: '📝 Old Content',
@@ -42,10 +44,10 @@ export default {
         inline: false
       });
 
-      // Add new content
+      
       const newContent = newMessage.content || '*(empty message)*';
-      const newContentTruncated = newContent.length > 512 
-        ? newContent.substring(0, 509) + '...' 
+      const newContentTruncated = newContent.length > MAX_LOGGED_EDIT_CONTENT_LENGTH 
+        ? newContent.substring(0, MAX_LOGGED_EDIT_CONTENT_LENGTH - 3) + '...' 
         : newContent;
       fields.push({
         name: '📝 New Content',
@@ -53,7 +55,7 @@ export default {
         inline: false
       });
 
-      // Add message ID
+      
       fields.push({
         name: '🆔 Message ID',
         value: newMessage.id,

@@ -1,33 +1,33 @@
-/**
- * CONFIG SERVICE
- * 
- * Centralized business logic for guild configuration operations
- * Provides validation, permission checks, audit trail, and conflict detection
- * 
- * Features:
- * - Centralized setting validation
- * - Permission verification and enforcement
- * - Configuration change audit trail
- * - Settings conflict detection and prevention
- * - Bulk config updates with validation
- * - Configuration rollback support
- * - Change notification system
- * 
- * Usage:
- * import ConfigService from '../../services/configService.js';
- * const result = await ConfigService.updateSetting(client, guildId, 'logChannelId', channelId, adminId);
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { logger } from '../utils/logger.js';
 import { getGuildConfig, setGuildConfig } from './guildConfig.js';
-import { Permissions } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 
-// Config change history for audit trail
+
 const configChangeHistory = new Map();
 const CONFIG_HISTORY_LIMIT = 100;
 
-// Configuration validation rules
+
 const CONFIG_VALIDATION_RULES = {
     logChannelId: { type: 'channel', required: false },
     reportChannelId: { type: 'channel', required: false },
@@ -43,7 +43,7 @@ const CONFIG_VALIDATION_RULES = {
     logging: { type: 'object', required: false }
 };
 
-// Settings that have dependencies/conflicts
+
 const SETTING_CONFLICTS = {
     'logChannelId': ['logging'],
     'birthdayChannelId': [],
@@ -53,19 +53,40 @@ const SETTING_CONFLICTS = {
 
 class ConfigService {
 
-    // ========== CONSTANTS ==========
+    
     static MAX_CHANNEL_IDS = 10;
     static MAX_ROLE_IDS = 20;
     static MAX_PREFIX_LENGTH = 10;
-    static PROTECTED_SETTINGS = ['_id', 'guildId', 'createdAt']; // Cannot be modified
+    static PROTECTED_SETTINGS = ['_id', 'guildId', 'createdAt']; 
+    static UNSAFE_KEYS = ['__proto__', 'prototype', 'constructor'];
 
-    /**
-     * Validate configuration value based on rules
-     * @param {string} key - Config key
-     * @param {*} value - Config value to validate
-     * @param {Guild} guild - Discord guild for context
-     * @returns {Promise<boolean>}
-     */
+    static validateConfigKeySafety(key) {
+        if (typeof key !== 'string' || key.trim().length === 0) {
+            throw createError(
+                'Invalid setting key',
+                ErrorTypes.VALIDATION,
+                'Setting key must be a non-empty string.',
+                { key }
+            );
+        }
+
+        if (this.UNSAFE_KEYS.includes(key)) {
+            throw createError(
+                'Unsafe setting key',
+                ErrorTypes.VALIDATION,
+                'This setting key is not allowed for security reasons.',
+                { key }
+            );
+        }
+    }
+
+    
+
+
+
+
+
+
     static async validateConfigValue(key, value, guild) {
         logger.debug(`[CONFIG_SERVICE] Validating config value`, { key, type: typeof value });
 
@@ -73,15 +94,15 @@ class ConfigService {
         
         if (!rule) {
             logger.warn(`[CONFIG_SERVICE] No validation rule for key: ${key}`);
-            return true; // Allow unknown keys
+            return true; 
         }
 
-        // Handle null/undefined for optional settings
+        
         if (rule.required === false && (value === null || value === undefined)) {
             return true;
         }
 
-        // Type validation
+        
         if (rule.type === 'channel') {
             if (typeof value !== 'string' && typeof value !== 'object') {
                 throw createError(
@@ -138,7 +159,7 @@ class ConfigService {
                 );
             }
 
-            // Check if bot can interact with this role
+            
             const botHighestRole = guild.members.me?.roles.highest;
             if (role.position >= botHighestRole?.position) {
                 throw createError(
@@ -244,13 +265,13 @@ class ConfigService {
         return true;
     }
 
-    /**
-     * Detect configuration conflicts
-     * @param {Object} currentConfig - Current configuration
-     * @param {string} key - Key being updated
-     * @param {*} value - New value
-     * @returns {string[]} Array of conflict descriptions
-     */
+    
+
+
+
+
+
+
     static detectConflicts(currentConfig, key, value) {
         logger.debug(`[CONFIG_SERVICE] Checking for config conflicts`, { key });
 
@@ -259,7 +280,7 @@ class ConfigService {
 
         for (const related of relatedSettings) {
             if (related === 'logging' && value === null) {
-                // Disabling log channel might conflict with logging system
+                
                 if (currentConfig.logging?.enabled) {
                     conflicts.push(
                         `Disabling log channel but logging system is still enabled. Consider disabling logging first.`
@@ -271,15 +292,15 @@ class ConfigService {
         return conflicts;
     }
 
-    /**
-     * Update a single configuration setting with validation
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {string} key - Setting key
-     * @param {*} value - New value
-     * @param {string} adminId - Admin user ID for audit
-     * @returns {Promise<Object>} Update result
-     */
+    
+
+
+
+
+
+
+
+
     static async updateSetting(client, guildId, key, value, adminId) {
         logger.info(`[CONFIG_SERVICE] Updating setting`, {
             guildId,
@@ -288,7 +309,9 @@ class ConfigService {
             valueType: typeof value
         });
 
-        // Prevent modification of protected settings
+        
+        this.validateConfigKeySafety(key);
+
         if (this.PROTECTED_SETTINGS.includes(key)) {
             logger.warn(`[CONFIG_SERVICE] Attempted to modify protected setting`, {
                 key,
@@ -303,7 +326,7 @@ class ConfigService {
             );
         }
 
-        // Get guild for context
+        
         const guild = client.guilds.cache.get(guildId);
         if (!guild) {
             throw createError(
@@ -314,13 +337,13 @@ class ConfigService {
             );
         }
 
-        // Validate value
+        
         await this.validateConfigValue(key, value, guild);
 
-        // Get current config for conflict detection
+        
         const currentConfig = await getGuildConfig(client, guildId);
 
-        // Check for conflicts
+        
         const conflicts = this.detectConflicts(currentConfig, key, value);
         if (conflicts.length > 0) {
             logger.warn(`[CONFIG_SERVICE] Config conflicts detected`, {
@@ -328,17 +351,17 @@ class ConfigService {
                 key,
                 conflicts
             });
-            // Log conflicts but don't prevent update (allow user to proceed)
+            
         }
 
-        // Store old value for audit
+        
         const oldValue = currentConfig[key];
 
-        // Update config
+        
         const updatedConfig = { ...currentConfig, [key]: value };
         await setGuildConfig(client, guildId, updatedConfig);
 
-        // Record audit trail
+        
         this.recordChange(guildId, {
             key,
             oldValue,
@@ -367,14 +390,14 @@ class ConfigService {
         };
     }
 
-    /**
-     * Bulk update multiple settings
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {Object} updates - Keys and values to update
-     * @param {string} adminId - Admin user ID for audit
-     * @returns {Promise<Object>} Bulk update result
-     */
+    
+
+
+
+
+
+
+
     static async bulkUpdate(client, guildId, updates, adminId) {
         logger.info(`[CONFIG_SERVICE] Bulk updating settings`, {
             guildId,
@@ -392,12 +415,14 @@ class ConfigService {
             );
         }
 
-        // Validate all updates first
+        
         const validatedUpdates = {};
         const validationErrors = [];
 
         for (const [key, value] of Object.entries(updates)) {
             try {
+                this.validateConfigKeySafety(key);
+
                 if (this.PROTECTED_SETTINGS.includes(key)) {
                     validationErrors.push(`${key}: Protected setting cannot be modified`);
                     continue;
@@ -423,14 +448,14 @@ class ConfigService {
             );
         }
 
-        // Get current config
+        
         const currentConfig = await getGuildConfig(client, guildId);
 
-        // Apply updates
+        
         const updatedConfig = { ...currentConfig, ...validatedUpdates };
         await setGuildConfig(client, guildId, updatedConfig);
 
-        // Record each change
+        
         for (const [key, value] of Object.entries(validatedUpdates)) {
             this.recordChange(guildId, {
                 key,
@@ -459,10 +484,10 @@ class ConfigService {
         };
     }
 
-    /**
-     * Record configuration change for audit trail
-     * @private
-     */
+    
+
+
+
     static recordChange(guildId, changeData) {
         if (!configChangeHistory.has(guildId)) {
             configChangeHistory.set(guildId, []);
@@ -471,7 +496,7 @@ class ConfigService {
         const history = configChangeHistory.get(guildId);
         history.push(changeData);
 
-        // Keep only last N changes
+        
         if (history.length > CONFIG_HISTORY_LIMIT) {
             history.shift();
         }
@@ -483,25 +508,25 @@ class ConfigService {
         });
     }
 
-    /**
-     * Get configuration change history
-     * @param {string} guildId - Guild ID
-     * @param {number} limit - Maximum number of records
-     * @returns {Object[]} Change history
-     */
+    
+
+
+
+
+
     static getChangeHistory(guildId, limit = 20) {
         const history = configChangeHistory.get(guildId) || [];
         return history.slice(-limit).reverse();
     }
 
-    /**
-     * Reset setting to default value
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {string} key - Setting key
-     * @param {string} adminId - Admin user ID for audit
-     * @returns {Promise<Object>} Result
-     */
+    
+
+
+
+
+
+
+
     static async resetSetting(client, guildId, key, adminId) {
         logger.info(`[CONFIG_SERVICE] Resetting setting`, {
             guildId,
@@ -512,7 +537,7 @@ class ConfigService {
         const currentConfig = await getGuildConfig(client, guildId);
         const oldValue = currentConfig[key];
 
-        // Get default value (null for optional settings)
+        
         const defaultValue = null;
 
         const updatedConfig = { ...currentConfig, [key]: defaultValue };
@@ -543,12 +568,12 @@ class ConfigService {
         };
     }
 
-    /**
-     * Get all guild settings summary
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @returns {Promise<Object>} Configuration summary
-     */
+    
+
+
+
+
+
     static async getConfigSummary(client, guildId) {
         logger.debug(`[CONFIG_SERVICE] Fetching config summary`, { guildId });
 
@@ -564,7 +589,7 @@ class ConfigService {
             );
         }
 
-        // Get readable names for IDs
+        
         const summary = {};
 
         for (const [key, value] of Object.entries(config)) {
@@ -599,15 +624,15 @@ class ConfigService {
         };
     }
 
-    /**
-     * Verify user has permission to modify settings
-     * @param {GuildMember} member - Guild member
-     * @returns {boolean}
-     */
+    
+
+
+
+
     static verifyPermission(member) {
         return member.permissions.has([
-            Permissions.FLAGS.ADMINISTRATOR,
-            Permissions.FLAGS.MANAGE_GUILD
+            PermissionFlagsBits.Administrator,
+            PermissionFlagsBits.ManageGuild
         ]);
     }
 }

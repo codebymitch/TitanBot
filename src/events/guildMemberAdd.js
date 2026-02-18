@@ -83,19 +83,22 @@ export default {
             const delay = welcomeConfig.autoRoleDelay || 0;
             
             if (delay > 0) {
-                setTimeout(async () => {
+                const timeout = setTimeout(async () => {
                     for (const roleId of welcomeConfig.roleIds) {
                         const role = guild.roles.cache.get(roleId);
                         if (role) {
-                            await member.roles.add(role).catch(() => {});
+                            await assignRoleSafely(member, role);
                         }
                     }
                 }, delay * 1000);
+                if (typeof timeout.unref === 'function') {
+                    timeout.unref();
+                }
             } else {
                 for (const roleId of welcomeConfig.roleIds) {
                     const role = guild.roles.cache.get(roleId);
                     if (role) {
-                        await member.roles.add(role).catch(() => {});
+                        await assignRoleSafely(member, role);
                     }
                 }
             }
@@ -105,7 +108,7 @@ export default {
             await handleVerification(member, guild, config.verification, member.client);
         }
 
-        // Log member join event
+        
         try {
             await logEvent({
                 client: member.client,
@@ -137,7 +140,7 @@ export default {
             logger.debug('Error logging member join:', error);
         }
         
-        // Update counters in real-time when member joins
+        
         try {
             const counters = await getServerCounters(member.client, guild.id);
             for (const counter of counters) {
@@ -184,6 +187,14 @@ async function handleVerification(member, guild, verificationConfig, client) {
             userTag: member.user.tag,
             error: error.message
         });
+    }
+}
+
+async function assignRoleSafely(member, role) {
+    try {
+        await member.roles.add(role);
+    } catch (error) {
+        logger.warn(`Failed to assign role ${role.id} to member ${member.id}:`, error);
     }
 }
 

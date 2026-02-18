@@ -138,6 +138,28 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
    LOG_LEVEL=info
    ```
 
+   Production note:
+   - `NODE_ENV=production`
+   - `LOG_LEVEL=warn` for a clean production console (critical issues + startup status)
+   - `LOG_LEVEL=info` if you want more detailed operational logs
+   - If your chosen `PORT` is already used, TitanBot now automatically tries the next port(s)
+
+   Environment options reference:
+   - `NODE_ENV`: `development`, `production`, `test` (any non-`production` value is treated as non-production)
+   - `LOG_LEVEL`: `error`, `warn`, `info`, `http`, `verbose`, `debug`, `silly`
+   - Accepted aliases for `LOG_LEVEL` in this bot: `warns`, `warning`, `warnings` → `warn`
+
+   Recommended production `.env` (easy mode):
+   ```env
+   NODE_ENV=production
+   LOG_LEVEL=warn
+   WEB_HOST=0.0.0.0
+   PORT=3000
+   PORT_RETRY_ATTEMPTS=5
+   ```
+   This gives clear startup/online status messages while keeping logs simple for non-technical operators.
+   If port `3000` is busy, the bot tries the next available ports automatically (up to `PORT_RETRY_ATTEMPTS`).
+
 4. **Setup PostgreSQL Database** (Optional but recommended)
    ```bash
    # Create database and user

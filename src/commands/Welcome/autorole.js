@@ -49,7 +49,7 @@ const { options, guild, client } = interaction;
                 const config = await getWelcomeConfig(client, guild.id);
                 const existingRoles = config.roleIds || [];
                 
-                // Check if role already exists (deduplication)
+                
                 if (existingRoles.includes(role.id)) {
                     logger.info(`[Autorole] User ${interaction.user.tag} tried to add duplicate role ${role.name} (${role.id}) in ${guild.name}`);
                     return interaction.editReply({
@@ -58,7 +58,7 @@ const { options, guild, client } = interaction;
                     });
                 }
 
-                // Add unique role
+                
                 const updatedRoles = [...new Set([...existingRoles, role.id])];
                 
                 await updateWelcomeConfig(client, guild.id, {

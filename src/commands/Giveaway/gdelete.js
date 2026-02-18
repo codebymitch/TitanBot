@@ -21,7 +21,7 @@ export default {
 
     async execute(interaction) {
         try {
-            // Validate guild context
+            
             if (!interaction.inGuild()) {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
@@ -31,7 +31,7 @@ export default {
                 );
             }
 
-            // Validate permissions
+            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
@@ -45,7 +45,7 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            // Validate message ID format
+            
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new TitanBotError(
                     'Invalid message ID format',
@@ -70,7 +70,7 @@ export default {
             let deletedMessage = false;
             let channelName = "Unknown Channel";
 
-            // Try to delete the message
+            
             try {
                 const channel = await interaction.client.channels.fetch(giveaway.channelId).catch(() => null);
                 if (channel && channel.isTextBased()) {
@@ -86,7 +86,7 @@ export default {
                 logger.warn(`Could not delete giveaway message: ${error.message}`);
             }
 
-            // Remove from database
+            
             await deleteGiveaway(
                 interaction.client,
                 interaction.guildId,
@@ -99,7 +99,7 @@ export default {
 
             logger.info(`Giveaway deleted: ${messageId} in ${channelName}`);
 
-            // Log deletion event
+            
             try {
                 await logEvent({
                     client: interaction.client,

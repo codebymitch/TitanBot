@@ -4,11 +4,11 @@ import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js'
 import { getServerCounters, saveServerCounters } from '../../../services/counterService.js';
 import { logger } from '../../../utils/logger.js';
 
-/**
- * Handle counter deletion subcommand
- * @param {CommandInteraction} interaction - The command interaction
- * @param {Client} client - Discord client
- */
+
+
+
+
+
 export async function handleDelete(interaction, client) {
     const guild = interaction.guild;
     const counterId = interaction.options.getString("counter-id");
@@ -111,13 +111,13 @@ time: 30000,
     }
 }
 
-/**
- * Perform the actual counter deletion
- * @param {CommandInteraction} interaction - The command interaction
- * @param {Client} client - Discord client
- * @param {Guild} guild - The guild
- * @param {Object} counter - The counter to delete
- */
+
+
+
+
+
+
+
 async function performDeletion(interaction, client, guild, counter) {
     try {
         const counters = await getServerCounters(client, guild.id);
@@ -168,11 +168,11 @@ async function performDeletion(interaction, client, guild, counter) {
     }
 }
 
-/**
- * Get display name for counter type
- * @param {string} type - Counter type
- * @returns {string} Display name
- */
+
+
+
+
+
 function getCounterTypeDisplay(type) {
     const types = {
         members: "👥 Members",

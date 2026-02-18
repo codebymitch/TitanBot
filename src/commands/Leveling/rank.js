@@ -1,7 +1,7 @@
-/**
- * Rank Command
- * Shows a user's rank and leveling progress
- */
+
+
+
+
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { logger } from '../../utils/logger.js';
@@ -21,12 +21,12 @@ export default {
     .setDMPermission(false),
   category: 'Leveling',
 
-  /**
-   * Execute rank command
-   * @param {ChatInputCommandInteraction} interaction - Command interaction
-   * @param {Object} config - Guild configuration
-   * @param {Client} client - Discord client
-   */
+  
+
+
+
+
+
   async execute(interaction, config, client) {
     try {
       await interaction.deferReply();
@@ -106,12 +106,12 @@ export default {
   }
 };
 
-/**
- * Create a visual progress bar
- * @param {number} percentage - Progress percentage (0-100)
- * @param {number} length - Length of the progress bar
- * @returns {string} Formatted progress bar
- */
+
+
+
+
+
+
 function createProgressBar(percentage, length = 10) {
   if (percentage < 0 || percentage > 100) {
     percentage = Math.max(0, Math.min(100, percentage));

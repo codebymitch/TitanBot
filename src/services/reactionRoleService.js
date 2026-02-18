@@ -1,14 +1,14 @@
 import { logger } from '../utils/logger.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 
-/**
- * Maximum number of roles allowed per reaction role message
- */
+
+
+
 const MAX_ROLES_PER_MESSAGE = 25;
 
-/**
- * Dangerous permissions that should not be assigned via reaction roles
- */
+
+
+
 const DANGEROUS_PERMISSIONS = [
     'Administrator',
     'ManageGuild',
@@ -19,11 +19,11 @@ const DANGEROUS_PERMISSIONS = [
     'KickMembers'
 ];
 
-/**
- * Validate guild ID format
- * @param {string} guildId - The guild ID to validate
- * @throws {TitanBotError} If guild ID is invalid
- */
+
+
+
+
+
 function validateGuildId(guildId) {
     if (!guildId || typeof guildId !== 'string' || !/^\d{17,19}$/.test(guildId)) {
         throw createError(
@@ -35,11 +35,11 @@ function validateGuildId(guildId) {
     }
 }
 
-/**
- * Validate message ID format
- * @param {string} messageId - The message ID to validate
- * @throws {TitanBotError} If message ID is invalid
- */
+
+
+
+
+
 function validateMessageId(messageId) {
     if (!messageId || typeof messageId !== 'string' || !/^\d{17,19}$/.test(messageId)) {
         throw createError(
@@ -51,11 +51,11 @@ function validateMessageId(messageId) {
     }
 }
 
-/**
- * Validate role ID format
- * @param {string} roleId - The role ID to validate
- * @throws {TitanBotError} If role ID is invalid
- */
+
+
+
+
+
 function validateRoleId(roleId) {
     if (!roleId || typeof roleId !== 'string' || !/^\d{17,19}$/.test(roleId)) {
         throw createError(
@@ -67,11 +67,11 @@ function validateRoleId(roleId) {
     }
 }
 
-/**
- * Check if a role has dangerous permissions
- * @param {import('discord.js').Role} role - The role to check
- * @returns {boolean} True if role has dangerous permissions
- */
+
+
+
+
+
 export function hasDangerousPermissions(role) {
     if (!role || !role.permissions) return false;
     
@@ -81,6 +81,47 @@ export function hasDangerousPermissions(role) {
         }
     }
     return false;
+}
+
+async function validateRoleSafety(client, guildId, roleId) {
+    const guild = client.guilds?.cache?.get(guildId) || await client.guilds?.fetch?.(guildId).catch(() => null);
+    if (!guild) {
+        throw createError(
+            `Guild not found for role validation: ${guildId}`,
+            ErrorTypes.VALIDATION,
+            'Server not found while validating reaction roles.',
+            { guildId, roleId }
+        );
+    }
+
+    const role = guild.roles.cache.get(roleId) || await guild.roles.fetch(roleId).catch(() => null);
+    if (!role) {
+        throw createError(
+            `Role not found: ${roleId}`,
+            ErrorTypes.VALIDATION,
+            'One or more selected roles no longer exist.',
+            { guildId, roleId }
+        );
+    }
+
+    if (hasDangerousPermissions(role)) {
+        throw createError(
+            `Dangerous role permission detected: ${roleId}`,
+            ErrorTypes.PERMISSION,
+            'For security reasons, high-privilege roles cannot be assigned through reaction roles.',
+            { guildId, roleId, roleName: role.name, dangerousPermissions: DANGEROUS_PERMISSIONS }
+        );
+    }
+
+    const botHighestRole = guild.members.me?.roles?.highest;
+    if (!botHighestRole || role.position >= botHighestRole.position) {
+        throw createError(
+            `Role above bot hierarchy: ${roleId}`,
+            ErrorTypes.PERMISSION,
+            'I cannot assign this role because it is equal to or above my highest role.',
+            { guildId, roleId, rolePosition: role.position, botRolePosition: botHighestRole?.position }
+        );
+    }
 }
 
 /**
@@ -113,16 +154,16 @@ export async function getReactionRoleMessage(client, guildId, messageId) {
     }
 }
 
-/**
- * Create or update a reaction role message
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} channelId - The channel ID
- * @param {string} messageId - The message ID
- * @param {string[]} roleIds - Array of role IDs
- * @returns {Promise<Object>} The created/updated reaction role data
- * @throws {TitanBotError} If validation fails or role limit exceeded
- */
+
+
+
+
+
+
+
+
+
+
 export async function createReactionRoleMessage(client, guildId, channelId, messageId, roleIds) {
     try {
         validateGuildId(guildId);
@@ -155,8 +196,11 @@ export async function createReactionRoleMessage(client, guildId, channelId, mess
             );
         }
         
-        // Validate all role IDs
-        roleIds.forEach(roleId => validateRoleId(roleId));
+        
+        for (const roleId of roleIds) {
+            validateRoleId(roleId);
+            await validateRoleSafety(client, guildId, roleId);
+        }
         
         const reactionRoleData = {
             guildId,
@@ -185,21 +229,22 @@ export async function createReactionRoleMessage(client, guildId, channelId, mess
     }
 }
 
-/**
- * Add a reaction role to a message
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} messageId - The message ID
- * @param {string} emoji - The emoji ID or name
- * @param {string} roleId - The role ID
- * @returns {Promise<boolean>} Whether the operation was successful
- * @throws {TitanBotError} If validation fails
- */
+
+
+
+
+
+
+
+
+
+
 export async function addReactionRole(client, guildId, messageId, emoji, roleId) {
     try {
         validateGuildId(guildId);
         validateMessageId(messageId);
         validateRoleId(roleId);
+        await validateRoleSafety(client, guildId, roleId);
         
         const key = `reaction_roles:${guildId}:${messageId}`;
         const data = await getReactionRoleMessage(client, guildId, messageId) || {
@@ -228,14 +273,14 @@ export async function addReactionRole(client, guildId, messageId, emoji, roleId)
     }
 }
 
-/**
- * Delete a reaction role message
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} messageId - The message ID
- * @returns {Promise<boolean>} Whether the operation was successful
- * @throws {TitanBotError} If validation fails or message not found
- */
+
+
+
+
+
+
+
+
 export async function deleteReactionRoleMessage(client, guildId, messageId) {
     try {
         validateGuildId(guildId);
@@ -270,15 +315,15 @@ export async function deleteReactionRoleMessage(client, guildId, messageId) {
     }
 }
 
-/**
- * Remove a reaction role from a message
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} messageId - The message ID
- * @param {string} emoji - The emoji ID or name
- * @returns {Promise<boolean>} Whether the operation was successful
- * @throws {TitanBotError} If validation fails
- */
+
+
+
+
+
+
+
+
+
 export async function removeReactionRole(client, guildId, messageId, emoji) {
     try {
         validateGuildId(guildId);
@@ -335,7 +380,7 @@ export async function getAllReactionRoleMessages(client, guildId) {
             
             if (keys && typeof keys === 'object') {
                 if (Array.isArray(keys)) {
-                    // keys is already an array
+                    
                 } else if (keys.value && Array.isArray(keys.value)) {
                     keys = keys.value;
                 } else {
@@ -388,7 +433,7 @@ export async function getAllReactionRoleMessages(client, guildId) {
                 }
             } catch (dataError) {
                 logger.warn(`Error getting data for reaction role key ${key}:`, dataError);
-                // Continue processing other keys
+                
             }
         }
 
@@ -408,15 +453,15 @@ export async function getAllReactionRoleMessages(client, guildId) {
     }
 }
 
-/**
- * Set the channel ID for a reaction role message
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} messageId - The message ID
- * @param {string} channelId - The channel ID
- * @returns {Promise<boolean>} Whether the operation was successful
- * @throws {TitanBotError} If validation fails
- */
+
+
+
+
+
+
+
+
+
 export async function setReactionRoleChannel(client, guildId, messageId, channelId) {
     try {
         validateGuildId(guildId);

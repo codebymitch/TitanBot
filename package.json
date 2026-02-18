@@ -6,12 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
-    "migrate": "node scripts/migrate.js",
-    "railway:start": "NODE_ENV=production node src/app.js",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
+    "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
-    "@discordjs/rest": "^1.8.0",
     "axios": "^1.13.2",
     "discord.js": "^14.15.3",
     "dotenv": "^17.2.3",
@@ -23,14 +20,9 @@
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^3.25.76"
   },
-  "devDependencies": {
-    "jest": "^29.7.0"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "extensionsToTreatAsEsm": [
-      ".js"
-    ]
+  "devDependencies": {},
+  "overrides": {
+    "undici": "^6.23.0"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,7 +1,7 @@
-/**
- * Level Set Command
- * Sets a user's level to a specific value (admin only)
- */
+
+
+
+
 
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../../utils/logger.js';
@@ -31,17 +31,17 @@ export default {
     .setDMPermission(false),
   category: 'Leveling',
 
-  /**
-   * Execute levelset command
-   * @param {ChatInputCommandInteraction} interaction - Command interaction
-   * @param {Object} config - Guild configuration
-   * @param {Client} client - Discord client
-   */
+  
+
+
+
+
+
   async execute(interaction, config, client) {
     try {
       await interaction.deferReply();
 
-      // Check permissions
+      
       const hasPermission = await checkUserPermissions(
         interaction,
         PermissionFlagsBits.ManageGuild,
@@ -52,7 +52,7 @@ export default {
       const targetUser = interaction.options.getUser('user');
       const newLevel = interaction.options.getInteger('level');
 
-      // Validate user exists in guild
+      
       const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
       if (!member) {
         throw new TitanBotError(
@@ -62,7 +62,7 @@ export default {
         );
       }
 
-      // Use service to set level (includes validation)
+      
       const userData = await setUserLevel(client, interaction.guildId, targetUser.id, newLevel);
 
       await interaction.editReply({

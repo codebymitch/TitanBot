@@ -3,14 +3,14 @@ import { getGuildBirthdays, setBirthday as dbSetBirthday, deleteBirthday as dbDe
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 
-/**
- * Validate a birthday date
- * @param {number} month - Month (1-12)
- * @param {number} day - Day (1-31)
- * @returns {Object} Validation result with isValid and error properties
- */
+
+
+
+
+
+
 export function validateBirthday(month, day) {
-  // Check if month and day are numbers
+  
   if (typeof month !== 'number' || typeof day !== 'number') {
     return {
       isValid: false,
@@ -18,7 +18,7 @@ export function validateBirthday(month, day) {
     };
   }
 
-  // Check month range
+  
   if (month < 1 || month > 12) {
     return {
       isValid: false,
@@ -26,7 +26,7 @@ export function validateBirthday(month, day) {
     };
   }
 
-  // Check day range
+  
   if (day < 1 || day > 31) {
     return {
       isValid: false,
@@ -34,7 +34,7 @@ export function validateBirthday(month, day) {
     };
   }
 
-  // Validate the date exists (e.g., no February 30th)
+  
   const currentYear = new Date().getFullYear();
   const date = new Date(currentYear, month - 1, day);
   
@@ -48,18 +48,18 @@ export function validateBirthday(month, day) {
   return { isValid: true };
 }
 
-/**
- * Set a user's birthday with validation
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @param {number} month - Month (1-12)
- * @param {number} day - Day (1-31)
- * @returns {Promise<Object>} Result object with success, data, and error properties
- */
+
+
+
+
+
+
+
+
+
 export async function setBirthday(client, guildId, userId, month, day) {
   try {
-    // Validate input
+    
     const validation = validateBirthday(month, day);
     if (!validation.isValid) {
       logger.warn('Birthday validation failed', {
@@ -120,13 +120,13 @@ export async function setBirthday(client, guildId, userId, month, day) {
   }
 }
 
-/**
- * Get a user's birthday
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @returns {Promise<Object|null>} Birthday data or null if not found
- */
+
+
+
+
+
+
+
 export async function getUserBirthday(client, guildId, userId) {
   try {
     const birthdays = await getGuildBirthdays(client, guildId);
@@ -151,12 +151,12 @@ export async function getUserBirthday(client, guildId, userId) {
   }
 }
 
-/**
- * Get all birthdays in a guild with sorting
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @returns {Promise<Array>} Sorted array of birthday objects
- */
+
+
+
+
+
+
 export async function getAllBirthdays(client, guildId) {
   try {
     const birthdays = await getGuildBirthdays(client, guildId);
@@ -165,7 +165,7 @@ export async function getAllBirthdays(client, guildId) {
       return [];
     }
 
-    // Transform and sort
+    
     const sortedBirthdays = Object.entries(birthdays)
       .map(([userId, data]) => ({
         userId,
@@ -188,16 +188,16 @@ export async function getAllBirthdays(client, guildId) {
   }
 }
 
-/**
- * Delete a user's birthday
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @returns {Promise<Object>} Result object with success property
- */
+
+
+
+
+
+
+
 export async function deleteBirthday(client, guildId, userId) {
   try {
-    // Check if birthday exists first
+    
     const birthday = await getUserBirthday(client, guildId, userId);
     
     if (!birthday) {
@@ -238,13 +238,13 @@ export async function deleteBirthday(client, guildId, userId) {
   }
 }
 
-/**
- * Get upcoming birthdays
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {number} limit - Maximum number of birthdays to return (default: 5)
- * @returns {Promise<Array>} Array of upcoming birthdays
- */
+
+
+
+
+
+
+
 export async function getUpcomingBirthdays(client, guildId, limit = 5) {
   try {
     const birthdays = await getGuildBirthdays(client, guildId);
@@ -261,7 +261,7 @@ export async function getUpcomingBirthdays(client, guildId, limit = 5) {
     for (const [userId, userData] of Object.entries(birthdays)) {
       let nextBirthday = new Date(currentYear, userData.month - 1, userData.day);
       
-      // If birthday has passed this year, use next year's date
+      
       if (nextBirthday < today) {
         nextBirthday = new Date(currentYear + 1, userData.month - 1, userData.day);
       }
@@ -278,10 +278,10 @@ export async function getUpcomingBirthdays(client, guildId, limit = 5) {
       });
     }
 
-    // Sort by days until birthday
+    
     upcomingBirthdays.sort((a, b) => a.daysUntil - b.daysUntil);
     
-    // Return limited results
+    
     return upcomingBirthdays.slice(0, limit);
   } catch (error) {
     logger.error('Error in getUpcomingBirthdays service', {
@@ -293,12 +293,12 @@ export async function getUpcomingBirthdays(client, guildId, limit = 5) {
   }
 }
 
-/**
- * Get birthdays happening today
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @returns {Promise<Array>} Array of user IDs with birthdays today
- */
+
+
+
+
+
+
 export async function getTodaysBirthdays(client, guildId) {
   try {
     const birthdays = await getGuildBirthdays(client, guildId);
@@ -329,10 +329,10 @@ export async function getTodaysBirthdays(client, guildId) {
   }
 }
 
-/**
- * Check for birthdays across all guilds and send birthday messages
- * @param {Object} client - Discord client
- */
+
+
+
+
 export async function checkBirthdays(client) {
   const today = new Date();
   const currentMonth = today.getUTCMonth() + 1;

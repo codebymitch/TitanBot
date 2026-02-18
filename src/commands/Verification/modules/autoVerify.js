@@ -1,10 +1,16 @@
-import { getColor } from '../../../config/bot.js';
+import { botConfig, getColor } from '../../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { validateAutoVerifyCriteria } from '../../../services/verificationService.js';
 import { logger } from '../../../utils/logger.js';
+
+const autoVerifyDefaults = botConfig.verification?.autoVerify || {};
+const minAccountAgeDays = autoVerifyDefaults.minAccountAge ?? 1;
+const maxAccountAgeDays = autoVerifyDefaults.maxAccountAge ?? 365;
+const defaultAccountAgeDays = autoVerifyDefaults.defaultAccountAgeDays ?? 7;
+const serverSizeThreshold = autoVerifyDefaults.serverSizeThreshold ?? 1000;
 
 export default {
     data: new SlashCommandBuilder()
@@ -20,8 +26,8 @@ export default {
                         .setName("criteria")
                         .setDescription("Criteria for automatic verification")
                         .addChoices(
-                            { name: "Account Age (older than 7 days)", value: "account_age" },
-                            { name: "Server Members (less than 1000 members)", value: "server_size" },
+                            { name: `Account Age (older than ${defaultAccountAgeDays} days)`, value: "account_age" },
+                            { name: `Server Members (less than ${serverSizeThreshold} members)`, value: "server_size" },
                             { name: "No Criteria (verify everyone)", value: "none" }
                         )
                         .setRequired(true)
@@ -30,8 +36,8 @@ export default {
                     option
                         .setName("account_age_days")
                         .setDescription("Minimum account age in days (for account age criteria)")
-                        .setMinValue(1)
-                        .setMaxValue(365)
+                        .setMinValue(minAccountAgeDays)
+                        .setMaxValue(maxAccountAgeDays)
                         .setRequired(false)
                 )
         )
@@ -72,12 +78,12 @@ export default {
 
 async function handleEnable(interaction, guild, client) {
     const criteria = interaction.options.getString("criteria");
-    const accountAgeDays = interaction.options.getInteger("account_age_days") || 7;
+    const accountAgeDays = interaction.options.getInteger("account_age_days") || defaultAccountAgeDays;
 
     await interaction.deferReply();
 
     try {
-        // Validate criteria using service
+        
         validateAutoVerifyCriteria(criteria, criteria === 'account_age' ? accountAgeDays : 1);
 
         const guildConfig = await getGuildConfig(client, guild.id);
@@ -100,7 +106,7 @@ async function handleEnable(interaction, guild, client) {
                 criteriaDescription = `Accounts older than ${accountAgeDays} days`;
                 break;
             case "server_size":
-                criteriaDescription = "All users (server has less than 1000 members)";
+                criteriaDescription = `All users (server has less than ${serverSizeThreshold} members)`;
                 break;
             case "none":
                 criteriaDescription = "All users immediately";
@@ -121,7 +127,7 @@ async function handleEnable(interaction, guild, client) {
         });
 
     } catch (error) {
-        // Error already handled by withErrorHandling wrapper
+        
         throw error;
     }
 }
@@ -171,7 +177,7 @@ async function handleStatus(interaction, guild, client) {
             criteriaDescription = `Accounts older than ${autoVerify.accountAgeDays} days`;
             break;
         case "server_size":
-            criteriaDescription = "All users (server has less than 1000 members)";
+            criteriaDescription = `All users (server has less than ${serverSizeThreshold} members)`;
             break;
         case "none":
             criteriaDescription = "All users immediately";

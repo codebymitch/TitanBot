@@ -3,21 +3,21 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logger } from '../../utils/logger.js';
 import { getFromDb, setInDb, deleteFromDb } from '../../utils/database.js';
 import { sanitizeInput } from '../../utils/sanitization.js';
-/**
- * Get user notes key for database
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @returns {string} Database key
- */
+
+
+
+
+
+
 function getUserNotesKey(guildId, userId) {
     return `moderation_user_notes_${guildId}_${userId}`;
 }
 
-/**
- * Get all user notes for a guild
- * @param {string} guildId - Guild ID
- * @returns {string} Database key for guild notes list
- */
+
+
+
+
+
 function getGuildNotesListKey(guildId) {
     return `moderation_user_notes_list_${guildId}`;
 }
@@ -192,7 +192,7 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
         });
     }
 
-    // Sanitize note to prevent injection attacks
+    
     note = sanitizeInput(note);
 
     const noteData = {

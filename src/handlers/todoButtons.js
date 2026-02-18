@@ -1,11 +1,21 @@
 import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
+import { errorEmbed, successEmbed } from '../utils/embeds.js';
 import { getFromDb, setInDb } from '../utils/database.js';
+import { checkRateLimit } from '../utils/rateLimiter.js';
+import { logger } from '../utils/logger.js';
 
 const sharedTodoAddHandler = {
   name: 'shared_todo_add',
   async execute(interaction, client, args) {
     const listId = args[0];
+
+    if (!listId || !/^[a-zA-Z0-9_-]{1,64}$/.test(listId)) {
+      await interaction.reply({
+        embeds: [errorEmbed('Error', 'Invalid shared list ID.')],
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
     
     const modal = new ModalBuilder()
       .setCustomId(`shared_todo_add_modal:${listId}`)
@@ -29,6 +39,14 @@ const sharedTodoCompleteHandler = {
   name: 'shared_todo_complete',
   async execute(interaction, client, args) {
     const listId = args[0];
+
+    if (!listId || !/^[a-zA-Z0-9_-]{1,64}$/.test(listId)) {
+      await interaction.reply({
+        embeds: [errorEmbed('Error', 'Invalid shared list ID.')],
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
     
     const modal = new ModalBuilder()
       .setCustomId(`shared_todo_complete_modal:${listId}`)
@@ -56,6 +74,28 @@ const sharedTodoAddModalHandler = {
     const userId = interaction.user.id;
 
     try {
+      const allowed = await checkRateLimit(`${userId}:shared_todo_add`, 5, 30000);
+      if (!allowed) {
+        return interaction.reply({
+          embeds: [errorEmbed('Rate Limited', 'You are adding tasks too quickly. Please wait and try again.')],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      if (!listId || !/^[a-zA-Z0-9_-]{1,64}$/.test(listId)) {
+        return interaction.reply({
+          embeds: [errorEmbed('Error', 'Invalid shared list ID.')],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      if (!taskText || taskText.trim().length === 0) {
+        return interaction.reply({
+          embeds: [errorEmbed('Error', 'Task text cannot be empty.')],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
       const listKey = `shared_todo_${listId}`;
       let listData = await getFromDb(listKey, null);
       
@@ -93,7 +133,7 @@ const sharedTodoAddModalHandler = {
       });
 
     } catch (error) {
-      console.error("Error in shared todo add modal:", error);
+      logger.error('Error in shared todo add modal:', error);
       return interaction.reply({
         embeds: [errorEmbed("Error", "An error occurred while adding the task.")],
         flags: MessageFlags.Ephemeral
@@ -106,10 +146,32 @@ const sharedTodoCompleteModalHandler = {
   name: 'shared_todo_complete_modal',
   async execute(interaction, client, args) {
     const listId = args[0];
-    const taskId = parseInt(interaction.fields.getTextInputValue('task_id'));
+    const taskId = parseInt(interaction.fields.getTextInputValue('task_id'), 10);
     const userId = interaction.user.id;
 
     try {
+      const allowed = await checkRateLimit(`${userId}:shared_todo_complete`, 5, 30000);
+      if (!allowed) {
+        return interaction.reply({
+          embeds: [errorEmbed('Rate Limited', 'You are completing tasks too quickly. Please wait and try again.')],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      if (!listId || !/^[a-zA-Z0-9_-]{1,64}$/.test(listId)) {
+        return interaction.reply({
+          embeds: [errorEmbed('Error', 'Invalid shared list ID.')],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      if (!Number.isInteger(taskId) || taskId <= 0) {
+        return interaction.reply({
+          embeds: [errorEmbed('Error', 'Task ID must be a positive number.')],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
       const listKey = `shared_todo_${listId}`;
       let listData = await getFromDb(listKey, null);
       
@@ -150,7 +212,7 @@ const sharedTodoCompleteModalHandler = {
       });
 
     } catch (error) {
-      console.error("Error in shared todo complete modal:", error);
+      logger.error('Error in shared todo complete modal:', error);
       return interaction.reply({
         embeds: [errorEmbed("Error", "An error occurred while completing the task.")],
         flags: MessageFlags.Ephemeral

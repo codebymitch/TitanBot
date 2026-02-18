@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -24,7 +23,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      // Validate permissions
+      
       if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
         throw new TitanBotError(
           "User lacks permission",
@@ -37,7 +36,7 @@ export default {
       const member = interaction.options.getMember("target");
       const reason = interaction.options.getString("reason") || "No reason provided";
 
-      // Validate target is not self
+      
       if (targetUser.id === interaction.user.id) {
         throw new TitanBotError(
           "Cannot kick self",
@@ -46,7 +45,7 @@ export default {
         );
       }
 
-      // Validate target is not bot
+      
       if (targetUser.id === client.user.id) {
         throw new TitanBotError(
           "Cannot kick bot",
@@ -55,7 +54,7 @@ export default {
         );
       }
 
-      // Validate target is in guild
+      
       if (!member) {
         throw new TitanBotError(
           "Target not found",
@@ -65,7 +64,7 @@ export default {
         );
       }
 
-      // Validate role hierarchy
+      
       if (interaction.member.roles.highest.position <= member.roles.highest.position) {
         throw new TitanBotError(
           "Cannot kick user",
@@ -74,7 +73,7 @@ export default {
         );
       }
 
-      // Validate bot can kick
+      
       if (!member.kickable) {
         throw new TitanBotError(
           "Bot cannot kick",
@@ -83,10 +82,10 @@ export default {
         );
       }
 
-      // Execute kick
+      
       await member.kick(reason);
 
-      // Log action
+      
       const caseId = await logModerationAction({
         client,
         guild: interaction.guild,
@@ -102,7 +101,7 @@ export default {
         }
       });
 
-      // Reply with success
+      
       await InteractionHelper.universalReply(interaction, {
         embeds: [
           successEmbed(

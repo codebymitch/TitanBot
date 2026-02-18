@@ -17,7 +17,7 @@ const createTables = async (client) => {
   console.log('📊 Creating database tables...');
 
   const tables = [
-    // Guild Configurations
+    
     `CREATE TABLE IF NOT EXISTS guild_configs (
       guild_id VARCHAR(255) PRIMARY KEY,
       prefix VARCHAR(10) DEFAULT '!',
@@ -31,7 +31,7 @@ const createTables = async (client) => {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
 
-    // User Leveling
+    
     `CREATE TABLE IF NOT EXISTS user_levels (
       id SERIAL PRIMARY KEY,
       user_id VARCHAR(255) NOT NULL,
@@ -43,7 +43,7 @@ const createTables = async (client) => {
       UNIQUE(user_id, guild_id)
     )`,
 
-    // User Economy
+    
     `CREATE TABLE IF NOT EXISTS user_economy (
       id SERIAL PRIMARY KEY,
       user_id VARCHAR(255) NOT NULL,
@@ -55,7 +55,7 @@ const createTables = async (client) => {
       UNIQUE(user_id, guild_id)
     )`,
 
-    // Birthdays
+    
     `CREATE TABLE IF NOT EXISTS birthdays (
       id SERIAL PRIMARY KEY,
       user_id VARCHAR(255) NOT NULL,
@@ -67,7 +67,7 @@ const createTables = async (client) => {
       UNIQUE(user_id, guild_id)
     )`,
 
-    // Tickets
+    
     `CREATE TABLE IF NOT EXISTS tickets (
       id SERIAL PRIMARY KEY,
       ticket_id VARCHAR(255) UNIQUE NOT NULL,
@@ -81,7 +81,7 @@ const createTables = async (client) => {
       closed_at TIMESTAMP
     )`,
 
-    // Giveaways
+    
     `CREATE TABLE IF NOT EXISTS giveaways (
       id SERIAL PRIMARY KEY,
       giveaway_id VARCHAR(255) UNIQUE NOT NULL,
@@ -96,7 +96,7 @@ const createTables = async (client) => {
       ends_at TIMESTAMP NOT NULL
     )`,
 
-    // Giveaway Participants
+    
     `CREATE TABLE IF NOT EXISTS giveaway_entries (
       id SERIAL PRIMARY KEY,
       giveaway_id VARCHAR(255) NOT NULL,
@@ -106,7 +106,7 @@ const createTables = async (client) => {
       FOREIGN KEY(giveaway_id) REFERENCES giveaways(giveaway_id) ON DELETE CASCADE
     )`,
 
-    // Reaction Roles
+    
     `CREATE TABLE IF NOT EXISTS reaction_roles (
       id SERIAL PRIMARY KEY,
       guild_id VARCHAR(255) NOT NULL,
@@ -119,7 +119,7 @@ const createTables = async (client) => {
       UNIQUE(message_id, emoji)
     )`,
 
-    // Welcome System
+    
     `CREATE TABLE IF NOT EXISTS welcome_system (
       id SERIAL PRIMARY KEY,
       guild_id VARCHAR(255) UNIQUE NOT NULL,
@@ -130,7 +130,7 @@ const createTables = async (client) => {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
 
-    // Counter
+    
     `CREATE TABLE IF NOT EXISTS counters (
       id SERIAL PRIMARY KEY,
       guild_id VARCHAR(255) UNIQUE NOT NULL,
@@ -141,7 +141,7 @@ const createTables = async (client) => {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
 
-    // Audit Log
+    
     `CREATE TABLE IF NOT EXISTS audit_logs (
       id SERIAL PRIMARY KEY,
       guild_id VARCHAR(255) NOT NULL,
@@ -232,7 +232,7 @@ const createTriggers = async (client) => {
 
   for (const { table, name } of triggers) {
     try {
-      // Create trigger function if it doesn't exist
+      
       await client.query(`
         CREATE OR REPLACE FUNCTION update_timestamp_${table}()
         RETURNS TRIGGER AS $$
@@ -243,7 +243,7 @@ const createTriggers = async (client) => {
         $$ LANGUAGE plpgsql;
       `);
 
-      // Create trigger
+      
       await client.query(`
         DROP TRIGGER IF EXISTS ${name} ON ${table};
         CREATE TRIGGER ${name}

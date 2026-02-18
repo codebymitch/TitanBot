@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { sanitizeMarkdown } from '../../utils/sanitization.js';
@@ -37,7 +36,7 @@ export default {
         const anonymous = interaction.options.getBoolean("anonymous") || false;
 
         try {
-            // Validate message length
+            
             if (message.length > 2000) {
                 return await interaction.editReply({
                     embeds: [
@@ -50,7 +49,7 @@ export default {
                 });
             }
 
-            // Check if user is a bot
+            
             if (targetUser.bot) {
                 return await interaction.editReply({
                     embeds: [
@@ -63,7 +62,7 @@ export default {
                 });
             }
 
-            // Sanitize the message to prevent markdown injection
+            
             const sanitized = sanitizeMarkdown(message);
 
             const dmChannel = await targetUser.createDM();

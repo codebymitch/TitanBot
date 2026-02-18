@@ -1,13 +1,13 @@
 import { logger } from '../utils/logger.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
-/**
- * Update a specific counter
- * @param {Client} client - Discord client
- * @param {Guild} guild - The guild
- * @param {Object} counter - The counter to update
- * @returns {Promise<boolean>} Whether the update was successful
- */
+
+
+
+
+
+
+
 export async function updateCounter(client, guild, counter) {
   try {
     if (!counter || !counter.type || !counter.channelId) {
@@ -64,7 +64,7 @@ export async function updateCounter(client, guild, counter) {
           logger.debug(`Updated channel name to: "${newName}"`);
         }
 
-        // Log counter update event (only on significant changes to avoid spam)
+        
         try {
           await logEvent({
             client,
@@ -112,12 +112,12 @@ export async function updateCounter(client, guild, counter) {
   }
 }
 
-/**
- * Get all server counters
- * @param {Client} client - Discord client
- * @param {string} guildId - The guild ID
- * @returns {Promise<Array>} The counters array
- */
+
+
+
+
+
+
 export async function getServerCounters(client, guildId) {
   try {
     if (!client || !client.db) {
@@ -158,13 +158,13 @@ export async function getServerCounters(client, guildId) {
   }
 }
 
-/**
- * Save server counters
- * @param {Client} client - Discord client
- * @param {string} guildId - The guild ID
- * @param {Array} counters - The counters array to save
- * @returns {Promise<boolean>} Whether the save was successful
- */
+
+
+
+
+
+
+
 export async function saveServerCounters(client, guildId, counters) {
   try {
     if (!client || !client.db) {

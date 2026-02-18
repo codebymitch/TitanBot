@@ -14,52 +14,99 @@ export function createEmbed({
   url = null
 } = {}) {
   const embed = new EmbedBuilder();
-  if (title) embed.setTitle(title);
-  if (description) embed.setDescription(description);
-  embed.setColor(getColor(color));
-
-  if (fields && fields.length > 0) {
-    embed.addFields(fields);
+  
+  
+  if (title && typeof title === 'string' && title.length > 0) {
+    embed.setTitle(title.substring(0, 256));
+  }
+  
+  
+  if (description && typeof description === 'string' && description.length > 0) {
+    embed.setDescription(description.substring(0, 4096));
+  }
+  
+  
+  try {
+    const embedColor = getColor(color) || '#000000';
+    embed.setColor(embedColor);
+  } catch (error) {
+    embed.setColor('#000000');
   }
 
+  
+  if (Array.isArray(fields) && fields.length > 0) {
+    const validFields = fields.filter(f => f && f.name && f.value);
+    if (validFields.length > 0) {
+      embed.addFields(validFields.slice(0, 25)); 
+    }
+  }
+
+  
   if (author) {
-    if (typeof author === 'string') {
-      embed.setAuthor({ name: author });
-    } else {
-      embed.setAuthor(author);
+    try {
+      if (typeof author === 'string' && author.length > 0) {
+        embed.setAuthor({ name: author.substring(0, 256) });
+      } else if (author && typeof author.name === 'string') {
+        embed.setAuthor(author);
+      }
+    } catch (error) {
+      
     }
   }
 
+  
   if (footer) {
-    if (typeof footer === 'string') {
-      embed.setFooter({ text: footer });
-    } else {
-      embed.setFooter(footer);
+    try {
+      if (typeof footer === 'string' && footer.length > 0) {
+        embed.setFooter({ text: footer.substring(0, 2048) });
+      } else if (footer && typeof footer.text === 'string') {
+        embed.setFooter(footer);
+      }
+    } catch (error) {
+      
     }
   }
 
+  
   if (thumbnail) {
-    if (typeof thumbnail === 'string') {
-      embed.setThumbnail(thumbnail);
-    } else {
-      embed.setThumbnail(thumbnail.url);
+    try {
+      if (typeof thumbnail === 'string' && thumbnail.length > 0) {
+        embed.setThumbnail(thumbnail);
+      } else if (thumbnail && typeof thumbnail.url === 'string') {
+        embed.setThumbnail(thumbnail.url);
+      }
+    } catch (error) {
+      
     }
   }
 
+  
   if (image) {
-    if (typeof image === 'string') {
-      embed.setImage(image);
-    } else {
-      embed.setImage(image.url);
+    try {
+      if (typeof image === 'string' && image.length > 0) {
+        embed.setImage(image);
+      } else if (image && typeof image.url === 'string') {
+        embed.setImage(image.url);
+      }
+    } catch (error) {
+      
     }
   }
 
-  if (timestamp) {
+  
+  if (timestamp === true) {
     embed.setTimestamp();
+  } else if (timestamp instanceof Date) {
+    embed.setTimestamp(timestamp);
   }
 
-  if (url) {
-    embed.setURL(url);
+  
+  if (url && typeof url === 'string' && url.length > 0) {
+    try {
+      embed.setURL(url);
+    } catch (error) {
+      
+    }
   }
 
   return embed;

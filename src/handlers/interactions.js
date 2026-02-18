@@ -40,7 +40,7 @@ export default async (client) => {
         if (error.code !== 'ENOENT') {
           logger.error(`Error loading ${type}:`, error);
         } else {
-          logger.warn(`No ${type} directory found, skipping...`);
+          logger.debug(`No ${type} directory found, skipping...`);
         }
       }
     }

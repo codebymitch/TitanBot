@@ -4,16 +4,16 @@ import { verifyUser } from '../services/verificationService.js';
 import { handleInteractionError } from '../utils/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
-/**
- * Handle verification button clicks
- * Uses centralized verification service for consistency
- * 
- * @param {ButtonInteraction} interaction - The button interaction
- * @param {Client} client - Discord client
- */
+
+
+
+
+
+
+
 export async function handleVerificationButton(interaction, client) {
     try {
-        // Verify button can only be used in guilds
+        
         if (!interaction.guild) {
             return await interaction.reply({
                 embeds: [errorEmbed("Guild Only", "This button can only be used in a server.")],
@@ -30,7 +30,7 @@ export async function handleVerificationButton(interaction, client) {
             userTag: interaction.user.tag
         });
 
-        // Use service layer for verification
+        
         const result = await verifyUser(client, guild.id, userId, {
             source: 'button_click',
             moderatorId: null
@@ -56,7 +56,7 @@ export async function handleVerificationButton(interaction, client) {
             });
         }
 
-        // Success response
+        
         logger.info('User verified via button', {
             guildId: guild.id,
             userId,
@@ -78,7 +78,7 @@ export async function handleVerificationButton(interaction, client) {
             userId: interaction.user.id
         });
 
-        // Use centralized error handler
+        
         await handleInteractionError(
             interaction,
             error,

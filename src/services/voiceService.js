@@ -1,32 +1,32 @@
-/**
- * VOICE SERVICE
- * 
- * Centralized business logic for voice channel operations and Discord Activities
- * Handles activity validation, permission checks, and invite generation
- * 
- * Features:
- * - Discord Activity type validation
- * - Voice channel permission verification
- * - Invite link generation with custom settings
- * - Error handling for failed activities
- * - Activity availability checking
- * - Comprehensive error logging and recovery
- * - Rate limiting for invite creation
- * 
- * Usage:
- * import VoiceService from '../../services/voiceService.js';
- * const result = await VoiceService.startActivity(client, member, activityType);
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { logger } from '../utils/logger.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { PermissionFlagsBits } from 'discord.js';
 
-// Rate limiting for invites
-const inviteCreationLimits = new Map();
-const INVITE_CREATION_COOLDOWN = 5 * 1000; // 5 seconds between invites per channel
 
-// Activity type definitions and metadata
+const inviteCreationLimits = new Map();
+const INVITE_CREATION_COOLDOWN = 5 * 1000; 
+
+
 const ACTIVITIES = {
     'youtube': {
         id: '880218394199220334',
@@ -103,40 +103,40 @@ const ACTIVITIES = {
 };
 
 const INVITE_CONFIG = {
-    max_age: 86400, // 24 hours
+    max_age: 86400, 
     temporary: false,
     unique: false
 };
 
 class VoiceService {
 
-    // ========== CONSTANTS ==========
+    
     static REQUIRED_PERMISSION = PermissionFlagsBits.CreateInstantInvite;
     static INVITE_CREATION_RETRIES = 3;
     static INVITE_CREATION_RETRY_DELAY = 1000;
 
-    /**
-     * Get activity metadata by type
-     * @param {string} activityType - Activity type/key
-     * @returns {Object|null} Activity metadata or null if not found
-     */
+    
+
+
+
+
     static getActivityMetadata(activityType) {
         return ACTIVITIES[activityType] || null;
     }
 
-    /**
-     * Get all available activities
-     * @returns {Object} All activities with metadata
-     */
+    
+
+
+
     static getAllActivities() {
         return ACTIVITIES;
     }
 
-    /**
-     * Validate activity type
-     * @param {string} activityType - Activity type to validate
-     * @returns {Promise<boolean>}
-     */
+    
+
+
+
+
     static async validateActivityType(activityType) {
         logger.debug(`[VOICE_SERVICE] Validating activity type`, { activityType });
 
@@ -163,11 +163,11 @@ class VoiceService {
         return true;
     }
 
-    /**
-     * Validate voice channel and member state
-     * @param {GuildMember} member - Guild member
-     * @returns {Promise<Object>} Validation result with channel details
-     */
+    
+
+
+
+
     static async validateVoiceChannel(member) {
         logger.debug(`[VOICE_SERVICE] Validating voice channel`, {
             userId: member.id,
@@ -202,12 +202,12 @@ class VoiceService {
         };
     }
 
-    /**
-     * Verify bot permissions in voice channel
-     * @param {GuildMember} botMember - Bot member object
-     * @param {VoiceChannel} voiceChannel - Voice channel
-     * @returns {Promise<Object>} Permission check result
-     */
+    
+
+
+
+
+
     static async verifyBotPermissions(botMember, voiceChannel) {
         logger.debug(`[VOICE_SERVICE] Verifying bot permissions`, {
             channelId: voiceChannel.id,
@@ -264,11 +264,11 @@ class VoiceService {
         };
     }
 
-    /**
-     * Verify user permissions (not just bot)
-     * @param {GuildMember} member - Guild member
-     * @returns {Promise<boolean>}
-     */
+    
+
+
+
+
     static async verifyUserPermissions(member) {
         logger.debug(`[VOICE_SERVICE] Verifying user permissions`, { userId: member.id });
 
@@ -282,14 +282,14 @@ class VoiceService {
         return hasConnect && hasPermission;
     }
 
-    /**
-     * Create activity invite with retry logic
-     * @param {Client} client - Discord client
-     * @param {string} channelId - Voice channel ID
-     * @param {string} activityId - Activity application ID
-     * @param {string} activityName - Activity display name
-     * @returns {Promise<Object>} Invite data
-     */
+    
+
+
+
+
+
+
+
     static async createActivityInvite(client, channelId, activityId, activityName) {
         logger.info(`[VOICE_SERVICE] Creating activity invite`, {
             channelId,
@@ -297,7 +297,7 @@ class VoiceService {
             activityName
         });
 
-        // Check rate limit
+        
         const now = Date.now();
         const lastInvite = inviteCreationLimits.get(channelId);
 
@@ -318,7 +318,7 @@ class VoiceService {
 
         let lastError = null;
 
-        // Retry logic for invite creation
+        
         for (let attempt = 1; attempt <= this.INVITE_CREATION_RETRIES; attempt++) {
             try {
                 logger.debug(`[VOICE_SERVICE] Invite creation attempt ${attempt}`, {
@@ -331,7 +331,7 @@ class VoiceService {
                     {
                         body: {
                             max_age: INVITE_CONFIG.max_age,
-                            target_type: 2, // Activity type
+                            target_type: 2, 
                             target_application_id: activityId,
                             temporary: INVITE_CONFIG.temporary,
                             unique: INVITE_CONFIG.unique
@@ -339,7 +339,7 @@ class VoiceService {
                     }
                 );
 
-                // Set rate limit
+                
                 inviteCreationLimits.set(channelId, now);
 
                 logger.info(`[VOICE_SERVICE] Activity invite created successfully`, {
@@ -368,12 +368,12 @@ class VoiceService {
                     break;
                 }
 
-                // Wait before retrying
+                
                 await new Promise(resolve => setTimeout(resolve, this.INVITE_CREATION_RETRY_DELAY));
             }
         }
 
-        // Handle final error
+        
         throw createError(
             'Failed to create activity',
             ErrorTypes.DISCORD_API_ERROR,
@@ -386,13 +386,13 @@ class VoiceService {
         );
     }
 
-    /**
-     * Start an activity in a voice channel
-     * @param {Client} client - Discord client
-     * @param {GuildMember} member - User's guild member
-     * @param {string} activityType - Activity type
-     * @returns {Promise<Object>} Activity start result
-     */
+    
+
+
+
+
+
+
     static async startActivity(client, member, activityType) {
         logger.info(`[VOICE_SERVICE] Starting activity`, {
             userId: member.id,
@@ -400,14 +400,14 @@ class VoiceService {
             guildId: member.guild.id
         });
 
-        // Validate activity type
+        
         await this.validateActivityType(activityType);
         const activity = this.getActivityMetadata(activityType.toLowerCase());
 
-        // Validate voice channel
+        
         const voiceStatus = await this.validateVoiceChannel(member);
 
-        // Verify user permissions
+        
         const userHasPerms = await this.verifyUserPermissions(member);
         if (!userHasPerms) {
             throw createError(
@@ -418,12 +418,12 @@ class VoiceService {
             );
         }
 
-        // Verify bot permissions
+        
         const botMember = member.guild.members.me;
         const channel = member.guild.channels.cache.get(voiceStatus.channelId);
         await this.verifyBotPermissions(botMember, channel);
 
-        // Create invite
+        
         const invite = await this.createActivityInvite(
             client,
             voiceStatus.channelId,
@@ -453,10 +453,10 @@ class VoiceService {
         };
     }
 
-    /**
-     * Get activity suggestions for a guild
-     * @returns {Array} Array of activity suggestions
-     */
+    
+
+
+
     static getActivitySuggestions() {
         return Object.entries(ACTIVITIES).map(([key, activity]) => ({
             key,
@@ -466,10 +466,10 @@ class VoiceService {
         }));
     }
 
-    /**
-     * Format activity list for display
-     * @returns {string} Formatted list of activities
-     */
+    
+
+
+
     static formatActivityList() {
         return Object.entries(ACTIVITIES)
             .map(([key, activity]) => `${activity.icon} **${activity.name}** (\`${key}\`) - ${activity.description}`)

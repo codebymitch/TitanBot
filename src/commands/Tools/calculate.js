@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
@@ -72,7 +71,7 @@ try {
 
             const dangerousPatterns = [
                 /\b(?:import|require|process|fs|child_process|exec|eval|Function|setTimeout|setInterval|new\s+Function)\s*\(/i,
-                /`/g, // Template literals
+                /`/g, 
 /\$\{.*\}/,
                 /\b(?:localStorage|document|window|fetch|XMLHttpRequest)\b/,
                 /\b(?:while|for)\s*\([^)]*\)\s*\{/,

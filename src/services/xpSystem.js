@@ -1,22 +1,22 @@
-/**
- * XP System Service - Handles XP distribution and level progression
- */
+
+
+
 
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getXpForLevel, getUserLevelData, saveUserLevelData } from './leveling.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
-/**
- * Add XP to a user and handle level ups
- * @param {Client} client - Discord client
- * @param {Guild} guild - Discord guild
- * @param {GuildMember} member - Guild member to add XP to
- * @param {number} xpToAdd - Amount of XP to add
- * @returns {Promise<Object>} Result object with success status and updated data
- */
+
+
+
+
+
+
+
+
 export async function addXp(client, guild, member, xpToAdd) {
   try {
-    // Validate inputs
+    
     if (!xpToAdd || xpToAdd <= 0) {
       return { success: false, reason: 'Invalid XP amount' };
     }
@@ -36,7 +36,7 @@ export async function addXp(client, guild, member, xpToAdd) {
     const xpNeededForNextLevel = getXpForLevel(levelData.level + 1);
     let didLevelUp = false;
     
-    // Check for level up
+    
     if (levelData.xp >= xpNeededForNextLevel) {
       levelData.level += 1;
       levelData.xp = levelData.xp - xpNeededForNextLevel;
@@ -44,17 +44,17 @@ export async function addXp(client, guild, member, xpToAdd) {
       
       logger.info(`🎉 ${member.user.tag} leveled up to level ${levelData.level} in ${guild.name}`);
       
-      // Award role if configured
+      
       if (config.roleRewards && config.roleRewards[levelData.level]) {
         await awardRoleReward(guild, member, config.roleRewards[levelData.level], levelData.level);
       }
       
-      // Send level up announcement if configured
+      
       if (config.announceLevelUp) {
         await sendLevelUpAnnouncement(guild, member, levelData, config);
       }
 
-      // Log level up event
+      
       try {
         await logEvent({
           client,
@@ -104,15 +104,15 @@ export async function addXp(client, guild, member, xpToAdd) {
   }
 }
 
-/**
- * Award a role to a member for reaching a level
- * @param {Guild} guild - Discord guild
- * @param {GuildMember} member - Member to award role to
- * @param {string} roleId - Role ID to award
- * @param {number} level - Level reached
- * @returns {Promise<void>}
- * @private
- */
+
+
+
+
+
+
+
+
+
 async function awardRoleReward(guild, member, roleId, level) {
   try {
     const role = guild.roles.cache.get(roleId);
@@ -122,7 +122,7 @@ async function awardRoleReward(guild, member, roleId, level) {
       return;
     }
 
-    // Check if member already has the role
+    
     if (member.roles.cache.has(roleId)) {
       logger.debug(`Member ${member.id} already has role ${roleId}`);
       return;
@@ -135,15 +135,15 @@ async function awardRoleReward(guild, member, roleId, level) {
   }
 }
 
-/**
- * Send level up announcement to the configured channel
- * @param {Guild} guild - Discord guild
- * @param {GuildMember} member - Member who leveled up
- * @param {Object} levelData - User's level data
- * @param {Object} config - Leveling configuration
- * @returns {Promise<void>}
- * @private
- */
+
+
+
+
+
+
+
+
+
 async function sendLevelUpAnnouncement(guild, member, levelData, config) {
   try {
     const levelUpChannel = config.levelUpChannel 
@@ -155,7 +155,7 @@ async function sendLevelUpAnnouncement(guild, member, levelData, config) {
       return;
     }
 
-    // Check bot permissions in the channel
+    
     const permissions = levelUpChannel.permissionsFor(guild.members.me);
     if (!permissions || !permissions.has(['SendMessages', 'EmbedLinks'])) {
       logger.warn(`Missing permissions to send levelup message in ${levelUpChannel.id}`);

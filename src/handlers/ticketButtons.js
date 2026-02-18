@@ -1,4 +1,4 @@
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
+import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
@@ -6,18 +6,44 @@ import { logEvent } from '../utils/moderation.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { logger } from '../utils/logger.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
+import { checkRateLimit } from '../utils/rateLimiter.js';
+
+async function ensureGuildContext(interaction) {
+  if (interaction.inGuild()) {
+    return true;
+  }
+
+  if (!interaction.replied && !interaction.deferred) {
+    await interaction.reply({
+      embeds: [errorEmbed('Guild Only', 'This action can only be used in a server.')],
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  return false;
+}
 
 const createTicketHandler = {
   name: 'create_ticket',
   async execute(interaction, client) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      const rateLimitKey = `${interaction.user.id}:create_ticket`;
+      const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
+      if (!allowed) {
+        await interaction.reply({
+          embeds: [errorEmbed('Rate Limited', 'You are creating tickets too quickly. Please wait a minute and try again.')],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const config = await getGuildConfig(client, interaction.guildId);
-      const categoryId = config.ticketCategoryId || null;
       const maxTicketsPerUser = config.maxTicketsPerUser || 3;
       
       const { getUserTicketCount } = await import('../services/ticket.js');
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
-      const remainingTickets = maxTicketsPerUser - currentTicketCount;
       
       if (currentTicketCount >= maxTicketsPerUser) {
         return interaction.reply({
@@ -48,7 +74,7 @@ const createTicketHandler = {
       
       await interaction.showModal(modal);
     } catch (error) {
-      console.error('Error creating ticket modal:', error);
+      logger.error('Error creating ticket modal:', error);
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           embeds: [errorEmbed('Error', 'Could not open ticket creation form.')],
@@ -68,6 +94,8 @@ const createTicketModalHandler = {
   name: 'create_ticket_modal',
   async execute(interaction, client) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
@@ -96,7 +124,7 @@ const createTicketModalHandler = {
         });
       }
     } catch (error) {
-      console.error('Error creating ticket:', error);
+      logger.error('Error creating ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while creating your ticket.')],
         flags: MessageFlags.Ephemeral
@@ -109,6 +137,8 @@ const closeTicketHandler = {
   name: 'ticket_close',
   async execute(interaction, client) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
@@ -137,7 +167,7 @@ const closeTicketHandler = {
         });
       }
     } catch (error) {
-      console.error('Error closing ticket:', error);
+      logger.error('Error closing ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while closing the ticket.')],
         flags: MessageFlags.Ephemeral
@@ -150,6 +180,16 @@ const claimTicketHandler = {
   name: 'ticket_claim',
   async execute(interaction, client) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        await interaction.reply({
+          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to claim tickets.')],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
@@ -177,7 +217,7 @@ const claimTicketHandler = {
         });
       }
     } catch (error) {
-      console.error('Error claiming ticket:', error);
+      logger.error('Error claiming ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while claiming the ticket.')],
         flags: MessageFlags.Ephemeral
@@ -190,10 +230,28 @@ const priorityTicketHandler = {
   name: 'ticket_priority',
   async execute(interaction, client, args) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        await interaction.reply({
+          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to change ticket priority.')],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
-      const priority = args[0];
+      const priority = args?.[0];
+      if (!priority) {
+        await interaction.editReply({
+          embeds: [errorEmbed('Invalid Priority', 'A priority value is required.')],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const result = await updateTicketPriority(interaction.channel, priority, interaction.user);
       
       if (result.success) {
@@ -208,7 +266,7 @@ const priorityTicketHandler = {
         });
       }
     } catch (error) {
-      console.error('Error updating ticket priority:', error);
+      logger.error('Error updating ticket priority:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while updating the priority.')],
         flags: MessageFlags.Ephemeral
@@ -221,6 +279,16 @@ const transcriptTicketHandler = {
   name: 'ticket_transcript',
   async execute(interaction, client) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        await interaction.reply({
+          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to create transcripts.')],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
@@ -372,7 +440,7 @@ color: 4689679
           }
         });
       } catch (dmError) {
-        console.error('Could not DM user:', dmError);
+        logger.error('Could not DM user:', dmError);
         await interaction.editReply({
           embeds: [errorEmbed('DM Failed', 'I couldn\'t send you the transcript. Please enable DMs from server members.')],
           flags: MessageFlags.Ephemeral
@@ -380,7 +448,7 @@ color: 4689679
       }
       
     } catch (error) {
-      console.error('Error creating transcript:', error);
+      logger.error('Error creating transcript:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'Failed to create ticket transcript.')],
         flags: MessageFlags.Ephemeral
@@ -393,6 +461,16 @@ const unclaimTicketHandler = {
   name: 'ticket_unclaim',
   async execute(interaction, client) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        await interaction.reply({
+          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to unclaim tickets.')],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
@@ -421,7 +499,7 @@ const unclaimTicketHandler = {
         });
       }
     } catch (error) {
-      console.error('Error unclaiming ticket:', error);
+      logger.error('Error unclaiming ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while unclaiming the ticket.')],
         flags: MessageFlags.Ephemeral
@@ -434,6 +512,16 @@ const reopenTicketHandler = {
   name: 'ticket_reopen',
   async execute(interaction, client) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        await interaction.reply({
+          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to reopen tickets.')],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
@@ -462,7 +550,7 @@ const reopenTicketHandler = {
         });
       }
     } catch (error) {
-      console.error('Error reopening ticket:', error);
+      logger.error('Error reopening ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while reopening the ticket.')],
         flags: MessageFlags.Ephemeral
@@ -475,6 +563,16 @@ const deleteTicketHandler = {
   name: 'ticket_delete',
   async execute(interaction, client) {
     try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        await interaction.reply({
+          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to delete tickets.')],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
@@ -503,7 +601,7 @@ const deleteTicketHandler = {
         });
       }
     } catch (error) {
-      console.error('Error deleting ticket:', error);
+      logger.error('Error deleting ticket:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while deleting the ticket.')],
         flags: MessageFlags.Ephemeral

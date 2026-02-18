@@ -1,21 +1,21 @@
-/**
- * ECONOMY SERVICE
- * 
- * Centralized business logic for all economy operations
- * Provides transaction safety, comprehensive logging, and validation
- * 
- * Features:
- * - Transaction safety (optimistic locking)
- * - Comprehensive logging via Winston
- * - Error handling with context
- * - Audit trail for all transactions
- * - Input validation
- * - Cooldown management
- * 
- * Usage:
- * import EconomyService from '../../services/economyService.js';
- * const result = await EconomyService.claimDaily(client, guildId, userId);
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { logger } from '../utils/logger.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../utils/economy.js';
@@ -23,7 +23,7 @@ import { createError, ErrorTypes } from '../utils/errorHandler.js';
 
 class EconomyService {
   
-  // ========== CONSTANTS ==========
+  
   static DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
   static WORK_COOLDOWN = 30 * 60 * 1000;
   static GAMBLE_COOLDOWN = 5 * 60 * 1000;
@@ -36,13 +36,24 @@ class EconomyService {
   static DAILY_AMOUNT = 1000;
   static MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
 
-  /**
-   * Claim daily reward with cooldown check
-   * @param {Client} client - Discord client
-   * @param {string} guildId - Guild ID
-   * @param {string} userId - User ID
-   * @returns {Promise<Object>} { earned, newWallet, nextClaimTime }
-   */
+  static assertSafeBalance(value, context = {}) {
+    if (!Number.isSafeInteger(value) || value < 0 || value > this.MAX_SAFE_INTEGER) {
+      throw createError(
+        "Invalid balance state",
+        ErrorTypes.VALIDATION,
+        "Operation would create an invalid account balance.",
+        { value, ...context }
+      );
+    }
+  }
+
+  
+
+
+
+
+
+
   static async claimDaily(client, guildId, userId) {
     logger.debug(`[ECONOMY_SERVICE] claimDaily requested`, { userId, guildId });
     
@@ -75,7 +86,9 @@ class EconomyService {
     }
 
     const earned = this.DAILY_AMOUNT;
-    userData.wallet = (userData.wallet || 0) + earned;
+    const nextWallet = (userData.wallet || 0) + earned;
+    this.assertSafeBalance(nextWallet, { operation: 'claimDaily', userId, guildId });
+    userData.wallet = nextWallet;
     userData.lastDaily = now;
 
     try {
@@ -110,15 +123,15 @@ class EconomyService {
     }
   }
 
-  /**
-   * Transfer money between users with validation
-   * @param {Client} client - Discord client
-   * @param {string} guildId - Guild ID
-   * @param {string} senderId - Sender user ID
-   * @param {string} receiverId - Receiver user ID
-   * @param {number} amount - Amount to transfer
-   * @returns {Promise<Object>} Transaction result
-   */
+  
+
+
+
+
+
+
+
+
   static async transferMoney(client, guildId, senderId, receiverId, amount) {
     logger.debug(`[ECONOMY_SERVICE] transferMoney requested`, {
       senderId,
@@ -127,7 +140,7 @@ class EconomyService {
       guildId
     });
 
-    // ===== VALIDATION =====
+    
     if (amount <= 0) {
       throw createError(
         "Invalid transfer amount",
@@ -148,7 +161,7 @@ class EconomyService {
 
     this.validateAmount(amount, { operation: 'transfer', senderId, receiverId });
 
-    // ===== LOAD DATA =====
+    
     const [senderData, receiverData] = await Promise.all([
       getEconomyData(client, guildId, senderId),
       getEconomyData(client, guildId, receiverId)
@@ -167,7 +180,7 @@ class EconomyService {
       );
     }
 
-    // ===== CHECK FUNDS =====
+    
     if (senderData.wallet < amount) {
       logger.warn(`[ECONOMY_SERVICE] Insufficient funds for transfer`, {
         senderId,
@@ -182,10 +195,16 @@ class EconomyService {
       );
     }
 
-    // ===== EXECUTE TRANSFER =====
+    
     const walletBefore = senderData.wallet;
-    senderData.wallet = (senderData.wallet || 0) - amount;
-    receiverData.wallet = (receiverData.wallet || 0) + amount;
+    const senderNext = (senderData.wallet || 0) - amount;
+    const receiverNext = (receiverData.wallet || 0) + amount;
+
+    this.assertSafeBalance(senderNext, { operation: 'transfer.sender', senderId, amount });
+    this.assertSafeBalance(receiverNext, { operation: 'transfer.receiver', receiverId, amount });
+
+    senderData.wallet = senderNext;
+    receiverData.wallet = receiverNext;
 
     try {
       await Promise.all([
@@ -228,15 +247,15 @@ class EconomyService {
     }
   }
 
-  /**
-   * Add money to user's wallet
-   * @param {Client} client - Discord client
-   * @param {string} guildId - Guild ID
-   * @param {string} userId - User ID
-   * @param {number} amount - Amount to add
-   * @param {string} source - Source of money (work, daily, gamble, etc.)
-   * @returns {Promise<Object>} Updated user data
-   */
+  
+
+
+
+
+
+
+
+
   static async addMoney(client, guildId, userId, amount, source = 'unknown') {
     if (amount <= 0) {
       throw createError(
@@ -251,7 +270,9 @@ class EconomyService {
 
     const userData = await getEconomyData(client, guildId, userId);
     const balanceBefore = userData.wallet || 0;
-    userData.wallet = balanceBefore + amount;
+    const nextWallet = balanceBefore + amount;
+    this.assertSafeBalance(nextWallet, { operation: 'addMoney', userId, source, amount });
+    userData.wallet = nextWallet;
 
     await setEconomyData(client, guildId, userId, userData);
 
@@ -269,15 +290,15 @@ class EconomyService {
     return userData;
   }
 
-  /**
-   * Remove money from user's wallet
-   * @param {Client} client - Discord client
-   * @param {string} guildId - Guild ID
-   * @param {string} userId - User ID
-   * @param {number} amount - Amount to remove
-   * @param {string} reason - Reason for removal
-   * @returns {Promise<Object>} Updated user data
-   */
+  
+
+
+
+
+
+
+
+
   static async removeMoney(client, guildId, userId, amount, reason = 'unknown') {
     if (amount <= 0) {
       throw createError(
@@ -320,14 +341,14 @@ class EconomyService {
     return userData;
   }
 
-  /**
-   * Deposit money from wallet to bank
-   * @param {Client} client - Discord client
-   * @param {string} guildId - Guild ID
-   * @param {string} userId - User ID
-   * @param {number} amount - Amount to deposit
-   * @returns {Promise<Object>} Updated user data
-   */
+  
+
+
+
+
+
+
+
   static async depositToBank(client, guildId, userId, amount) {
     this.validateAmount(amount, { operation: 'deposit', userId });
 
@@ -353,8 +374,14 @@ class EconomyService {
       );
     }
 
-    userData.wallet -= amount;
-    userData.bank = (userData.bank || 0) + amount;
+    const nextWallet = userData.wallet - amount;
+    const nextBank = (userData.bank || 0) + amount;
+
+    this.assertSafeBalance(nextWallet, { operation: 'deposit.wallet', userId, amount });
+    this.assertSafeBalance(nextBank, { operation: 'deposit.bank', userId, amount });
+
+    userData.wallet = nextWallet;
+    userData.bank = nextBank;
 
     await setEconomyData(client, guildId, userId, userData);
 
@@ -370,14 +397,14 @@ class EconomyService {
     return userData;
   }
 
-  /**
-   * Withdraw money from bank to wallet
-   * @param {Client} client - Discord client
-   * @param {string} guildId - Guild ID
-   * @param {string} userId - User ID
-   * @param {number} amount - Amount to withdraw
-   * @returns {Promise<Object>} Updated user data
-   */
+  
+
+
+
+
+
+
+
   static async withdrawFromBank(client, guildId, userId, amount) {
     this.validateAmount(amount, { operation: 'withdraw', userId });
 
@@ -393,8 +420,14 @@ class EconomyService {
       );
     }
 
-    userData.wallet = (userData.wallet || 0) + amount;
-    userData.bank = bank - amount;
+    const nextWallet = (userData.wallet || 0) + amount;
+    const nextBank = bank - amount;
+
+    this.assertSafeBalance(nextWallet, { operation: 'withdraw.wallet', userId, amount });
+    this.assertSafeBalance(nextBank, { operation: 'withdraw.bank', userId, amount });
+
+    userData.wallet = nextWallet;
+    userData.bank = nextBank;
 
     await setEconomyData(client, guildId, userId, userData);
 
@@ -410,13 +443,13 @@ class EconomyService {
     return userData;
   }
 
-  /**
-   * Check if user is on cooldown
-   * @param {Object} userData - User economy data
-   * @param {string} action - Action name (daily, work, gamble, etc.)
-   * @param {number} cooldownMs - Cooldown duration in milliseconds
-   * @returns {Object} Cooldown info
-   */
+  
+
+
+
+
+
+
   static checkCooldown(userData, action, cooldownMs) {
     const lastActionField = `last${action.charAt(0).toUpperCase() + action.slice(1)}`;
     const lastTime = userData[lastActionField] || 0;
@@ -431,11 +464,11 @@ class EconomyService {
     };
   }
 
-  /**
-   * Validate amount is safe integer
-   * @param {number} amount - Amount to validate
-   * @param {Object} context - Error context
-   */
+  
+
+
+
+
   static validateAmount(amount, context = {}) {
     if (!Number.isInteger(amount)) {
       throw createError(
@@ -466,11 +499,11 @@ class EconomyService {
     }
   }
 
-  /**
-   * Format time duration for user display
-   * @param {number} ms - Milliseconds
-   * @returns {string} Formatted string
-   */
+  
+
+
+
+
   static formatDuration(ms) {
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -486,11 +519,11 @@ class EconomyService {
     return `${seconds}s`;
   }
 
-  /**
-   * Format cooldown for user display (bold version)
-   * @param {number} ms - Milliseconds
-   * @returns {string} Formatted string
-   */
+  
+
+
+
+
   static formatCooldownDisplay(ms) {
     const duration = this.formatDuration(ms);
     return `**${duration}**`;

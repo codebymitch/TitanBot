@@ -12,7 +12,7 @@ export default {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            // Use service layer
+            
             const result = await deleteBirthday(client, guildId, userId);
 
             if (result.success) {

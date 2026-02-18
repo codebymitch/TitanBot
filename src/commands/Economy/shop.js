@@ -196,7 +196,7 @@ export default {
                         components: disabledComponents
                     });
                 } catch (error) {
-                    // Message may have been deleted
+                    
                 }
             });
         } catch (error) {

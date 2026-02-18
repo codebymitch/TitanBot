@@ -1,4 +1,4 @@
-import { MessageFlags } from 'discord.js';
+import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { errorEmbed, successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError } from '../utils/errorHandler.js';
@@ -16,14 +16,14 @@ import {
 } from '../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 
-/**
- * Handler for joining a giveaway
- */
+
+
+
 export const giveawayJoinHandler = {
     customId: 'giveaway_join',
     async execute(interaction, client) {
         try {
-            // Check rate limiting
+            
             if (isUserRateLimited(interaction.user.id, interaction.message.id)) {
                 return interaction.reply({
                     embeds: [
@@ -50,7 +50,7 @@ export const giveawayJoinHandler = {
                 );
             }
 
-            // Check if giveaway has ended (by time or flag)
+            
             const endedByTime = isGiveawayEnded(giveaway);
             const endedByFlag = giveaway.ended || giveaway.isEnded;
 
@@ -69,7 +69,7 @@ export const giveawayJoinHandler = {
             const participants = giveaway.participants || [];
             const userId = interaction.user.id;
 
-            // Check if already entered
+            
             if (participants.includes(userId)) {
                 return interaction.reply({
                     embeds: [
@@ -82,7 +82,7 @@ export const giveawayJoinHandler = {
                 });
             }
 
-            // Add participant
+            
             participants.push(userId);
             giveaway.participants = participants;
 
@@ -90,7 +90,7 @@ export const giveawayJoinHandler = {
 
             logger.debug(`User ${interaction.user.tag} joined giveaway ${interaction.message.id}`);
 
-            // Update embed with new participant count
+            
             const updatedEmbed = createGiveawayEmbed(giveaway, 'active');
             const updatedRow = createGiveawayButtons(false);
 
@@ -120,14 +120,14 @@ export const giveawayJoinHandler = {
     }
 };
 
-/**
- * Handler for ending a giveaway via button
- */
+
+
+
 export const giveawayEndHandler = {
     customId: 'giveaway_end',
     async execute(interaction, client) {
         try {
-            // Check guild context
+            
             if (!interaction.inGuild()) {
                 throw new TitanBotError(
                     'Button used outside guild',
@@ -137,8 +137,8 @@ export const giveawayEndHandler = {
                 );
             }
 
-            // Validate permissions
-            if (!interaction.member.permissions.has('ManageGuild')) {
+            
+            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
@@ -171,7 +171,7 @@ export const giveawayEndHandler = {
             const participants = giveaway.participants || [];
             const winners = selectWinners(participants, giveaway.winnerCount);
 
-            // Update giveaway state atomically
+            
             giveaway.ended = true;
             giveaway.isEnded = true;
             giveaway.winnerIds = winners;
@@ -182,7 +182,7 @@ export const giveawayEndHandler = {
 
             logger.info(`Giveaway ended via button by ${interaction.user.tag}: ${interaction.message.id}`);
 
-            // Update message
+            
             const updatedEmbed = createGiveawayEmbed(giveaway, 'ended', winners);
             const updatedRow = createGiveawayButtons(true);
 
@@ -192,7 +192,7 @@ export const giveawayEndHandler = {
                 components: [updatedRow]
             });
 
-            // Log event
+            
             try {
                 await logEvent({
                     client,
@@ -248,14 +248,14 @@ export const giveawayEndHandler = {
     }
 };
 
-/**
- * Handler for rerolling giveaway winners via button
- */
+
+
+
 export const giveawayRerollHandler = {
     customId: 'giveaway_reroll',
     async execute(interaction, client) {
         try {
-            // Check guild context
+            
             if (!interaction.inGuild()) {
                 throw new TitanBotError(
                     'Button used outside guild',
@@ -265,8 +265,8 @@ export const giveawayRerollHandler = {
                 );
             }
 
-            // Validate permissions
-            if (!interaction.member.permissions.has('ManageGuild')) {
+            
+            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
@@ -309,7 +309,7 @@ export const giveawayRerollHandler = {
 
             const newWinners = selectWinners(participants, giveaway.winnerCount);
 
-            // Update giveaway with new winners
+            
             giveaway.winnerIds = newWinners;
             giveaway.rerolledAt = new Date().toISOString();
             giveaway.rerolledBy = interaction.user.id;
@@ -318,7 +318,7 @@ export const giveawayRerollHandler = {
 
             logger.info(`Giveaway rerolled via button by ${interaction.user.tag}: ${interaction.message.id}`);
 
-            // Update message
+            
             const updatedEmbed = createGiveawayEmbed(giveaway, 'reroll', newWinners);
             const updatedRow = createGiveawayButtons(true);
 
@@ -328,7 +328,7 @@ export const giveawayRerollHandler = {
                 components: [updatedRow]
             });
 
-            // Log event
+            
             try {
                 await logEvent({
                     client,

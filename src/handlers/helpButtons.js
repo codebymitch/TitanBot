@@ -205,7 +205,7 @@ export const helpReportCommand = {
     name: COMMAND_LIST_ID,
     categoryName: null,
     async execute(interaction, client) {
-        // This is handled by help select menu
+        
     }
 };
 

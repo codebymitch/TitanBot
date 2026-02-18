@@ -1,59 +1,59 @@
-/**
- * UTILITY SERVICE
- * 
- * Centralized business logic for utility commands (reports, data wiping, todos)
- * Provides validation, duplicate detection, and comprehensive auditing
- * 
- * Features:
- * - Report validation and duplicate detection
- * - Data wiping with safety checks and confirmation
- * - Complete audit trail for data deletions
- * - Todo task management and persistence
- * - Shared todo list collaboration
- * - Rate limiting for sensitive operations
- * - Data recovery prevention
- * 
- * Usage:
- * import UtilityService from '../../services/utilityService.js';
- * const result = await UtilityService.submitReport(client, guildId, userId, reportData);
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { logger } from '../utils/logger.js';
 import { getFromDb, setInDb, deleteFromDb } from '../utils/database.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 
-// Report tracking for duplicate detection
-const recentReports = new Map();
-const REPORT_DUPLICATE_WINDOW = 60 * 60 * 1000; // 1 hour
-const REPORT_USER_COOLDOWN = 10 * 60 * 1000; // 10 minutes per user
+const REPORT_DUPLICATE_WINDOW = 60 * 60 * 1000; 
+const REPORT_USER_COOLDOWN = 10 * 60 * 1000; 
 
-// Data wipe tracking
+
 const wipedataRequests = new Map();
-const WIPEDATA_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours between wipes
+const WIPEDATA_COOLDOWN = 24 * 60 * 60 * 1000; 
+const WIPEDATA_CONFIRM_WINDOW = 2 * 60 * 1000; 
+const WIPEDATA_REQUEST_CACHE_LIMIT = 1000;
 
-// Todo task limits and configurations
+
 const TODO_MAX_TASKS = 100;
 const TODO_MAX_LENGTH = 500;
 const SHARED_TODO_MAX_MEMBERS = 20;
 
 class UtilityService {
 
-    // ========== REPORT SYSTEM ==========
+    
 
-    /**
-     * Validate report data
-     * @param {string} reportedUserId - ID of user being reported
-     * @param {string} reportingUserId - ID of user making report
-     * @param {string} reason - Report reason
-     * @returns {Promise<boolean>}
-     */
+    
+
+
+
+
+
+
     static async validateReport(reportedUserId, reportingUserId, reason) {
         logger.debug(`[UTILITY_SERVICE] Validating report`, {
             reportedUserId,
             reportingUserId
         });
 
-        // Validate users are not the same
+        
         if (reportedUserId === reportingUserId) {
             throw createError(
                 'Cannot report self',
@@ -63,7 +63,7 @@ class UtilityService {
             );
         }
 
-        // Validate reason
+        
         if (!reason || typeof reason !== 'string') {
             throw createError(
                 'Invalid reason',
@@ -104,13 +104,13 @@ class UtilityService {
         return true;
     }
 
-    /**
-     * Check for duplicate reports
-     * @param {string} guildId - Guild ID
-     * @param {string} reportedUserId - ID of reported user
-     * @param {string} reportingUserId - ID of reporting user
-     * @returns {Promise<Object>} Duplicate check result
-     */
+    
+
+
+
+
+
+
     static async checkForDuplicateReport(guildId, reportedUserId, reportingUserId) {
         logger.debug(`[UTILITY_SERVICE] Checking for duplicate reports`, {
             guildId,
@@ -125,7 +125,7 @@ class UtilityService {
             r => (now - r.timestamp) < REPORT_DUPLICATE_WINDOW
         );
 
-        // Check if same user reported recently
+        
         const userReportCount = recentWindow.filter(
             r => r.reportingUserId === reportingUserId
         ).length;
@@ -160,15 +160,15 @@ class UtilityService {
         };
     }
 
-    /**
-     * Submit a report
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {string} reportedUserId - ID of reported user
-     * @param {string} reportingUserId - ID of reporting user
-     * @param {Object} reportData - Report details
-     * @returns {Promise<Object>} Report result
-     */
+    
+
+
+
+
+
+
+
+
     static async submitReport(client, guildId, reportedUserId, reportingUserId, reportData) {
         logger.info(`[UTILITY_SERVICE] Submitting report`, {
             guildId,
@@ -176,13 +176,13 @@ class UtilityService {
             reportingUserId
         });
 
-        // Validate report
+        
         await this.validateReport(reportedUserId, reportingUserId, reportData.reason);
 
-        // Check for duplicates
+        
         await this.checkForDuplicateReport(guildId, reportedUserId, reportingUserId);
 
-        // Create report record
+        
         const reportId = `${guildId}:${reportedUserId}:${Date.now()}`;
         const report = {
             id: reportId,
@@ -196,7 +196,7 @@ class UtilityService {
             reviewed: false
         };
 
-        // Store report in history
+        
         const reportsKey = `reports:${guildId}:${reportedUserId}`;
         const recentReports = await getFromDb(reportsKey, []);
         recentReports.push({
@@ -206,7 +206,7 @@ class UtilityService {
         });
         await setInDb(reportsKey, recentReports);
 
-        // Store full report
+        
         await setInDb(`report:${reportId}`, report);
 
         logger.info(`[UTILITY_SERVICE] Report submitted successfully`, {
@@ -225,14 +225,14 @@ class UtilityService {
         };
     }
 
-    // ========== WIPEDATA SYSTEM ==========
+    
 
-    /**
-     * Check if user can wipe data (cooldown)
-     * @param {string} guildId - Guild ID
-     * @param {string} userId - User ID
-     * @returns {Promise<Object>} Cooldown status
-     */
+    
+
+
+
+
+
     static async checkWipedataCooldown(guildId, userId) {
         logger.debug(`[UTILITY_SERVICE] Checking wipedata cooldown`, {
             guildId,
@@ -267,13 +267,13 @@ class UtilityService {
         return { canWipe: true, cooldownRemaining: 0 };
     }
 
-    /**
-     * Execute data wipe with audit trail
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {string} userId - User ID
-     * @returns {Promise<Object>} Wipe result
-     */
+    
+
+
+
+
+
+
     static async executeDataWipe(client, guildId, userId) {
         logger.warn(`[UTILITY_SERVICE] Executing data wipe`, {
             guildId,
@@ -281,7 +281,41 @@ class UtilityService {
             timestamp: new Date().toISOString()
         });
 
-        // Check cooldown
+        const now = Date.now();
+        const confirmationKey = `${guildId}:${userId}`;
+        const existingConfirmation = wipedataRequests.get(confirmationKey);
+
+        if (wipedataRequests.size > WIPEDATA_REQUEST_CACHE_LIMIT) {
+            for (const [key, value] of wipedataRequests.entries()) {
+                if (!value?.requestedAt || (now - value.requestedAt) > WIPEDATA_CONFIRM_WINDOW) {
+                    wipedataRequests.delete(key);
+                }
+            }
+        }
+
+        const hasValidConfirmation = existingConfirmation &&
+            (now - existingConfirmation.requestedAt) <= WIPEDATA_CONFIRM_WINDOW;
+
+        if (!hasValidConfirmation) {
+            wipedataRequests.set(confirmationKey, {
+                requestedAt: now,
+                expiresAt: now + WIPEDATA_CONFIRM_WINDOW
+            });
+
+            throw createError(
+                'Wipedata confirmation required',
+                ErrorTypes.VALIDATION,
+                'This action permanently deletes your stored data. Run the wipe command again within 2 minutes to confirm.',
+                {
+                    confirmationRequired: true,
+                    expiresAt: new Date(now + WIPEDATA_CONFIRM_WINDOW).toISOString()
+                }
+            );
+        }
+
+        wipedataRequests.delete(confirmationKey);
+
+        
         const cooldown = await this.checkWipedataCooldown(guildId, userId);
         if (!cooldown.canWipe) {
             throw createError(
@@ -292,7 +326,7 @@ class UtilityService {
             );
         }
 
-        // List of all data patterns to delete
+        
         const dataKeyPatterns = [
             `economy:${guildId}:${userId}`,
             `level:${guildId}:${userId}`,
@@ -322,7 +356,7 @@ class UtilityService {
         const deletedKeys = [];
         const deleteErrors = [];
 
-        // Delete each data key
+        
         for (const key of dataKeyPatterns) {
             try {
                 await deleteFromDb(key);
@@ -334,7 +368,7 @@ class UtilityService {
             }
         }
 
-        // Try prefix search for additional keys
+        
         try {
             if (client.db?.list && typeof client.db.list === 'function') {
                 const userPrefix = `${guildId}:${userId}`;
@@ -358,11 +392,11 @@ class UtilityService {
             logger.warn(`[UTILITY_SERVICE] Could not perform prefix search`, error);
         }
 
-        // Record wipe in cooldown system
+        
         const cooldownKey = `wipedata:cooldown:${guildId}:${userId}`;
         await setInDb(cooldownKey, Date.now());
 
-        // Create audit record
+        
         const auditKey = `wipedata:audit:${guildId}:${userId}:${Date.now()}`;
         await setInDb(auditKey, {
             userId,
@@ -389,14 +423,14 @@ class UtilityService {
         };
     }
 
-    // ========== TODO SYSTEM ==========
+    
 
-    /**
-     * Add a task to user's todo list
-     * @param {string} userId - User ID
-     * @param {string} taskContent - Task description
-     * @returns {Promise<Object>} Created task
-     */
+    
+
+
+
+
+
     static async addTodoTask(userId, taskContent) {
         logger.debug(`[UTILITY_SERVICE] Adding todo task`, { userId, taskLength: taskContent?.length });
 
@@ -428,11 +462,11 @@ class UtilityService {
             );
         }
 
-        // Get user's todo list
+        
         const todoKey = `todo:${userId}`;
         const todoList = await getFromDb(todoKey, { tasks: [], nextId: 1 });
 
-        // Check max tasks
+        
         if (todoList.tasks?.length >= TODO_MAX_TASKS) {
             throw createError(
                 'Too many tasks',
@@ -442,7 +476,7 @@ class UtilityService {
             );
         }
 
-        // Create task
+        
         const taskId = todoList.nextId || 1;
         const task = {
             id: taskId,
@@ -451,14 +485,14 @@ class UtilityService {
             createdAt: new Date().toISOString()
         };
 
-        // Add to list
+        
         if (!Array.isArray(todoList.tasks)) {
             todoList.tasks = [];
         }
         todoList.tasks.push(task);
         todoList.nextId = (todoList.nextId || 1) + 1;
 
-        // Save
+        
         await setInDb(todoKey, todoList);
 
         logger.info(`[UTILITY_SERVICE] Todo task added`, {
@@ -470,12 +504,12 @@ class UtilityService {
         return task;
     }
 
-    /**
-     * Complete a todo task
-     * @param {string} userId - User ID
-     * @param {number} taskId - Task ID
-     * @returns {Promise<Object>} Updated task
-     */
+    
+
+
+
+
+
     static async completeTodoTask(userId, taskId) {
         logger.debug(`[UTILITY_SERVICE] Completing todo task`, { userId, taskId });
 
@@ -506,12 +540,12 @@ class UtilityService {
         return task;
     }
 
-    /**
-     * Remove a todo task
-     * @param {string} userId - User ID
-     * @param {number} taskId - Task ID
-     * @returns {Promise<Object>} Result
-     */
+    
+
+
+
+
+
     static async removeTodoTask(userId, taskId) {
         logger.debug(`[UTILITY_SERVICE] Removing todo task`, { userId, taskId });
 
@@ -545,11 +579,11 @@ class UtilityService {
         };
     }
 
-    /**
-     * Get user's todo list
-     * @param {string} userId - User ID
-     * @returns {Promise<Object>} Todo list
-     */
+    
+
+
+
+
     static async getTodoList(userId) {
         logger.debug(`[UTILITY_SERVICE] Fetching todo list`, { userId });
 
@@ -565,13 +599,13 @@ class UtilityService {
         };
     }
 
-    /**
-     * Create a shared todo list
-     * @param {string} userId - Creator user ID
-     * @param {string} listName - List name
-     * @param {string} listId - Unique list ID
-     * @returns {Promise<Object>} Created list
-     */
+    
+
+
+
+
+
+
     static async createSharedTodoList(userId, listName, listId) {
         logger.info(`[UTILITY_SERVICE] Creating shared todo list`, {
             userId,
@@ -601,7 +635,7 @@ class UtilityService {
         const listKey = `shared_todo:${listId}`;
         await setInDb(listKey, sharedList);
 
-        // Add to user's shared lists
+        
         const userListsKey = `user_shared_lists:${userId}`;
         const userLists = await getFromDb(userListsKey, []);
         if (!userLists.includes(listId)) {
@@ -618,13 +652,13 @@ class UtilityService {
         return sharedList;
     }
 
-    /**
-     * Add member to shared todo list
-     * @param {string} listId - List ID
-     * @param {string} memberId - Member user ID
-     * @param {string} requestedBy - User who requested adding
-     * @returns {Promise<Object>} Result
-     */
+    
+
+
+
+
+
+
     static async addMemberToSharedList(listId, memberId, requestedBy) {
         logger.info(`[UTILITY_SERVICE] Adding member to shared list`, {
             listId,
@@ -644,7 +678,7 @@ class UtilityService {
             );
         }
 
-        // Check if requester is creator
+        
         if (list.creatorId !== requestedBy) {
             throw createError(
                 'Permission denied',
@@ -654,7 +688,7 @@ class UtilityService {
             );
         }
 
-        // Check max members
+        
         if (list.members?.length >= SHARED_TODO_MAX_MEMBERS) {
             throw createError(
                 'Too many members',
@@ -664,7 +698,7 @@ class UtilityService {
             );
         }
 
-        // Add member
+        
         if (!list.members) list.members = [];
         if (!list.members.includes(memberId)) {
             list.members.push(memberId);
@@ -672,7 +706,7 @@ class UtilityService {
 
         await setInDb(listKey, list);
 
-        // Add list to member's shared lists
+        
         const memberListsKey = `user_shared_lists:${memberId}`;
         const memberLists = await getFromDb(memberListsKey, []);
         if (!memberLists.includes(listId)) {

@@ -5,16 +5,41 @@ import { getColor } from '../config/bot.js';
 import { getEndedGiveaways, markGiveawayEnded } from '../utils/database.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
-// Rate limiting store for button interactions
-const userGiveawayInteractions = new Map();
-const GIVEAWAY_INTERACTION_COOLDOWN = 1000; // 1 second between interactions
 
-/**
- * Parse and validate duration string (e.g., "1h", "30m", "5d")
- * @param {string} durationString - Duration string to parse
- * @returns {number|null} Duration in milliseconds, or null if invalid
- * @throws {TitanBotError} If duration is invalid
- */
+const userGiveawayInteractions = new Map();
+const GIVEAWAY_INTERACTION_COOLDOWN = 1000; 
+const GIVEAWAY_INTERACTION_TTL = 5 * 60 * 1000; 
+const GIVEAWAY_INTERACTION_MAX_ENTRIES = 5000;
+const GIVEAWAY_INTERACTION_CLEANUP_INTERVAL = 60 * 1000;
+let lastInteractionCleanupAt = 0;
+
+function cleanupInteractionCache(force = false) {
+    const now = Date.now();
+    if (!force && (now - lastInteractionCleanupAt) < GIVEAWAY_INTERACTION_CLEANUP_INTERVAL) {
+        return;
+    }
+
+    lastInteractionCleanupAt = now;
+    const cutoff = now - GIVEAWAY_INTERACTION_TTL;
+    for (const [key, timestamp] of userGiveawayInteractions.entries()) {
+        if (timestamp < cutoff) {
+            userGiveawayInteractions.delete(key);
+        }
+    }
+
+    while (userGiveawayInteractions.size > GIVEAWAY_INTERACTION_MAX_ENTRIES) {
+        const oldestKey = userGiveawayInteractions.keys().next().value;
+        if (!oldestKey) break;
+        userGiveawayInteractions.delete(oldestKey);
+    }
+}
+
+
+
+
+
+
+
 export function parseDuration(durationString) {
     if (!durationString || typeof durationString !== 'string') {
         throw new TitanBotError(
@@ -72,7 +97,7 @@ export function parseDuration(durationString) {
             );
     }
 
-    const maxDuration = 30 * 24 * 60 * 60 * 1000; // 30 days
+    const maxDuration = 30 * 24 * 60 * 60 * 1000; 
     if (ms > maxDuration) {
         throw new TitanBotError(
             `Duration exceeds maximum: ${ms}ms > ${maxDuration}ms`,
@@ -82,7 +107,7 @@ export function parseDuration(durationString) {
         );
     }
 
-    const minDuration = 10 * 1000; // 10 seconds
+    const minDuration = 10 * 1000; 
     if (ms < minDuration) {
         throw new TitanBotError(
             `Duration below minimum: ${ms}ms < ${minDuration}ms`,
@@ -95,11 +120,11 @@ export function parseDuration(durationString) {
     return ms;
 }
 
-/**
- * Validate giveaway prize string
- * @param {string} prize - Prize to validate
- * @throws {TitanBotError} If prize is invalid
- */
+
+
+
+
+
 export function validatePrize(prize) {
     if (!prize || typeof prize !== 'string') {
         throw new TitanBotError(
@@ -123,11 +148,11 @@ export function validatePrize(prize) {
     return trimmed;
 }
 
-/**
- * Validate winner count
- * @param {number} winnerCount - Number of winners to validate
- * @throws {TitanBotError} If winner count is invalid
- */
+
+
+
+
+
 export function validateWinnerCount(winnerCount) {
     if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 10) {
         throw new TitanBotError(
@@ -139,13 +164,13 @@ export function validateWinnerCount(winnerCount) {
     }
 }
 
-/**
- * Create a giveaway embed for display
- * @param {Object} giveaway - Giveaway data
- * @param {string} status - Status ('active', 'ended', 'reroll')
- * @param {Array<string>} winners - Array of winner user IDs
- * @returns {EmbedBuilder} Formatted embed
- */
+
+
+
+
+
+
+
 export function createGiveawayEmbed(giveaway, status, winners = []) {
     try {
         const statusEmoji = status === 'ended' ? '🎉' : status === 'reroll' ? '🔄' : '🎉';
@@ -187,11 +212,11 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
     }
 }
 
-/**
- * Create action row with giveaway buttons
- * @param {boolean} ended - Whether giveaway has ended
- * @returns {ActionRowBuilder} Action row with buttons
- */
+
+
+
+
+
 export function createGiveawayButtons(ended = false) {
     try {
         const row = new ActionRowBuilder();
@@ -236,13 +261,13 @@ export function createGiveawayButtons(ended = false) {
     }
 }
 
-/**
- * Pick random winners from participants with validation
- * @param {Array<string>} participants - Array of user IDs
- * @param {number} winnerCount - Number of winners to select
- * @returns {Array<string>} Array of winner user IDs
- * @throws {TitanBotError} If validation fails
- */
+
+
+
+
+
+
+
 export function selectWinners(participants, winnerCount) {
     if (!Array.isArray(participants) || participants.length === 0) {
         return [];
@@ -260,7 +285,7 @@ export function selectWinners(participants, winnerCount) {
     const requested = Math.min(winnerCount, participants.length);
     
     try {
-        // Fisher-Yates shuffle for better randomization
+        
         const shuffled = [...participants];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -278,13 +303,15 @@ export function selectWinners(participants, winnerCount) {
     }
 }
 
-/**
- * Check if user is rate-limited for giveaway interactions
- * @param {string} userId - User ID to check
- * @param {string} giveawayId - Giveaway message ID
- * @returns {boolean} True if user is rate-limited
- */
+
+
+
+
+
+
 export function isUserRateLimited(userId, giveawayId) {
+    cleanupInteractionCache();
+
     const key = `${userId}:${giveawayId}`;
     const lastInteraction = userGiveawayInteractions.get(key);
     
@@ -296,37 +323,29 @@ export function isUserRateLimited(userId, giveawayId) {
     return elapsed < GIVEAWAY_INTERACTION_COOLDOWN;
 }
 
-/**
- * Record user interaction for rate limiting
- * @param {string} userId - User ID
- * @param {string} giveawayId - Giveaway message ID
- */
+
+
+
+
+
 export function recordUserInteraction(userId, giveawayId) {
+    cleanupInteractionCache();
+
     const key = `${userId}:${giveawayId}`;
     userGiveawayInteractions.set(key, Date.now());
 
-    // Cleanup old entries every minute
-    if (userGiveawayInteractions.size > 10000) {
-        const now = Date.now();
-        const cutoff = now - (60 * 1000); // 1 minute ago
-
-        for (const [k, v] of userGiveawayInteractions.entries()) {
-            if (v < cutoff) {
-                userGiveawayInteractions.delete(k);
-            }
-        }
-    }
+    cleanupInteractionCache(true);
 }
 
-/**
- * End a giveaway and select winners with transaction-like handling
- * @param {Object} client - Discord client
- * @param {Object} giveaway - Giveaway data
- * @param {string} guildId - Guild ID
- * @param {string} endedBy - User ID who ended the giveaway
- * @returns {Promise<Object>} Result with winners and status
- * @throws {TitanBotError} If operation fails
- */
+
+
+
+
+
+
+
+
+
 export async function endGiveaway(client, giveaway, guildId, endedBy) {
     try {
         if (!giveaway) {
@@ -350,7 +369,7 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
         const participants = giveaway.participants || [];
         const winners = selectWinners(participants, giveaway.winnerCount || 1);
         
-        // Update giveaway state atomically
+        
         const updatedGiveaway = {
             ...giveaway,
             ended: true,
@@ -434,7 +453,7 @@ export async function checkGiveaways(client) {
           ? winners.map(id => `<@${id}>`).join(', ')
           : 'No valid entries!';
 
-        // Create ended embed using centralized function
+        
         const endedEmbed = createGiveawayEmbed(giveaway, 'ended', winners);
 
         await message.edit({
@@ -442,7 +461,7 @@ export async function checkGiveaways(client) {
           components: [createGiveawayButtons(true)]
         });
 
-        // Update giveaway state atomically
+        
         giveaway.ended = true;
         giveaway.isEnded = true;
         giveaway.winnerIds = winners;
@@ -458,7 +477,7 @@ export async function checkGiveaways(client) {
           const winnerAnnouncement = `🎉 Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**! Please contact <@${giveaway.hostId}> to claim your prize.`;
           await channel.send({ content: winnerAnnouncement });
 
-          // Log giveaway winner event
+          
           try {
             await logEvent({
               client,

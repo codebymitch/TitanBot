@@ -1,7 +1,7 @@
-/**
- * Shop Configuration Module
- * Centralized configuration for the shop system
- */
+
+
+
+
 
 import { shopItems, getItemById, getItemsByType, getItemPrice, validatePurchase } from './items.js';
 import { botConfig } from '../bot.js';
@@ -126,14 +126,14 @@ export {
     validatePurchase
 };
 
-/**
- * Get the current price of an item, considering any active sales or discounts
- * @param {string} itemId - The ID of the item
- * @param {Object} [options] - Additional options
- * @param {number} [options.quantity=1] - The quantity being purchased
- * @param {Object} [options.userData] - The user's data for personalized pricing
- * @returns {number} The final price after applying discounts
- */
+
+
+
+
+
+
+
+
 export function getCurrentPrice(itemId, { quantity = 1, userData = null } = {}) {
     const basePrice = getItemPrice(itemId) * quantity;
     
@@ -163,11 +163,11 @@ discount += 0.1;
     return Math.floor(basePrice * (1 - discount));
 }
 
-/**
- * Get the shop category for a specific item
- * @param {string} itemType - The type of the item
- * @returns {Object} The category object
- */
+
+
+
+
+
 export function getCategoryForItem(itemType) {
     return shopConfig.categories.find(cat => 
         cat.itemTypes.includes(itemType)
@@ -179,11 +179,11 @@ export function getCategoryForItem(itemType) {
     };
 }
 
-/**
- * Get all items in a specific category
- * @param {string} categoryId - The ID of the category
- * @returns {Array} Array of items in the category
- */
+
+
+
+
+
 export function getItemsInCategory(categoryId) {
     const category = shopConfig.categories.find(cat => cat.id === categoryId);
     if (!category) return [];

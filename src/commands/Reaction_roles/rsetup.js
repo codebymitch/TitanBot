@@ -1,7 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -56,7 +55,7 @@ export default {
 
     async execute(interaction) {
         try {
-            // Defer the interaction
+            
             const deferSuccess = await InteractionHelper.safeDefer(interaction);
             if (!deferSuccess) return;
             
@@ -66,7 +65,7 @@ export default {
             const title = interaction.options.getString('title');
             const description = interaction.options.getString('description');
             
-            // Validate channel type
+            
             if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildAnnouncement) {
                 throw createError(
                     `Invalid channel type: ${channel.type}`,
@@ -76,7 +75,7 @@ export default {
                 );
             }
             
-            // Check bot permissions
+            
             if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
                 throw createError(
                     'Bot missing ManageRoles permission',
@@ -86,7 +85,7 @@ export default {
                 );
             }
             
-            // Check channel send permissions
+            
             if (!channel.permissionsFor(interaction.guild.members.me).has(PermissionFlagsBits.SendMessages)) {
                 throw createError(
                     `Bot cannot send messages in ${channel.name}`,
@@ -96,32 +95,32 @@ export default {
                 );
             }
             
-            // Collect and validate roles
+            
             const roles = [];
             const roleValidationErrors = [];
             
             for (let i = 1; i <= 5; i++) {
                 const role = interaction.options.getRole(`role${i}`);
                 if (role) {
-                    // Check role hierarchy
+                    
                     if (role.position >= interaction.guild.members.me.roles.highest.position) {
                         roleValidationErrors.push(`**${role.name}** - My role is not high enough in the hierarchy`);
                         continue;
                     }
                     
-                    // Check for dangerous permissions
+                    
                     if (hasDangerousPermissions(role)) {
                         roleValidationErrors.push(`**${role.name}** - This role has dangerous permissions (Administrator, Manage Server, etc.)`);
                         continue;
                     }
                     
-                    // Check if role is managed (bot role, integration role)
+                    
                     if (role.managed) {
                         roleValidationErrors.push(`**${role.name}** - This is a managed role (integration/bot role)`);
                         continue;
                     }
                     
-                    // Check if role is @everyone
+                    
                     if (role.id === interaction.guild.id) {
                         roleValidationErrors.push(`**${role.name}** - Cannot use the @everyone role`);
                         continue;
@@ -131,7 +130,7 @@ export default {
                 }
             }
             
-            // Show validation errors if any
+            
             if (roleValidationErrors.length > 0) {
                 const errorMsg = `The following roles cannot be added:\n${roleValidationErrors.join('\n')}`;
                 
@@ -144,7 +143,7 @@ export default {
                     );
                 }
                 
-                // If some roles are valid, show warning
+                
                 await interaction.followUp({
                     embeds: [warningEmbed('Role Validation Warning', errorMsg)],
                     ephemeral: true
@@ -160,7 +159,7 @@ export default {
                 );
             }
 
-            // Create the select menu
+            
             const row = new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId('reaction_roles')
@@ -177,7 +176,7 @@ export default {
                     )
             );
 
-            // Send the message
+            
             const message = await channel.send({
                 embeds: [{
                     title,
@@ -196,7 +195,7 @@ export default {
                 components: [row]
             });
 
-            // Save to database using service layer
+            
             const roleIds = roles.map(role => role.id);
             await createReactionRoleMessage(
                 interaction.client,
@@ -208,7 +207,7 @@ export default {
             
             logger.info(`Reaction role message created: ${message.id} with ${roles.length} roles by ${interaction.user.tag}`);
 
-            // Log to audit system
+            
             try {
                 await logEvent({
                     client: interaction.client,

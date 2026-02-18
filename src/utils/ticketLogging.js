@@ -3,23 +3,23 @@ import { getGuildConfig } from '../services/guildConfig.js';
 import { EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from './logger.js';
 
-/**
- * Comprehensive ticket logging system with separate channels for different events
- * @param {Object} options - The log options
- * @param {import('discord.js').Client} options.client - The Discord client
- * @param {string} options.guildId - The guild ID
- * @param {Object} options.event - The ticket event details
- * @param {string} options.event.type - The type of ticket event (open, close, claim, unclaim, transcript, priority, etc.)
- * @param {string} [options.event.ticketId] - The ticket ID/channel
- * @param {string} [options.event.ticketNumber] - The ticket number
- * @param {string} [options.event.userId] - The user who created/owns the ticket
- * @param {string} [options.event.executorId] - The user who performed the action
- * @param {string} [options.event.reason] - The reason for the action
- * @param {string} [options.event.priority] - The ticket priority
- * @param {Object} [options.event.metadata] - Additional metadata
- * @param {import('discord.js').AttachmentBuilder[]} [options.event.attachments] - File attachments (for transcripts)
- * @returns {Promise<void>}
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export async function logTicketEvent({ client, guildId, event }) {
   try {
     const guild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId).catch(() => null);
@@ -76,12 +76,12 @@ export async function logTicketEvent({ client, guildId, event }) {
   }
 }
 
-/**
- * Get the appropriate log channel ID for a specific event type
- * @param {Object} config - Guild configuration
- * @param {string} eventType - The event type
- * @returns {string|null} Channel ID or null if logging disabled
- */
+
+
+
+
+
+
 function getLogChannelForEventType(config, eventType) {
   const ticketLogging = config.ticketLogging || {};
   
@@ -124,12 +124,12 @@ function mapTicketEventType(eventType) {
   }
 }
 
-/**
- * Create a log embed for ticket events
- * @param {import('discord.js').Guild} guild - The guild
- * @param {Object} event - The event details
- * @returns {Promise<EmbedBuilder>}
- */
+
+
+
+
+
+
 async function createTicketLogEmbed(guild, event) {
   const embed = new EmbedBuilder();
   
@@ -238,11 +238,11 @@ transcript: 0x1abc9c
   return embed;
 }
 
-/**
- * Get display information for different event types
- * @param {Object} event - The event details
- * @returns {Object} { title: string, description: string }
- */
+
+
+
+
+
 function getEventDisplayInfo(event) {
   const ticketRef = event.ticketNumber ? `#${event.ticketNumber}` : event.ticketId ? `<#${event.ticketId}>` : 'Unknown';
   
@@ -283,12 +283,12 @@ function getEventDisplayInfo(event) {
   };
 }
 
-/**
- * Get current ticket logging configuration
- * @param {import('discord.js').Client} client - The Discord client
- * @param {string} guildId - The guild ID
- * @returns {Promise<Object>} Current configuration
- */
+
+
+
+
+
+
 export async function getTicketLoggingConfig(client, guildId) {
   const config = await getGuildConfig(client, guildId);
   return {
@@ -299,12 +299,12 @@ export async function getTicketLoggingConfig(client, guildId) {
   };
 }
 
-/**
- * Validate a channel for ticket logging
- * @param {import('discord.js').GuildChannel} channel - The channel to validate
- * @param {import('discord.js').GuildMember} botMember - The bot's guild member
- * @returns {Object} Validation result
- */
+
+
+
+
+
+
 export function validateLogChannel(channel, botMember) {
   if (!channel || channel.type !== ChannelType.GuildText) {
     return {

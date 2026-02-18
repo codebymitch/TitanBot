@@ -1,10 +1,38 @@
+/**
+ * Centralized Error Handling System
+ * 
+ * This module provides structured error handling for the TitanBot application.
+ * 
+ * PHILOSOPHY:
+ * - All errors are categorized by type for consistent handling
+ * - User-facing errors display friendly messages
+ * - System errors are logged with full context
+ * - Errors contain context information for debugging
+ * 
+ * USAGE:
+ * - Throw TitanBotError for application-specific errors
+ * - Use handleInteractionError for interaction errors
+ * - Errors are automatically formatted and sent to user
+ * 
+ * ERROR TYPES:
+ * - VALIDATION: Invalid user input
+ * - PERMISSION: Missing access permissions
+ * - CONFIGURATION: Missing/invalid configuration
+ * - DATABASE: Database operation failure
+ * - NETWORK: Network/external service failure
+ * - DISCORD_API: Discord API error
+ * - USER_INPUT: User input processing error
+ * - RATE_LIMIT: Rate limit exceeded
+ * - UNKNOWN: Unclassified error
+ */
+
 import { logger } from './logger.js';
 import { createEmbed } from './embeds.js';
 import { MessageFlags } from 'discord.js';
 
-/**
- * Error types for categorization
- */
+
+
+
 export const ErrorTypes = {
     VALIDATION: 'validation',
     PERMISSION: 'permission',
@@ -17,9 +45,9 @@ export const ErrorTypes = {
     UNKNOWN: 'unknown'
 };
 
-/**
- * Custom error class for TitanBot
- */
+
+
+
 export class TitanBotError extends Error {
     constructor(message, type = ErrorTypes.UNKNOWN, userMessage = null, context = {}) {
         super(message);
@@ -31,9 +59,9 @@ export class TitanBotError extends Error {
     }
 }
 
-/**
- * Error categorization utility
- */
+
+
+
 export function categorizeError(error) {
     if (error instanceof TitanBotError) {
         return error.type;
@@ -73,9 +101,9 @@ export function categorizeError(error) {
     return ErrorTypes.UNKNOWN;
 }
 
-/**
- * User-friendly error messages
- */
+
+
+
 const UserMessages = {
     [ErrorTypes.VALIDATION]: {
         default: "Please check your input and try again.",
@@ -123,9 +151,9 @@ const UserMessages = {
     }
 };
 
-/**
- * Get user-friendly error message
- */
+
+
+
 export function getUserMessage(error, context = {}) {
     const type = categorizeError(error);
     const messages = UserMessages[type] || UserMessages[ErrorTypes.UNKNOWN];
@@ -141,16 +169,16 @@ export function getUserMessage(error, context = {}) {
     return messages.default;
 }
 
-/**
- * Centralized error handler for interactions
- */
+
+
+
 export async function handleInteractionError(interaction, error, context = {}) {
     const errorType = categorizeError(error);
     const userMessage = getUserMessage(error, context);
     
-    // Log at appropriate level based on error type
-    // User errors (expected behavior) = debug/info
-    // System errors (unexpected failures) = error
+    
+    
+    
     const isUserError = [
         ErrorTypes.VALIDATION,
         ErrorTypes.RATE_LIMIT,
@@ -173,7 +201,7 @@ export async function handleInteractionError(interaction, error, context = {}) {
     };
     
     if (isUserError) {
-        // User-facing errors (cooldowns, invalid input, etc.) - expected behavior
+        
         logger.debug(`User Error [${errorType.toUpperCase()}]: ${error.message}`, logData);
     } else {
         // System errors (database, network, etc.) - unexpected failures
@@ -208,13 +236,13 @@ export async function handleInteractionError(interaction, error, context = {}) {
     }
 
     try {
-        // Check if interaction is still valid
+        
         if (!interaction || !interaction.id) {
             logger.warn('Interaction was null or invalid when handling error');
             return;
         }
 
-        // Check if interaction has expired (older than 14 minutes)
+        
         if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
             logger.warn('Interaction expired before error handler could send response');
             return;
@@ -234,7 +262,7 @@ export async function handleInteractionError(interaction, error, context = {}) {
             await interaction.reply(errorMessage);
         }
     } catch (replyError) {
-        // Check if this is an "interaction already acknowledged" error
+        
         if (replyError.code === 40060 || replyError.code === 10062) {
             logger.warn('Interaction already acknowledged or expired, cannot send error response:', replyError.code);
             return;
@@ -243,9 +271,9 @@ export async function handleInteractionError(interaction, error, context = {}) {
     }
 }
 
-/**
- * Get error title based on type
- */
+
+
+
 function getErrorTitle(errorType) {
     const titles = {
         [ErrorTypes.VALIDATION]: "❌ Invalid Input",
@@ -262,9 +290,9 @@ function getErrorTitle(errorType) {
     return titles[errorType] || titles[ErrorTypes.UNKNOWN];
 }
 
-/**
- * Error handler wrapper for command execution
- */
+
+
+
 export function withErrorHandling(fn, context = {}) {
     return async (...args) => {
         try {
@@ -286,9 +314,9 @@ export function withErrorHandling(fn, context = {}) {
     };
 }
 
-/**
- * Create a TitanBotError with context
- */
+
+
+
 export function createError(message, type = ErrorTypes.UNKNOWN, userMessage = null, context = {}) {
     return new TitanBotError(message, type, userMessage, context);
 }

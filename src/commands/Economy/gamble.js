@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
@@ -65,14 +64,14 @@ export default {
             let usedClover = false;
             let usedCharm = false;
 
-            // Lucky Clover - single use, +10% win chance
+            
             if (cloverCount > 0) {
                 winChance += CLOVER_WIN_BONUS;
                 userData.inventory["lucky_clover"] -= 1;
                 cloverMessage = `\n🍀 **Lucky Clover Consumed:** Your win chance was boosted!`;
                 usedClover = true;
             }
-            // Lucky Charm - 3 uses, +8% win chance
+            
             else if (charmCount > 0) {
                 winChance += CHARM_WIN_BONUS;
                 userData.inventory["lucky_charm"] -= 1;

@@ -39,10 +39,10 @@ const CATEGORY_ICONS = {
     Config: "⚙️",
 };
 
-/**
- * Creates the initial help menu embed and components
- * @returns {Object} Object containing embeds and components
- */
+
+
+
+
 async function createInitialHelpMenu() {
     const commandsPath = path.join(__dirname, "../../commands");
     const categoryDirs = (
@@ -199,7 +199,7 @@ export default {
         .setDescription("Displays the help menu with all available commands"),
 
     async execute(interaction, guildConfig, client) {
-        // Defer reply to avoid timeout (filesystem operations take time)
+        
         const { MessageFlags } = await import('discord.js');
         await interaction.deferReply();
         
@@ -223,7 +223,7 @@ export default {
                     components: [],
                 });
             } catch (error) {
-                // Message might be deleted or no longer editable.
+                
             }
         }, HELP_MENU_TIMEOUT_MS);
     },

@@ -9,7 +9,7 @@ export default {
         try {
             await interaction.deferReply();
             
-            // Use service layer - returns sorted, limited results
+            
             const next5 = await getUpcomingBirthdays(client, interaction.guildId, 5);
 
             if (next5.length === 0) {

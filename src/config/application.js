@@ -7,11 +7,11 @@ import { pgConfig } from "./postgres.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Main application configuration object
- * Combines environment variables, bot config, and other settings
- * Centralizes all application-wide settings for TitanBot
- */
+
+
+
+
+
 const appConfig = {
   paths: {
     root: path.join(__dirname, "../.."),
@@ -77,40 +77,40 @@ const appConfig = {
 
   shop,
 
-  /**
-   * Comprehensive feature toggles for all bot systems
-   * Matches commands in src/commands/ directories
-   * Enables/disables entire feature systems
-   */
+  
+
+
+
+
   features: {
-    // Core systems
-    economy: true,                  // Economy system (balance, shop, currency)
-    leveling: true,                 // XP and leveling system
-    moderation: true,               // Ban, kick, warn, etc.
-    logging: true,                  // Event logging and audit trail
-    welcome: true,                  // Member welcome messages
+    
+    economy: true,                  
+    leveling: true,                 
+    moderation: true,               
+    logging: true,                  
+    welcome: true,                  
 
-    // Interactive systems
-    tickets: true,                  // Support ticket system
-    giveaways: true,                // Giveaway creation and management
-    birthday: true,                 // Birthday tracking and announcements
-    counter: true,                  // Custom server counters
+    
+    tickets: true,                  
+    giveaways: true,                
+    birthday: true,                 
+    counter: true,                  
 
-    // Advanced features
-    verification: true,             // Member verification system
-    reactionRoles: true,            // Reaction role assignments
-    joinToCreate: true,             // Dynamic voice channel creation
+    
+    verification: true,             
+    reactionRoles: true,            
+    joinToCreate: true,             
 
-    // Utility & Communication
-    voice: true,                    // Voice channel utilities
-    search: true,                   // Search functionality
-    tools: true,                    // General tools and utilities
-    utility: true,                  // Utility commands
-    community: true,                // Community management commands
-    fun: true,                      // Fun and entertainment commands
+    
+    voice: true,                    
+    search: true,                   
+    tools: true,                    
+    utility: true,                  
+    community: true,                
+    fun: true,                      
 
-    // Legacy/Disabled
-    music: false,                   // Music playback (not implemented)
+    
+    music: false,                   
   },
 
   env: process.env.NODE_ENV || "development",

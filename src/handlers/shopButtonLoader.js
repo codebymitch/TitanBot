@@ -1,10 +1,10 @@
 import { shopPurchaseHandler } from './shopButtons.js';
 import { logger } from '../utils/logger.js';
 
-/**
- * Load shop button handlers
- * @param {Client} client - Discord client
- */
+
+
+
+
 export default async function loadShopButtons(client) {
   try {
     client.buttons.set('shop_buy', shopPurchaseHandler);

@@ -6,20 +6,29 @@ import { getColor } from '../../config/bot.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 import { getReactionRoleMessage } from '../../services/reactionRoleService.js';
 
-/**
- * Handle reaction role select menu interactions
- * @param {import('discord.js').StringSelectMenuInteraction} interaction - The select menu interaction
- * @param {import('discord.js').Client} client - The Discord client
- * @returns {Promise<void>}
- */
+
+
+
+
+
+
 export async function execute(interaction, client) {
     try {
         const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
         if (!deferSuccess) return;
 
+        if (!interaction.inGuild() || !interaction.guild || !interaction.member) {
+            throw createError(
+                'Reaction role interaction used outside a guild context',
+                ErrorTypes.VALIDATION,
+                'This reaction role menu can only be used inside a server.',
+                { userId: interaction.user.id }
+            );
+        }
+
         logger.debug(`Reaction role select menu interaction by ${interaction.user.tag} on message ${interaction.message.id}`);
 
-        // Get reaction role data using service layer
+        
         const reactionRoleData = await getReactionRoleMessage(client, interaction.guildId, interaction.message.id);
         
         if (!reactionRoleData) {
@@ -36,8 +45,19 @@ export async function execute(interaction, client) {
         const member = interaction.member;
         const selectedRoleIds = interaction.values;
         
-        // Permission checks
-        if (!interaction.guild.members.me.permissions.has('ManageRoles')) {
+        
+        const me = interaction.guild.members.me ?? await interaction.guild.members.fetchMe().catch(() => null);
+
+        if (!me) {
+            throw createError(
+                'Unable to fetch bot member for permission validation',
+                ErrorTypes.PERMISSION,
+                'I could not verify my server permissions. Please try again.',
+                { guildId: interaction.guildId }
+            );
+        }
+
+        if (!me.permissions.has('ManageRoles')) {
             throw createError(
                 'Bot missing ManageRoles permission',
                 ErrorTypes.PERMISSION,
@@ -46,9 +66,9 @@ export async function execute(interaction, client) {
             );
         }
         
-        const botRolePosition = interaction.guild.members.me.roles.highest.position;
+        const botRolePosition = me.roles.highest.position;
         
-        // Get available role IDs from data
+        
         let availableRoleIds;
         if (Array.isArray(reactionRoleData.roles)) {
             availableRoleIds = reactionRoleData.roles;
@@ -62,7 +82,7 @@ export async function execute(interaction, client) {
         const removedRoles = [];
         const skippedRoles = [];
 
-        // Add selected roles
+        
         for (const roleId of selectedRoleIds) {
             if (!availableRoleIds.includes(roleId)) {
                 logger.warn(`Role ${roleId} not in available roles for message ${interaction.message.id}`);
@@ -75,15 +95,32 @@ export async function execute(interaction, client) {
                 skippedRoles.push(roleId);
                 continue;
             }
+
+            const roleHasDangerousPermissions = role.permissions.has([
+                'Administrator',
+                'ManageGuild',
+                'ManageRoles',
+                'ManageChannels',
+                'ManageWebhooks',
+                'BanMembers',
+                'KickMembers',
+                'MentionEveryone'
+            ]);
+
+            if (role.managed || roleHasDangerousPermissions) {
+                logger.warn(`Blocked self-assignment for protected role ${role.name} (${roleId})`);
+                skippedRoles.push(role.name);
+                continue;
+            }
             
-            // Check role hierarchy
+            
             if (role.position >= botRolePosition) {
                 logger.warn(`Cannot assign role ${role.name} (${roleId}), hierarchy issue`);
                 skippedRoles.push(role.name);
                 continue;
             }
 
-            // Add role if member doesn't have it
+            
             if (!member.roles.cache.has(roleId)) {
                 try {
                     await member.roles.add(role);
@@ -96,17 +133,17 @@ export async function execute(interaction, client) {
             }
         }
 
-        // Remove unselected roles
+        
         for (const roleId of availableRoleIds) {
             if (selectedRoleIds.includes(roleId)) continue;
 
             const role = interaction.guild.roles.cache.get(roleId);
             if (!role) continue;
 
-            // Check role hierarchy
+            
             if (role.position >= botRolePosition) continue;
 
-            // Remove role if member has it
+            
             if (member.roles.cache.has(roleId)) {
                 try {
                     await member.roles.remove(role);
@@ -118,7 +155,7 @@ export async function execute(interaction, client) {
             }
         }
 
-        // Build response message
+        
         let description = '🎭 **Roles updated successfully!**\n\n';
         
         if (addedRoles.length > 0) {

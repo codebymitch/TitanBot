@@ -1,27 +1,27 @@
-﻿/**
- * Permission Guard - Centralized permission checking for commands
- * Ensures consistent security checks across all command handlers
- */
+﻿
+
+
+
 
 import { PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { logger } from './logger.js';
 import { errorEmbed } from './embeds.js';
 
-/**
- * Check if a user has admin permissions in the guild
- * @param {import('discord.js').GuildMember} member - The guild member to check
- * @returns {boolean} True if user is admin
- */
+
+
+
+
+
 export function isAdmin(member) {
   if (!member) return false;
   return member.permissions.has(PermissionFlagsBits.Administrator);
 }
 
-/**
- * Check if a user has mod permissions (Admin or ManageGuild)
- * @param {import('discord.js').GuildMember} member - The guild member to check
- * @returns {boolean} True if user has mod permissions
- */
+
+
+
+
+
 export function isModerator(member) {
   if (!member) return false;
   return member.permissions.has([
@@ -30,23 +30,23 @@ export function isModerator(member) {
   ]);
 }
 
-/**
- * Check if a user has specific permission(s)
- * @param {import('discord.js').GuildMember} member - The guild member to check
- * @param {string|string[]} permissions - Permission(s) to check
- * @returns {boolean} True if user has all specified permissions
- */
+
+
+
+
+
+
 export function hasPermission(member, permissions) {
   if (!member) return false;
   return member.permissions.has(permissions);
 }
 
-/**
- * Check if bot has required permissions in a channel
- * @param {import('discord.js').GuildChannel} channel - The channel to check
- * @param {string|string[]} permissions - Required permission(s)
- * @returns {boolean} True if bot has all required permissions
- */
+
+
+
+
+
+
 export function botHasPermission(channel, permissions) {
   if (!channel || !channel.guild) return false;
   const botMember = channel.guild.members.me;
@@ -54,13 +54,13 @@ export function botHasPermission(channel, permissions) {
   return channel.permissionsFor(botMember).has(permissions);
 }
 
-/**
- * Guard helper - Check user permissions and respond with error embed if missing
- * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction
- * @param {string|string[]} requiredPermissions - Permission(s) required
- * @param {string} [errorMessage] - Custom error message
- * @returns {Promise<boolean>} True if user has permissions, false otherwise (response already sent)
- */
+
+
+
+
+
+
+
 export async function checkUserPermissions(
   interaction,
   requiredPermissions,
@@ -83,13 +83,13 @@ export async function checkUserPermissions(
   return true;
 }
 
-/**
- * Guard helper - Check bot permissions in channel and respond with error if missing
- * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction
- * @param {string|string[]} requiredPermissions - Permission(s) required
- * @param {import('discord.js').TextChannel} [channel] - Channel to check (defaults to command channel)
- * @returns {Promise<boolean>} True if bot has permissions, false otherwise (response already sent)
- */
+
+
+
+
+
+
+
 export async function checkBotPermissions(
   interaction,
   requiredPermissions,
@@ -142,18 +142,39 @@ export async function checkBotPermissions(
   return true;
 }
 
-/**
- * Audit log permission check result
- * @param {string} userId - User ID
- * @param {string} action - Action being performed
- * @param {boolean} allowed - Whether the action was allowed
- * @param {string} [reason] - Reason for deny
- */
+
+
+
+
+
+function hashUserId(userId) {
+  
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    const char = userId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; 
+  }
+  return Math.abs(hash).toString(16).substring(0, 8);
+}
+
+
+
+
+
+
+
+
 export function auditPermissionCheck(userId, action, allowed, reason = null) {
+  
+  const userHash = hashUserId(userId);
+  
+  
   if (allowed) {
-    logger.debug(`[PERMISSION_AUDIT] User ${userId} authorized for action: ${action}`);
+    logger.debug('[PERMISSION_AUDIT] Permission granted', { action, userHash });
   } else {
-    logger.warn(`[PERMISSION_AUDIT] User ${userId} denied for action: ${action} - ${reason || 'insufficient permissions'}`);
+    const denyReason = reason || 'insufficient_permissions';
+    logger.warn('[PERMISSION_AUDIT] Permission denied', { action, userHash, reason: denyReason });
   }
 }
 

@@ -1,12 +1,11 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-const FISH_COOLDOWN = 45 * 60 * 1000; // 45 minutes
+const FISH_COOLDOWN = 45 * 60 * 1000; 
 const BASE_MIN_REWARD = 300;
 const BASE_MAX_REWARD = 900;
 const FISHING_ROD_MULTIPLIER = 1.5;
@@ -63,24 +62,24 @@ export default {
                 );
             }
 
-            // Determine what was caught based on rarity
+            
             const rand = Math.random();
             let fishCaught;
             
             if (rand < 0.5) {
-                // 50% common
+                
                 fishCaught = FISH_TYPES.filter(f => f.rarity === 'common')[Math.floor(Math.random() * 3)];
             } else if (rand < 0.75) {
-                // 25% uncommon
+                
                 fishCaught = FISH_TYPES.filter(f => f.rarity === 'uncommon')[Math.floor(Math.random() * 2)];
             } else if (rand < 0.9) {
-                // 15% rare
+                
                 fishCaught = FISH_TYPES.filter(f => f.rarity === 'rare')[Math.floor(Math.random() * 2)];
             } else if (rand < 0.98) {
-                // 8% epic
+                
                 fishCaught = FISH_TYPES.find(f => f.rarity === 'epic');
             } else {
-                // 2% legendary
+                
                 fishCaught = FISH_TYPES.find(f => f.rarity === 'legendary');
             }
 
@@ -91,7 +90,7 @@ export default {
             let finalEarned = baseEarned;
             let multiplierMessage = "";
 
-            // Apply fishing rod multiplier
+            
             if (hasFishingRod > 0) {
                 finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
                 multiplierMessage = `\n🎣 **Fishing Rod Bonus: +50%**`;
