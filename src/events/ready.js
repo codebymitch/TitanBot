@@ -1,5 +1,5 @@
 import { Events } from "discord.js";
-import { logger } from "../utils/logger.js";
+import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
 
 export default {
@@ -10,9 +10,9 @@ export default {
     try {
       client.user.setPresence(config.bot.presence);
 
-      logger.info(`Ready! Logged in as ${client.user.tag}`);
-      logger.info(`Serving ${client.guilds.cache.size} guild(s)`);
-      logger.info(`Loaded ${client.commands.size} commands`);
+      startupLog(`Ready! Logged in as ${client.user.tag}`);
+      startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
+      startupLog(`Loaded ${client.commands.size} commands`);
     } catch (error) {
       logger.error("Error in ready event:", error);
     }

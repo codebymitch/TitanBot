@@ -1,7 +1,6 @@
 import { Events, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { errorEmbed } from '../utils/embeds.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationButton, handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
@@ -185,15 +184,20 @@ const buttonType = parts.slice(0, 3).join('_');
       logger.error('Unhandled error in interactionCreate:', error);
       
       try {
-        const errorMessage = {
+        const ephemeralErrorMessage = {
           embeds: [MessageTemplates.ERRORS.DATABASE_ERROR('processing your interaction')],
-          flags: ['Ephemeral']
+          flags: MessageFlags.Ephemeral
+        };
+        const editErrorMessage = {
+          embeds: [MessageTemplates.ERRORS.DATABASE_ERROR('processing your interaction')]
         };
         
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply(errorMessage);
+        if (interaction.deferred) {
+          await interaction.editReply(editErrorMessage);
+        } else if (interaction.replied) {
+          await interaction.followUp(ephemeralErrorMessage);
         } else {
-          await interaction.reply(errorMessage);
+          await interaction.reply(ephemeralErrorMessage);
         }
       } catch (replyError) {
         logger.error('Failed to send fallback error response:', replyError);

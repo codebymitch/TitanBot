@@ -1,7 +1,7 @@
-/**
- * Shop items configuration
- * Defines all items available in the shop with their properties
- */
+
+
+
+
 
 export const shopItems = [
     {
@@ -142,47 +142,47 @@ roleId: null,
     }
 ];
 
-/**
- * Get a shop item by its ID
- * @param {string} itemId - The ID of the item to find
- * @returns {Object|undefined} The item object or undefined if not found
- */
+
+
+
+
+
 export function getItemById(itemId) {
     return shopItems.find(item => item.id === itemId);
 }
 
-/**
- * Get all items of a specific type
- * @param {string} type - The type of items to retrieve
- * @returns {Array} Array of items matching the type
- */
+
+
+
+
+
 export function getItemsByType(type) {
     return shopItems.filter(item => item.type === type);
 }
 
-/**
- * Get the price of an item by its ID
- * @param {string} itemId - The ID of the item
- * @returns {number} The price of the item, or 0 if not found
- */
+
+
+
+
+
 export function getItemPrice(itemId) {
     const item = getItemById(itemId);
     return item ? item.price : 0;
 }
 
-/**
- * Validate if an item can be purchased
- * @param {string} itemId - The ID of the item to validate
- * @param {Object} userData - The user's data including inventory and stats
- * @returns {{valid: boolean, reason: string}} Validation result
- */
+
+
+
+
+
+
 export function validatePurchase(itemId, userData) {
     const item = getItemById(itemId);
     if (!item) {
         return { valid: false, reason: 'Item not found' };
     }
 
-    // Inventory is an object: { itemId: quantity }
+    
     const inventory = userData.inventory || {};
     const upgrades = userData.upgrades || {};
 
@@ -197,7 +197,7 @@ export function validatePurchase(itemId, userData) {
     }
 
     if (item.type === 'upgrade' && item.maxLevel) {
-        // Check if user already has max level of this upgrade
+        
         if (upgrades[itemId]) {
             return { 
                 valid: false, 
@@ -207,7 +207,7 @@ export function validatePurchase(itemId, userData) {
     }
 
     if (item.type === 'tool') {
-        // Check if user already has this tool (except for bank_note which is stackable)
+        
         const currentQuantity = inventory[itemId] || 0;
         if (itemId !== 'bank_note' && currentQuantity > 0) {
             return { 

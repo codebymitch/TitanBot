@@ -2,6 +2,8 @@ import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 
+const MAX_LOGGED_MESSAGE_CONTENT_LENGTH = 1024;
+
 export default {
   name: Events.MessageDelete,
   once: false,
@@ -12,7 +14,7 @@ export default {
 
       const fields = [];
 
-      // Add message author info
+      
       if (message.author) {
         fields.push({
           name: '👤 Author',
@@ -21,17 +23,17 @@ export default {
         });
       }
 
-      // Add channel info
+      
       fields.push({
         name: '💬 Channel',
         value: `${message.channel.toString()} (${message.channel.id})`,
         inline: true
       });
 
-      // Add message content (truncated if too long)
+      
       if (message.content) {
-        const content = message.content.length > 1024 
-          ? message.content.substring(0, 1021) + '...' 
+        const content = message.content.length > MAX_LOGGED_MESSAGE_CONTENT_LENGTH 
+          ? message.content.substring(0, MAX_LOGGED_MESSAGE_CONTENT_LENGTH - 3) + '...' 
           : message.content;
         fields.push({
           name: '📝 Content',
@@ -40,21 +42,21 @@ export default {
         });
       }
 
-      // Add message ID
+      
       fields.push({
         name: '🆔 Message ID',
         value: message.id,
         inline: true
       });
 
-      // Add creation date
+      
       fields.push({
         name: '📅 Created',
         value: `<t:${Math.floor(message.createdTimestamp / 1000)}:R>`,
         inline: true
       });
 
-      // Add attachment count if any
+      
       if (message.attachments.size > 0) {
         fields.push({
           name: '📎 Attachments',

@@ -1,7 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, EmbedBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, createError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -15,13 +14,13 @@ export default {
 
     async execute(interaction) {
         try {
-            // Defer the interaction
+            
             const deferSuccess = await InteractionHelper.safeDefer(interaction);
             if (!deferSuccess) return;
             
             logger.info(`Reaction role list requested by ${interaction.user.tag} in guild ${interaction.guild.name}`);
             
-            // Get all reaction role messages using service layer
+            
             const guildReactionRoles = await getAllReactionRoleMessages(interaction.client, interaction.guildId);
 
             if (guildReactionRoles.length === 0) {
@@ -43,7 +42,7 @@ export default {
                     const channel = await interaction.guild.channels.fetch(rr.channelId).catch(() => null);
                     const message = channel ? await channel.messages.fetch(rr.messageId).catch(() => null) : null;
                     
-                    // Count roles
+                    
                     let roleCount = 0;
                     if (Array.isArray(rr.roles)) {
                         roleCount = rr.roles.length;
@@ -51,13 +50,13 @@ export default {
                         roleCount = Object.keys(rr.roles).length;
                     }
                     
-                    // Build field value
+                    
                     let fieldValue = '';
                     fieldValue += `📍 **Channel:** ${channel ? channel.toString() : '❌ Not found'}\n`;
                     fieldValue += `🔗 **Message:** ${message ? `[Jump to Message](${message.url})` : '❌ Message not found'}\n`;
                     fieldValue += `🏷️ **Roles:** ${roleCount} role${roleCount !== 1 ? 's' : ''} configured`;
                     
-                    // Add created date if available
+                    
                     if (rr.createdAt) {
                         fieldValue += `\n📅 **Created:** <t:${Math.floor(new Date(rr.createdAt).getTime() / 1000)}:R>`;
                     }

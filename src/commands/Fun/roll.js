@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
@@ -40,7 +39,7 @@ export default {
       const numSides = parseInt(match[2], 10);
       const modifier = parseInt(match[3] || "0", 10);
 
-      // Validate dice parameters
+      
       if (numDice < 1 || numDice > 20) {
         throw new TitanBotError(
           `Too many dice requested: ${numDice}`,

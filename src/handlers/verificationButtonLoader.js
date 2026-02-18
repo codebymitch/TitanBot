@@ -1,15 +1,20 @@
 import verificationButtonHandler from './verificationButtons.js';
+import { logger } from '../utils/logger.js';
 
-/**
- * Load verification button handlers
- * @param {Client} client - Discord client
- */
+
+
+
+
 export async function loadVerificationButtons(client) {
-    client.buttons.set(verificationButtonHandler.customId, verificationButtonHandler);
-    console.log('✅ Loaded verification button handler');
+    try {
+        client.buttons.set(verificationButtonHandler.customId, verificationButtonHandler);
+        logger.info('Verification button handler loaded');
+    } catch (error) {
+        logger.error('Error loading verification button handler:', error);
+    }
 }
 
-export default { loadVerificationButtons };
+export default loadVerificationButtons;
 
 
 

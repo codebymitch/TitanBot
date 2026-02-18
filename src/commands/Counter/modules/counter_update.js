@@ -3,11 +3,11 @@ import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js'
 import { getServerCounters, saveServerCounters, updateCounter } from '../../../services/counterService.js';
 import { logger } from '../../../utils/logger.js';
 
-/**
- * Handle counter update subcommand
- * @param {CommandInteraction} interaction - The command interaction
- * @param {Client} client - Discord client
- */
+
+
+
+
+
 export async function handleUpdate(interaction, client) {
     const guild = interaction.guild;
     const counterId = interaction.options.getString("counter-id");

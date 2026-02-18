@@ -1,37 +1,37 @@
-/**
- * Bot Configuration
- * Centralized configuration for Titan Bot
- */
+
+
+
+
 
 import { logger } from '../utils/logger.js';
 
-// Default bot configuration
+
 export const botConfig = {
-  // Bot presence and status
-  // ActivityType values: 0=Playing, 1=Streaming, 2=Listening, 3=Watching, 5=Competing
+  
+  
   presence: {
     status: "online",
     activities: [
       {
         name: "/help | Titan Bot",
-        type: 0, // Playing
+        type: 0, 
       },
     ],
   },
 
-  // Command settings
+  
   commands: {
     prefix: "!",
     owners: process.env.OWNER_IDS?.split(",") || [],
-    defaultCooldown: 3, // seconds
+    defaultCooldown: 3, 
     deleteCommands: false,
     testGuildId: process.env.TEST_GUILD_ID,
   },
 
-  // Legacy prefix for backward compatibility
+  
   prefix: "!",
 
-  // Application system settings
+  
   applications: {
     defaultQuestions: [
       { question: "What is your name?", required: true },
@@ -43,46 +43,46 @@ export const botConfig = {
       approved: "#00FF00",
       denied: "#FF0000",
     },
-    applicationCooldown: 24, // hours
-    deleteDeniedAfter: 7, // days
-    deleteApprovedAfter: 30, // days
+    applicationCooldown: 24, 
+    deleteDeniedAfter: 7, 
+    deleteApprovedAfter: 30, 
     managerRoles: [], // Will be populated from environment or database
   },
 
-  // Embed theming and color scheme
+  
   // IMPORTANT: This is the SINGLE SOURCE OF TRUTH for all bot colors
-  // Always use getColor() function to access these colors - DO NOT hardcode hex values
-  //
-  // Usage Examples:
-  //   - Primary embeds: getColor('primary')
-  //   - Success messages: getColor('success')
-  //   - Error messages: getColor('error')
-  //   - Warnings: getColor('warning')
-  //   - Info messages: getColor('info')
-  //   - Nested colors: getColor('ticket.open') or getColor('priority.high')
-  //
-  // Use status colors (success, error, warning, info) for most embeds
-  // Use 'primary' for main bot embeds (help, about, general info)
-  // Use 'secondary' for subtle/background embeds
-  // AVOID using grayscale (gray, light, dark) for main content
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   embeds: {
     colors: {
-      // Primary brand colors
-      primary: "#336699", // Discord blurple - use for main bot embeds (help, info pages)
-      secondary: "#2F3136", // Dark theme background - use for subtle/background embeds
+      
+      primary: "#336699", 
+      secondary: "#2F3136", 
 
-      // Status colors - USE THESE FOR MOST EMBEDS
-      success: "#57F287", // Green - successful operations, confirmations
-      error: "#ED4245", // Red - errors, failures, critical issues
-      warning: "#FEE75C", // Yellow/Orange - warnings, cautions, pending actions
-      info: "#3498DB", // Blue - informational messages, processing
+      
+      success: "#57F287", 
+      error: "#ED4245", 
+      warning: "#FEE75C", 
+      info: "#3498DB", 
 
-      // Grayscale - AVOID for main embed content, only for specific UI elements
+      
       light: "#FFFFFF",
       dark: "#202225",
       gray: "#99AAB5",
 
-      // Discord-specific colors
+      
       blurple: "#5865F2",
       green: "#57F287",
       yellow: "#FEE75C",
@@ -90,7 +90,7 @@ export const botConfig = {
       red: "#ED4245",
       black: "#000000",
 
-      // System-specific colors
+      
       giveaway: {
         active: "#57F287",
         ended: "#ED4245",
@@ -105,7 +105,7 @@ export const botConfig = {
       birthday: "#E91E63",
       moderation: "#9B59B6",
 
-      // Priority levels
+      
       priority: {
         none: "#95A5A6",
         low: "#3498db",
@@ -126,7 +126,7 @@ export const botConfig = {
     },
   },
 
-  // Economy settings
+  
   economy: {
     currency: {
       name: "coins",
@@ -141,15 +141,15 @@ export const botConfig = {
     begMin: 5,
     begMax: 50,
     robSuccessRate: 0.4,
-    robFailJailTime: 3600000, // 1 hour in ms
+    robFailJailTime: 3600000, 
   },
 
-  // Shop settings
+  
   shop: {
-    // Will be imported from shop/index.js
+    
   },
 
-  // Ticket system settings
+  
   tickets: {
     defaultCategory: null,
     supportRoles: [],
@@ -185,45 +185,49 @@ export const botConfig = {
     logChannel: null,
   },
 
-  // Giveaway system settings
+  
   giveaways: {
-    defaultDuration: 86400000, // 24 hours
+    defaultDuration: 86400000, 
     minimumWinners: 1,
     maximumWinners: 10,
-    minimumDuration: 300000, // 5 minutes
-    maximumDuration: 2592000000, // 30 days
+    minimumDuration: 300000, 
+    maximumDuration: 2592000000, 
     allowedRoles: [],
     bypassRoles: [],
   },
 
-  // Birthday system settings
+  
   birthday: {
     defaultRole: null,
     announcementChannel: null,
     timezone: "UTC",
   },
 
-  // Verification system settings
+  
   verification: {
-    // Default verification message
+    
     defaultMessage: "Click the button below to verify yourself and gain access to the server!",
     
-    // Default button text
+    
     defaultButtonText: "Verify",
     
-    // Auto-verification settings
+    
     autoVerify: {
-      // Default criteria
+      
       defaultCriteria: "none",
+
       
-      // Min/max account age for criteria
-      minAccountAge: 1,      // days
-      maxAccountAge: 365,    // days
+      defaultAccountAgeDays: 7,
+      serverSizeThreshold: 1000,
       
-      // DM notification when auto-verified
+      
+      minAccountAge: 1,      
+      maxAccountAge: 365,    
+      
+      
       sendDMNotification: true,
       
-      // Criteria options
+      
       criteria: {
         account_age: "Account must be older than specified days",
         server_size: "All users if server has less than 1000 members",
@@ -231,20 +235,27 @@ export const botConfig = {
       }
     },
     
-    // Verification cooldown (milliseconds)
-    // Users cannot verify more than once per this duration
-    verificationCooldown: 5000,  // 5 seconds
     
-    // Rate limiting settings
-    maxVerificationAttempts: 3,   // max attempts
-    attemptWindow: 60000,          // within 1 minute
     
-    // Logging and audit
-    logAllVerifications: true,     // Log all verification events
+    verificationCooldown: 5000,  
+    
+    
+    maxVerificationAttempts: 3,   
+    attemptWindow: 60000,          
+
+    
+    maxCooldownEntries: 10000,
+    maxAttemptEntries: 10000,
+    cooldownCleanupInterval: 300000, 
+    maxAuditMetadataBytes: 4096,
+    maxInMemoryAuditEntries: 1000,
+    
+    
+    logAllVerifications: true,     
     keepAuditTrail: true          // Store audit trail in database
   },
 
-  // Welcome system settings
+  
   welcome: {
     defaultWelcomeMessage:
       "Welcome {user} to {server}! We now have {memberCount} members!",
@@ -254,7 +265,7 @@ export const botConfig = {
     defaultGoodbyeChannel: null,
   },
 
-  // Counter system settings
+  
   counters: {
     defaults: {
       name: "{name} Counter",
@@ -292,7 +303,7 @@ export const botConfig = {
     },
   },
 
-  // System messages
+  
   messages: {
     noPermission: "You do not have permission to use this command.",
     cooldownActive: "Please wait {time} before using this command again.",
@@ -303,27 +314,27 @@ export const botConfig = {
     maintenanceMode: "The bot is currently in maintenance mode.",
   },
 
-  // Comprehensive feature toggles - matches application.js
+  
   features: {
-    // Core systems
+    
     economy: true,
     leveling: true,
     moderation: true,
     logging: true,
     welcome: true,
 
-    // Interactive systems
+    
     tickets: true,
     giveaways: true,
     birthday: true,
     counter: true,
 
-    // Advanced features
+    
     verification: true,
     reactionRoles: true,
     joinToCreate: true,
 
-    // Utility & Communication
+    
     voice: true,
     search: true,
     tools: true,
@@ -331,20 +342,20 @@ export const botConfig = {
     community: true,
     fun: true,
 
-    // Legacy/Disabled
+    
     music: false,
   },
 };
 
-/**
- * Validates the bot configuration
- * @param {Object} config - The configuration to validate
- * @returns {string[]} Array of error messages, empty if valid
- */
+
+
+
+
+
 export function validateConfig(config) {
   const errors = [];
 
-  // Debug: Log environment variables (without sensitive data)
+  
   if (process.env.NODE_ENV !== 'production') {
     logger.debug('Environment variables check:');
     logger.debug('DISCORD_TOKEN exists:', !!process.env.DISCORD_TOKEN);
@@ -363,7 +374,7 @@ export function validateConfig(config) {
     errors.push("Client ID is required (CLIENT_ID environment variable)");
   }
 
-  // PostgreSQL validation (recommended for production)
+  
   if (process.env.NODE_ENV === 'production') {
     if (!process.env.POSTGRES_HOST) {
       errors.push("PostgreSQL host is required in production (POSTGRES_HOST environment variable)");
@@ -379,7 +390,7 @@ export function validateConfig(config) {
   return errors;
 }
 
-// Validate the configuration when imported
+
 const configErrors = validateConfig(botConfig);
 if (configErrors.length > 0) {
   console.error("Bot configuration errors:", configErrors.join("\n"));
@@ -388,52 +399,52 @@ if (configErrors.length > 0) {
   }
 }
 
-// Export as BotConfig for backward compatibility
+
 export const BotConfig = botConfig;
 
-/**
- * Get a color from the bot's color scheme
- * 
- * ALWAYS use this function instead of hardcoding hex values!
- * This ensures consistent theming across the entire bot.
- * 
- * @param {string|number} path - Color path (e.g., 'primary', 'success', 'ticket.open', 'priority.high')
- *                                or direct hex/number value for backwards compatibility
- * @param {string} fallback - Fallback color if path not found (default: gray)
- * @returns {number} Discord.js color integer
- * 
- * @example
- * // Status colors (most common usage)
- * getColor('success')  // Returns green for success messages
- * getColor('error')    // Returns red for error messages
- * getColor('warning')  // Returns yellow for warnings
- * getColor('info')     // Returns blue for info messages
- * 
- * @example
- * // Primary bot color for main embeds
- * getColor('primary')  // Use for help menus, about pages, general info
- * 
- * @example
- * // Nested paths for specific systems
- * getColor('ticket.open')      // Ticket status colors
- * getColor('priority.high')    // Priority level colors
- * getColor('giveaway.active')  // Giveaway state colors
- * 
- * @example
- * // In createEmbed utility
- * createEmbed({ title: 'Success!', description: '...', color: 'success' })
- * 
- * @example
- * // Direct EmbedBuilder usage
- * const embed = new EmbedBuilder()
- *   .setTitle('My Embed')
- *   .setColor(getColor('primary'))
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export function getColor(path, fallback = "#99AAB5") {
-  // If a numeric color or a hex string is provided directly, return it as-is
+  
   if (typeof path === "number") return path;
   if (typeof path === "string" && path.startsWith("#")) {
-    // Convert hex string to integer expected by Discord.js Embed#setColor
+    
     return parseInt(path.replace("#", ""), 16);
   }
   return path

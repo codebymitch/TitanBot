@@ -1,8 +1,8 @@
-/**
- * Join to Create Service Layer
- * Centralized business logic for the Join to Create feature
- * Handles all JoinToCreate operations with proper error handling, validation, and logging
- */
+
+
+
+
+
 
 import {
     getJoinToCreateConfig,
@@ -16,12 +16,26 @@ import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
 
-/**
- * Validate channel name template for security
- * @param {string} template - The template to validate
- * @throws {TitanBotError} If validation fails
- * @returns {boolean} True if valid
- */
+const CHANNEL_NAME_MAX_LENGTH = 100;
+const CHANNEL_VARIABLE_MAX_LENGTH = 32;
+const CONTROL_AND_INVISIBLE_CHARS_REGEX = /[\x00-\x1F\x7F\u200B-\u200D\uFEFF]/g;
+const ALLOWED_TEMPLATE_PLACEHOLDERS = new Set([
+    '{username}',
+    '{user_tag}',
+    '{displayName}',
+    '{display_name}',
+    '{guildName}',
+    '{guild_name}',
+    '{channelName}',
+    '{channel_name}'
+]);
+
+
+
+
+
+
+
 export function validateChannelNameTemplate(template) {
     if (!template || typeof template !== 'string') {
         throw new TitanBotError(
@@ -31,17 +45,19 @@ export function validateChannelNameTemplate(template) {
         );
     }
 
-    if (template.length > 100) {
+    const normalizedTemplate = template.normalize('NFKC').replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '').trim();
+
+    if (normalizedTemplate.length > CHANNEL_NAME_MAX_LENGTH) {
         throw new TitanBotError(
             'Channel template exceeds maximum length',
             ErrorTypes.VALIDATION,
-            'Channel name template cannot exceed 100 characters.'
+            `Channel name template cannot exceed ${CHANNEL_NAME_MAX_LENGTH} characters.`
         );
     }
 
-    // Allow only alphanumeric, spaces, hyphens, and template variables
-    const validPattern = /^[\w\s\-\{\}]*$/;
-    if (!validPattern.test(template)) {
+    
+    const validPattern = /^[a-zA-Z0-9\s\-\{\}_]*$/;
+    if (!validPattern.test(normalizedTemplate)) {
         throw new TitanBotError(
             'Channel template contains invalid characters',
             ErrorTypes.VALIDATION,
@@ -49,15 +65,26 @@ export function validateChannelNameTemplate(template) {
         );
     }
 
+    const placeholders = normalizedTemplate.match(/\{[^}]+\}/g) || [];
+    for (const placeholder of placeholders) {
+        if (!ALLOWED_TEMPLATE_PLACEHOLDERS.has(placeholder)) {
+            throw new TitanBotError(
+                'Channel template contains unknown placeholders',
+                ErrorTypes.VALIDATION,
+                `Unknown placeholder: ${placeholder}. Allowed placeholders are ${Array.from(ALLOWED_TEMPLATE_PLACEHOLDERS).join(', ')}`
+            );
+        }
+    }
+
     return true;
 }
 
-/**
- * Validate bitrate value
- * @param {number} bitrate - The bitrate in kbps
- * @throws {TitanBotError} If validation fails
- * @returns {boolean} True if valid
- */
+
+
+
+
+
+
 export function validateBitrate(bitrate) {
     const bitrateNum = parseInt(bitrate);
 
@@ -80,12 +107,12 @@ export function validateBitrate(bitrate) {
     return true;
 }
 
-/**
- * Validate user limit value
- * @param {number} limit - The user limit
- * @throws {TitanBotError} If validation fails
- * @returns {boolean} True if valid
- */
+
+
+
+
+
+
 export function validateUserLimit(limit) {
     const limitNum = parseInt(limit);
 
@@ -108,16 +135,17 @@ export function validateUserLimit(limit) {
     return true;
 }
 
-/**
- * Format channel name with template variables (security-hardened version)
- * @param {string} template - The name template
- * @param {Object} variables - Variables to replace
- * @returns {string} The formatted channel name
- * @throws {TitanBotError} If formatting fails
- */
+
+
+
+
+
+
+
 export function formatChannelName(template, variables) {
     try {
-        validateChannelNameTemplate(template);
+        const safeTemplate = template.normalize('NFKC').replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '').trim();
+        validateChannelNameTemplate(safeTemplate);
 
         if (!variables || typeof variables !== 'object') {
             throw new TitanBotError(
@@ -126,17 +154,19 @@ export function formatChannelName(template, variables) {
             );
         }
 
-        // Sanitize all input variables
+        
         const sanitized = {};
         for (const [key, value] of Object.entries(variables)) {
             if (value === null || value === undefined) {
                 sanitized[key] = 'Unknown';
             } else {
-                // Remove any potentially dangerous characters
+                
                 sanitized[key] = String(value)
-                    .replace(/[^\w\s-]/g, '')
+                    .normalize('NFKC')
+                    .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
+                    .replace(/[^a-zA-Z0-9\s-]/g, '')
                     .trim()
-                    .substring(0, 32); // Limit individual variable length
+                    .substring(0, CHANNEL_VARIABLE_MAX_LENGTH); 
             }
         }
 
@@ -151,19 +181,24 @@ export function formatChannelName(template, variables) {
             '{channel_name}': sanitized.channelName || 'Voice Channel',
         };
 
-        let formatted = template;
+        let formatted = safeTemplate;
         for (const [placeholder, value] of Object.entries(replacements)) {
             formatted = formatted.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
         }
 
-        // Final sanitization - remove any remaining special characters
-        formatted = formatted.replace(/[^\w\s-]/g, '').trim();
+        
+        formatted = formatted
+            .normalize('NFKC')
+            .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
+            .replace(/[^a-zA-Z0-9\s-]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
 
-        // Ensure channel name is between 1 and 100 characters
+        
         if (formatted.length === 0) {
             formatted = 'Voice Channel';
-        } else if (formatted.length > 100) {
-            formatted = formatted.substring(0, 100);
+        } else if (formatted.length > CHANNEL_NAME_MAX_LENGTH) {
+            formatted = formatted.substring(0, CHANNEL_NAME_MAX_LENGTH);
         }
 
         logger.debug(`Formatted channel name: "${formatted}" from template "${template}"`);
@@ -175,14 +210,14 @@ export function formatChannelName(template, variables) {
     }
 }
 
-/**
- * Initialize Join to Create system for a guild
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} channelId - Trigger channel ID
- * @param {Object} options - Configuration options
- * @throws {TitanBotError} If initialization fails
- */
+
+
+
+
+
+
+
+
 export async function initializeJoinToCreate(client, guildId, channelId, options = {}) {
     try {
         if (!client || !client.db) {
@@ -201,12 +236,12 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
             );
         }
 
-        // Validate all options
+        
         if (options.nameTemplate) {
             validateChannelNameTemplate(options.nameTemplate);
         }
         if (options.bitrate) {
-            validateBitrate(options.bitrate / 1000); // Convert from stored format
+            validateBitrate(options.bitrate / 1000); 
         }
         if (options.userLimit !== undefined) {
             validateUserLimit(options.userLimit);
@@ -256,14 +291,14 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
     }
 }
 
-/**
- * Update Join to Create configuration for a guild
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} channelId - Trigger channel ID
- * @param {Object} updates - Configuration updates
- * @throws {TitanBotError} If update fails
- */
+
+
+
+
+
+
+
+
 export async function updateChannelConfig(client, guildId, channelId, updates) {
     try {
         if (!client || !client.db) {
@@ -283,7 +318,7 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
             );
         }
 
-        // Validate updates
+        
         if (updates.nameTemplate) {
             validateChannelNameTemplate(updates.nameTemplate);
         }
@@ -324,13 +359,13 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
     }
 }
 
-/**
- * Remove a trigger channel from Join to Create system
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} channelId - Trigger channel ID
- * @throws {TitanBotError} If removal fails
- */
+
+
+
+
+
+
+
 export async function removeTriggerChannel(client, guildId, channelId) {
     try {
         if (!client || !client.db) {
@@ -358,7 +393,7 @@ export async function removeTriggerChannel(client, guildId, channelId) {
             delete config.channelOptions[channelId];
         }
 
-        // Clean up any temporary channels created from this trigger
+        
         if (config.temporaryChannels) {
             for (const [tempChannelId, tempInfo] of Object.entries(config.temporaryChannels)) {
                 if (tempInfo.triggerChannelId === channelId) {
@@ -385,13 +420,13 @@ export async function removeTriggerChannel(client, guildId, channelId) {
     }
 }
 
-/**
- * Get current Join to Create configuration for a guild
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @returns {Object} Configuration object
- * @throws {TitanBotError} If retrieval fails
- */
+
+
+
+
+
+
+
 export async function getConfiguration(client, guildId) {
     try {
         if (!client || !client.db) {
@@ -415,13 +450,13 @@ export async function getConfiguration(client, guildId) {
     }
 }
 
-/**
- * Check if a channel is a valid Join to Create trigger
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} channelId - Channel ID to check
- * @returns {boolean} Whether channel is a trigger
- */
+
+
+
+
+
+
+
 export async function isTriggerChannel(client, guildId, channelId) {
     try {
         const config = await getConfiguration(client, guildId);
@@ -432,14 +467,14 @@ export async function isTriggerChannel(client, guildId, channelId) {
     }
 }
 
-/**
- * Get configuration for a specific trigger channel
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} channelId - Trigger channel ID
- * @returns {Object} Channel-specific configuration
- * @throws {TitanBotError} If channel not found
- */
+
+
+
+
+
+
+
+
 export async function getChannelConfiguration(client, guildId, channelId) {
     try {
         const config = await getConfiguration(client, guildId);
@@ -468,11 +503,11 @@ export async function getChannelConfiguration(client, guildId, channelId) {
     }
 }
 
-/**
- * Check if user has ManageGuild permission (helper)
- * @param {Object} member - Guild member
- * @returns {boolean} Whether member has permission
- */
+
+
+
+
+
 export function hasManageGuildPermission(member) {
     try {
         if (!member || !member.permissions) {
@@ -485,14 +520,14 @@ export function hasManageGuildPermission(member) {
     }
 }
 
-/**
- * Log Join to Create configuration change
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User who made the change
- * @param {string} action - Action performed
- * @param {Object} details - Change details
- */
+
+
+
+
+
+
+
+
 export async function logConfigurationChange(client, guildId, userId, action, details) {
     try {
         await logEvent({
@@ -512,14 +547,14 @@ export async function logConfigurationChange(client, guildId, userId, action, de
     }
 }
 
-/**
- * Create temporary voice channel with validation
- * @param {Object} guild - Discord guild
- * @param {Object} member - Guild member
- * @param {Object} options - Channel creation options
- * @returns {Object} Created channel info
- * @throws {TitanBotError} If creation fails
- */
+
+
+
+
+
+
+
+
 export async function createTemporaryChannel(guild, member, options = {}) {
     try {
         if (!guild || !member) {
@@ -536,7 +571,7 @@ export async function createTemporaryChannel(guild, member, options = {}) {
             parentId
         } = options;
 
-        // Validate options
+        
         if (nameTemplate) {
             validateChannelNameTemplate(nameTemplate);
         }
@@ -547,7 +582,7 @@ export async function createTemporaryChannel(guild, member, options = {}) {
             validateBitrate(bitrate / 1000);
         }
 
-        // Format channel name
+        
         const channelName = formatChannelName(nameTemplate || '{username}\'s Room', {
             username: member.user.username,
             displayName: member.displayName,
@@ -555,7 +590,7 @@ export async function createTemporaryChannel(guild, member, options = {}) {
             guildName: guild.name
         });
 
-        // Create channel
+        
         const tempChannel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildVoice,

@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Collection, ActionRowBuilder } from 'discord.js';
+import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,7 +66,7 @@ async function createCategoryCommandsMenu(category, client) {
             }
         }
     } catch (error) {
-        console.error(
+        logger.error(
             `Error reading commands from category ${category}:`,
             error,
         );
@@ -75,14 +76,14 @@ async function createCategoryCommandsMenu(category, client) {
 
     let registeredCommands = new Collection();
     try {
-        if (client && client.application) {
+        if (client?.application?.commands?.fetch) {
             const commands = await client.application.commands.fetch();
             for (const cmd of commands.values()) {
                 registeredCommands.set(cmd.name, cmd);
             }
         }
     } catch (error) {
-        console.error("Error fetching registered commands:", error);
+        logger.error('Error fetching registered commands:', error);
     }
 
     const embed = createEmbed({
@@ -197,7 +198,7 @@ export async function createAllCommandsMenu(page = 1, client) {
                 }
             }
         } catch (error) {
-            console.error(
+            logger.error(
                 `Error reading commands from category ${category}:`,
                 error,
             );
@@ -208,14 +209,14 @@ export async function createAllCommandsMenu(page = 1, client) {
 
     let registeredCommands = new Collection();
     try {
-        if (client && client.application) {
+        if (client?.application?.commands?.fetch) {
             const commands = await client.application.commands.fetch();
             for (const cmd of commands.values()) {
                 registeredCommands.set(cmd.name, cmd);
             }
         }
     } catch (error) {
-        console.error("Error fetching registered commands:", error);
+        logger.error('Error fetching registered commands:', error);
     }
 
     const totalPages = Math.ceil(allCommands.length / commandsPerPage);
@@ -288,20 +289,30 @@ export async function createAllCommandsMenu(page = 1, client) {
 export const helpCategorySelectMenu = {
     name: CATEGORY_SELECT_ID,
     async execute(interaction, client) {
-        const selectedCategory = interaction.values[0];
+        try {
+            const selectedCategory = interaction.values[0];
 
-        if (selectedCategory === ALL_COMMANDS_ID) {
-            const { embeds, components } = await createAllCommandsMenu(1, client);
-            await interaction.update({
-                embeds,
-                components,
-            });
-        } else {
-            const { embeds, components } = await createCategoryCommandsMenu(selectedCategory, client);
-            await interaction.update({
-                embeds,
-                components,
-            });
+            if (selectedCategory === ALL_COMMANDS_ID) {
+                const { embeds, components } = await createAllCommandsMenu(1, client);
+                await interaction.update({
+                    embeds,
+                    components,
+                });
+            } else {
+                const { embeds, components } = await createCategoryCommandsMenu(selectedCategory, client);
+                await interaction.update({
+                    embeds,
+                    components,
+                });
+            }
+        } catch (error) {
+            logger.error('Error in help category select menu handler:', error);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: 'An error occurred while loading help categories.',
+                    ephemeral: true,
+                });
+            }
         }
     },
 };

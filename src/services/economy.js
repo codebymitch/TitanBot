@@ -20,11 +20,11 @@ const DEFAULT_ECONOMY_DATA = {
     cooldowns: {}
 };
 
-/**
- * Helper function to calculate the user's maximum bank capacity
- * @param {Object} userData - The user's economy data
- * @returns {number} The maximum bank capacity for the user
- */
+
+
+
+
+
 export function getMaxBankCapacity(userData) {
     if (!userData) return BASE_BANK_CAPACITY;
     
@@ -32,13 +32,13 @@ export function getMaxBankCapacity(userData) {
     return BASE_BANK_CAPACITY + (bankLevel * BANK_CAPACITY_PER_LEVEL);
 }
 
-/**
- * Get economy data for a user
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {Promise<Object>} The user's economy data
- */
+
+
+
+
+
+
+
 export async function getEconomyData(client, guildId, userId) {
     try {
         const key = getEconomyKey(guildId, userId);
@@ -61,14 +61,14 @@ export async function getEconomyData(client, guildId, userId) {
     }
 }
 
-/**
- * Save economy data for a user
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @param {Object} newData - The new economy data to save
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
+
 export async function setEconomyData(client, guildId, userId, newData) {
     let mergedData = null;
     try {
@@ -99,15 +99,15 @@ export async function setEconomyData(client, guildId, userId, newData) {
     }
 }
 
-/**
- * Add money to a user's wallet or bank
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @param {number} amount - The amount to add
- * @param {string} [type='wallet'] - Where to add the money ('wallet' or 'bank')
- * @returns {Promise<{success: boolean, newBalance: number, maxBank?: number}>} Result of the operation
- */
+
+
+
+
+
+
+
+
+
 export async function addMoney(client, guildId, userId, amount, type = 'wallet') {
     try {
         if (amount <= 0) {
@@ -144,15 +144,15 @@ export async function addMoney(client, guildId, userId, amount, type = 'wallet')
     }
 }
 
-/**
- * Remove money from a user's wallet or bank
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @param {number} amount - The amount to remove
- * @param {string} [type='wallet'] - Where to remove the money from ('wallet' or 'bank')
- * @returns {Promise<{success: boolean, newBalance: number}>} Result of the operation
- */
+
+
+
+
+
+
+
+
+
 export async function removeMoney(client, guildId, userId, amount, type = 'wallet') {
     try {
         if (amount <= 0) {
@@ -195,15 +195,15 @@ export async function removeMoney(client, guildId, userId, amount, type = 'walle
     }
 }
 
-/**
- * Transfer money between wallet and bank
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @param {number} amount - The amount to transfer
- * @param {string} direction - 'deposit' or 'withdraw'
- * @returns {Promise<{success: boolean, wallet: number, bank: number, maxBank?: number}>} Result of the operation
- */
+
+
+
+
+
+
+
+
+
 export async function transferMoney(client, guildId, userId, amount, direction) {
     try {
         if (amount <= 0) {
@@ -270,15 +270,15 @@ export async function transferMoney(client, guildId, userId, amount, direction) 
     }
 }
 
-/**
- * Check if a user is on cooldown for a specific action
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @param {string} action - The action to check cooldown for
- * @param {number} cooldownTime - The cooldown time in milliseconds
- * @returns {Promise<{onCooldown: boolean, timeLeft?: number}>} Cooldown status
- */
+
+
+
+
+
+
+
+
+
 export async function checkCooldown(client, guildId, userId, action, cooldownTime) {
     try {
         const userData = await getEconomyData(client, guildId, userId);

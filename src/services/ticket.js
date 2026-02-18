@@ -13,11 +13,11 @@ import { createEmbed, errorEmbed } from '../utils/embeds.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { BotConfig } from '../config/bot.js';
 
-/**
- * Generates priority map from centralized BotConfig
- * This ensures the ticket system uses consistent priority definitions
- * @returns {Object} Priority map with name, color, emoji, and label
- */
+
+
+
+
+
 function getPriorityMap() {
   const priorities = BotConfig.tickets?.priorities || {
     none: { emoji: "⚪", color: "#95A5A6", label: "None" },
@@ -40,10 +40,14 @@ function getPriorityMap() {
 }
 
 const PRIORITY_MAP = getPriorityMap();
+const TICKET_DELETE_DELAY_MS = 3000;
+const TICKET_DELETE_DELAY_SECONDS = Math.floor(TICKET_DELETE_DELAY_MS / 1000);
+const TICKET_NUMBER_BASE = 100;
+const TICKET_NUMBER_RANGE = 900;
 
-/**
- * Count the number of open tickets for a user in a guild
- */
+
+
+
 export async function getUserTicketCount(guildId, userId) {
   try {
     const ticketKeys = await getFromDb(`guild:${guildId}:ticket:*`, {});
@@ -587,7 +591,7 @@ export async function deleteTicket(channel, deleter) {
     
     const deleteEmbed = createEmbed({
       title: 'Ticket Deleted',
-      description: `🗑️ This ticket will be permanently deleted in 3 seconds.`,
+      description: `🗑️ This ticket will be permanently deleted in ${TICKET_DELETE_DELAY_SECONDS} seconds.`,
       color: '#e74c3c',
       footer: { text: `Ticket ID: ${ticketData.id}` }
     });
@@ -616,7 +620,7 @@ export async function deleteTicket(channel, deleter) {
       } catch (deleteError) {
         logger.error(`Failed to delete ticket channel ${channel.id}:`, deleteError);
       }
-    }, 3000);
+    }, TICKET_DELETE_DELAY_MS);
     
     return { success: true, ticketData };
     
@@ -711,7 +715,7 @@ export async function unclaimTicket(channel, unclaimer) {
       
       await claimMessage.edit({ 
         embeds: [unclaimEmbed],
-components: []
+        components: []
       });
     } else {
       const unclaimEmbed = createEmbed({
@@ -750,7 +754,7 @@ components: []
 }
 
 async function getNextTicketNumber(guildId) {
-  const randomTicket = Math.floor(Math.random() * 900) + 100;
+  const randomTicket = Math.floor(Math.random() * TICKET_NUMBER_RANGE) + TICKET_NUMBER_BASE;
   return randomTicket.toString();
 }
 

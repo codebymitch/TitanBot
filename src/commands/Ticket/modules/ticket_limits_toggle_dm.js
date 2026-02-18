@@ -8,7 +8,7 @@ import { handleInteractionError } from '../../../utils/errorHandler.js';
 export default {
     async execute(interaction, config, client) {
         try {
-            // Ensure interaction is deferred before proceeding
+            
             if (!interaction.deferred && !interaction.replied) {
                 const deferred = await InteractionHelper.safeDefer(interaction);
                 if (!deferred) {

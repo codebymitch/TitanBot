@@ -1,7 +1,7 @@
-/**
- * Level Add Command
- * Adds levels to a user (admin only)
- */
+
+
+
+
 
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../../utils/logger.js';
@@ -31,17 +31,17 @@ export default {
     .setDMPermission(false),
   category: 'Leveling',
 
-  /**
-   * Execute leveladd command
-   * @param {ChatInputCommandInteraction} interaction - Command interaction
-   * @param {Object} config - Guild configuration
-   * @param {Client} client - Discord client
-   */
+  
+
+
+
+
+
   async execute(interaction, config, client) {
     try {
       await interaction.deferReply();
 
-      // Check permissions
+      
       const hasPermission = await checkUserPermissions(
         interaction,
         PermissionFlagsBits.ManageGuild,
@@ -52,7 +52,7 @@ export default {
       const targetUser = interaction.options.getUser('user');
       const levelsToAdd = interaction.options.getInteger('levels');
 
-      // Validate user exists in guild
+      
       const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
       if (!member) {
         throw new TitanBotError(
@@ -62,7 +62,7 @@ export default {
         );
       }
 
-      // Use service to add levels
+      
       const userData = await addLevels(client, interaction.guildId, targetUser.id, levelsToAdd);
 
       await interaction.editReply({

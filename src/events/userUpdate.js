@@ -43,9 +43,9 @@ export default {
         });
       }
 
-      for (const guild of newUser.client.guilds.cache.values()) {
-        const member = await guild.members.fetch(newUser.id).catch(() => null);
-        if (!member) continue;
+      const guilds = [...newUser.client.guilds.cache.values()];
+      for (const guild of guilds) {
+        if (!guild.members.cache.has(newUser.id)) continue;
 
         await logEvent({
           client: newUser.client,
@@ -65,6 +65,8 @@ export default {
           }
         });
       }
+
+      logger.debug(`Processed userUpdate for ${newUser.id} across ${guilds.length} guild(s)`);
     } catch (error) {
       logger.error('Error in userUpdate event:', error);
     }

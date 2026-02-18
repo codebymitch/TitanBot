@@ -1,7 +1,7 @@
-/**
- * Level Config Command
- * Configure the leveling system for the guild (admin only)
- */
+
+
+
+
 
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { logger } from '../../utils/logger.js';
@@ -71,17 +71,17 @@ export default {
     .setDMPermission(false),
   category: 'Leveling',
 
-  /**
-   * Execute levelconfig command
-   * @param {ChatInputCommandInteraction} interaction - Command interaction
-   * @param {Object} config - Guild configuration
-   * @param {Client} client - Discord client
-   */
+  
+
+
+
+
+
   async execute(interaction, config, client) {
     try {
       await interaction.deferReply();
 
-      // Check permissions
+      
       const hasPermission = await checkUserPermissions(
         interaction,
         PermissionFlagsBits.ManageGuild,
@@ -116,7 +116,7 @@ export default {
         case 'channel': {
           const channel = interaction.options.getChannel('channel');
 
-          // Verify bot can send messages in the channel
+          
           if (!botHasPermission(channel, ['SendMessages', 'EmbedLinks'])) {
             throw new TitanBotError(
               'Bot missing permissions in the specified channel',
@@ -175,7 +175,7 @@ export default {
         case 'message': {
           const text = interaction.options.getString('text');
 
-          // Validate message template
+          
           if (!text.includes('{user}') && !text.includes('{level}')) {
             logger.warn(`Message template missing placeholders in guild ${interaction.guildId}`);
           }

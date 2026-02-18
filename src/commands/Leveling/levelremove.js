@@ -1,7 +1,7 @@
-/**
- * Level Remove Command
- * Removes levels from a user (admin only)
- */
+
+
+
+
 
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../../utils/logger.js';
@@ -31,17 +31,17 @@ export default {
     .setDMPermission(false),
   category: 'Leveling',
 
-  /**
-   * Execute levelremove command
-   * @param {ChatInputCommandInteraction} interaction - Command interaction
-   * @param {Object} config - Guild configuration
-   * @param {Client} client - Discord client
-   */
+  
+
+
+
+
+
   async execute(interaction, config, client) {
     try {
       await interaction.deferReply();
 
-      // Check permissions
+      
       const hasPermission = await checkUserPermissions(
         interaction,
         PermissionFlagsBits.ManageGuild,
@@ -52,7 +52,7 @@ export default {
       const targetUser = interaction.options.getUser('user');
       const levelsToRemove = interaction.options.getInteger('levels');
 
-      // Validate user exists in guild
+      
       const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
       if (!member) {
         throw new TitanBotError(
@@ -62,7 +62,7 @@ export default {
         );
       }
 
-      // Check if user has levels to remove
+      
       const userData = await getUserLevelData(client, interaction.guildId, targetUser.id);
       if (userData.level === 0) {
         throw new TitanBotError(
@@ -72,7 +72,7 @@ export default {
         );
       }
 
-      // Use service to remove levels
+      
       const updatedData = await removeLevels(client, interaction.guildId, targetUser.id, levelsToRemove);
 
       await interaction.editReply({

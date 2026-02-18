@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { sanitizeInput } from '../../utils/sanitization.js';
@@ -42,7 +41,7 @@ export default {
       const name1Raw = interaction.options.getString("name1");
       const name2Raw = interaction.options.getString("name2");
 
-      // Validate inputs
+      
       if (!name1Raw || name1Raw.trim().length === 0 || !name2Raw || name2Raw.trim().length === 0) {
         throw new TitanBotError(
           'Empty names provided to ship command',
@@ -51,11 +50,11 @@ export default {
         );
       }
 
-      // Sanitize inputs
+      
       const name1 = sanitizeInput(name1Raw.trim(), 100);
       const name2 = sanitizeInput(name2Raw.trim(), 100);
 
-      // Prevent shipping the same name
+      
       if (name1.toLowerCase() === name2.toLowerCase()) {
         const embed = warningEmbed(
           "💖 Ship Score",

@@ -3,22 +3,22 @@ import { shopConfig, shopItems, getItemById, validatePurchase, getCurrentPrice, 
 import { logger } from '../utils/logger.js';
 import { getEconomyData, setEconomyData } from '../utils/economy.js';
 
-/**
- * Shop service for handling shop-related operations
- */
+
+
+
 class ShopService {
     constructor() {
         this.logger = logger.child({ module: 'ShopService' });
     }
 
-    /**
-     * Purchase an item from the shop
-     * @param {string} userId - The ID of the user making the purchase
-     * @param {string} itemId - The ID of the item to purchase
-     * @param {number} [quantity=1] - The quantity to purchase
-     * @param {Object} [options] - Additional options
-     * @returns {Promise<{success: boolean, message: string, data?: any}>} The result of the purchase
-     */
+    
+
+
+
+
+
+
+
     async purchaseItem(userId, itemId, quantity = 1, options = {}) {
         try {
             const { guildId, client } = options;
@@ -49,13 +49,13 @@ class ShopService {
                 return { success: false, message: validation.reason };
             }
 
-            // Deduct money from wallet
+            
             userData.wallet -= totalCost;
 
-            // Add item to inventory
+            
             await this.addToUserInventory(userId, itemId, quantity, guildId, client, userData);
 
-            // Save updated data
+            
             await setEconomyData(client, guildId, userId, userData);
 
             this.logger.info(`User ${userId} purchased ${quantity}x ${item.name} for ${totalCost} ${this.getCurrencyName()}`);
@@ -79,13 +79,13 @@ class ShopService {
         }
     }
 
-    /**
-     * Get the user's inventory
-     * @param {string} userId - The ID of the user
-     * @param {string} [guildId] - The ID of the guild (for server-specific items)
-     * @param {Object} client - The Discord client
-     * @returns {Promise<Object>} The user's inventory
-     */
+    
+
+
+
+
+
+
     async getUserInventory(userId, guildId, client) {
         try {
             const userData = await getEconomyData(client, guildId, userId);
@@ -96,13 +96,13 @@ class ShopService {
         }
     }
 
-    /**
-     * Add an item to the user's inventory
-     * @private
-     */
+    
+
+
+
     async addToUserInventory(userId, itemId, quantity = 1, guildId = null, client = null, userData = null) {
         try {
-            // Inventory is an object with itemId as key and quantity as value
+            
             if (!userData) {
                 userData = await getEconomyData(client, guildId, userId);
             }
@@ -113,14 +113,14 @@ class ShopService {
             
             const item = getItemById(itemId);
             
-            // For upgrades, set to true (they're boolean flags)
+            
             if (item && item.type === 'upgrade') {
                 if (!userData.upgrades) {
                     userData.upgrades = {};
                 }
                 userData.upgrades[itemId] = true;
             } else {
-                // For consumables and tools, add to inventory
+                
                 userData.inventory[itemId] = (userData.inventory[itemId] || 0) + quantity;
             }
             
@@ -131,21 +131,21 @@ class ShopService {
         }
     }
 
-    /**
-     * Get the currency name
-     * @returns {string} The name of the currency
-     */
+    
+
+
+
     getCurrencyName() {
         return shopConfig.currencyName || 'coins';
     }
 
-    /**
-     * Create an embed for the shop
-     * @param {Object} options - Options for the shop embed
-     * @param {string} [options.category] - The category to display
-     * @param {number} [options.page=1] - The page number
-     * @returns {EmbedBuilder} The shop embed
-     */
+    
+
+
+
+
+
+
     createShopEmbed(options = {}) {
         const { category, page = 1 } = options;
         
@@ -159,10 +159,10 @@ class ShopService {
         return embed;
     }
 
-    /**
-     * Get the shop categories
-     * @returns {Array} The available shop categories
-     */
+    
+
+
+
     getCategories() {
         const categories = [
             { 
@@ -178,10 +178,10 @@ class ShopService {
         return categories;
     }
     
-    /**
-     * Get the currency information
-     * @returns {Object} Currency information
-     */
+    
+
+
+
     getCurrencyInfo() {
         return {
             name: shopConfig.currencyName,
@@ -190,11 +190,11 @@ class ShopService {
         };
     }
     
-    /**
-     * Get items for a specific category
-     * @param {string} categoryId - The category ID
-     * @returns {Array} Array of items in the category
-     */
+    
+
+
+
+
     getItemsForCategory(categoryId) {
         if (categoryId === 'all') {
             return shopItems;

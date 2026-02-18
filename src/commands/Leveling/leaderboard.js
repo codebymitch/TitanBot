@@ -1,7 +1,7 @@
-/**
- * Leaderboard Command
- * Shows the server's top leveling members
- */
+
+
+
+
 
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { logger } from '../../utils/logger.js';
@@ -15,12 +15,12 @@ export default {
     .setDMPermission(false),
   category: 'Leveling',
 
-  /**
-   * Execute leaderboard command
-   * @param {ChatInputCommandInteraction} interaction - Command interaction
-   * @param {Object} config - Guild configuration
-   * @param {Client} client - Discord client
-   */
+  
+
+
+
+
+
   async execute(interaction, config, client) {
     try {
       await interaction.deferReply();

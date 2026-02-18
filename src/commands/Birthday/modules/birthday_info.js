@@ -13,7 +13,7 @@ export default {
             const userId = targetUser.id;
             const guildId = interaction.guildId;
 
-            // Use service layer
+            
             const birthdayData = await getUserBirthday(client, guildId, userId);
 
             if (!birthdayData) {

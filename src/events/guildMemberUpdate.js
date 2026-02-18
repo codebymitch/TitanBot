@@ -12,14 +12,14 @@ export default {
 
       const fields = [];
 
-      // Add member info
+      
       fields.push({
         name: '👤 Member',
         value: `${newMember.user.tag} (${newMember.user.id})`,
         inline: true
       });
 
-      // Check for nickname change
+      
       if (oldMember.nickname !== newMember.nickname) {
         fields.push({
           name: '🏷️ Old Nickname',

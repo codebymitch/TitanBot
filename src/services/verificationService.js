@@ -1,16 +1,16 @@
-/**
- * Verification Service - Centralized verification business logic
- * 
- * This service handles all verification operations including:
- * - User verification and role assignment
- * - Auto-verification on join
- * - Verification removal and cleanup
- * - Validation and permission checks
- * - Rate limiting and cooldown tracking
- * - Audit logging
- * 
- * @module verificationService
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { PermissionFlagsBits } from 'discord.js';
 import { botConfig } from '../config/bot.js';
@@ -19,41 +19,49 @@ import { getGuildConfig, setGuildConfig } from './guildConfig.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { insertVerificationAudit } from '../utils/database.js';
 
-// Rate limiting store
+
 const verificationCooldowns = new Map();
 const attemptTracker = new Map();
 
 const verificationDefaults = botConfig?.verification || {};
 const autoVerifyDefaults = verificationDefaults.autoVerify || {};
+const minAutoVerifyAccountAgeDays = autoVerifyDefaults.minAccountAge ?? 1;
+const maxAutoVerifyAccountAgeDays = autoVerifyDefaults.maxAccountAge ?? 365;
+const serverSizeThreshold = autoVerifyDefaults.serverSizeThreshold ?? 1000;
 const defaultCooldownMs = verificationDefaults.verificationCooldown ?? 5000;
 const defaultMaxAttempts = verificationDefaults.maxVerificationAttempts ?? 3;
 const defaultAttemptWindowMs = verificationDefaults.attemptWindow ?? 60000;
+const maxCooldownEntries = verificationDefaults.maxCooldownEntries ?? 10000;
+const maxAttemptEntries = verificationDefaults.maxAttemptEntries ?? 10000;
+const cooldownCleanupIntervalMs = verificationDefaults.cooldownCleanupInterval ?? 300000;
+const maxAuditMetadataBytes = verificationDefaults.maxAuditMetadataBytes ?? 4096;
 const shouldSendAutoVerifyDm = autoVerifyDefaults.sendDMNotification ?? true;
 const shouldLogVerifications = verificationDefaults.logAllVerifications ?? true;
 const shouldKeepAuditTrail = verificationDefaults.keepAuditTrail ?? false;
+let lastCleanupAt = 0;
 
-/**
- * Verify a user by assigning the verified role
- * 
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID to verify
- * @param {Object} options - Additional options
- * @returns {Promise<Object>} Result object with status and details
- * 
- * @throws {TitanBotError} If verification fails
- * 
- * @example
- * await verifyUser(client, guildId, userId, { 
- *     source: 'button_click',
- *     moderatorId: null 
- * });
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export async function verifyUser(client, guildId, userId, options = {}) {
     const { source = 'manual', moderatorId = null } = options;
     
     try {
-        // Get guild and member
+        
         const guild = client.guilds.cache.get(guildId);
         if (!guild) {
             throw createError(
@@ -76,7 +84,7 @@ export async function verifyUser(client, guildId, userId, options = {}) {
             );
         }
 
-        // Get verification config
+        
         const guildConfig = await getGuildConfig(client, guildId);
         
         if (!guildConfig.verification?.enabled) {
@@ -88,10 +96,10 @@ export async function verifyUser(client, guildId, userId, options = {}) {
             );
         }
 
-        // Validate setup
+        
         await validateVerificationSetup(guild, guildConfig.verification);
 
-        // Check if already verified
+        
         const verifiedRole = guild.roles.cache.get(guildConfig.verification.roleId);
         if (member.roles.cache.has(verifiedRole.id)) {
             return {
@@ -103,14 +111,14 @@ export async function verifyUser(client, guildId, userId, options = {}) {
             };
         }
 
-        // Check cooldown and attempt limits
+        
         await checkVerificationCooldown(userId, guildId, defaultCooldownMs);
         await trackVerificationAttempt(userId, guildId, defaultMaxAttempts, defaultAttemptWindowMs);
 
-        // Assign role
+        
         await member.roles.add(verifiedRole.id, `User verified (${source})`);
 
-        // Log successful verification
+        
         logVerificationAction(client, guildId, userId, 'verified', {
             source,
             roleId: verifiedRole.id,
@@ -145,20 +153,59 @@ export async function verifyUser(client, guildId, userId, options = {}) {
     }
 }
 
-/**
- * Auto-verify a user based on criteria when they join
- * 
- * @param {Object} client - Discord client
- * @param {import('discord.js').Guild} guild - Discord guild
- * @param {import('discord.js').GuildMember} member - Guild member
- * @param {Object} verificationConfig - Verification configuration
- * @returns {Promise<Object>} Result object with auto-verify details
- * 
- * @throws {TitanBotError} If critical error occurs
- */
+function pruneVerificationTrackers(now = Date.now()) {
+    if (now - lastCleanupAt < cooldownCleanupIntervalMs) {
+        return;
+    }
+
+    lastCleanupAt = now;
+
+    for (const [key, timestamp] of verificationCooldowns.entries()) {
+        if (now - timestamp > Math.max(defaultCooldownMs * 2, 60000)) {
+            verificationCooldowns.delete(key);
+        }
+    }
+
+    for (const [key, attempts] of attemptTracker.entries()) {
+        const recentAttempts = (attempts || []).filter(ts => now - ts < defaultAttemptWindowMs);
+        if (recentAttempts.length === 0) {
+            attemptTracker.delete(key);
+            continue;
+        }
+        attemptTracker.set(key, recentAttempts);
+    }
+
+    while (verificationCooldowns.size > maxCooldownEntries) {
+        const firstKey = verificationCooldowns.keys().next().value;
+        if (!firstKey) {
+            break;
+        }
+        verificationCooldowns.delete(firstKey);
+    }
+
+    while (attemptTracker.size > maxAttemptEntries) {
+        const firstKey = attemptTracker.keys().next().value;
+        if (!firstKey) {
+            break;
+        }
+        attemptTracker.delete(firstKey);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 export async function autoVerifyOnJoin(client, guild, member, verificationConfig) {
     try {
-        // Check if auto-verify is enabled
+        
         if (!verificationConfig.autoVerify?.enabled) {
             return {
                 autoVerified: false,
@@ -166,10 +213,10 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             };
         }
 
-        // Validate setup
+        
         await validateVerificationSetup(guild, verificationConfig);
 
-        // Determine if user meets criteria
+        
         const shouldVerify = evaluateAutoVerifyCriteria(
             member,
             verificationConfig.autoVerify
@@ -183,10 +230,10 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             };
         }
 
-        // Get verified role
+        
         const verifiedRole = guild.roles.cache.get(verificationConfig.roleId);
         
-        // Check if bot can assign role
+        
         const canAssign = await validateBotCanAssignRole(guild, verifiedRole.id);
         if (!canAssign) {
             logger.warn('Cannot auto-verify: bot cannot assign role', {
@@ -200,7 +247,7 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             };
         }
 
-        // Check if already verified
+        
         if (member.roles.cache.has(verifiedRole.id)) {
             return {
                 autoVerified: false,
@@ -209,10 +256,10 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             };
         }
 
-        // Assign role
+        
         await member.roles.add(verifiedRole.id, 'Auto-verified on join');
 
-        // Log auto-verification
+        
         logVerificationAction(client, guild.id, member.id, 'auto_verified', {
             criteria: verificationConfig.autoVerify.criteria,
             accountAge: Date.now() - member.user.createdTimestamp,
@@ -228,7 +275,7 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             accountAge: Date.now() - member.user.createdTimestamp
         });
 
-        // Send DM notification if configured
+        
         if (shouldSendAutoVerifyDm) {
             await sendAutoVerifyNotification(member, verifiedRole, guild);
         }
@@ -247,7 +294,7 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             userId: member.id,
             error: error.message
         });
-        // Don't throw - auto-verify failure shouldn't break member join
+        
         return {
             autoVerified: false,
             reason: 'auto_verify_error',
@@ -256,15 +303,15 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
     }
 }
 
-/**
- * Remove verification from a user
- * 
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID to remove verification from
- * @param {Object} options - Additional options
- * @returns {Promise<Object>} Result object
- */
+
+
+
+
+
+
+
+
+
 export async function removeVerification(client, guildId, userId, options = {}) {
     const { moderatorId = null, reason = 'admin_removal' } = options;
     
@@ -321,13 +368,13 @@ export async function removeVerification(client, guildId, userId, options = {}) 
             };
         }
 
-        // Remove role
+        
         await member.roles.remove(
             verifiedRole.id, 
             `Verification removed by ${moderatorId || 'system'}: ${reason}`
         );
 
-        // Log removal
+        
         logVerificationAction(client, guildId, userId, 'removed', {
             removedBy: moderatorId,
             reason,
@@ -359,16 +406,16 @@ export async function removeVerification(client, guildId, userId, options = {}) 
     }
 }
 
-/**
- * Validate that verification setup is still valid
- * Checks that role and channel still exist and bot has permissions
- * 
- * @param {import('discord.js').Guild} guild - Discord guild
- * @param {Object} verificationConfig - Verification configuration
- * @throws {TitanBotError} If validation fails
- */
+
+
+
+
+
+
+
+
 export async function validateVerificationSetup(guild, verificationConfig) {
-    // Check verified role exists
+    
     const verifiedRole = guild.roles.cache.get(verificationConfig.roleId);
     if (!verifiedRole) {
         throw createError(
@@ -379,7 +426,7 @@ export async function validateVerificationSetup(guild, verificationConfig) {
         );
     }
 
-    // Check verification channel exists
+    
     if (verificationConfig.channelId) {
         const channel = guild.channels.cache.get(verificationConfig.channelId);
         if (!channel) {
@@ -391,7 +438,7 @@ export async function validateVerificationSetup(guild, verificationConfig) {
             );
         }
 
-        // Check bot permissions in channel
+        
         const botPerms = channel.permissionsFor(guild.members.me);
         const requiredPerms = ['SendMessages', 'EmbedLinks'];
         const missingPerms = requiredPerms.filter(perm => !botPerms.has(perm));
@@ -409,13 +456,13 @@ export async function validateVerificationSetup(guild, verificationConfig) {
     return true;
 }
 
-/**
- * Validate that bot can assign the verified role
- * 
- * @param {import('discord.js').Guild} guild - Discord guild
- * @param {string} roleId - Role ID to check
- * @returns {Promise<boolean>} True if bot can assign role
- */
+
+
+
+
+
+
+
 export async function validateBotCanAssignRole(guild, roleId) {
     const role = guild.roles.cache.get(roleId);
     
@@ -429,7 +476,7 @@ export async function validateBotCanAssignRole(guild, roleId) {
 
     const botMember = guild.members.me;
     
-    // Check if bot has ManageRoles permission
+    
     if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
         logger.warn('Cannot assign role - missing ManageRoles permission', {
             guildId: guild.id,
@@ -438,7 +485,7 @@ export async function validateBotCanAssignRole(guild, roleId) {
         return false;
     }
 
-    // Check role hierarchy
+    
     const botHighest = botMember.roles.highest;
     if (role.position >= botHighest.position) {
         logger.warn('Cannot assign role - role hierarchy issue', {
@@ -453,13 +500,13 @@ export async function validateBotCanAssignRole(guild, roleId) {
     return true;
 }
 
-/**
- * Evaluate auto-verify criteria
- * 
- * @param {import('discord.js').GuildMember} member - Guild member
- * @param {Object} autoVerifyConfig - Auto-verify configuration
- * @returns {boolean} True if user meets criteria
- */
+
+
+
+
+
+
+
 function evaluateAutoVerifyCriteria(member, autoVerifyConfig) {
     const { criteria, accountAgeDays } = autoVerifyConfig;
 
@@ -471,7 +518,7 @@ function evaluateAutoVerifyCriteria(member, autoVerifyConfig) {
         }
 
         case 'server_size':
-            return member.guild.memberCount < 1000;
+            return member.guild.memberCount < serverSizeThreshold;
 
         case 'none':
             return true;
@@ -482,15 +529,17 @@ function evaluateAutoVerifyCriteria(member, autoVerifyConfig) {
     }
 }
 
-/**
- * Check if user is on verification cooldown
- * 
- * @param {string} userId - User ID
- * @param {string} guildId - Guild ID
- * @param {number} cooldownMs - Cooldown duration in milliseconds (default 5000)
- * @throws {TitanBotError} If on cooldown
- */
+
+
+
+
+
+
+
+
 export async function checkVerificationCooldown(userId, guildId, cooldownMs = defaultCooldownMs) {
+    pruneVerificationTrackers();
+
     const key = `${guildId}:${userId}`;
     const lastVerified = verificationCooldowns.get(key);
     
@@ -507,26 +556,28 @@ export async function checkVerificationCooldown(userId, guildId, cooldownMs = de
     verificationCooldowns.set(key, Date.now());
 }
 
-/**
- * Track verification attempts for rate limiting
- * 
- * @param {string} userId - User ID
- * @param {string} guildId - Guild ID
- * @param {number} maxAttempts - Maximum attempts (default 3)
- * @param {number} windowMs - Time window in milliseconds (default 60000)
- * @throws {TitanBotError} If too many attempts
- */
+
+
+
+
+
+
+
+
+
 export async function trackVerificationAttempt(
     userId,
     guildId,
     maxAttempts = defaultMaxAttempts,
     windowMs = defaultAttemptWindowMs
 ) {
+    pruneVerificationTrackers();
+
     const key = `${guildId}:${userId}`;
     const attempts = attemptTracker.get(key) || [];
     const now = Date.now();
 
-    // Remove expired attempts
+    
     const recentAttempts = attempts.filter(timestamp => now - timestamp < windowMs);
 
     if (recentAttempts.length >= maxAttempts) {
@@ -542,13 +593,13 @@ export async function trackVerificationAttempt(
     attemptTracker.set(key, recentAttempts);
 }
 
-/**
- * Send auto-verify notification to user
- * 
- * @param {import('discord.js').GuildMember} member - Guild member
- * @param {import('discord.js').Role} role - Verified role
- * @param {import('discord.js').Guild} guild - Guild
- */
+
+
+
+
+
+
+
 async function sendAutoVerifyNotification(member, role, guild) {
     try {
         const { createEmbed } = await import('../utils/embeds.js');
@@ -578,30 +629,32 @@ async function sendAutoVerifyNotification(member, role, guild) {
             guildId: guild.id,
             reason: error.message
         });
-        // Don't throw - DM failure shouldn't break auto-verify
+        
     }
 }
 
-/**
- * Log verification action for audit trail
- * 
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @param {string} action - Action type ('verified', 'auto_verified', 'removed', 'updated')
- * @param {Object} metadata - Additional metadata
- */
+
+
+
+
+
+
+
+
+
 function logVerificationAction(client, guildId, userId, action, metadata = {}) {
     if (!shouldLogVerifications) {
         return;
     }
+
+    const sanitizedMetadata = sanitizeAuditMetadata(metadata);
 
     logger.info('Verification action', {
         guildId,
         userId,
         action,
         timestamp: new Date().toISOString(),
-        metadata
+        metadata: sanitizedMetadata
     });
 
     if (!shouldKeepAuditTrail) {
@@ -617,18 +670,44 @@ function logVerificationAction(client, guildId, userId, action, metadata = {}) {
         action,
         source,
         moderatorId,
-        metadata,
+        metadata: sanitizedMetadata,
         createdAt: new Date().toISOString()
     });
 }
 
-/**
- * Validate auto-verify criteria configuration
- * 
- * @param {string} criteria - Criteria type
- * @param {number} accountAgeDays - Account age days (if criteria is 'account_age')
- * @throws {TitanBotError} If validation fails
- */
+function sanitizeAuditMetadata(metadata = {}) {
+    try {
+        const payload = metadata && typeof metadata === 'object' ? metadata : { value: metadata };
+        const json = JSON.stringify(payload);
+
+        if (!json) {
+            return {};
+        }
+
+        if (Buffer.byteLength(json, 'utf8') <= maxAuditMetadataBytes) {
+            return payload;
+        }
+
+        return {
+            truncated: true,
+            originalBytes: Buffer.byteLength(json, 'utf8'),
+            preview: json.slice(0, Math.max(0, maxAuditMetadataBytes - 32))
+        };
+    } catch {
+        return {
+            invalidMetadata: true,
+            reason: 'Failed to serialize metadata'
+        };
+    }
+}
+
+
+
+
+
+
+
+
 export function validateAutoVerifyCriteria(criteria, accountAgeDays) {
     const validCriteria = ['account_age', 'server_size', 'none'];
     
@@ -642,12 +721,12 @@ export function validateAutoVerifyCriteria(criteria, accountAgeDays) {
     }
     
     if (criteria === 'account_age') {
-        if (!accountAgeDays || accountAgeDays < 1 || accountAgeDays > 365) {
+        if (!accountAgeDays || accountAgeDays < minAutoVerifyAccountAgeDays || accountAgeDays > maxAutoVerifyAccountAgeDays) {
             throw createError(
                 "Invalid account age days",
                 ErrorTypes.VALIDATION,
-                "Account age must be between 1 and 365 days.",
-                { accountAgeDays }
+                `Account age must be between ${minAutoVerifyAccountAgeDays} and ${maxAutoVerifyAccountAgeDays} days.`,
+                { accountAgeDays, minAutoVerifyAccountAgeDays, maxAutoVerifyAccountAgeDays }
             );
         }
     }

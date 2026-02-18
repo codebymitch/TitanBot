@@ -11,7 +11,7 @@ export default {
 
             const guildId = interaction.guildId;
             
-            // Use service layer - returns sorted array
+            
             const sortedBirthdays = await getAllBirthdays(client, guildId);
 
             if (sortedBirthdays.length === 0) {

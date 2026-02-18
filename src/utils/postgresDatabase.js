@@ -13,10 +13,10 @@ class PostgreSQLDatabase {
         this.connectionPromise = null;
     }
 
-    /**
-     * Initialize PostgreSQL connection
-     * @returns {Promise<boolean>} Connection status
-     */
+    
+
+
+
     async connect() {
         if (this.connectionPromise) {
             return this.connectionPromise;
@@ -37,7 +37,7 @@ class PostgreSQLDatabase {
                 await new Promise(resolve => setTimeout(resolve, 100));
 
                 this.pool = new pg.Pool({
-                    // Connection settings
+                    
                     host: pgConfig.options.host,
                     port: pgConfig.options.port,
                     database: pgConfig.options.database,
@@ -45,13 +45,13 @@ class PostgreSQLDatabase {
                     password: pgConfig.options.password,
                     ssl: pgConfig.options.ssl,
                     
-                    // Pool settings
+                    
                     max: pgConfig.options.max,
                     min: pgConfig.options.min,
                     idleTimeoutMillis: pgConfig.options.idleTimeoutMillis,
                     connectionTimeoutMillis: pgConfig.options.connectionTimeoutMillis,
                     
-                    // Production settings
+                    
                     application_name: pgConfig.options.application_name,
                     statement_timeout: pgConfig.options.statement_timeout,
                     keepalives: pgConfig.options.keepalives,
@@ -115,10 +115,10 @@ class PostgreSQLDatabase {
         return false;
     }
 
-    /**
-     * Check if PostgreSQL is connected
-     * @returns {boolean} Connection status
-     */
+    
+
+
+
     isAvailable() {
         return this.isConnected && this.pool;
     }
@@ -306,9 +306,9 @@ class PostgreSQLDatabase {
         await this.createAuditTriggers();
     }
 
-    /**
-     * Create performance indexes for better query performance
-     */
+    
+
+
     async createIndexes() {
         const indexes = [
             `CREATE INDEX IF NOT EXISTS idx_guild_users_guild_id ON ${pgConfig.tables.guild_users}(guild_id)`,
@@ -342,9 +342,9 @@ class PostgreSQLDatabase {
         logger.info('✅ Performance indexes created/verified');
     }
 
-    /**
-     * Create audit triggers for automatic updated_at timestamps
-     */
+    
+
+
     async createAuditTriggers() {
         try {
             const functionQuery = `
@@ -394,12 +394,12 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Get a value from PostgreSQL (Redis compatibility layer)
-     * @param {string} key - The key to retrieve
-     * @param {any} defaultValue - Default value if key doesn't exist
-     * @returns {Promise<any>} The value or default
-     */
+    
+
+
+
+
+
     async get(key, defaultValue = null) {
         try {
             if (!this.isAvailable()) {
@@ -432,13 +432,13 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Set a value in PostgreSQL (Redis compatibility layer)
-     * @param {string} key - The key to set
-     * @param {any} value - The value to store
-     * @param {number} ttl - Optional TTL in seconds
-     * @returns {Promise<boolean>} Success status
-     */
+    
+
+
+
+
+
+
     async set(key, value, ttl = null) {
         try {
             if (!this.isAvailable()) {
@@ -476,11 +476,11 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Delete a key from PostgreSQL
-     * @param {string} key - The key to delete
-     * @returns {Promise<boolean>} Success status
-     */
+    
+
+
+
+
     async delete(key) {
         try {
             if (!this.isAvailable()) {
@@ -507,11 +507,11 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * List all keys with a given prefix
-     * @param {string} prefix - The prefix to search for
-     * @returns {Promise<Array>} Array of matching keys
-     */
+    
+
+
+
+
     async list(prefix) {
         try {
             if (!this.isAvailable()) {
@@ -540,11 +540,11 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Insert a verification audit record
-     * @param {Object} record - Audit record details
-     * @returns {Promise<boolean>} Success status
-     */
+    
+
+
+
+
     async insertVerificationAudit(record) {
         try {
             if (!this.isAvailable()) {
@@ -576,11 +576,11 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Check if a key exists
-     * @param {string} key - The key to check
-     * @returns {Promise<boolean>} Whether the key exists
-     */
+    
+
+
+
+
     async exists(key) {
         try {
             if (!this.isAvailable()) {
@@ -595,12 +595,12 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Increment a numeric value
-     * @param {string} key - The key to increment
-     * @param {number} amount - Amount to increment by (default: 1)
-     * @returns {Promise<number>} New value
-     */
+    
+
+
+
+
+
     async increment(key, amount = 1) {
         try {
             if (!this.isAvailable()) {
@@ -617,12 +617,12 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Decrement a numeric value
-     * @param {string} key - The key to decrement
-     * @param {number} amount - Amount to decrement by (default: 1)
-     * @returns {Promise<number>} New value
-     */
+    
+
+
+
+
+
     async decrement(key, amount = 1) {
         try {
             if (!this.isAvailable()) {
@@ -641,10 +641,36 @@ class PostgreSQLDatabase {
 
     /**
      * Parse a Redis-style key to determine type and components
-     * @param {string} key - The key to parse
-     * @returns {Object} Parsed key information
+     * Maps Redis-style hierarchical keys to specific database tables and operations
+     * 
+     * KEY FORMATS SUPPORTED:
+     * - Guild Config: 'guild:{guildId}:config' → guild_config
+     * - Guild Birthdays: 'guild:{guildId}:birthdays' → guild_birthdays
+     * - Guild Giveaways: 'guild:{guildId}:giveaways' → guild_giveaways
+     * - Welcome Config: 'guild:{guildId}:welcome' → welcome_config
+     * - Leveling Config: 'guild:{guildId}:leveling:config' → leveling_config
+     * - User Levels: 'guild:{guildId}:leveling:users:{userId}' → user_level
+     * - Economy: 'guild:{guildId}:economy:{userId}' → economy
+     * - AFK Status: 'guild:{guildId}:afk:{userId}' → afk_status
+     * - Tickets: 'guild:{guildId}:ticket:{channelId}' → ticket
+     * - Counters: 'counters:{guildId}' → counters
+     * - Temp Data: 'temp:*' → temp_data (auto-TTL)
+     * - Cache Data: 'cache:*' → cache_data (auto-TTL)
+     * 
+     * @param {string} key - The Redis-style key to parse (colon-separated format)
+     * @returns {Object} Parsed key information with type, IDs, and full key
+     * @example
+     * // Guild config key
+     * parseKey('guild:123456789:config')
+     * // Returns: { type: 'guild_config', guildId: '123456789', fullKey: 'guild:123456789:config' }
+     * 
+     * @example
+     * // User economy key
+     * parseKey('guild:123456789:economy:987654321')
+     * // Returns: { type: 'economy', guildId: '123456789', userId: '987654321', fullKey: '...' }
      */
     parseKey(key) {
+        
         if (key.startsWith('temp:')) {
             return { type: 'temp', fullKey: key };
         }
@@ -653,6 +679,7 @@ class PostgreSQLDatabase {
         }
 
         const parts = key.split(':');
+        
         
         if (parts[0] === 'guild') {
             if (parts[2] === 'config') {
@@ -668,6 +695,7 @@ class PostgreSQLDatabase {
                 return { type: 'welcome_config', guildId: parts[1], fullKey: key };
             }
             if (parts[2] === 'leveling') {
+                
                 if (parts[3] === 'config') {
                     return { type: 'leveling_config', guildId: parts[1], fullKey: key };
                 }
@@ -687,10 +715,12 @@ class PostgreSQLDatabase {
             }
         }
 
+        
         if (parts[0] === 'counters' && parts[1]) {
             return { type: 'counters', guildId: parts[1], fullKey: key };
         }
 
+        
         return { type: 'temp', fullKey: key };
     }
 
@@ -999,9 +1029,7 @@ class PostgreSQLDatabase {
                         }
                     }
                     
-                    console.log('Saving counter data to PostgreSQL:', JSON.stringify(value, null, 2));
-                    console.log('Value type:', typeof value);
-                    console.log('Is value an array?:', Array.isArray(value));
+                    logger.debug('Saving counter data to PostgreSQL', { type: typeof value, isArray: Array.isArray(value) });
                     
                     try {
                         await this.pool.query(
@@ -1011,23 +1039,20 @@ class PostgreSQLDatabase {
                             [parsedKey.guildId, value]
                         );
                     } catch (queryError) {
-                        console.error('PostgreSQL query error details:', queryError);
-                        console.error('Error message:', queryError.message);
-                        console.error('Error detail:', queryError.detail);
-                        console.error('Error hint:', queryError.hint);
+                        logger.error('PostgreSQL query error', { message: queryError.message, detail: queryError.detail, hint: queryError.hint });
                         
                         try {
                             const jsonString = JSON.stringify(value);
-                            console.log('Attempting to save as stringified JSON:', jsonString);
+                            logger.debug('Attempting fallback: save counter data as stringified JSON');
                             await this.pool.query(
                                 `INSERT INTO ${pgConfig.tables.guilds} (id, counters, updated_at) 
                                  VALUES ($1, $2::jsonb, CURRENT_TIMESTAMP) 
                                  ON CONFLICT (id) DO UPDATE SET counters = $2::jsonb, updated_at = CURRENT_TIMESTAMP`,
                                 [parsedKey.guildId, jsonString]
                             );
-                            console.log('Successfully saved as stringified JSON');
+                            logger.debug('Successfully saved counter data as stringified JSON');
                         } catch (fallbackError) {
-                            console.error('Fallback approach also failed:', fallbackError);
+                            logger.error('Fallback approach for counter data also failed', fallbackError);
                             throw queryError;
                         }
                     }
@@ -1095,9 +1120,9 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Close PostgreSQL connection
-     */
+    
+
+
     async disconnect() {
         try {
             if (this.pool) {
@@ -1109,10 +1134,10 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Get PostgreSQL info for debugging
-     * @returns {Promise<Object>} PostgreSQL server info
-     */
+    
+
+
+
     async getInfo() {
         try {
             if (!this.isAvailable()) {

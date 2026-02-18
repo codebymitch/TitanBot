@@ -1,3 +1,5 @@
+import { logger } from './logger.js';
+
 const DEFAULT_TEMPLATES = {
     welcome: 'Welcome {user} to {server}!',
     goodbye: '{user.tag} has left the server.'
@@ -10,38 +12,49 @@ function replaceAll(message, token, value) {
     return message.split(token).join(String(value));
 }
 
-/**
- * @param {string} message 
- * @param {Object} data 
- * @returns {string} 
- */
+
+
+
+
+
 export function formatWelcomeMessage(message, data) {
-    const template = message || '';
-    if (!template) return '';
+    
+    if (typeof message !== 'string') return '';
+    if (!message) return '';
+    if (!data || typeof data !== 'object') return message;
 
     const user = data?.user;
     const guild = data?.guild;
 
+    
+    if (!user || typeof user !== 'object') {
+        logger.warn('Invalid user object passed to formatWelcomeMessage');
+    }
+    if (!guild || typeof guild !== 'object') {
+        logger.warn('Invalid guild object passed to formatWelcomeMessage');
+    }
+
     const tokens = {
-        '{user}': user?.toString(),
-        '{user.mention}': user?.toString(),
-        '{user.tag}': user?.tag,
-        '{user.username}': user?.username,
-        '{username}': user?.username,
-        '{user.discriminator}': user?.discriminator,
-        '{user.id}': user?.id,
-        '{server}': guild?.name,
-        '{server.name}': guild?.name,
-        '{guild.name}': guild?.name,
-        '{guild.id}': guild?.id,
-        '{guild.memberCount}': guild?.memberCount,
-        '{memberCount}': guild?.memberCount,
-        '{membercount}': guild?.memberCount
+        '{user}': user?.toString?.() || 'User',
+        '{user.mention}': user?.toString?.() || 'User',
+        '{user.tag}': user?.tag || 'Unknown#0000',
+        '{user.username}': user?.username || 'Unknown',
+        '{username}': user?.username || 'Unknown',
+        '{user.discriminator}': user?.discriminator || '0000',
+        '{user.id}': user?.id || 'unknown',
+        '{server}': guild?.name || 'Server',
+        '{server.name}': guild?.name || 'Server',
+        '{guild.name}': guild?.name || 'Server',
+        '{guild.id}': guild?.id || 'unknown',
+        '{guild.memberCount}': guild?.memberCount?.toString?.() || '0',
+        '{memberCount}': guild?.memberCount?.toString?.() || '0',
+        '{membercount}': guild?.memberCount?.toString?.() || '0'
     };
 
-    let result = template;
+    let result = message;
     for (const [token, value] of Object.entries(tokens)) {
-        result = replaceAll(result, token, value);
+        if (value === undefined || value === null) continue;
+        result = replaceAll(result, token, String(value));
     }
 
     return result;

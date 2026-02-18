@@ -1,13 +1,13 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { EVENT_TYPES } from '../services/loggingService.js';
 
-/**
- * Create logging control buttons for toggling event types
- * @returns {ActionRowBuilder[]} Array of button rows
- */
+
+
+
+
 export function createLoggingButtons() {
   const buttons = [
-    // Moderation row
+    
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.MODERATION_BAN}`)
@@ -27,7 +27,7 @@ export function createLoggingButtons() {
         .setStyle(ButtonStyle.Secondary)
     ),
     
-    // Member and events row
+    
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.MEMBER_JOIN}`)
@@ -47,7 +47,7 @@ export function createLoggingButtons() {
         .setStyle(ButtonStyle.Secondary)
     ),
 
-    // Counter and special row
+    
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('logging_toggle:counter.*')
@@ -67,20 +67,20 @@ export function createLoggingButtons() {
   return buttons;
 }
 
-/**
- * Get button status color based on enabled/disabled state
- * @param {boolean} isEnabled
- * @returns {ButtonStyle}
- */
+
+
+
+
+
 export function getButtonStatusStyle(isEnabled) {
   return isEnabled ? ButtonStyle.Success : ButtonStyle.Danger;
 }
 
-/**
- * Create action rows with status indicators for all event categories
- * @param {Object} enabledEvents - Map of event types to their enabled status
- * @returns {ActionRowBuilder[]} Array of button rows (up to 2 rows for all categories)
- */
+
+
+
+
+
 export function createStatusIndicatorButtons(enabledEvents) {
   const eventCategories = ['moderation', 'ticket', 'message', 'role', 'member', 'leveling', 'reactionrole', 'giveaway', 'counter'];
   const buttons = [];
@@ -116,7 +116,7 @@ export function createStatusIndicatorButtons(enabledEvents) {
     return [];
   }
 
-  // Split buttons into rows of 5 max (Discord limit)
+  
   const rows = [];
   for (let i = 0; i < buttons.length; i += 5) {
     const rowButtons = buttons.slice(i, i + 5);
@@ -126,11 +126,11 @@ export function createStatusIndicatorButtons(enabledEvents) {
   return rows;
 }
 
-/**
- * Parse event type from button custom ID
- * @param {string} customId
- * @returns {string|null}
- */
+
+
+
+
+
 export function parseEventTypeFromButton(customId) {
   if (!customId.startsWith('logging_toggle:')) {
     return null;

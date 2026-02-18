@@ -1,15 +1,16 @@
-import { Events, EmbedBuilder, MessageFlags } from 'discord.js';
+import { Events, EmbedBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { getReactionRoleMessage, addReactionRole, removeReactionRole } from '../services/reactionRoleService.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { errorEmbed } from '../utils/embeds.js';
+import { logger } from '../utils/logger.js';
 
-/**
- * Handle reaction add events for reaction roles
- * @param {import('discord.js').Client} client - The Discord client
- * @param {import('discord.js').MessageReaction} reaction - The reaction object
- * @param {import('discord.js').User} user - The user who reacted
- * @returns {Promise<void>}
- */
+
+
+
+
+
+
+
 async function handleReactionAdd(client, reaction, user) {
     try {
         if (user.bot || !reaction.message.guild) return;
@@ -39,7 +40,7 @@ async function handleReactionAdd(client, reaction, user) {
 
         await member.roles.add(role);
 
-        // Log reaction role added
+        
         try {
             await logEvent({
                 client,
@@ -69,21 +70,21 @@ async function handleReactionAdd(client, reaction, user) {
                 }
             });
         } catch (error) {
-            console.debug('Error logging reaction role add:', error);
+            logger.debug('Error logging reaction role add:', error);
         }
 
     } catch (error) {
-        console.error('Error in handleReactionAdd:', error);
+        logger.error('Error in handleReactionAdd:', error);
     }
 }
 
-/**
- * Handle reaction remove events for reaction roles
- * @param {import('discord.js').Client} client - The Discord client
- * @param {import('discord.js').MessageReaction} reaction - The reaction object
- * @param {import('discord.js').User} user - The user who removed their reaction
- * @returns {Promise<void>}
- */
+
+
+
+
+
+
+
 async function handleReactionRemove(client, reaction, user) {
     try {
         if (user.bot || !reaction.message.guild) return;
@@ -113,7 +114,7 @@ async function handleReactionRemove(client, reaction, user) {
 
         await member.roles.remove(role);
 
-        // Log reaction role removed
+        
         try {
             await logEvent({
                 client,
@@ -143,19 +144,19 @@ async function handleReactionRemove(client, reaction, user) {
                 }
             });
         } catch (error) {
-            console.debug('Error logging reaction role remove:', error);
+            logger.debug('Error logging reaction role remove:', error);
         }
 
     } catch (error) {
-        console.error('Error in handleReactionRemove:', error);
+        logger.error('Error in handleReactionRemove:', error);
     }
 }
 
-/**
- * Handle reaction role interactions
- * @param {import('discord.js').Interaction} interaction - The interaction to handle
- * @returns {Promise<boolean>} Whether the interaction was handled
- */
+
+
+
+
+
 export async function handleReactionRoles(interaction) {
     try {
         if (!interaction.isCommand()) return false;
@@ -166,7 +167,7 @@ export async function handleReactionRoles(interaction) {
             const subcommand = options.getSubcommand();
             
             if (subcommand === 'create') {
-                if (!member.permissions.has('MANAGE_ROLES')) {
+                if (!member.permissions.has(PermissionFlagsBits.ManageRoles)) {
                     await interaction.reply({
                         embeds: [errorEmbed('You need the `Manage Roles` permission to use this command.')],
                         flags: MessageFlags.Ephemeral
@@ -177,6 +178,38 @@ export async function handleReactionRoles(interaction) {
                 const messageId = options.getString('message_id');
                 const emoji = options.getString('emoji');
                 const role = options.getRole('role');
+
+                if (!guild || !member) {
+                    await interaction.reply({
+                        embeds: [errorEmbed('This command can only be used in a server.')],
+                        flags: MessageFlags.Ephemeral
+                    });
+                    return true;
+                }
+
+                if (!messageId || !/^\d{17,20}$/.test(messageId)) {
+                    await interaction.reply({
+                        embeds: [errorEmbed('Invalid message ID. Please provide a valid Discord message ID.')],
+                        flags: MessageFlags.Ephemeral
+                    });
+                    return true;
+                }
+
+                if (!emoji || emoji.length > 100) {
+                    await interaction.reply({
+                        embeds: [errorEmbed('Invalid emoji. Please provide a valid emoji value.')],
+                        flags: MessageFlags.Ephemeral
+                    });
+                    return true;
+                }
+
+                if (!role) {
+                    await interaction.reply({
+                        embeds: [errorEmbed('Invalid role selection.')],
+                        flags: MessageFlags.Ephemeral
+                    });
+                    return true;
+                }
 
                 let emojiId = emoji;
                 const emojiMatch = emoji.match(/<a?:\w+:(\d+)>/);
@@ -197,7 +230,7 @@ export async function handleReactionRoles(interaction) {
                     const message = await channel.messages.fetch(messageId);
                     await message.react(emoji);
                 } catch (error) {
-                    console.error('Error adding reaction to message:', error);
+                    logger.error('Error adding reaction to message:', error);
                 }
 
                 await interaction.reply({
@@ -215,7 +248,7 @@ export async function handleReactionRoles(interaction) {
 
         return false;
     } catch (error) {
-        console.error('Error in handleReactionRoles:', error);
+        logger.error('Error in handleReactionRoles:', error);
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
                 embeds: [errorEmbed('An error occurred while processing your request.')],
@@ -231,10 +264,10 @@ export async function handleReactionRoles(interaction) {
     }
 }
 
-/**
- * Set up reaction role event listeners
- * @param {import('discord.js').Client} client - The Discord client
- */
+
+
+
+
 export function setupReactionRoleListeners(client) {
     client.on(Events.MessageReactionAdd, async (reaction, user) => {
         await handleReactionAdd(client, reaction, user);

@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
@@ -25,7 +24,7 @@ export default {
       const challenger = interaction.user;
       const opponent = interaction.options.getUser("opponent");
 
-      // Validate opponent is not the challenger
+      
       if (challenger.id === opponent.id) {
         const embed = warningEmbed(
           "⚔️ Invalid Challenge",
@@ -34,7 +33,7 @@ export default {
         return await interaction.editReply({ embeds: [embed] });
       }
 
-      // Validate opponent is not a bot
+      
       if (opponent.bot) {
         throw new TitanBotError(
           `User tried to fight a bot: ${opponent.id}`,

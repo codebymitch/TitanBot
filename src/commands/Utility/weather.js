@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
@@ -123,10 +122,10 @@ export default {
     },
 };
 
-/**
- * Converts the WMO Weather Code (WMO_CODE) to a readable description and emoji.
- * @param {number} code
- */
+
+
+
+
 function getWeatherDescription(code) {
     if (code >= 0 && code <= 3) {
         return { description: "Clear sky / Partly cloudy ☀️", emoji: "☀️" };

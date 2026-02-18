@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { sanitizeInput } from '../../utils/sanitization.js';
@@ -31,7 +30,7 @@ export default {
       const targetUser = interaction.options.getUser("user");
       const crimeRaw = interaction.options.getString("crime");
 
-      // Validate and sanitize crime input
+      
       let crime = "Too adorable for this server.";
       if (crimeRaw) {
         const sanitizedCrime = sanitizeInput(crimeRaw.trim(), 100);
@@ -40,7 +39,7 @@ export default {
         }
       }
 
-      // Validate user exists and is accessible
+      
       if (!targetUser) {
         throw new TitanBotError(
           'Target user not found for wanted command',

@@ -24,7 +24,7 @@ export default {
 
     async execute(interaction) {
         try {
-            // Validate guild context
+            
             if (!interaction.inGuild()) {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
@@ -34,7 +34,7 @@ export default {
                 );
             }
 
-            // Validate permissions
+            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
@@ -48,7 +48,7 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            // Validate message ID format
+            
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new TitanBotError(
                     'Invalid message ID format',
@@ -63,7 +63,7 @@ export default {
                 interaction.guildId,
             );
 
-            // Use find() for consistent lookup (not direct object access)
+            
             const giveaway = giveaways.find(g => g.messageId === messageId);
 
             if (!giveaway) {
@@ -75,7 +75,7 @@ export default {
                 );
             }
 
-            // Verify giveaway is ended
+            
             if (!giveaway.isEnded && !giveaway.ended) {
                 throw new TitanBotError(
                     `Giveaway still active: ${messageId}`,
@@ -96,13 +96,13 @@ export default {
                 );
             }
 
-            // Select new winners using service function
+            
             const newWinners = selectWinners(
                 participants,
                 giveaway.winnerCount,
             );
 
-            // Update giveaway with new winners
+            
             const updatedGiveaway = {
                 ...giveaway,
                 winnerIds: newWinners,
@@ -110,7 +110,7 @@ export default {
                 rerolledBy: interaction.user.id
             };
 
-            // Fetch channel
+            
             const channel = await interaction.client.channels.fetch(
                 giveaway.channelId,
             ).catch(err => {
@@ -119,7 +119,7 @@ export default {
             });
 
             if (!channel || !channel.isTextBased()) {
-                // Still save to database even if channel not found
+                
                 await saveGiveaway(
                     interaction.client,
                     interaction.guildId,
@@ -139,7 +139,7 @@ export default {
                 });
             }
 
-            // Try to fetch and update the message
+            
             const message = await channel.messages
                 .fetch(messageId)
                 .catch(err => {
@@ -148,7 +148,7 @@ export default {
                 });
 
             if (!message) {
-                // Save new winners to database
+                
                 await saveGiveaway(
                     interaction.client,
                     interaction.guildId,
@@ -208,7 +208,7 @@ export default {
                 });
             }
 
-            // Update original message with new embed
+            
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,

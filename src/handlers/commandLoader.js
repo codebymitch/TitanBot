@@ -1,17 +1,17 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { Collection } from 'discord.js';
 import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Extracts subcommand information from a SlashCommandBuilder
- * @param {SlashCommandBuilder} commandData - The command data object
- * @returns {string[]} - Array of subcommand names
- */
+
+
+
+
+
 function getSubcommandInfo(commandData) {
     const subcommands = [];
     
@@ -34,12 +34,12 @@ if (subOption.type === 1) {
     return subcommands;
 }
 
-/**
- * Recursively loads all command files from the specified directory
- * @param {string} directory - Directory to load commands from
- * @param {string[]} fileList - List of file paths (used for recursion)
- * @returns {Promise<string[]>} - Array of file paths
- */
+
+
+
+
+
+
 async function getAllFiles(directory, fileList = []) {
     const files = await fs.readdir(directory, { withFileTypes: true });
     
@@ -59,11 +59,11 @@ async function getAllFiles(directory, fileList = []) {
     return fileList;
 }
 
-/**
- * Loads all commands from the commands directory
- * @param {import('discord.js').Client} client - Discord.js client
- * @returns {Promise<Collection<string, object>>} - Collection of commands
- */
+
+
+
+
+
 export async function loadCommands(client) {
     client.commands = new Collection();
     const commandsPath = path.join(__dirname, '../commands');
@@ -109,7 +109,6 @@ export async function loadCommands(client) {
             }
             
         } catch (error) {
-            console.error(`Error loading command from ${filePath}:`, error);
             logger.error(`Error loading command from ${filePath}:`, error);
         }
     }
@@ -134,12 +133,12 @@ export async function loadCommands(client) {
     return client.commands;
 }
 
-/**
- * Registers all slash commands with Discord
- * @param {import('discord.js').Client} client - Discord.js client
- * @param {string} [guildId] - Optional guild ID to register commands for a specific guild
- * @returns {Promise<void>}
- */
+
+
+
+
+
+
 export async function registerCommands(client, guildId) {
     try {
         const commands = [];
@@ -297,12 +296,12 @@ const registeredNames = new Set();
     }
 }
 
-/**
- * Reloads a specific command
- * @param {import('discord.js').Client} client - Discord.js client
- * @param {string} commandName - Name of the command to reload
- * @returns {Promise<{success: boolean, message: string}>} - Result of the reload operation
- */
+
+
+
+
+
+
 export async function reloadCommand(client, commandName) {
     const command = client.commands.get(commandName);
     
@@ -312,9 +311,10 @@ export async function reloadCommand(client, commandName) {
     
     try {
         const commandPath = path.resolve(command.filePath);
-        delete require.cache[require.resolve(commandPath)];
-        
-        const newCommand = (await import(`file://${commandPath}`)).default;
+        const moduleUrl = pathToFileURL(commandPath);
+        moduleUrl.searchParams.set('t', Date.now().toString());
+
+        const newCommand = (await import(moduleUrl.href)).default;
         
         client.commands.set(commandName, newCommand);
         

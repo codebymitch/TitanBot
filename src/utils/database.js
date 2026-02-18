@@ -3,6 +3,7 @@ import { MemoryStorage } from './memoryStorage.js';
 import { logger } from './logger.js';
 import { BotConfig } from '../config/bot.js';
 import { normalizeGuildConfig } from './schemas.js';
+import { DEFAULT_GUILD_CONFIG } from './constants.js';
 
 class DatabaseWrapper {
     constructor() {
@@ -32,7 +33,7 @@ class DatabaseWrapper {
             logger.warn('PostgreSQL connection failed:', error.message);
         }
 
-        // Fallback to memory storage
+        
         this.db = new MemoryStorage();
         this.useFallback = true;
         this.connectionType = 'memory';
@@ -114,10 +115,10 @@ class DatabaseWrapper {
         return this.db && !this.useFallback;
     }
 
-    /**
-     * Get current connection status
-     * @returns {Object} Status information
-     */
+    
+
+
+
     getStatus() {
         return {
             initialized: this.initialized,
@@ -189,11 +190,16 @@ export async function insertVerificationAudit(record) {
         const key = `verification:audit:${record.guildId}`;
         const existing = await getFromDb(key, []);
         const auditEntries = Array.isArray(existing) ? existing : [];
+        const maxInMemoryAuditEntries = BotConfig?.verification?.maxInMemoryAuditEntries ?? 1000;
 
         auditEntries.push({
             ...record,
             createdAt: record.createdAt || new Date().toISOString()
         });
+
+        if (auditEntries.length > maxInMemoryAuditEntries) {
+            auditEntries.splice(0, auditEntries.length - maxInMemoryAuditEntries);
+        }
 
         await setInDb(key, auditEntries);
         return true;
@@ -239,17 +245,9 @@ export async function getGuildConfig(client, guildId) {
         const rawConfig = await client.db.get(configKey, {});
         const cleanedConfig = unwrapReplitData(rawConfig);
 
-        const defaults = {
-            logIgnore: { users: [], channels: [] },
-            enabledCommands: {},
-            reportChannelId: null,
-            birthdayChannelId: null,
-            premiumRoleId: null
-        };
-
-        return normalizeGuildConfig(cleanedConfig, defaults);
+        return normalizeGuildConfig(cleanedConfig, DEFAULT_GUILD_CONFIG);
     } catch (error) {
-        console.error(`Error fetching config for guild ${guildId}:`, error);
+        logger.error(`Error fetching config for guild ${guildId}`, error);
         return {};
     }
 }
@@ -264,7 +262,7 @@ export async function getGuildConfig(client, guildId) {
 export async function setGuildConfig(client, guildId, config) {
     try {
         if (!client.db || typeof client.db.set !== "function") {
-            console.error("Database client is not available for setGuildConfig.");
+            logger.error("Database client is not available for setGuildConfig");
             return false;
         }
 
@@ -272,7 +270,7 @@ export async function setGuildConfig(client, guildId, config) {
         await client.db.set(key, config);
         return true;
     } catch (error) {
-        console.error(`Error saving config for guild ${guildId}:`, error);
+        logger.error(`Error saving config for guild ${guildId}`, error);
         return false;
     }
 }
@@ -378,11 +376,11 @@ export async function deleteBirthday(client, guildId, userId) {
     }
 }
 
-/**
- * Get the month name from a month number (1-12)
- * @param {number} monthNum - Month number (1-12)
- * @returns {string} Month name
- */
+
+
+
+
+
 export function getMonthName(monthNum) {
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -545,31 +543,31 @@ export function giveawayKey(guildId) {
     return `guild:${guildId}:giveaways`;
 }
 
-/**
- * Get the economy data key for a user in a guild
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {string} The economy key
- */
+
+
+
+
+
+
 export function getEconomyKey(guildId, userId) {
     return `guild:${guildId}:economy:${userId}`;
 }
 
-/**
- * Get the AFK status key for a user in a guild
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {string} The AFK key
- */
+
+
+
+
+
+
 export function getAFKKey(guildId, userId) {
     return `guild:${guildId}:afk:${userId}`;
 }
 
-/**
- * Get the welcome system configuration key for a guild
- * @param {string} guildId - The guild ID
- * @returns {string} The welcome config key
- */
+
+
+
+
+
 export function getWelcomeConfigKey(guildId) {
     return `guild:${guildId}:welcome`;
 }
@@ -621,12 +619,12 @@ function normalizeWelcomeConfig(raw = {}) {
     };
 }
 
-/**
- * Get welcome system configuration for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @returns {Promise<Object>} The welcome system configuration
- */
+
+
+
+
+
+
 export async function getWelcomeConfig(client, guildId) {
     if (!client.db) {
         console.warn('Database not available for getWelcomeConfig');
@@ -644,13 +642,13 @@ export async function getWelcomeConfig(client, guildId) {
     }
 }
 
-/**
- * Save welcome system configuration for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @param {Object} config - The configuration to save
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
 export async function saveWelcomeConfig(client, guildId, config) {
     const key = getWelcomeConfigKey(guildId);
     try {
@@ -665,13 +663,13 @@ export async function saveWelcomeConfig(client, guildId, config) {
     }
 }
 
-/**
- * Update specific fields in the welcome config
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @param {Object} updates - The fields to update
- * @returns {Promise<Object>} The updated config
- */
+
+
+
+
+
+
+
 export async function updateWelcomeConfig(client, guildId, updates) {
     try {
         const currentConfig = await getWelcomeConfig(client, guildId);
@@ -686,31 +684,31 @@ export async function updateWelcomeConfig(client, guildId, updates) {
 }
 
 
-/**
- * Gets the leveling data key for a guild
- * @param {string} guildId - The ID of the guild
- * @returns {string} The leveling data key
- */
+
+
+
+
+
 export function getLevelingKey(guildId) {
     return `guild:${guildId}:leveling:config`;
 }
 
-/**
- * Gets the user level data key
- * @param {string} guildId - The ID of the guild
- * @param {string} userId - The ID of the user
- * @returns {string} The user level data key
- */
+
+
+
+
+
+
 export function getUserLevelKey(guildId, userId) {
     return `guild:${guildId}:leveling:users:${userId}`;
 }
 
-/**
- * Gets the leveling configuration for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @returns {Promise<Object>} The leveling configuration
- */
+
+
+
+
+
+
 export async function getLevelingConfig(client, guildId) {
     const key = getLevelingKey(guildId);
     try {
@@ -743,13 +741,13 @@ export async function getLevelingConfig(client, guildId) {
     }
 }
 
-/**
- * Saves the leveling configuration for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @param {Object} config - The configuration to save
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
 export async function saveLevelingConfig(client, guildId, config) {
     const key = getLevelingKey(guildId);
     try {
@@ -765,13 +763,13 @@ export async function saveLevelingConfig(client, guildId, config) {
     }
 }
 
-/**
- * Gets a user's level data
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @param {string} userId - The ID of the user
- * @returns {Promise<Object>} The user's level data
- */
+
+
+
+
+
+
+
 export async function getUserLevelData(client, guildId, userId) {
     const key = getUserLevelKey(guildId, userId);
     try {
@@ -810,14 +808,14 @@ export async function getUserLevelData(client, guildId, userId) {
     }
 }
 
-/**
- * Saves a user's level data
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @param {string} userId - The ID of the user
- * @param {Object} data - The level data to save
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
+
 export async function saveUserLevelData(client, guildId, userId, data) {
     const key = getUserLevelKey(guildId, userId);
     try {
@@ -839,22 +837,22 @@ export async function saveUserLevelData(client, guildId, userId, data) {
     }
 }
 
-/**
- * Calculates the XP needed for a specific level
- * @param {number} level - The level to calculate XP for
- * @returns {number} The XP needed for the level
- */
+
+
+
+
+
 export function getXpForLevel(level) {
     return 5 * Math.pow(level, 2) + 50 * level + 50;
 }
 
-/**
- * Gets the leaderboard for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The ID of the guild
- * @param {number} limit - The maximum number of entries to return (default: 10)
- * @returns {Promise<Array>} Sorted array of user level data
- */
+
+
+
+
+
+
+
 export async function getLeaderboard(client, guildId, limit = 10) {
     try {
         if (!client.db || typeof client.db.list !== "function") {
@@ -914,21 +912,21 @@ rank: 0
 }
 
 
-/**
- * Get the application roles key for a guild
- * @param {string} guildId - The guild ID
- * @returns {string} The application roles key
- */
+
+
+
+
+
 export function getApplicationRolesKey(guildId) {
     return `guild:${guildId}:applications:roles`;
 }
 
-/**
- * Get application roles for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @returns {Promise<Array>} Array of application roles
- */
+
+
+
+
+
+
 export async function getApplicationRoles(client, guildId) {
     try {
         if (!client.db || typeof client.db.get !== "function") {
@@ -946,13 +944,13 @@ export async function getApplicationRoles(client, guildId) {
     }
 }
 
-/**
- * Save application roles for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {Array} roles - Array of application roles
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
 export async function saveApplicationRoles(client, guildId, roles) {
     try {
         if (!client.db || typeof client.db.set !== "function") {
@@ -969,41 +967,41 @@ export async function saveApplicationRoles(client, guildId, roles) {
     }
 }
 
-/**
- * Get the application settings key for a guild
- * @param {string} guildId - The guild ID
- * @returns {string} The application settings key
- */
+
+
+
+
+
 export function getApplicationSettingsKey(guildId) {
     return `guild:${guildId}:applications:settings`;
 }
 
-/**
- * Get the user applications key
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {string} The user applications key
- */
+
+
+
+
+
+
 export function getUserApplicationsKey(guildId, userId) {
     return `guild:${guildId}:applications:users:${userId}`;
 }
 
-/**
- * Get the application key
- * @param {string} guildId - The guild ID
- * @param {string} applicationId - The application ID
- * @returns {string} The application key
- */
+
+
+
+
+
+
 export function getApplicationKey(guildId, applicationId) {
     return `guild:${guildId}:applications:${applicationId}`;
 }
 
-/**
- * Get application settings for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @returns {Promise<Object>} The application settings
- */
+
+
+
+
+
+
 export async function getApplicationSettings(client, guildId) {
     if (!client.db) {
         console.warn('Database not available for getApplicationSettings');
@@ -1079,13 +1077,13 @@ cooldown: 7,
     }
 }
 
-/**
- * Save application settings for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {Object} settings - The settings to save
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
 export async function saveApplicationSettings(client, guildId, settings) {
     const key = getApplicationSettingsKey(guildId);
     try {
@@ -1100,12 +1098,12 @@ export async function saveApplicationSettings(client, guildId, settings) {
     }
 }
 
-/**
- * Create a new application
- * @param {Object} client - The Discord client
- * @param {Object} application - The application data
- * @returns {Promise<Object>} The created application
- */
+
+
+
+
+
+
 export async function createApplication(client, application) {
     const { guildId, userId } = application;
     const applicationId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1149,13 +1147,13 @@ status: 'pending',
     }
 }
 
-/**
- * Get an application by ID
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} applicationId - The application ID
- * @returns {Promise<Object|null>} The application or null if not found
- */
+
+
+
+
+
+
+
 export async function getApplication(client, guildId, applicationId) {
     const key = getApplicationKey(guildId, applicationId);
     try {
@@ -1167,14 +1165,14 @@ export async function getApplication(client, guildId, applicationId) {
     }
 }
 
-/**
- * Update an application
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} applicationId - The application ID
- * @param {Object} updates - The updates to apply
- * @returns {Promise<Object>} The updated application
- */
+
+
+
+
+
+
+
+
 export async function updateApplication(client, guildId, applicationId, updates) {
     const key = getApplicationKey(guildId, applicationId);
     try {
@@ -1197,13 +1195,13 @@ export async function updateApplication(client, guildId, applicationId, updates)
     }
 }
 
-/**
- * Get all applications for a user in a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {Promise<Array>} The user's applications
- */
+
+
+
+
+
+
+
 export async function getUserApplications(client, guildId, userId) {
     const userKey = getUserApplicationsKey(guildId, userId);
     try {
@@ -1229,17 +1227,17 @@ export async function getUserApplications(client, guildId, userId) {
     }
 }
 
-/**
- * Get all applications in a guild with optional filters
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {Object} [filters] - Optional filters
- * @param {string} [filters.status] - Filter by status
- * @param {string} [filters.userId] - Filter by user ID
- * @param {number} [filters.limit=50] - Maximum number of applications to return
- * @param {number} [filters.offset=0] - Number of applications to skip
- * @returns {Promise<Array>} The filtered applications
- */
+
+
+
+
+
+
+
+
+
+
+
 export async function getApplications(client, guildId, filters = {}) {
     const {
         status,
@@ -1291,41 +1289,41 @@ export async function getApplications(client, guildId, filters = {}) {
 }
 
 
-/**
- * Get the modlog settings key for a guild
- * @param {string} guildId - The guild ID
- * @returns {string} The modlog settings key
- */
+
+
+
+
+
 export function getModlogSettingsKey(guildId) {
     return `guild:${guildId}:modlog:settings`;
 }
 
-/**
- * Get the modlog entry key
- * @param {string} guildId - The guild ID
- * @param {string} caseId - The case ID
- * @returns {string} The modlog entry key
- */
+
+
+
+
+
+
 export function getModlogEntryKey(guildId, caseId) {
     return `guild:${guildId}:modlog:cases:${caseId}`;
 }
 
-/**
- * Get the modlog user cases key
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {string} The user's modlog cases key
- */
+
+
+
+
+
+
 export function getUserModlogKey(guildId, userId) {
     return `guild:${guildId}:modlog:users:${userId}`;
 }
 
-/**
- * Get modlog settings for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @returns {Promise<Object>} The modlog settings
- */
+
+
+
+
+
+
 export async function getModlogSettings(client, guildId) {
     const key = getModlogSettingsKey(guildId);
     try {
@@ -1461,13 +1459,13 @@ export async function getModlogSettings(client, guildId) {
     }
 }
 
-/**
- * Save modlog settings for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {Object} settings - The settings to save
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
 export async function saveModlogSettings(client, guildId, settings) {
     const key = getModlogSettingsKey(guildId);
     try {
@@ -1482,12 +1480,12 @@ export async function saveModlogSettings(client, guildId, settings) {
     }
 }
 
-/**
- * Create a new modlog entry
- * @param {Object} client - The Discord client
- * @param {Object} entry - The modlog entry data
- * @returns {Promise<Object>} The created modlog entry
- */
+
+
+
+
+
+
 export async function createModlogEntry(client, entry) {
     const { guildId, userId } = entry;
     const caseId = generateCaseId();
@@ -1518,13 +1516,13 @@ export async function createModlogEntry(client, entry) {
     }
 }
 
-/**
- * Get a modlog entry by case ID
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} caseId - The case ID
- * @returns {Promise<Object|null>} The modlog entry or null if not found
- */
+
+
+
+
+
+
+
 export async function getModlogEntry(client, guildId, caseId) {
     const key = getModlogEntryKey(guildId, caseId);
     try {
@@ -1536,14 +1534,14 @@ export async function getModlogEntry(client, guildId, caseId) {
     }
 }
 
-/**
- * Update a modlog entry
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} caseId - The case ID
- * @param {Object} updates - The updates to apply
- * @returns {Promise<Object>} The updated modlog entry
- */
+
+
+
+
+
+
+
+
 export async function updateModlogEntry(client, guildId, caseId, updates) {
     const key = getModlogEntryKey(guildId, caseId);
     try {
@@ -1566,13 +1564,13 @@ export async function updateModlogEntry(client, guildId, caseId, updates) {
     }
 }
 
-/**
- * Get all modlog entries for a user in a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} userId - The user ID
- * @returns {Promise<Array>} The user's modlog entries
- */
+
+
+
+
+
+
+
 export async function getUserModlogEntries(client, guildId, userId) {
     const userKey = getUserModlogKey(guildId, userId);
     try {
@@ -1589,18 +1587,18 @@ export async function getUserModlogEntries(client, guildId, userId) {
     }
 }
 
-/**
- * Get all modlog entries in a guild with optional filters
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {Object} [filters] - Optional filters
- * @param {string} [filters.userId] - Filter by user ID
- * @param {string} [filters.moderatorId] - Filter by moderator ID
- * @param {string} [filters.action] - Filter by action type
- * @param {number} [filters.limit=50] - Maximum number of entries to return
- * @param {number} [filters.offset=0] - Number of entries to skip
- * @returns {Promise<Array>} The filtered modlog entries
- */
+
+
+
+
+
+
+
+
+
+
+
+
 export async function getModlogEntries(client, guildId, filters = {}) {
     const {
         userId,
@@ -1641,30 +1639,30 @@ export async function getModlogEntries(client, guildId, filters = {}) {
 }
 
 
-/**
- * Get the Join to Create configuration key for a guild
- * @param {string} guildId - The guild ID
- * @returns {string} The Join to Create config key
- */
+
+
+
+
+
 export function getJoinToCreateConfigKey(guildId) {
     return `guild:${guildId}:jointocreate`;
 }
 
-/**
- * Get the Join to Create temporary channels key for a guild
- * @param {string} guildId - The guild ID
- * @returns {string} The temporary channels key
- */
+
+
+
+
+
 export function getJoinToCreateChannelsKey(guildId) {
     return `guild:${guildId}:jointocreate:channels`;
 }
 
-/**
- * Get Join to Create configuration for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @returns {Promise<Object>} The Join to Create configuration
- */
+
+
+
+
+
+
 export async function getJoinToCreateConfig(client, guildId) {
     if (!client.db) {
         console.warn('Database not available for getJoinToCreateConfig');
@@ -1708,13 +1706,13 @@ export async function getJoinToCreateConfig(client, guildId) {
     }
 }
 
-/**
- * Save Join to Create configuration for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {Object} config - The configuration to save
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
 export async function saveJoinToCreateConfig(client, guildId, config) {
     const key = getJoinToCreateConfigKey(guildId);
     try {
@@ -1729,13 +1727,13 @@ export async function saveJoinToCreateConfig(client, guildId, config) {
     }
 }
 
-/**
- * Update specific fields in the Join to Create config
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {Object} updates - The fields to update
- * @returns {Promise<Object>} The updated config
- */
+
+
+
+
+
+
+
 export async function updateJoinToCreateConfig(client, guildId, updates) {
     try {
         const currentConfig = await getJoinToCreateConfig(client, guildId);
@@ -1749,14 +1747,14 @@ export async function updateJoinToCreateConfig(client, guildId, updates) {
     }
 }
 
-/**
- * Add a trigger channel to the Join to Create system
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} channelId - The trigger channel ID
- * @param {Object} options - Channel-specific options
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
+
 export async function addJoinToCreateTrigger(client, guildId, channelId, options = {}) {
     try {
         const config = await getJoinToCreateConfig(client, guildId);
@@ -1786,13 +1784,13 @@ export async function addJoinToCreateTrigger(client, guildId, channelId, options
     }
 }
 
-/**
- * Remove a trigger channel from the Join to Create system
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} channelId - The trigger channel ID
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
 export async function removeJoinToCreateTrigger(client, guildId, channelId) {
     try {
         const config = await getJoinToCreateConfig(client, guildId);
@@ -1816,15 +1814,15 @@ export async function removeJoinToCreateTrigger(client, guildId, channelId) {
     }
 }
 
-/**
- * Register a temporary channel in the system
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} channelId - The temporary channel ID
- * @param {string} ownerId - The owner user ID
- * @param {string} triggerChannelId - The trigger channel that created this
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
+
+
 export async function registerTemporaryChannel(client, guildId, channelId, ownerId, triggerChannelId) {
     try {
         const config = await getJoinToCreateConfig(client, guildId);
@@ -1842,13 +1840,13 @@ export async function registerTemporaryChannel(client, guildId, channelId, owner
     }
 }
 
-/**
- * Unregister a temporary channel from the system
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} channelId - The temporary channel ID
- * @returns {Promise<boolean>} Whether the operation was successful
- */
+
+
+
+
+
+
+
 export async function unregisterTemporaryChannel(client, guildId, channelId) {
     try {
         const config = await getJoinToCreateConfig(client, guildId);
@@ -1865,13 +1863,13 @@ export async function unregisterTemporaryChannel(client, guildId, channelId) {
     }
 }
 
-/**
- * Get a temporary channel's information
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} channelId - The temporary channel ID
- * @returns {Promise<Object|null>} The temporary channel info or null if not found
- */
+
+
+
+
+
+
+
 export async function getTemporaryChannelInfo(client, guildId, channelId) {
     try {
         const config = await getJoinToCreateConfig(client, guildId);
@@ -1882,12 +1880,12 @@ export async function getTemporaryChannelInfo(client, guildId, channelId) {
     }
 }
 
-/**
- * Format channel name with template variables
- * @param {string} template - The name template
- * @param {Object} variables - The variables to replace
- * @returns {string} The formatted channel name
- */
+
+
+
+
+
+
 export function formatChannelName(template, variables) {
     let formatted = template;
     
@@ -1909,10 +1907,10 @@ formatted = formatted.substring(0, 100);
     return formatted || 'Voice Channel';
 }
 
-/**
- * Generate a unique case ID
- * @returns {string} A unique case ID
- */
+
+
+
+
 function generateCaseId() {
     return `${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 4)}`;
 }

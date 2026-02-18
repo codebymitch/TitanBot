@@ -26,7 +26,7 @@ export default {
 
     async execute(interaction) {
         try {
-            // Validate guild context
+            
             if (!interaction.inGuild()) {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
@@ -36,7 +36,7 @@ export default {
                 );
             }
 
-            // Validate permissions
+            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
@@ -50,7 +50,7 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            // Validate message ID format
+            
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new TitanBotError(
                     'Invalid message ID format',
@@ -72,7 +72,7 @@ export default {
                 );
             }
 
-            // Use service layer to end giveaway (handles state management atomically)
+            
             const endResult = await endGiveawayService(
                 interaction.client,
                 giveaway,
@@ -83,7 +83,7 @@ export default {
             const updatedGiveaway = endResult.giveaway;
             const winners = endResult.winners;
 
-            // Fetch and update the message
+            
             const channel = await interaction.client.channels.fetch(
                 updatedGiveaway.channelId,
             ).catch(err => {
@@ -116,14 +116,14 @@ export default {
                 );
             }
 
-            // Save updated giveaway to database
+            
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
                 updatedGiveaway,
             );
 
-            // Update the original message with ended embed
+            
             const newEmbed = createGiveawayEmbed(updatedGiveaway, "ended", winners);
             const newRow = createGiveawayButtons(true);
 
@@ -133,7 +133,7 @@ export default {
                 components: [newRow],
             });
 
-            // Announce winners
+            
             if (winners.length > 0) {
                 const winnerMentions = winners
                     .map((id) => `<@${id}>`)
@@ -144,7 +144,7 @@ export default {
 
                 logger.info(`Giveaway ended with ${winners.length} winner(s): ${messageId}`);
 
-                // Log giveaway winner event
+                
                 try {
                     await logEvent({
                         client: interaction.client,

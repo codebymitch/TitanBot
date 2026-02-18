@@ -8,14 +8,38 @@ const { combine, timestamp, printf, colorize, errors, json } = format;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const validLogLevels = new Set(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']);
+const defaultLogLevel = process.env.NODE_ENV === 'production' ? 'info' : 'debug';
+const logLevelAliases = {
+  warning: 'warn',
+  warnings: 'warn',
+  warns: 'warn',
+  err: 'error',
+  information: 'info',
+};
+const rawRequestedLogLevel = process.env.LOG_LEVEL?.toLowerCase().trim();
+const requestedLogLevel = logLevelAliases[rawRequestedLogLevel] || rawRequestedLogLevel;
 
-const logFormat = printf(({ level, message, timestamp, stack }) => {
-  const logMessage = `[${timestamp}] [${level}]: ${stack || message}`;
+const resolvedLogLevel = validLogLevels.has(requestedLogLevel)
+  ? requestedLogLevel
+  : defaultLogLevel;
+
+if (requestedLogLevel && !validLogLevels.has(requestedLogLevel)) {
+  console.warn(
+    `[logger] Invalid LOG_LEVEL "${process.env.LOG_LEVEL}". Falling back to "${defaultLogLevel}".`
+  );
+}
+
+const shouldPromoteStartupLogs = process.env.NODE_ENV === 'production' && resolvedLogLevel === 'warn';
+
+const logFormat = printf(({ level, message, timestamp, stack, displayLevel }) => {
+  const visibleLevel = displayLevel || level;
+  const logMessage = `[${timestamp}] [${visibleLevel}]: ${stack || message}`;
   return logMessage;
 });
 
 const logger = createLogger({
-  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  level: resolvedLogLevel,
   format: combine(
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     errors({ stack: true }),
@@ -63,7 +87,7 @@ if (process.env.NODE_ENV !== 'production') {
       errors({ stack: true }),
       logFormat
     ),
-    level: 'debug',
+    level: resolvedLogLevel,
   }));
 } else {
   logger.add(new transports.Console({
@@ -73,7 +97,7 @@ if (process.env.NODE_ENV !== 'production') {
       errors({ stack: true }),
       logFormat
     ),
-    level: 'warn',
+    level: resolvedLogLevel,
   }));
 }
 
@@ -83,7 +107,24 @@ logger.stream = {
   },
 };
 
-export { logger };
+function startupLog(message) {
+  if (shouldPromoteStartupLogs) {
+    logger.log({
+      level: 'warn',
+      message,
+      displayLevel: 'startup',
+    });
+    return;
+  }
+
+  logger.log({
+    level: 'info',
+    message,
+    displayLevel: 'startup',
+  });
+}
+
+export { logger, startupLog };
 
 export default logger;
 

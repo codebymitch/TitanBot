@@ -1,25 +1,26 @@
-/**
- * APPLICATION SERVICE
- * 
- * Centralized business logic for application system operations
- * Provides validation, security, comprehensive logging, and audit trail
- * 
- * Features:
- * - Input validation and sanitization
- * - Permission verification
- * - Rate limiting and cooldowns
- * - Comprehensive logging via Winston
- * - Error handling with context
- * - Audit trail for all operations
- * 
- * Usage:
- * import ApplicationService from '../../services/applicationService.js';
- * const result = await ApplicationService.submitApplication(client, guildId, userId, data);
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { logger } from '../utils/logger.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { PermissionFlagsBits } from 'discord.js';
+import { sanitizeInput, sanitizeMarkdown } from '../utils/sanitization.js';
 import {
     getApplicationSettings,
     saveApplicationSettings,
@@ -32,15 +33,19 @@ import {
     saveApplicationRoles
 } from '../utils/database.js';
 
-// Rate limiting store
+
 const applicationCooldowns = new Map();
-const APPLICATION_SUBMIT_COOLDOWN = 5 * 60 * 1000; // 5 minutes between applications
+const APPLICATION_SUBMIT_COOLDOWN = 5 * 60 * 1000; 
 
 class ApplicationService {
-    /**
-     * Validate application submission input
-     * @private
-     */
+    static sanitizeApplicationText(value, maxLength) {
+        return sanitizeMarkdown(sanitizeInput(String(value ?? ''), maxLength));
+    }
+
+    
+
+
+
     static validateApplicationSubmission(data) {
         if (!data.guildId || !data.userId || !data.roleId) {
             throw createError(
@@ -60,9 +65,12 @@ class ApplicationService {
             );
         }
 
-        // Validate answers
+        
         for (const answer of data.answers) {
-            if (!answer.question || !answer.answer) {
+            const sanitizedQuestion = this.sanitizeApplicationText(answer.question, 200);
+            const sanitizedAnswer = this.sanitizeApplicationText(answer.answer, 1000);
+
+            if (!sanitizedQuestion || !sanitizedAnswer) {
                 throw createError(
                     'Invalid answer format',
                     ErrorTypes.VALIDATION,
@@ -71,22 +79,22 @@ class ApplicationService {
                 );
             }
 
-            // Sanitize and validate length
-            if (answer.answer.length > 1000) {
+            
+            if (sanitizedAnswer.length > 1000) {
                 throw createError(
                     'Answer too long',
                     ErrorTypes.VALIDATION,
                     'Each answer must be less than 1000 characters.',
-                    { length: answer.answer.length }
+                    { length: sanitizedAnswer.length }
                 );
             }
 
-            if (answer.answer.trim().length < 10) {
+            if (sanitizedAnswer.trim().length < 10) {
                 throw createError(
                     'Answer too short',
                     ErrorTypes.VALIDATION,
                     'Please provide meaningful answers (at least 10 characters).',
-                    { length: answer.answer.length }
+                    { length: sanitizedAnswer.length }
                 );
             }
         }
@@ -94,10 +102,10 @@ class ApplicationService {
         return true;
     }
 
-    /**
-     * Check if user can submit application (rate limiting)
-     * @private
-     */
+    
+
+
+
     static checkApplicationCooldown(userId) {
         const now = Date.now();
         const cooldownKey = `submit_${userId}`;
@@ -117,10 +125,10 @@ class ApplicationService {
         return true;
     }
 
-    /**
-     * Check if user has permission to manage applications
-     * @private
-     */
+    
+
+
+
     static async checkManagerPermission(client, guildId, member) {
         const settings = await getApplicationSettings(client, guildId);
         
@@ -141,21 +149,21 @@ class ApplicationService {
         return true;
     }
 
-    /**
-     * Submit a new application
-     * @param {Client} client - Discord client
-     * @param {Object} data - Application submission data
-     * @returns {Promise<Object>} Created application
-     */
+    
+
+
+
+
+
     static async submitApplication(client, data) {
         try {
-            // Validate input
+            
             this.validateApplicationSubmission(data);
 
-            // Check rate limiting
+            
             this.checkApplicationCooldown(data.userId);
 
-            // Check if application system is enabled
+            
             const settings = await getApplicationSettings(client, data.guildId);
             if (!settings.enabled) {
                 throw createError(
@@ -166,7 +174,7 @@ class ApplicationService {
                 );
             }
 
-            // Check if user already has pending application
+            
             const userApps = await getUserApplications(client, data.guildId, data.userId);
             const pendingApp = userApps.find(app => app.status === 'pending');
 
@@ -179,16 +187,16 @@ class ApplicationService {
                 );
             }
 
-            // Sanitize answers
+            
             const sanitizedData = {
                 ...data,
                 answers: data.answers.map(answer => ({
-                    question: answer.question.trim(),
-                    answer: answer.answer.trim()
+                    question: this.sanitizeApplicationText(answer.question, 200),
+                    answer: this.sanitizeApplicationText(answer.answer, 1000)
                 }))
             };
 
-            // Create application
+            
             const application = await createApplication(client, sanitizedData);
 
             logger.info('Application submitted', {
@@ -211,19 +219,19 @@ class ApplicationService {
         }
     }
 
-    /**
-     * Review an application (approve/deny)
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {string} applicationId - Application ID
-     * @param {Object} reviewData - Review data
-     * @returns {Promise<Object>} Updated application
-     */
+    
+
+
+
+
+
+
+
     static async reviewApplication(client, guildId, applicationId, reviewData) {
         try {
             const { action, reason, reviewerId } = reviewData;
 
-            // Validate review data
+            
             if (!['approve', 'deny'].includes(action)) {
                 throw createError(
                     'Invalid review action',
@@ -233,7 +241,7 @@ class ApplicationService {
                 );
             }
 
-            // Get application
+            
             const application = await getApplication(client, guildId, applicationId);
             if (!application) {
                 throw createError(
@@ -244,7 +252,7 @@ class ApplicationService {
                 );
             }
 
-            // Check if already processed
+            
             if (application.status !== 'pending') {
                 throw createError(
                     'Application already processed',
@@ -257,7 +265,7 @@ class ApplicationService {
             const status = action === 'approve' ? 'approved' : 'denied';
             const sanitizedReason = reason ? reason.trim().substring(0, 500) : 'No reason provided.';
 
-            // Update application
+            
             const updatedApplication = await updateApplication(client, guildId, applicationId, {
                 status,
                 reviewer: reviewerId,
@@ -285,13 +293,13 @@ class ApplicationService {
         }
     }
 
-    /**
-     * Get applications with filters
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {Object} filters - Filter options
-     * @returns {Promise<Array>} Filtered applications
-     */
+    
+
+
+
+
+
+
     static async getApplicationsList(client, guildId, filters = {}) {
         try {
             const applications = await getApplications(client, guildId, filters);
@@ -319,16 +327,16 @@ class ApplicationService {
         }
     }
 
-    /**
-     * Update application settings with validation
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {Object} updates - Settings updates
-     * @returns {Promise<Object>} Updated settings
-     */
+    
+
+
+
+
+
+
     static async updateSettings(client, guildId, updates) {
         try {
-            // Validate channel if provided
+            
             if (updates.logChannelId && typeof updates.logChannelId !== 'string') {
                 throw createError(
                     'Invalid log channel ID',
@@ -338,7 +346,7 @@ class ApplicationService {
                 );
             }
 
-            // Validate manager roles if provided
+            
             if (updates.managerRoles && !Array.isArray(updates.managerRoles)) {
                 throw createError(
                     'Invalid manager roles format',
@@ -348,7 +356,7 @@ class ApplicationService {
                 );
             }
 
-            // Validate questions if provided
+            
             if (updates.questions) {
                 if (!Array.isArray(updates.questions) || updates.questions.length === 0) {
                     throw createError(
@@ -359,7 +367,7 @@ class ApplicationService {
                     );
                 }
 
-                // Sanitize questions
+                
                 updates.questions = updates.questions.map(q => 
                     typeof q === 'string' ? q.trim().substring(0, 100) : q
                 );
@@ -385,13 +393,13 @@ class ApplicationService {
         }
     }
 
-    /**
-     * Manage application roles (add/remove/list)
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {Object} data - Role management data
-     * @returns {Promise<Array>} Updated application roles
-     */
+    
+
+
+
+
+
+
     static async manageApplicationRoles(client, guildId, data) {
         try {
             const { action, roleId, name } = data;
@@ -408,7 +416,7 @@ class ApplicationService {
                     );
                 }
 
-                // Check if role already exists
+                
                 if (currentRoles.some(appRole => appRole.roleId === roleId)) {
                     throw createError(
                         'Role already configured',
@@ -471,13 +479,13 @@ class ApplicationService {
         }
     }
 
-    /**
-     * Get user's applications
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {string} userId - User ID
-     * @returns {Promise<Array>} User's applications
-     */
+    
+
+
+
+
+
+
     static async getUserApplications(client, guildId, userId) {
         try {
             const applications = await getUserApplications(client, guildId, userId);
@@ -505,13 +513,13 @@ class ApplicationService {
         }
     }
 
-    /**
-     * Get single application with validation
-     * @param {Client} client - Discord client
-     * @param {string} guildId - Guild ID
-     * @param {string} applicationId - Application ID
-     * @returns {Promise<Object>} Application data
-     */
+    
+
+
+
+
+
+
     static async getSingleApplication(client, guildId, applicationId) {
         try {
             const application = await getApplication(client, guildId, applicationId);

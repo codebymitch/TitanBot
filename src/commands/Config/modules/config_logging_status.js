@@ -103,7 +103,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 return list.map((id) => `\`${id}\``).join("\n");
             };
 
-            // Build event status
+            
             let eventStatus = '';
             const categories = {
                 'moderation': '🔨 Moderation',
@@ -200,7 +200,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                     },
                 );
 
-            // Create interactive buttons
+            
             const statusButtons = createStatusIndicatorButtons(loggingStatus.enabledEvents);
             const refreshButton = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -213,7 +213,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                     .setStyle(ButtonStyle.Primary)
             );
 
-            // Combine all button rows (status buttons + refresh row)
+            
             const components = [...statusButtons, refreshButton];
 
             await interaction.editReply({ 

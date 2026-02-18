@@ -46,7 +46,7 @@ export default {
             const image = options.getString('image');
             const ping = options.getBoolean('ping') ?? false;
 
-            // Validate message is not empty
+            
             if (!message || message.trim().length === 0) {
                 logger.warn(`[Welcome] Empty message provided by ${interaction.user.tag} in ${guild.name}`);
                 return await interaction.editReply({
@@ -55,7 +55,7 @@ export default {
                 });
             }
 
-            // Validate image URL if provided
+            
             if (image) {
                 try {
                     new URL(image);

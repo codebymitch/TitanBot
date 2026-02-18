@@ -1,23 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
 import { getColor } from '../config/bot.js';
 
-export function getPromoRow() {
-    return new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setLabel('Invite Me')
-            .setURL('https://discord.com/oauth2/authorize?client_id=YOUR_BOT_ID&scope=bot&permissions=8')
-            .setStyle(ButtonStyle.Link),
-        new ButtonBuilder()
-            .setLabel('Support Server')
-            .setURL('https://discord.gg/YOUR_SERVER_INVITE')
-            .setStyle(ButtonStyle.Link),
-        new ButtonBuilder()
-            .setLabel('GitHub')
-            .setURL('https://github.com/yourusername/your-bot')
-            .setStyle(ButtonStyle.Link)
-    );
-}
-
 export function getConfirmationButtons(customIdPrefix = 'confirm') {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -75,27 +58,61 @@ export function createSelectMenu(customId, placeholder, options = [], min = 1, m
 }
 
 export function createButton(customId, label, style = 'primary', emoji = null, disabled = false) {
-    const button = new ButtonBuilder()
-        .setCustomId(customId)
-        .setLabel(label)
-        .setStyle(ButtonStyle[style.charAt(0).toUpperCase() + style.slice(1).toLowerCase()] || ButtonStyle.Primary)
-        .setDisabled(disabled);
     
-    if (emoji) {
-        button.setEmoji(emoji);
+    if (!customId || typeof customId !== 'string' || customId.length === 0) {
+        throw new Error('customId must be a non-empty string');
+    }
+    if (!label || typeof label !== 'string' || label.length === 0) {
+        throw new Error('label must be a non-empty string');
+    }
+    
+    
+    const validCustomId = customId.substring(0, 100);
+    const validLabel = label.substring(0, 80);
+    
+    
+    const normalizedStyle = style.charAt(0).toUpperCase() + style.slice(1).toLowerCase();
+    const buttonStyle = ButtonStyle[normalizedStyle] || ButtonStyle.Primary;
+    
+    const button = new ButtonBuilder()
+        .setCustomId(validCustomId)
+        .setLabel(validLabel)
+        .setStyle(buttonStyle)
+        .setDisabled(disabled === true);
+    
+    if (emoji && typeof emoji === 'string' && emoji.length > 0) {
+        try {
+            button.setEmoji(emoji);
+        } catch (error) {
+            
+        }
     }
     
     return button;
 }
 
 export function createLinkButton(label, url, emoji = null) {
+    
+    if (!label || typeof label !== 'string') {
+        throw new Error('label must be a non-empty string');
+    }
+    if (!url || typeof url !== 'string') {
+        throw new Error('url must be a non-empty string');
+    }
+    
+    const validLabel = label.substring(0, 80);
+    
     const button = new ButtonBuilder()
-        .setLabel(label)
+        .setLabel(validLabel)
         .setURL(url)
         .setStyle(ButtonStyle.Link);
     
-    if (emoji) {
-        button.setEmoji(emoji);
+    if (emoji && typeof emoji === 'string' && emoji.length > 0) {
+        try {
+            button.setEmoji(emoji);
+        } catch (error) {
+            
+        }
     }
     
     return button;
@@ -104,17 +121,29 @@ export function createLinkButton(label, url, emoji = null) {
 export function createButtonRow(buttons) {
     const row = new ActionRowBuilder();
     
-    for (const button of buttons) {
-        if (button.url) {
-            row.addComponents(createLinkButton(button.label, button.url, button.emoji));
-        } else {
-            row.addComponents(createButton(
-                button.customId,
-                button.label,
-                button.style || 'primary',
-                button.emoji,
-                button.disabled || false
-            ));
+    if (!Array.isArray(buttons) || buttons.length === 0) {
+        return row;
+    }
+    
+    
+    for (const button of buttons.slice(0, 5)) {
+        if (!button) continue;
+        
+        try {
+            if (button.url) {
+                row.addComponents(createLinkButton(button.label, button.url, button.emoji));
+            } else {
+                row.addComponents(createButton(
+                    button.customId,
+                    button.label,
+                    button.style || 'primary',
+                    button.emoji,
+                    button.disabled || false
+                ));
+            }
+        } catch (error) {
+            
+            continue;
         }
     }
     

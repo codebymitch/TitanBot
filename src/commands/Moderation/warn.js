@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
@@ -40,7 +39,7 @@ export default {
                     throw new Error("The target user is not currently in this server.");
                 }
 
-                // Use WarningService for persistent storage
+                
                 const result = await WarningService.addWarning({
                     guildId,
                     userId: target.id,

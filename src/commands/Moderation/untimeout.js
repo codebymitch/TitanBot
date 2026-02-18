@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
@@ -23,7 +22,7 @@ export default {
                 const targetUser = interaction.options.getUser("target");
                 const member = interaction.options.getMember("target");
 
-                // Use ModerationService for untimeout operation
+                
                 const result = await ModerationService.removeTimeoutUser({
                     guild: interaction.guild,
                     member,

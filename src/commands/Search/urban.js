@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import axios from 'axios';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -19,7 +18,7 @@ export default {
     
     async execute(interaction) {
         try {
-            // Defer the interaction to allow time for API call
+            
             const deferred = await InteractionHelper.safeDefer(interaction);
             if (!deferred) {
                 return;

@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getColor } from '../../config/bot.js';
-import { getPromoRow } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import ApplicationService from '../../services/applicationService.js';
@@ -171,7 +170,7 @@ export default {
             subcommand
         });
 
-        // Check permissions using ApplicationService
+        
         await ApplicationService.checkManagerPermission(interaction.client, guild.id, member);
 
         if (subcommand === "setup") {
@@ -385,7 +384,7 @@ async function handleReview(interaction) {
         }
     );
 
-    // Notify user via DM
+    
     try {
         const user = await interaction.client.users.fetch(application.userId);
         const statusColor = status === "approved" ? getColor('success') : getColor('error');
@@ -405,7 +404,7 @@ async function handleReview(interaction) {
         });
     }
 
-    // Update log message
+    
     if (application.logMessageId && application.logChannelId) {
         try {
             const statusColor = status === "approved" ? getColor('success') : getColor('error');

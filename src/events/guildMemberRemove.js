@@ -69,7 +69,7 @@ export default {
             }
         }
         
-        // Log member leave event using unified logging service
+        
         try {
             await logEvent({
                 client: member.client,
@@ -101,7 +101,7 @@ export default {
             logger.debug('Error logging member leave:', error);
         }
         
-        // Update counters in real-time when member leaves
+        
         try {
             const counters = await getServerCounters(member.client, guild.id);
             for (const counter of counters) {

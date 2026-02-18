@@ -1,7 +1,7 @@
-/**
- * Leveling Service - Centralized business logic for leveling system
- * Handles all leveling operations with validation, error handling, and security checks
- */
+
+
+
+
 
 import { EmbedBuilder } from 'discord.js';
 import { logger } from '../utils/logger.js';
@@ -9,18 +9,18 @@ import { getGuildConfig, setGuildConfig } from '../services/guildConfig.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { addXp } from './xpSystem.js';
 
-// XP calculation constants
+
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
 const MAX_LEVEL = 1000;
 const MIN_LEVEL = 0;
 
-/**
- * Calculate XP required for a specific level
- * @param {number} level - Target level
- * @returns {number} XP required for next level
- * @throws {TitanBotError} If level is invalid
- */
+
+
+
+
+
+
 export function getXpForLevel(level) {
   if (!Number.isInteger(level) || level < 0 || level > MAX_LEVEL) {
     throw new TitanBotError(
@@ -32,11 +32,11 @@ export function getXpForLevel(level) {
   return 5 * Math.pow(level, 2) + 50 * level + 50;
 }
 
-/**
- * Get level and XP progress from total XP
- * @param {number} xp - Total XP earned
- * @returns {Object} Level data with current XP and XP needed
- */
+
+
+
+
+
 export function getLevelFromXp(xp) {
   if (!Number.isInteger(xp) || xp < 0) {
     throw new TitanBotError(
@@ -62,16 +62,16 @@ export function getLevelFromXp(xp) {
   };
 }
 
-/**
- * Get server leaderboard with safety checks
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {number} limit - Max entries (default: 10, max: 100)
- * @returns {Promise<Array>} Leaderboard entries
- */
+
+
+
+
+
+
+
 export async function getLeaderboard(client, guildId, limit = 10) {
   try {
-    // Validate inputs
+    
     if (!guildId || typeof guildId !== 'string') {
       throw new TitanBotError(
         'Invalid guild ID',
@@ -130,12 +130,12 @@ export async function getLeaderboard(client, guildId, limit = 10) {
   }
 }
 
-/**
- * Create a formatted Discord embed for leaderboard
- * @param {Array} leaderboard - Leaderboard data
- * @param {Object} guild - Discord guild object
- * @returns {EmbedBuilder} Formatted embed
- */
+
+
+
+
+
+
 export function createLeaderboardEmbed(leaderboard, guild) {
   const embed = new EmbedBuilder()
     .setTitle(`🏆 ${guild.name} Leaderboard`)
@@ -166,12 +166,12 @@ export function createLeaderboardEmbed(leaderboard, guild) {
   return embed;
 }
 
-/**
- * Get leveling configuration for guild
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @returns {Promise<Object>} Leveling configuration
- */
+
+
+
+
+
+
 export async function getLevelingConfig(client, guildId) {
   try {
     const guildConfig = await getGuildConfig(client, guildId);
@@ -206,13 +206,13 @@ export async function getLevelingConfig(client, guildId) {
   }
 }
 
-/**
- * Get user level data with validation
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @returns {Promise<Object>} User level data
- */
+
+
+
+
+
+
+
 export async function getUserLevelData(client, guildId, userId) {
   try {
     if (!guildId || !userId) {
@@ -253,14 +253,14 @@ export async function getUserLevelData(client, guildId, userId) {
   }
 }
 
-/**
- * Save user level data with validation
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @param {Object} data - Level data to save
- * @returns {Promise<void>}
- */
+
+
+
+
+
+
+
+
 export async function saveUserLevelData(client, guildId, userId, data) {
   try {
     if (!guildId || !userId) {
@@ -270,7 +270,7 @@ export async function saveUserLevelData(client, guildId, userId, data) {
       );
     }
 
-    // Validate data integrity
+    
     if (!data || typeof data !== 'object') {
       throw new TitanBotError(
         'Invalid user level data',
@@ -278,7 +278,7 @@ export async function saveUserLevelData(client, guildId, userId, data) {
       );
     }
 
-    // Sanitize data to ensure valid numbers
+    
     const sanitizedData = {
       xp: Math.max(0, Number(data.xp) || 0),
       level: Math.max(0, Math.min(Number(data.level) || 0, MAX_LEVEL)),
@@ -302,13 +302,13 @@ export async function saveUserLevelData(client, guildId, userId, data) {
   }
 }
 
-/**
- * Save leveling configuration for guild
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {Object} config - Configuration to save
- * @returns {Promise<void>}
- */
+
+
+
+
+
+
+
 export async function saveLevelingConfig(client, guildId, config) {
   try {
     if (!guildId || !config) {
@@ -320,7 +320,7 @@ export async function saveLevelingConfig(client, guildId, config) {
 
     const guildConfig = await getGuildConfig(client, guildId);
     
-    // Validate config values
+    
     if (config.xpCooldown && (config.xpCooldown < 0 || config.xpCooldown > 3600)) {
       throw new TitanBotError(
         'XP cooldown must be between 0 and 3600 seconds',
@@ -352,17 +352,17 @@ export async function saveLevelingConfig(client, guildId, config) {
   }
 }
 
-/**
- * Add levels to a user with validation and security checks
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @param {number} levels - Levels to add (must be positive)
- * @returns {Promise<Object>} Updated user data
- */
+
+
+
+
+
+
+
+
 export async function addLevels(client, guildId, userId, levels) {
   try {
-    // Validate inputs
+    
     if (!Number.isInteger(levels) || levels <= 0) {
       throw new TitanBotError(
         `Invalid level amount: ${levels}`,
@@ -404,17 +404,17 @@ export async function addLevels(client, guildId, userId, levels) {
   }
 }
 
-/**
- * Remove levels from a user with validation
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @param {number} levels - Levels to remove (must be positive)
- * @returns {Promise<Object>} Updated user data
- */
+
+
+
+
+
+
+
+
 export async function removeLevels(client, guildId, userId, levels) {
   try {
-    // Validate inputs
+    
     if (!Number.isInteger(levels) || levels <= 0) {
       throw new TitanBotError(
         `Invalid level amount: ${levels}`,
@@ -448,17 +448,17 @@ export async function removeLevels(client, guildId, userId, levels) {
   }
 }
 
-/**
- * Set user level to exact value with validation
- * @param {Object} client - Discord client
- * @param {string} guildId - Guild ID
- * @param {string} userId - User ID
- * @param {number} level - Level to set (must be between 0 and MAX_LEVEL)
- * @returns {Promise<Object>} Updated user data
- */
+
+
+
+
+
+
+
+
 export async function setUserLevel(client, guildId, userId, level) {
   try {
-    // Validate inputs
+    
     if (!Number.isInteger(level) || level < MIN_LEVEL || level > MAX_LEVEL) {
       throw new TitanBotError(
         `Invalid level: ${level}`,

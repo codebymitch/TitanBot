@@ -4,22 +4,22 @@ import { logger } from './logger.js';
 import { getFromDb, setInDb } from './database.js';
 import { getColor } from '../config/bot.js';
 
-/**
- * Enhanced moderation logging system with comprehensive tracking
- * Uses centralized color scheme from bot.js config
- * @param {Object} options - The log options
- * @param {import('discord.js').Client} options.client - The Discord client
- * @param {import('discord.js').Guild} options.guild - The guild object
- * @param {Object} options.event - The event details
- * @param {string} options.event.action - The action that was taken
- * @param {string} options.event.target - The target user/channel/object
- * @param {string} options.event.executor - The moderator who performed the action
- * @param {string} [options.event.reason] - The reason for the action
- * @param {string} [options.event.duration] - Duration for timed actions
- * @param {Object} [options.event.metadata] - Additional metadata
- * @param {string} [options.event.color] - Embed color override
- * @returns {Promise<void>}
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export async function logEvent({ client, guild, guildId, event }) {
   try {
     if (!guild && guildId) {
@@ -48,7 +48,7 @@ export async function logEvent({ client, guild, guildId, event }) {
       return;
     }
 
-    // Action styles using bot.js color scheme
+    
     const actionStyles = {
       'Member Banned': { color: getColor('error'), icon: '🔨' },
       'Member Kicked': { color: getColor('warning'), icon: '👢' },
@@ -125,12 +125,12 @@ export async function logEvent({ client, guild, guildId, event }) {
   }
 }
 
-/**
- * Generate a unique case ID for moderation actions
- * @param {import('discord.js').Client} client - The Discord client
- * @param {string} guildId - The guild ID
- * @returns {Promise<number>} Next case number
- */
+
+
+
+
+
+
 export async function generateCaseId(client, guildId) {
   try {
     const caseKey = `moderation_cases_${guildId}`;
@@ -179,12 +179,12 @@ export async function storeModerationCase({ guildId, caseId, caseData }) {
   }
 }
 
-/**
- * Get moderation cases for a guild
- * @param {string} guildId - The guild ID
- * @param {Object} filters - Optional filters
- * @returns {Promise<Array>} Array of cases
- */
+
+
+
+
+
+
 export async function getModerationCases(guildId, filters = {}) {
   try {
     const { userId, moderatorId, action, limit = 50, offset = 0 } = filters;

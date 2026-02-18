@@ -47,7 +47,7 @@ export default {
         const deleteDays = interaction.options.getInteger("delete_days") || 0;
 
         try {
-            // Check rate limit - 3 mass bans per minute
+            
             const rateLimitKey = `massban_${interaction.user.id}`;
             const isAllowed = await checkRateLimit(rateLimitKey, 3, 60000);
             if (!isAllowed) {

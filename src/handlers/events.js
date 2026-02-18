@@ -15,11 +15,24 @@ export default async function loadEvents(client) {
         const filePath = join(eventsPath, file);
         try {
             const { default: event } = await import(`file://${filePath}`);
+
+            if (!event?.name || typeof event.execute !== 'function') {
+                logger.warn(`Event ${file} is missing required "name" or "execute" properties.`);
+                continue;
+            }
+
+            const safeExecute = async (...args) => {
+                try {
+                    await event.execute(...args, client);
+                } catch (error) {
+                    logger.error(`Error executing event ${event.name}:`, error);
+                }
+            };
             
             if (event.once) {
-                client.once(event.name, (...args) => event.execute(...args, client));
+                client.once(event.name, safeExecute);
             } else {
-                client.on(event.name, (...args) => event.execute(...args, client));
+                client.on(event.name, safeExecute);
             }
         } catch (error) {
             logger.error(`Error loading event ${file}:`, error);

@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 let db = null;
 let useFallback = false;
 let connectionType = 'none';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 async function initializeServicesDatabase() {
   try {
@@ -16,7 +17,15 @@ async function initializeServicesDatabase() {
       logger.info('✅ Services: PostgreSQL Database initialized');
       return;
     }
+    if (IS_PRODUCTION) {
+      logger.error('Services: PostgreSQL connection unavailable in production. Refusing to use fallback storage.');
+      throw new Error('Critical database initialization failure in production environment');
+    }
   } catch (error) {
+    if (IS_PRODUCTION) {
+      logger.error('Services: PostgreSQL connection failed in production:', error.message);
+      throw error;
+    }
     logger.warn('Services: PostgreSQL connection failed, using mock database:', error.message);
   }
   
@@ -34,7 +43,12 @@ async function initializeServicesDatabase() {
   logger.info('Services: Using mock database (fallback)');
 }
 
-initializeServicesDatabase();
+initializeServicesDatabase().catch((error) => {
+  logger.error('Fatal services database initialization failure:', error.message);
+  if (IS_PRODUCTION) {
+    process.exit(1);
+  }
+});
 
 
 export function getGuildConfigKey(guildId) {

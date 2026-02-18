@@ -38,7 +38,7 @@ export default {
         const reason = interaction.options.getString("reason") || "Mass kick - No reason provided";
 
         try {
-            // Check rate limit - 3 mass kicks per minute
+            
             const rateLimitKey = `masskick_${interaction.user.id}`;
             const isAllowed = await checkRateLimit(rateLimitKey, 3, 60000);
             if (!isAllowed) {

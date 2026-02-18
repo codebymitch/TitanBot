@@ -1,6 +1,6 @@
 import { botConfig, getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed, infoEmbed } from '../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../services/guildConfig.js';
 import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { removeVerification, verifyUser } from '../../services/verificationService.js';
@@ -11,7 +11,6 @@ export default {
     data: new SlashCommandBuilder()
         .setName("verification")
         .setDescription("Manage the server verification system")
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand
                 .setName("setup")
@@ -33,12 +32,14 @@ export default {
                     option
                         .setName("message")
                         .setDescription("Custom verification message")
+                        .setMaxLength(2000)
                         .setRequired(false)
                 )
                 .addStringOption(option =>
                     option
                         .setName("button_text")
                         .setDescription("Text for the verification button")
+                        .setMaxLength(80)
                         .setRequired(false)
                 )
         )
@@ -74,6 +75,15 @@ export default {
             const subcommand = interaction.options.getSubcommand();
             const guild = interaction.guild;
 
+            if (subcommand !== 'verify' && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+                throw createError(
+                    'Missing ManageGuild permission for verification admin subcommand',
+                    ErrorTypes.PERMISSION,
+                    'You need the **Manage Server** permission to use this verification subcommand.',
+                    { subcommand, requiredPermission: 'ManageGuild', userId: interaction.user.id }
+                );
+            }
+
             switch (subcommand) {
                 case "setup":
                     return await handleSetup(interaction, guild, client);
@@ -102,22 +112,36 @@ async function handleSetup(interaction, guild, client) {
     const verifiedRole = interaction.options.getRole("verified_role");
     const message = interaction.options.getString("message") || botConfig.verification.defaultMessage;
     const buttonText = interaction.options.getString("button_text") || botConfig.verification.defaultButtonText;
+    const botMember = guild.members.me;
 
-    const requiredPermissions = ["SendMessages", "EmbedLinks"];
-    const missingChannelPerms = requiredPermissions.filter(perm => 
-        !verificationChannel.permissionsFor(guild.members.me).has(perm)
+    if (!botMember) {
+        throw createError(
+            'Bot member not found in guild cache',
+            ErrorTypes.CONFIGURATION,
+            'I could not verify my permissions in this server. Please try again in a moment.',
+            { guildId: guild.id }
+        );
+    }
+
+    const requiredChannelPermissions = [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.EmbedLinks
+    ];
+    const missingChannelPerms = requiredChannelPermissions.filter(perm => 
+        !verificationChannel.permissionsFor(botMember).has(perm)
     );
     
     if (missingChannelPerms.length > 0) {
         throw createError(
             `Missing channel permissions: ${missingChannelPerms.join(', ')}`,
             ErrorTypes.PERMISSION,
-            `I need the following permissions in the verification channel: ${missingChannelPerms.join(', ')}`,
+            'I need **View Channel**, **Send Messages**, and **Embed Links** in the verification channel.',
             { missingPermissions: missingChannelPerms, channel: verificationChannel.id }
         );
     }
 
-    if (!guild.members.me.permissions.has("ManageRoles")) {
+    if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
         throw createError(
             "Missing ManageRoles permission",
             ErrorTypes.PERMISSION,
@@ -126,7 +150,7 @@ async function handleSetup(interaction, guild, client) {
         );
     }
 
-    const botRole = guild.members.me.roles.highest;
+    const botRole = botMember.roles.highest;
     if (verifiedRole.position >= botRole.position) {
         throw createError(
             "Role hierarchy error",

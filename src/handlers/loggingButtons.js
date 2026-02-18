@@ -16,7 +16,7 @@ export default {
 
   async execute(interaction) {
     try {
-      // Check permissions
+      
       if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
         return interaction.reply({
           content: '❌ You need **Manage Server** permissions to use this.',
@@ -55,7 +55,7 @@ async function handleToggle(interaction) {
     const status = await getLoggingStatus(interaction.client, interaction.guildId);
     
     if (eventType === 'all') {
-      // Toggle all events
+      
       const newState = !Object.values(status.enabledEvents).every(v => v !== false);
       const allTypes = Object.values(EVENT_TYPES);
       
@@ -66,7 +66,7 @@ async function handleToggle(interaction) {
         ephemeral: true
       });
     } else {
-      // Toggle single event type or category
+      
       const currentState = status.enabledEvents[eventType] !== false;
       const newState = !currentState;
       
@@ -118,9 +118,9 @@ async function handleRefresh(interaction) {
   }
 }
 
-/**
- * Create a status embed showing current logging configuration
- */
+
+
+
 function createLoggingStatusEmbed(guild, status, config) {
   const embed = new EmbedBuilder()
     .setTitle('📋 Logging Configuration')
@@ -129,7 +129,7 @@ function createLoggingStatusEmbed(guild, status, config) {
     .setTimestamp()
     .setFooter({ text: guild.name, iconURL: guild.iconURL() });
 
-  // Channel info
+  
   if (status.channelId) {
     const channel = guild.channels.cache.get(status.channelId);
     embed.addFields({
@@ -152,7 +152,7 @@ function createLoggingStatusEmbed(guild, status, config) {
     });
   }
 
-  // Event categories summary
+  
   const categories = {
     'moderation': '🔨 Moderation',
     'ticket': '🎫 Tickets',
