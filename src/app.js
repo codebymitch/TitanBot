@@ -13,7 +13,7 @@ import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
 import { getServerCounters, updateCounter } from './services/counterService.js';
-import { logger, startupLog } from './utils/logger.js';
+import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
@@ -263,6 +263,7 @@ class TitanBot extends Client {
       { path: 'events', type: 'default', required: true },
       { path: 'interactions', type: 'default', required: true },
       { path: 'todoButtonLoader', type: 'default', required: false },
+      { path: 'counterButtonLoader', type: 'default', required: false },
       { path: 'ticketButtonLoader', type: 'default', required: false },
       { path: 'shopButtonLoader', type: 'default', required: false },
       { path: 'giveawayButtonLoader', type: 'named:loadGiveawayButtons', required: false },
@@ -270,7 +271,9 @@ class TitanBot extends Client {
       { path: 'helpSelectMenuLoader', type: 'default', required: false },
       { path: 'loggingButtonLoader', type: 'default', required: false },
       { path: 'verificationButtonLoader', type: 'named:loadVerificationButtons', required: false },
-      { path: 'wipedataButtonLoader', type: 'default', required: false }
+      { path: 'wipedataButtonLoader', type: 'default', required: false },
+      { path: 'countdownButtonLoader', type: 'default', required: false },
+      { path: 'calculateButtonLoader', type: 'default', required: false }
     ];
 
     for (const handler of handlers) {
@@ -306,6 +309,7 @@ class TitanBot extends Client {
   }
 
   async shutdown(reason = 'UNKNOWN') {
+    shutdownLog(`Bot is shutting down (${reason})...`);
     logger.info(`\n${'='.repeat(60)}`);
     logger.info(`🛑 Graceful Shutdown Initiated (${reason})`);
     logger.info(`${'='.repeat(60)}`);
@@ -343,6 +347,7 @@ class TitanBot extends Client {
       }
 
       logger.info('✅ Graceful shutdown complete');
+  shutdownLog('Bot stopped successfully.');
       process.exit(0);
     } catch (error) {
       logger.error('Error during graceful shutdown:', error);

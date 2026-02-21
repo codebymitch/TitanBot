@@ -13,6 +13,9 @@ const BACK_BUTTON_ID = "help-back-to-main";
 const ALL_COMMANDS_ID = "help-all-commands";
 const PAGINATION_PREFIX = "help-page";
 const CATEGORY_SELECT_ID = "help-category-select";
+const FOOTER_TEXT = "Made with ❤️";
+const SUBCOMMAND_TYPE = 1;
+const SUBCOMMAND_GROUP_TYPE = 2;
 
 const CATEGORY_ICONS = {
     Core: "ℹ️",
@@ -33,6 +36,79 @@ const CATEGORY_ICONS = {
     Config: "⚙️",
 };
 
+function buildHelpEntries(command, category) {
+    const commandData = normalizeCommandData(command);
+    if (!commandData?.name) {
+        return [];
+    }
+
+    const baseName = commandData.name;
+    const baseDescription = commandData.description || "No description";
+    const options = commandData.options || [];
+
+    const entries = [];
+
+    for (const option of options) {
+        if (!option) continue;
+
+        if (option.type === SUBCOMMAND_TYPE) {
+            entries.push({
+                baseName,
+                displayName: `${baseName} ${option.name}`,
+                description: option.description || baseDescription,
+                category,
+            });
+            continue;
+        }
+
+        if (option.type === SUBCOMMAND_GROUP_TYPE) {
+            const nestedOptions = option.options || [];
+            for (const nested of nestedOptions) {
+                if (nested?.type !== SUBCOMMAND_TYPE) continue;
+
+                entries.push({
+                    baseName,
+                    displayName: `${baseName} ${option.name} ${nested.name}`,
+                    description: nested.description || option.description || baseDescription,
+                    category,
+                });
+            }
+        }
+    }
+
+    if (entries.length === 0) {
+        entries.push({
+            baseName,
+            displayName: baseName,
+            description: baseDescription,
+            category,
+        });
+    }
+
+    return entries;
+}
+
+function normalizeCommandData(command) {
+    const rawData = command?.data;
+    if (!rawData) {
+        return null;
+    }
+
+    const jsonData = typeof rawData.toJSON === 'function' ? rawData.toJSON() : rawData;
+    if (!jsonData?.name) {
+        return null;
+    }
+
+    return {
+        ...jsonData,
+        options: Array.isArray(jsonData.options)
+            ? jsonData.options.map((option) =>
+                  typeof option?.toJSON === 'function' ? option.toJSON() : option,
+              )
+            : [],
+    };
+}
+
 async function createCategoryCommandsMenu(category, client) {
     const categoryName =
         category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
@@ -50,19 +126,16 @@ async function createCategoryCommandsMenu(category, client) {
             const filePath = path.join(categoryPath, file);
             const commandModule = await import(`file://${filePath}`);
             const command = commandModule.default;
+            const commandData = normalizeCommandData(command);
 
-            if (command && command.data && command.data.name) {
+            if (commandData) {
                 if (
-                    command.data.name === "help" ||
-                    command.data.name === "commandlist"
+                    commandData.name === "help" ||
+                    commandData.name === "commandlist"
                 )
                     continue;
 
-                categoryCommands.push({
-                    name: command.data.name,
-                    description: command.data.description || "No description",
-                    options: command.data.options || [],
-                });
+                categoryCommands.push(...buildHelpEntries(command, categoryName));
             }
         }
     } catch (error) {
@@ -72,7 +145,7 @@ async function createCategoryCommandsMenu(category, client) {
         );
     }
 
-    categoryCommands.sort((a, b) => a.name.localeCompare(b.name));
+    categoryCommands.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     let registeredCommands = new Collection();
     try {
@@ -96,11 +169,11 @@ async function createCategoryCommandsMenu(category, client) {
     if (categoryCommands.length > 0) {
         const commandMentions = categoryCommands
             .map((cmd) => {
-                const registeredCmd = registeredCommands.get(cmd.name);
+                const registeredCmd = registeredCommands.get(cmd.baseName);
                 if (registeredCmd && registeredCmd.id) {
-                    return `</${cmd.name}:${registeredCmd.id}> · ${cmd.description}`;
+                    return `</${cmd.displayName}:${registeredCmd.id}> · ${cmd.description}`;
                 }
-                return `\`/${cmd.name}\` · ${cmd.description}`;
+                return `\`/${cmd.displayName}\` · ${cmd.description}`;
             })
             .join("\n");
 
@@ -135,6 +208,9 @@ async function createCategoryCommandsMenu(category, client) {
             });
         }
     }
+
+    embed.setFooter({ text: FOOTER_TEXT });
+    embed.setTimestamp();
 
     const backButton = createButton(
         BACK_BUTTON_ID,
@@ -179,22 +255,20 @@ export async function createAllCommandsMenu(page = 1, client) {
                 const filePath = path.join(categoryPath, file);
                 const commandModule = await import(`file://${filePath}`);
                 const command = commandModule.default;
+                const commandData = normalizeCommandData(command);
 
-                if (command && command.data && command.data.name) {
+                if (commandData) {
                     if (
-                        command.data.name === "help" ||
-                        command.data.name === "commandlist"
+                        commandData.name === "help" ||
+                        commandData.name === "commandlist"
                     )
                         continue;
 
-                    allCommands.push({
-                        name: command.data.name,
-                        description:
-                            command.data.description || "No description",
-                        category:
-                            category.charAt(0).toUpperCase() +
-                            category.slice(1).toLowerCase(),
-                    });
+                    const categoryName =
+                        category.charAt(0).toUpperCase() +
+                        category.slice(1).toLowerCase();
+
+                    allCommands.push(...buildHelpEntries(command, categoryName));
                 }
             }
         } catch (error) {
@@ -205,7 +279,7 @@ export async function createAllCommandsMenu(page = 1, client) {
         }
     }
 
-    allCommands.sort((a, b) => a.name.localeCompare(b.name));
+    allCommands.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     let registeredCommands = new Collection();
     try {
@@ -226,16 +300,19 @@ export async function createAllCommandsMenu(page = 1, client) {
 
     const embed = createEmbed({
         title: "📋 All Commands",
-        description: `(${allCommands.length}+ total commands)`
+        description: `(${allCommands.length} total commands, including subcommands)`
     });
+
+    embed.setFooter({ text: FOOTER_TEXT });
+    embed.setTimestamp();
 
     if (pageCommands.length > 0) {
         const commandMentions = pageCommands.map((cmd) => {
-            const registeredCmd = registeredCommands.get(cmd.name);
+            const registeredCmd = registeredCommands.get(cmd.baseName);
             if (registeredCmd && registeredCmd.id) {
-                return `</${cmd.name}:${registeredCmd.id}> · ${cmd.category}`;
+                return `</${cmd.displayName}:${registeredCmd.id}> · ${cmd.category}`;
             }
-            return `\`/${cmd.name}\` · ${cmd.category}`;
+            return `\`/${cmd.displayName}\` · ${cmd.category}`;
         });
 
         const columnCount = pageCommands.length > 20 ? 3 : (pageCommands.length > 10 ? 2 : 1);

@@ -185,7 +185,6 @@ export default {
             });
 
         } catch (error) {
-            logger.error('Error in gcreate command:', error);
             await handleInteractionError(interaction, error, {
                 type: 'command',
                 commandName: 'gcreate',

@@ -1,7 +1,8 @@
-import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -10,6 +11,16 @@ export default {
 
   async execute(interaction) {
     try {
+      const deferSuccess = await InteractionHelper.safeDefer(interaction);
+      if (!deferSuccess) {
+        logger.warn(`ServerInfo interaction defer failed`, {
+          userId: interaction.user.id,
+          guildId: interaction.guildId,
+          commandName: 'serverinfo'
+        });
+        return;
+      }
+
       const guild = interaction.guild;
       const owner = await guild.fetchOwner();
 

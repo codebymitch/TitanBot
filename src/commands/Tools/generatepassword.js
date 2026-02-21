@@ -35,7 +35,7 @@ export default {
                 
                 if (length < 8 || length > 50) {
                     await interaction.reply({
-                        embeds: [errorEmbed('Error', 'Password length must be between 8 and 50 characters.')],
+                        embeds: [errorEmbed('❌ Invalid Length', 'Password must be 8-50 characters. You provided: ' + length)],
                         flags: MessageFlags.Ephemeral
                     });
                     return;

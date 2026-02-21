@@ -45,6 +45,7 @@ export function validateChannelNameTemplate(template) {
         );
     }
 
+    // Remove only control characters, keep emojis and punctuation for templates
     const normalizedTemplate = template.normalize('NFKC').replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '').trim();
 
     if (normalizedTemplate.length > CHANNEL_NAME_MAX_LENGTH) {
@@ -55,13 +56,12 @@ export function validateChannelNameTemplate(template) {
         );
     }
 
-    
-    const validPattern = /^[a-zA-Z0-9\s\-\{\}_]*$/;
-    if (!validPattern.test(normalizedTemplate)) {
+    // Check for Discord-forbidden channel name characters (only @#: and backticks are problematic)
+    if (/[@#:`]/.test(normalizedTemplate)) {
         throw new TitanBotError(
-            'Channel template contains invalid characters',
+            'Channel template contains forbidden characters',
             ErrorTypes.VALIDATION,
-            'Channel template can only contain letters, numbers, spaces, hyphens, and template variables like {username}.'
+            'Channel template cannot contain @, #, :, or backtick characters.'
         );
     }
 
@@ -154,19 +154,19 @@ export function formatChannelName(template, variables) {
             );
         }
 
-        
+        // Sanitize each variable to prevent injection and ensure Discord compatibility
         const sanitized = {};
         for (const [key, value] of Object.entries(variables)) {
             if (value === null || value === undefined) {
                 sanitized[key] = 'Unknown';
             } else {
-                
+                // Remove dangerous and Discord-incompatible characters
                 sanitized[key] = String(value)
                     .normalize('NFKC')
                     .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
-                    .replace(/[^a-zA-Z0-9\s-]/g, '')
+                    .replace(/[@#:`\n\r\t]/g, '') // Remove Discord-forbidden chars
                     .trim()
-                    .substring(0, CHANNEL_VARIABLE_MAX_LENGTH); 
+                    .substring(0, CHANNEL_VARIABLE_MAX_LENGTH);
             }
         }
 
@@ -186,11 +186,12 @@ export function formatChannelName(template, variables) {
             formatted = formatted.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
         }
 
-        
+        // Final sanitization: preserve emojis but remove Discord-forbidden characters
+        // Discord allows emojis but not @#:` and control characters
         formatted = formatted
             .normalize('NFKC')
             .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
-            .replace(/[^a-zA-Z0-9\s-]/g, '')
+            .replace(/[@#:`\n\r\t]/g, '') // Remove only Discord-forbidden chars, keep emojis
             .replace(/\s+/g, ' ')
             .trim();
 
@@ -304,7 +305,8 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
         if (!client || !client.db) {
             throw new TitanBotError(
                 'Database service not available',
-                ErrorTypes.DATABASE
+                ErrorTypes.DATABASE,
+                'Database service is currently unavailable. Please try again later.'
             );
         }
 
@@ -371,7 +373,8 @@ export async function removeTriggerChannel(client, guildId, channelId) {
         if (!client || !client.db) {
             throw new TitanBotError(
                 'Database service not available',
-                ErrorTypes.DATABASE
+                ErrorTypes.DATABASE,
+                'Database service is currently unavailable. Please try again later.'
             );
         }
 
@@ -432,7 +435,8 @@ export async function getConfiguration(client, guildId) {
         if (!client || !client.db) {
             throw new TitanBotError(
                 'Database service not available',
-                ErrorTypes.DATABASE
+                ErrorTypes.DATABASE,
+                'Database service is currently unavailable. Please try again later.'
             );
         }
 
@@ -479,7 +483,7 @@ export async function getChannelConfiguration(client, guildId, channelId) {
     try {
         const config = await getConfiguration(client, guildId);
 
-        if (!config.triggerChannels.includes(channelId)) {
+        if (!config.triggerChannels || !Array.isArray(config.triggerChannels) || !config.triggerChannels.includes(channelId)) {
             throw new TitanBotError(
                 'Channel is not a valid Join to Create trigger',
                 ErrorTypes.VALIDATION,
@@ -498,7 +502,8 @@ export async function getChannelConfiguration(client, guildId, channelId) {
         }
         throw new TitanBotError(
             `Failed to get channel configuration: ${error.message}`,
-            ErrorTypes.DATABASE
+            ErrorTypes.DATABASE,
+            'Failed to retrieve channel configuration. Please try again.'
         );
     }
 }

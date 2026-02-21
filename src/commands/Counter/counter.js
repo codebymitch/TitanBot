@@ -1,5 +1,5 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 
@@ -16,7 +16,7 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName("create")
-                .setDescription("Create a new counter for a channel")
+                .setDescription("Create a new counter channel in a category")
                 .addStringOption(option =>
                     option
                         .setName("type")
@@ -30,13 +30,20 @@ export default {
                 )
                 .addStringOption(option =>
                     option
-                        .setName("channel")
-                        .setDescription("The channel type for the counter")
+                        .setName("channel_type")
+                        .setDescription("The channel type to create for this counter")
                         .setRequired(true)
                         .addChoices(
                             { name: "voice channel (recommended)", value: "voice" },
                             { name: "text channel", value: "text" }
                         )
+                )
+                .addChannelOption(option =>
+                    option
+                        .setName("category")
+                        .setDescription("The category where the counter channel will be created")
+                        .setRequired(true)
+                        .addChannelTypes(ChannelType.GuildCategory)
                 )
         )
         .addSubcommand(subcommand =>

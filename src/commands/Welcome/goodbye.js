@@ -4,6 +4,7 @@ import { createEmbed, errorEmbed } from '../../utils/embeds.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 import { formatWelcomeMessage } from '../../utils/welcome.js';
 import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -33,6 +34,16 @@ export default {
                 .setDescription('Enable or disable goodbye messages')),
 
     async execute(interaction) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Goodbye interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'goodbye'
+            });
+            return;
+        }
+
         const { options, guild, client } = interaction;
         const subcommand = options.getSubcommand();
 

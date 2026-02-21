@@ -30,7 +30,6 @@ export default {
         await interaction.reply({
             embeds: [bugReportEmbed],
             components: [row],
-            flags: MessageFlags.Ephemeral
         });
     },
 };

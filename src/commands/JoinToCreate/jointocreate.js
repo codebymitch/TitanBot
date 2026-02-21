@@ -1,5 +1,5 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder } from 'discord.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -97,16 +97,15 @@ export default {
             }
 
         } catch (error) {
-            logger.error('Error in jointocreate command:', error);
-
             try {
                 let errorMessage = 'An error occurred while executing this command.';
                 
                 if (error instanceof TitanBotError) {
-                    errorMessage = error.userMessage || errorMessage;
-                    logger.warn(`TitanBotError [${error.type}]: ${error.message}`);
+                    errorMessage = error.userMessage || 'An error occurred. Please try again.';
+                    logger.debug(`TitanBotError [${error.type}]: ${error.message}`, error.context || {});
                 } else {
-                    logger.error('Non-TitanBotError in jointocreate:', error);
+                    logger.error('Unexpected error in jointocreate command:', error);
+                    errorMessage = 'An unexpected error occurred. Please try again or contact support.';
                 }
 
                 const errorEmbedObj = errorEmbed("⚠️ Error", errorMessage);
@@ -131,98 +130,88 @@ async function handleSetupSubcommand(interaction, client) {
         const bitrate = interaction.options.getInteger('bitrate') || 64;
         const guildId = interaction.guild.id;
 
-        const existingChannels = await interaction.guild.channels.fetch();
-        const existingJoinToCreate = existingChannels.filter(c =>
-            c.type === ChannelType.GuildVoice &&
-            c.name === 'Join to Create'
-        );
+        logger.debug(`Setting up Join to Create in guild ${guildId} with template: ${nameTemplate}`);
 
-        let triggerChannel;
-
-        if (existingJoinToCreate.size > 0) {
-            triggerChannel = existingJoinToCreate.first();
-
+        // Check if guild already has a Join to Create channel configured
+        const existingConfig = await getConfiguration(client, guildId);
+        
+        if (existingConfig.triggerChannels && existingConfig.triggerChannels.length > 0) {
+            // Guild has a JTC channel in database - verify it still exists in Discord
+            const existingChannelId = existingConfig.triggerChannels[0];
+            const existingChannel = await interaction.guild.channels.fetch(existingChannelId).catch(() => null);
             
-            const config = await updateChannelConfig(client, guildId, triggerChannel.id, {
-                nameTemplate: nameTemplate,
-                userLimit: userLimit,
-                bitrate: bitrate * 1000,
-                categoryId: category?.id
-            });
-
-            await logConfigurationChange(client, guildId, interaction.user.id, 'Updated Join to Create', {
-                channelId: triggerChannel.id,
-                nameTemplate,
-                userLimit,
-                bitrate
-            });
-
-            const responseEmbed = successEmbed(
-                `Updated existing Join to Create channel: ${triggerChannel}\n\n` +
-                `**New Settings:**\n` +
-                `• Template: \`${nameTemplate}\`\n` +
-                `• User Limit: ${userLimit === 0 ? 'Unlimited' : userLimit + ' users'}\n` +
-                `• Bitrate: ${bitrate} kbps\n` +
-                `${category ? `• Category: ${category.name}` : ''}`,
-                '✅ Settings Updated'
-            );
-
-            return await interaction.editReply({ embeds: [responseEmbed] });
-
-        } else {
-            
-            triggerChannel = await interaction.guild.channels.create({
-                name: 'Join to Create',
-                type: ChannelType.GuildVoice,
-                parent: category?.id,
-                userLimit: 0,
-                bitrate: 64000,
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.id,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
-                    },
-                ],
-            });
-
-            
-            const config = await initializeJoinToCreate(client, guildId, triggerChannel.id, {
-                nameTemplate: nameTemplate,
-                userLimit: userLimit,
-                bitrate: bitrate * 1000,
-                categoryId: category?.id
-            });
-
-            await logConfigurationChange(client, guildId, interaction.user.id, 'Initialized Join to Create', {
-                channelId: triggerChannel.id,
-                nameTemplate,
-                userLimit,
-                bitrate
-            });
-
-            logger.info(`Created new Join to Create system in guild ${guildId}`);
-
-            const responseEmbed = successEmbed(
-                `Created Join to Create channel: ${triggerChannel}\n\n` +
-                `**Settings:**\n` +
-                `• Template: \`${nameTemplate}\`\n` +
-                `• User Limit: ${userLimit === 0 ? 'Unlimited' : userLimit + ' users'}\n` +
-                `• Bitrate: ${bitrate} kbps\n` +
-                `${category ? `• Category: ${category.name}` : '• Category: Root level'}`,
-                '✅ Setup Complete'
-            );
-
-            return await interaction.editReply({ embeds: [responseEmbed] });
+            if (existingChannel) {
+                // Channel exists, show error
+                const errorMessage = `This server already has a Join to Create channel set up: ${existingChannel}\n\nUse \`/jointocreate config\` to modify it, or remove it first before creating a new one.`;
+                
+                throw new TitanBotError(
+                    'Guild already has a Join to Create channel',
+                    ErrorTypes.VALIDATION,
+                    errorMessage
+                );
+            } else {
+                // Channel in database but doesn't exist in Discord - clean it up
+                logger.info(`Cleaning up stale JTC trigger ${existingChannelId} from guild ${guildId}`);
+                await removeTriggerChannel(client, guildId, existingChannelId);
+            }
         }
 
+        // Create the trigger channel
+        logger.debug('Creating Join to Create trigger channel...');
+        let triggerChannel = await interaction.guild.channels.create({
+            name: 'Join to Create',
+            type: ChannelType.GuildVoice,
+            parent: category?.id,
+            userLimit: 0,
+            bitrate: 64000,
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+                },
+            ],
+        });
+
+        logger.debug(`Created trigger channel ${triggerChannel.id}, initializing config...`);
+
+        // Initialize the Join to Create configuration
+        const config = await initializeJoinToCreate(client, guildId, triggerChannel.id, {
+            nameTemplate: nameTemplate,
+            userLimit: userLimit,
+            bitrate: bitrate * 1000,
+            categoryId: category?.id
+        });
+
+        await logConfigurationChange(client, guildId, interaction.user.id, 'Initialized Join to Create', {
+            channelId: triggerChannel.id,
+            nameTemplate,
+            userLimit,
+            bitrate
+        });
+
+        logger.info(`Successfully created Join to Create system in guild ${guildId}`);
+
+        const responseEmbed = successEmbed(
+            '✅ Setup Complete',
+            `Created Join to Create channel: ${triggerChannel}\n\n` +
+            `**Settings:**\n` +
+            `• Template: \`${nameTemplate}\`\n` +
+            `• User Limit: ${userLimit === 0 ? 'Unlimited' : userLimit + ' users'}\n` +
+            `• Bitrate: ${bitrate} kbps\n` +
+            `${category ? `• Category: ${category.name}` : '• Category: Root level'}`
+        );
+
+        return await interaction.editReply({ embeds: [responseEmbed] });
+
     } catch (error) {
+        logger.error('Error in handleSetupSubcommand:', error);
         if (error instanceof TitanBotError) {
             throw error;
         }
         throw new TitanBotError(
             `Setup failed: ${error.message}`,
             ErrorTypes.DISCORD_API,
-            'Failed to set up Join to Create system.'
+            'Failed to set up Join to Create system. Please check bot permissions.'
         );
     }
 }
@@ -232,16 +221,16 @@ async function handleConfigSubcommand(interaction, client) {
         const triggerChannel = interaction.options.getChannel('trigger_channel');
         const guildId = interaction.guild.id;
 
-        
+        // Validate that the channel is actually a Join to Create trigger
         const currentConfig = await getChannelConfiguration(client, guildId, triggerChannel.id);
         const channelConfig = currentConfig.channelConfig || {};
 
         
-        const configEmbed = {
-            title: '⚙️ Join to Create Configuration',
-            description: `Configuration for ${triggerChannel}`,
-            color: getColor('info'),
-            fields: [
+        const configEmbed = new EmbedBuilder()
+            .setTitle('⚙️ Join to Create Configuration')
+            .setDescription(`Configuration for ${triggerChannel}`)
+            .setColor(getColor('info'))
+            .addFields(
                 {
                     name: '📝 Channel Name Template',
                     value: `\`${channelConfig.nameTemplate || currentConfig.channelNameTemplate || "{username}'s Room"}\``,
@@ -257,10 +246,9 @@ async function handleConfigSubcommand(interaction, client) {
                     value: `${(channelConfig.bitrate ?? currentConfig.bitrate ?? 64000) / 1000} kbps`,
                     inline: true
                 }
-            ],
-            footer: { text: 'Use the buttons below to modify settings' },
-            timestamp: new Date()
-        };
+            )
+            .setFooter({ text: 'Use the buttons below to modify settings' })
+            .setTimestamp();
 
         
         const nameButton = new ButtonBuilder()
@@ -319,11 +307,15 @@ async function handleConfigSubcommand(interaction, client) {
                     await handleChannelDeletion(buttonInteraction, triggerChannel, currentConfig, client);
                 }
             } catch (error) {
-                logger.error('Error handling config button interaction:', error);
-
                 const userMessage = error instanceof TitanBotError
                     ? error.userMessage || 'An error occurred.'
                     : 'An error occurred while processing your request.';
+
+                if (error instanceof TitanBotError) {
+                    logger.debug(`Button interaction validation error: ${error.message}`, error.context || {});
+                } else {
+                    logger.error('Unexpected error in config button interaction:', error);
+                }
 
                 await buttonInteraction.reply({
                     content: `❌ ${userMessage}`,
@@ -342,10 +334,7 @@ async function handleConfigSubcommand(interaction, client) {
 
             message.edit({
                 components: [disabledRow],
-                embeds: [{
-                    ...configEmbed,
-                    footer: { text: 'Configuration session expired. Run the command again to make changes.' }
-                }]
+                embeds: [configEmbed.setFooter({ text: 'Configuration session expired. Run the command again to make changes.' })]
             }).catch(() => {});
         });
 
@@ -386,6 +375,15 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
             time: 60000
         });
 
+        // Recheck permissions
+        if (!hasManageGuildPermission(modalSubmission.member)) {
+            await modalSubmission.reply({
+                content: '❌ You need **Manage Server** permission to modify these settings.',
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
         const newTemplate = modalSubmission.fields.getTextInputValue('template').trim();
 
         await updateChannelConfig(client, interaction.guild.id, triggerChannel.id, {
@@ -406,8 +404,15 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
             return;
         }
-        logger.error('Error in name template modal:', error);
-        throw error;
+        if (error instanceof TitanBotError) {
+            throw error;
+        }
+        logger.error('Unexpected error in name template modal:', error);
+        throw new TitanBotError(
+            `Modal error: ${error.message}`,
+            ErrorTypes.UNKNOWN,
+            'An error occurred while updating the template.'
+        );
     }
 }
 
@@ -439,6 +444,15 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
             time: 60000
         });
 
+        // Recheck permissions
+        if (!hasManageGuildPermission(modalSubmission.member)) {
+            await modalSubmission.reply({
+                content: '❌ You need **Manage Server** permission to modify these settings.',
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
         const userInput = modalSubmission.fields.getTextInputValue('user_limit').trim();
 
         await updateChannelConfig(client, interaction.guild.id, triggerChannel.id, {
@@ -459,8 +473,15 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
             return;
         }
-        logger.error('Error in user limit modal:', error);
-        throw error;
+        if (error instanceof TitanBotError) {
+            throw error;
+        }
+        logger.error('Unexpected error in user limit modal:', error);
+        throw new TitanBotError(
+            `Modal error: ${error.message}`,
+            ErrorTypes.UNKNOWN,
+            'An error occurred while updating the user limit.'
+        );
     }
 }
 
@@ -492,6 +513,15 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
             time: 60000
         });
 
+        // Recheck permissions
+        if (!hasManageGuildPermission(modalSubmission.member)) {
+            await modalSubmission.reply({
+                content: '❌ You need **Manage Server** permission to modify these settings.',
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
         const userInput = modalSubmission.fields.getTextInputValue('bitrate').trim();
 
         await updateChannelConfig(client, interaction.guild.id, triggerChannel.id, {
@@ -512,8 +542,15 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
             return;
         }
-        logger.error('Error in bitrate modal:', error);
-        throw error;
+        if (error instanceof TitanBotError) {
+            throw error;
+        }
+        logger.error('Unexpected error in bitrate modal:', error);
+        throw new TitanBotError(
+            `Modal error: ${error.message}`,
+            ErrorTypes.UNKNOWN,
+            'An error occurred while updating the bitrate.'
+        );
     }
 }
 
@@ -549,6 +586,15 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
 
         deleteCollector.on('collect', async (buttonInteraction) => {
             try {
+                // Recheck permissions
+                if (!hasManageGuildPermission(buttonInteraction.member)) {
+                    await buttonInteraction.reply({
+                        content: '❌ You need **Manage Server** permission to remove channels.',
+                        flags: MessageFlags.Ephemeral
+                    });
+                    return;
+                }
+
                 if (buttonInteraction.customId === `jtc_delete_confirm_${triggerChannel.id}`) {
                     
                     await removeTriggerChannel(client, interaction.guild.id, triggerChannel.id);
@@ -596,8 +642,15 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
         });
 
     } catch (error) {
-        logger.error('Error in handleChannelDeletion:', error);
-        throw error;
+        if (error instanceof TitanBotError) {
+            throw error;
+        }
+        logger.error('Unexpected error in handleChannelDeletion:', error);
+        throw new TitanBotError(
+            `Deletion error: ${error.message}`,
+            ErrorTypes.UNKNOWN,
+            'An error occurred while removing the channel.'
+        );
     }
 }
 

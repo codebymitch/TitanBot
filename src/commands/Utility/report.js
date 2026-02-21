@@ -4,6 +4,7 @@ import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("report")
@@ -31,6 +32,16 @@ export default {
 
     async execute(interaction, config, client) {
         try {
+            const deferSuccess = await InteractionHelper.safeDefer(interaction);
+            if (!deferSuccess) {
+                logger.warn(`Report interaction defer failed`, {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'report'
+                });
+                return;
+            }
+
             const targetUser = interaction.options.getUser("user");
             const reason = interaction.options.getString("reason");
             const guildId = interaction.guildId;

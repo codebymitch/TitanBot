@@ -1,7 +1,8 @@
-import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("userinfo")
@@ -14,6 +15,16 @@ export default {
 
   async execute(interaction) {
     try {
+      const deferSuccess = await InteractionHelper.safeDefer(interaction);
+      if (!deferSuccess) {
+        logger.warn(`UserInfo interaction defer failed`, {
+          userId: interaction.user.id,
+          guildId: interaction.guildId,
+          commandName: 'userinfo'
+        });
+        return;
+      }
+
       const user = interaction.options.getUser("target") || interaction.user;
       const member = interaction.guild.members.cache.get(user.id);
 

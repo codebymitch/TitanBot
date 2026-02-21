@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getFromDb, setInDb } from '../../utils/database.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 import crypto from 'crypto';
 
 function generateShareId() {
@@ -111,6 +112,23 @@ export default {
                                 .setRequired(true)
                         )
                 )
+                .addSubcommand(subcommand =>
+                    subcommand
+                        .setName("remove")
+                        .setDescription("Remove a task from a shared to-do list")
+                        .addStringOption(option =>
+                            option
+                                .setName("list_id")
+                                .setDescription("ID of the shared list")
+                                .setRequired(true)
+                        )
+                        .addIntegerOption(option =>
+                            option
+                                .setName("number")
+                                .setDescription("The number of the task to remove")
+                                .setRequired(true)
+                        )
+                )
         )
         .setDMPermission(false)
         .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
@@ -152,6 +170,16 @@ export default {
         }
 
         try {
+            const deferSuccess = await InteractionHelper.safeDefer(interaction);
+            if (!deferSuccess) {
+                logger.warn(`Todo interaction defer failed`, {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'todo'
+                });
+                return;
+            }
+
             if (shareSubcommand) {
                 switch (shareSubcommand) {
                     case 'create': {
@@ -264,7 +292,11 @@ export default {
                                             new ButtonBuilder()
                                                 .setCustomId(`shared_todo_complete_${listId}`)
                                                 .setLabel('Complete Task')
-                                                .setStyle(ButtonStyle.Success)
+                                                .setStyle(ButtonStyle.Success),
+                                            new ButtonBuilder()
+                                                .setCustomId(`shared_todo_remove_${listId}`)
+                                                .setLabel('Remove Task')
+                                                .setStyle(ButtonStyle.Danger)
                                         )
                                     ]
                                 });
@@ -304,7 +336,11 @@ export default {
                                     new ButtonBuilder()
                                         .setCustomId(`shared_todo_complete_${listId}`)
                                         .setLabel('Complete Task')
-                                        .setStyle(ButtonStyle.Success)
+                                        .setStyle(ButtonStyle.Success),
+                                    new ButtonBuilder()
+                                        .setCustomId(`shared_todo_remove_${listId}`)
+                                        .setLabel('Remove Task')
+                                        .setStyle(ButtonStyle.Danger)
                                 )
                             ]
                         });
@@ -342,6 +378,41 @@ export default {
                         return await interaction.editReply({
                             embeds: [
                                 successEmbed("Task Added", `Added "${taskText}" to the shared list "${listData.name}"`)
+                            ]
+                        });
+                    }
+
+                    case 'remove': {
+                        const listId = interaction.options.getString('list_id');
+                        const taskNumber = interaction.options.getInteger('number');
+
+                        const listData = await getOrCreateSharedList(listId);
+
+                        if (!listData) {
+                            return await interaction.editReply({
+                                embeds: [errorEmbed("Error", "Shared list not found.")]
+                            });
+                        }
+
+                        if (!listData.members.includes(userId)) {
+                            return await interaction.editReply({
+                                embeds: [errorEmbed("Error", "You don't have access to this list.")]
+                            });
+                        }
+
+                        const taskIndex = listData.tasks.findIndex(task => task.id === taskNumber);
+                        if (taskIndex === -1) {
+                            return await interaction.editReply({
+                                embeds: [errorEmbed("Error", "Task not found.")]
+                            });
+                        }
+
+                        const [removedTask] = listData.tasks.splice(taskIndex, 1);
+                        await setInDb(`shared_todo_${listId}`, listData);
+
+                        return await interaction.editReply({
+                            embeds: [
+                                successEmbed("Task Removed", `Removed "${removedTask.text}" from the shared list "${listData.name}".`)
                             ]
                         });
                     }
@@ -411,6 +482,12 @@ export default {
                     if (!task) {
                         return await interaction.editReply({
                             embeds: [errorEmbed("Error", "Task not found.")],
+                        });
+                    }
+
+                    if (task.completed) {
+                        return await interaction.editReply({
+                            embeds: [errorEmbed("Task Already Completed", `Task #${task.id} is already completed.`)],
                         });
                     }
                     

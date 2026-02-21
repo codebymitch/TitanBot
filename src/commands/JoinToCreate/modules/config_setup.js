@@ -11,6 +11,8 @@ import {
     ButtonStyle
 } from 'discord.js';
 import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { logger } from '../../../utils/logger.js';
+import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { 
     getJoinToCreateConfig, 
     updateJoinToCreateConfig,
@@ -27,7 +29,11 @@ export default {
         const currentConfig = await getJoinToCreateConfig(client, guildId);
 
         if (!currentConfig.triggerChannels.includes(triggerChannel.id)) {
-            throw new Error(`${triggerChannel} is not configured as a Join to Create trigger channel.`);
+            throw new TitanBotError(
+                `Channel ${triggerChannel.id} is not a Join to Create trigger`,
+                ErrorTypes.VALIDATION,
+                `${triggerChannel} is not configured as a Join to Create trigger channel.`
+            );
         }
 
         const embed = new EmbedBuilder()
@@ -86,7 +92,7 @@ export default {
             embeds: [embed],
             components: [row],
         }).catch(error => {
-            console.error('Failed to edit reply in config_setup:', error);
+            logger.error('Failed to edit reply in config_setup:', error);
         });
 
         const collector = interaction.channel.createMessageComponentCollector({
@@ -119,11 +125,20 @@ time: 60000
                         break;
                 }
             } catch (error) {
-                console.error('Configuration menu error:', error);
+                if (error instanceof TitanBotError) {
+                    logger.debug(`Configuration validation error: ${error.message}`, error.context || {});
+                } else {
+                    logger.error('Unexpected configuration menu error:', error);
+                }
+                
+                const errorMessage = error instanceof TitanBotError 
+                    ? error.userMessage || 'An error occurred while processing your selection.'
+                    : 'An error occurred while processing your selection.';
+                    
                 await selectInteraction.followUp({
-                    embeds: [errorEmbed('Configuration Error', 'An error occurred while processing your selection.')],
+                    embeds: [errorEmbed('Configuration Error', errorMessage)],
                     flags: MessageFlags.Ephemeral,
-                });
+                }).catch(() => {});
             }
         });
 
@@ -139,8 +154,15 @@ time: 60000
             }
         });
             } catch (error) {
-            console.error('Error in config_setup:', error);
-            throw new Error(`Failed to configure Join to Create: ${error.message}`);
+            if (error instanceof TitanBotError) {
+                throw error;
+            }
+            logger.error('Unexpected error in config_setup:', error);
+            throw new TitanBotError(
+                `Config setup failed: ${error.message}`,
+                ErrorTypes.UNKNOWN,
+                'Failed to configure Join to Create system.'
+            );
         }
     }
 };
@@ -201,11 +223,20 @@ time: 30000,
 
             await message.delete().catch(() => {});
         } catch (error) {
-            console.error('Template update error:', error);
+            if (error instanceof TitanBotError) {
+                logger.debug(`Template validation error: ${error.message}`);
+            } else {
+                logger.error('Template update error:', error);
+            }
+            
+            const errorMessage = error instanceof TitanBotError
+                ? error.userMessage || 'Could not update the channel name template.'
+                : 'Could not update the channel name template.';
+                
             await interaction.followUp({
-                embeds: [errorEmbed('Update Failed', 'Could not update the channel name template.')],
+                embeds: [errorEmbed('Update Failed', errorMessage)],
                 flags: MessageFlags.Ephemeral,
-            });
+            }).catch(() => {});
         }
     });
 
@@ -270,11 +301,20 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
 
             await message.delete().catch(() => {});
         } catch (error) {
-            console.error('User limit update error:', error);
+            if (error instanceof TitanBotError) {
+                logger.debug(`User limit validation error: ${error.message}`);
+            } else {
+                logger.error('User limit update error:', error);
+            }
+            
+            const errorMessage = error instanceof TitanBotError
+                ? error.userMessage || 'Could not update the user limit.'
+                : 'Could not update the user limit.';
+                
             await interaction.followUp({
-                embeds: [errorEmbed('Update Failed', 'Could not update the user limit.')],
+                embeds: [errorEmbed('Update Failed', errorMessage)],
                 flags: MessageFlags.Ephemeral,
-            });
+            }).catch(() => {});
         }
     });
 
@@ -344,11 +384,20 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
 
             await message.delete().catch(() => {});
         } catch (error) {
-            console.error('Bitrate update error:', error);
+            if (error instanceof TitanBotError) {
+                logger.debug(`Bitrate validation error: ${error.message}`);
+            } else {
+                logger.error('Bitrate update error:', error);
+            }
+            
+            const errorMessage = error instanceof TitanBotError
+                ? error.userMessage || 'Could not update the bitrate.'
+                : 'Could not update the bitrate.';
+                
             await interaction.followUp({
-                embeds: [errorEmbed('Update Failed', 'Could not update the bitrate.')],
+                embeds: [errorEmbed('Update Failed', errorMessage)],
                 flags: MessageFlags.Ephemeral,
-            });
+            }).catch(() => {});
         }
     });
 
@@ -413,11 +462,20 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
                     });
                 }
             } catch (error) {
-                console.error('Remove trigger error:', error);
+                if (error instanceof TitanBotError) {
+                    logger.debug(`Trigger removal validation error: ${error.message}`);
+                } else {
+                    logger.error('Remove trigger error:', error);
+                }
+                
+                const errorMessage = error instanceof TitanBotError
+                    ? error.userMessage || 'An error occurred while removing the trigger channel.'
+                    : 'An error occurred while removing the trigger channel.';
+                    
                 await buttonInteraction.followUp({
-                    embeds: [errorEmbed('Removal Failed', 'An error occurred while removing the trigger channel.')],
+                    embeds: [errorEmbed('Removal Failed', errorMessage)],
                     flags: MessageFlags.Ephemeral,
-                });
+                }).catch(() => {});
             }
         } else {
             await buttonInteraction.followUp({

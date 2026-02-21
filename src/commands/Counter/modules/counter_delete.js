@@ -1,6 +1,6 @@
 import { getColor } from '../../../config/bot.js';
-import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { createEmbed, errorEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters } from '../../../services/counterService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -13,31 +13,37 @@ export async function handleDelete(interaction, client) {
     const guild = interaction.guild;
     const counterId = interaction.options.getString("counter-id");
     
-    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({ 
-            embeds: [errorEmbed("You need **Manage Channels** permission to delete counters.")],
-            flags: MessageFlags.Ephemeral 
-        });
+    // Defer reply immediately to ensure interaction is acknowledged
+    try {
+        await interaction.deferReply();
+    } catch (error) {
+        logger.error("Failed to defer reply:", error);
         return;
     }
 
-    await interaction.deferReply();
+    // Check permissions after deferring
+    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        await interaction.editReply({ 
+            embeds: [errorEmbed("You need **Manage Channels** permission to delete counters.")]
+        }).catch(logger.error);
+        return;
+    }
 
     try {
         const counters = await getServerCounters(client, guild.id);
 
         if (counters.length === 0) {
             await interaction.editReply({
-                embeds: [errorEmbed("No counters found to delete.")]}
-            );
+                embeds: [errorEmbed("No counters found to delete.")]
+            }).catch(logger.error);
             return;
         }
 
         const counterToDelete = counters.find(c => c.id === counterId);
         if (!counterToDelete) {
             await interaction.editReply({
-                embeds: [errorEmbed(`Counter with ID \`${counterId}\` not found. Use \`/counter list\` to see all counters.`)]}
-            );
+                embeds: [errorEmbed(`Counter with ID \`${counterId}\` not found. Use \`/counter list\` to see all counters.`)]
+            }).catch(logger.error);
             return;
         }
 
@@ -51,63 +57,22 @@ export async function handleDelete(interaction, client) {
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                .setCustomId(`confirm_delete_${counterToDelete.id}`)
+                .setCustomId(`counter-delete:confirm:${counterToDelete.id}:${interaction.user.id}`)
                 .setLabel("Confirm Delete")
                 .setStyle(ButtonStyle.Danger),
             new ButtonBuilder()
-                .setCustomId(`cancel_delete_${counterToDelete.id}`)
+                .setCustomId(`counter-delete:cancel:${counterToDelete.id}:${interaction.user.id}`)
                 .setLabel("Cancel")
                 .setStyle(ButtonStyle.Secondary)
         );
 
-        await interaction.editReply({ embeds: [embed], components: [row] });
-
-        const filter = (i) => i.user.id === interaction.user.id && i.customId.includes(counterToDelete.id);
-        const collector = interaction.channel.createMessageComponentCollector({
-            filter,
-            componentType: ComponentType.Button,
-time: 30000,
-            max: 1
-        });
-
-        collector.on("collect", async (i) => {
-            try {
-                if (i.customId === `confirm_delete_${counterToDelete.id}`) {
-                    await i.update({ content: "Deleting counter...", components: [] });
-                    await performDeletion(interaction, client, guild, counterToDelete);
-                } else if (i.customId === `cancel_delete_${counterToDelete.id}`) {
-                    await i.update({
-                        embeds: [createEmbed({ 
-                            title: "❌ Cancelled", 
-                            description: "Counter deletion cancelled.",
-                            color: getColor('error')
-                        })],
-                        components: []
-                    });
-                }
-            } catch (error) {
-                logger.error("Error in button interaction:", error);
-            }
-        });
-
-        collector.on("end", async (collected) => {
-            if (collected.size === 0) {
-                await interaction.editReply({
-                    embeds: [createEmbed({ 
-                        title: "❌ Cancelled", 
-                        description: "Counter deletion cancelled - no confirmation received.",
-                        color: getColor('error')
-                    })],
-                    components: []
-                });
-            }
-        });
+        await interaction.editReply({ embeds: [embed], components: [row] }).catch(logger.error);
 
     } catch (error) {
         logger.error("Error in handleDelete:", error);
         await interaction.editReply({
-            embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]}
-        );
+            embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]
+        }).catch(logger.error);
     }
 }
 
@@ -117,20 +82,26 @@ time: 30000,
 
 
 
-
-async function performDeletion(interaction, client, guild, counter) {
+export async function performDeletionByCounterId(client, guild, counterId) {
     try {
         const counters = await getServerCounters(client, guild.id);
+
+        const counter = counters.find(c => c.id === counterId);
+        if (!counter) {
+            return {
+                success: false,
+                message: `Counter with ID \`${counterId}\` was not found.`
+            };
+        }
 
         const updatedCounters = counters.filter(c => c.id !== counter.id);
 
         const saved = await saveServerCounters(client, guild.id, updatedCounters);
         if (!saved) {
-            await interaction.followUp({
-                embeds: [errorEmbed("Failed to delete counter. Please try again.")],
-                flags: MessageFlags.Ephemeral
-            });
-            return;
+            return {
+                success: false,
+                message: "Failed to delete counter. Please try again."
+            };
         }
 
         const channel = guild.channels.cache.get(counter.channelId);
@@ -155,16 +126,17 @@ async function performDeletion(interaction, client, guild, counter) {
             message += `\n**Channel:** Already deleted`;
         }
 
-        await interaction.followUp({
-            embeds: [successEmbed(message)]
-        });
+        return {
+            success: true,
+            message
+        };
 
     } catch (error) {
         logger.error("Error deleting counter:", error);
-        await interaction.followUp({
-            embeds: [errorEmbed("An error occurred while deleting the counter. Please try again.")],
-            flags: MessageFlags.Ephemeral
-        });
+        return {
+            success: false,
+            message: "An error occurred while deleting the counter. Please try again."
+        };
     }
 }
 
