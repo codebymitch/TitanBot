@@ -3,6 +3,10 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+
+// Store calculation context for modal handlers
+const calculationContexts = new Map();
 
 function evaluate(expression) {
     let expr = expression.replace(/\s/g, '').toLowerCase();
@@ -37,6 +41,8 @@ function evaluate(expression) {
 const calculationHistory = new Map();
 const MAX_HISTORY = 5;
 
+export { calculationContexts };
+
 export default {
     data: new SlashCommandBuilder()
         .setName("calculate")
@@ -51,6 +57,16 @@ export default {
         ),
 
     async execute(interaction) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Calculate interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'calculate'
+            });
+            return;
+        }
+
 try {
 
             const expression = interaction.options.getString("expression");
@@ -58,12 +74,13 @@ try {
             if (
                 !/^[0-9+\-*/.()^%! ,<>=&|~?:\[\]{}a-z√π∞°]+$/i.test(expression)
             ) {
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [
                         errorEmbed(
-                            "Invalid Expression",
-                            "The expression contains invalid characters. " +
-                                "Only basic math operations, numbers, and common functions are allowed.",
+                            "❌ Invalid Expression",
+                            "**Contains unsupported characters.**\n\n" +
+                                "✅ Supported: Numbers, decimals, + - * / ^ %, sin cos tan sqrt abs log exp, pi e, ()\n" +
+                                "❌ Not supported: Brackets, curly braces, and other symbols",
                         ),
                     ],
                 });
@@ -83,8 +100,10 @@ try {
                     return interaction.editReply({
                         embeds: [
                             errorEmbed(
-                                "Security Alert",
-                                "The expression contains potentially dangerous code and cannot be evaluated.",
+                                "🔒 Security Alert",
+                                "**Contains blocked code patterns.**\n\n" +
+                                "🚫 **Blocked:** import, require, eval, Function, setTimeout, setInterval, process, fs, document, window, fetch, loops, async/await\n\n" +
+                                "Code-like syntax is not allowed in calculations.",
                             ),
                         ],
                         flags: ["Ephemeral"],
@@ -236,8 +255,18 @@ const BUTTON_TIMEOUT = 300000;
                         }
 
                         try {
+                            const contextKey = `${i.user.id}_${operation}`;
+                            calculationContexts.set(contextKey, {
+                                expression,
+                                formattedResult,
+                                operator,
+                                messageId: interaction.message?.id,
+                                channelId: interaction.channelId,
+                                userId: i.user.id
+                            });
+
                             await i.showModal({
-                                customId: `calc_modal_${i.user.id}_${operation}`,
+                                customId: `calc_modal:${operation}`,
                                 title: `Enter a number to ${operation}`,
                                 components: [
                                     {
@@ -245,10 +274,9 @@ const BUTTON_TIMEOUT = 300000;
                                         components: [
                                             {
                                                 type: 4,
-                                                customId: "operand",
+                                                customId: `operand:${contextKey}`,
                                                 label: `Number to ${operator} with ${formattedResult}`,
-                                                placeholder:
-                                                    "Enter a number...",
+                                                placeholder: "Enter a number...",
                                                 style: 1,
                                                 required: true,
                                                 maxLength: 50,
@@ -258,94 +286,23 @@ const BUTTON_TIMEOUT = 300000;
                                 ],
                             });
                         } catch (modalError) {
-                            console.error("Failed to show modal:", modalError);
-                            if (!i.replied) {
-                                await i
-                                    .reply({
-                                        content:
-                                            "Failed to open calculator. Please try again.",
-                                        flags: ["Ephemeral"],
-                                    })
-                                    .catch(console.error);
+                            logger.error("Failed to show modal:", modalError);
+                            if (!i.replied && !i.deferred) {
+                                await i.reply({
+                                    content: "Failed to open calculator. Please try again.",
+                                    flags: ["Ephemeral"],
+                                }).catch(console.error);
                             }
                             return;
                         }
 
-                        try {
-                            const modalResponse = await i.awaitModalSubmit({
-                                filter: (m) =>
-                                    m.customId ===
-                                    `calc_modal_${i.user.id}_${operation}`,
-time: 300000,
-                            });
-
-                            await modalResponse.deferUpdate();
-
-                            const operand =
-                                modalResponse.fields.getTextInputValue(
-                                    "operand",
-                                );
-                            const newExpression = `(${expression}) ${operator} (${operand})`;
-
-                            let newResult;
-                            try {
-                                newResult = evaluate(newExpression);
-                                
-                                let formattedNewResult;
-                                if (typeof newResult === "number") {
-                                    formattedNewResult = newResult.toLocaleString("en-US", {
-                                        maximumFractionDigits: 10,
-                                    });
-
-                                    if (
-                                        Math.abs(newResult) > 0 &&
-                                        (Math.abs(newResult) >= 1e10 || Math.abs(newResult) < 1e-3)
-                                    ) {
-                                        formattedNewResult = newResult.toExponential(6);
-                                    }
-                                } else {
-                                    formattedNewResult = String(newResult);
-                                }
-
-                                const updatedEmbed = successEmbed(
-                                    "🧮 Calculation Result",
-                                    `**Expression:** \`${newExpression.replace(/`/g, "\`")}\`\n` +
-                                        `**Result:** \`${formattedNewResult}\`\n\n` +
-                                        `*Use the buttons below to perform operations with the result.*`,
-                                );
-
-                                await modalResponse.editReply({
-                                    embeds: [updatedEmbed],
-                                });
-
-                            } catch (calcError) {
-                                await modalResponse.followUp({
-                                    embeds: [errorEmbed("Calculation Error", "Failed to evaluate the new expression.")],
-                                    flags: ["Ephemeral"],
-                                });
-                            }
-                        } catch (error) {
-                            console.error("Modal error:", error);
-                            if (!i.deferred && !i.replied) {
-                                await i
-                                    .followUp({
-                                        content:
-                                            "An error occurred while processing your input.",
-                                        flags: ["Ephemeral"],
-                                    })
-                                    .catch(console.error);
-                            }
-                        }
                     } catch (error) {
-                        console.error("Button interaction error:", error);
+                        logger.error("Button interaction error:", error);
                         if (!i.deferred && !i.replied) {
-                            await i
-                                .followUp({
-                                    content:
-                                        "An error occurred while processing your request.",
-                                    flags: ["Ephemeral"],
-                                })
-                                .catch(console.error);
+                            await i.followUp({
+                                content: "An error occurred while processing your request.",
+                                flags: ["Ephemeral"],
+                            }).catch(console.error);
                         }
                     }
                 });

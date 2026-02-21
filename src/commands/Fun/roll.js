@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
@@ -79,7 +79,6 @@ export default {
       await interaction.editReply({ embeds: [embed] });
       logger.debug(`Roll command executed by user ${interaction.user.id} with notation ${notation} in guild ${interaction.guildId}`);
     } catch (error) {
-      logger.error('Roll command error:', error);
       await handleInteractionError(interaction, error, {
         commandName: 'roll',
         source: 'roll_command'

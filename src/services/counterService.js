@@ -2,6 +2,46 @@ import { logger } from '../utils/logger.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
 
+function isValidCounterShape(counter) {
+  return Boolean(
+    counter &&
+    typeof counter === 'object' &&
+    typeof counter.id === 'string' &&
+    counter.id.length > 0 &&
+    typeof counter.type === 'string' &&
+    typeof counter.channelId === 'string' &&
+    counter.channelId.length > 0
+  );
+}
+
+function normalizeCounter(counter, guildId) {
+  const normalized = {
+    id: String(counter.id),
+    type: String(counter.type),
+    channelId: String(counter.channelId),
+    guildId: String(counter.guildId || guildId),
+    createdAt: counter.createdAt || new Date().toISOString(),
+    enabled: typeof counter.enabled === 'boolean' ? counter.enabled : true
+  };
+
+  if (counter.updatedAt) {
+    normalized.updatedAt = counter.updatedAt;
+  }
+
+  return normalized;
+}
+
+function sanitizeCounters(counters, guildId) {
+  if (!Array.isArray(counters)) {
+    return [];
+  }
+
+  return counters
+    .filter(isValidCounterShape)
+    .map(counter => normalizeCounter(counter, guildId));
+}
+
+
 
 
 
@@ -133,25 +173,23 @@ export async function getServerCounters(client, guildId) {
       counters = data.value;
     } else if (Array.isArray(data)) {
       counters = data;
-    } else if (data && typeof data === 'object' && !data.ok) {
-      counters = Object.values(data);
+    } else if (typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        counters = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        counters = [];
+      }
+    } else if (data && typeof data === 'object' && !data.ok && isValidCounterShape(data)) {
+      counters = [data];
     } else {
       if (process.env.NODE_ENV !== 'production') {
         logger.debug('No counter data found, returning empty array');
       }
       return [];
     }
-    
-    
-    const validCounters = counters.filter(counter => 
-      counter && 
-      typeof counter === 'object' &&
-      counter.type && 
-      counter.channelId &&
-      counter.id
-    );
-    
-    return validCounters;
+
+    return sanitizeCounters(counters, guildId);
   } catch (error) {
     logger.error("Error getting server counters:", error);
     return [];
@@ -172,10 +210,13 @@ export async function saveServerCounters(client, guildId, counters) {
       return false;
     }
     
+    const sanitizedCounters = sanitizeCounters(counters, guildId);
+
     if (process.env.NODE_ENV !== 'production') {
-      logger.debug(`Saving ${counters.length} counters for guild ${guildId}:`, counters);
+      logger.debug(`Saving ${sanitizedCounters.length} counters for guild ${guildId}:`, sanitizedCounters);
     }
-    await client.db.set(`counters:${guildId}`, counters);
+
+    await client.db.set(`counters:${guildId}`, sanitizedCounters);
     if (process.env.NODE_ENV !== 'production') {
       logger.debug('Counters saved successfully');
     }

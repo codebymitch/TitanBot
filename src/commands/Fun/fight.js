@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
 
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -35,11 +35,11 @@ export default {
 
       
       if (opponent.bot) {
-        throw new TitanBotError(
-          `User tried to fight a bot: ${opponent.id}`,
-          ErrorTypes.USER_INPUT,
+        const embed = warningEmbed(
+          "⚔️ Invalid Opponent",
           "You can't fight bots! Challenge a real person instead."
         );
+        return await interaction.editReply({ embeds: [embed] });
       }
 
       const winner = rand(0, 1) === 0 ? challenger : opponent;

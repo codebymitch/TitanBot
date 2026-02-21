@@ -142,7 +142,7 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
    - `NODE_ENV=production`
    - `LOG_LEVEL=warn` for a clean production console (critical issues + startup status)
    - `LOG_LEVEL=info` if you want more detailed operational logs
-   - If your chosen `PORT` is already used, TitanBot now automatically tries the next port(s)
+   - If your chosen `PORT` is already used, TitanBot automatically tries the next port(s)
 
    Environment options reference:
    - `NODE_ENV`: `development`, `production`, `test` (any non-`production` value is treated as non-production)

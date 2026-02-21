@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 const EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 const MAX_OPTIONS = 10;
 export default {
@@ -59,6 +60,16 @@ export default {
                 .setRequired(false)),
 
     async execute(interaction) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+        if (!deferSuccess) {
+            logger.warn(`Poll interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'poll'
+            });
+            return;
+        }
+
         try {
             const question = interaction.options.getString('question');
                 const isAnonymous = interaction.options.getBoolean('anonymous') || false;
@@ -96,9 +107,8 @@ export default {
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
                 
-                await interaction.reply({
+                await interaction.editReply({
                     content: '✅ Poll created successfully!',
-                    flags: MessageFlags.Ephemeral
                 });
         } catch (error) {
             await handleInteractionError(interaction, error, {

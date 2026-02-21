@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -26,11 +27,20 @@ export default {
                 .setRequired(false)),
 
     async execute(interaction) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`RandomUser interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'randomuser'
+            });
+            return;
+        }
+
 try {
             if (!interaction.guild) {
-                return interaction.reply({
-                    embeds: [errorEmbed('Error', 'This command can only be used in a server.')],
-                    flags: ["Ephemeral"]
+                return interaction.editReply({
+                    embeds: [errorEmbed('❌ Server Only', 'This command can only be used in a server/guild.')],
                 });
             }
             
@@ -56,12 +66,13 @@ try {
             }
             
             if (memberArray.length === 0) {
-                let errorMessage = 'No users found matching the criteria.';
-                if (role) errorMessage += ` No users have the ${role.name} role.`;
-                if (onlineOnly) errorMessage += ' No online users found.';
+                let errorMessage = 'Could not find any users matching your filters:';
+                if (role) errorMessage = `No users have the **${role.name}** role.`;
+                if (onlineOnly) errorMessage = 'No users are currently online.'; 
+                if (role && onlineOnly) errorMessage = `No **${role.name}** members are online.`;
                 
                 return interaction.editReply({
-                    embeds: [errorEmbed('No Users Found', errorMessage)],
+                    embeds: [errorEmbed('❌ No Users Found', errorMessage + '\n\nTry adjusting your filters.')],
                     flags: ["Ephemeral"]
                 });
             }
@@ -87,7 +98,7 @@ try {
                 { name: '🤖 Bot', value: user.bot ? 'Yes' : 'No', inline: true },
                 { name: `🎭 Roles (${roles.length})`, value: roles.length > 0 ? roles.slice(0, 5).join(' ') + (roles.length > 5 ? ` +${roles.length - 5} more` : '') : 'No roles', inline: false }
             )
-            .setColor(selectedMember.displayHexColor || '#3498db');
+            .setColor('primary');
             
             const row = new ActionRowBuilder()
                 .addComponents(

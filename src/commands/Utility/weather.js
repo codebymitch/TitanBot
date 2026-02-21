@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
 
@@ -18,6 +19,16 @@ export default {
 
     async execute(interaction) {
         try {
+            const deferSuccess = await InteractionHelper.safeDefer(interaction);
+            if (!deferSuccess) {
+                logger.warn(`Weather interaction defer failed`, {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'weather'
+                });
+                return;
+            }
+
             const city = interaction.options.getString("city");
 
             const geoResponse = await fetch(

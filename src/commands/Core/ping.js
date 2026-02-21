@@ -1,5 +1,7 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -7,6 +9,16 @@ export default {
         .setDescription("Checks the bot's latency and API speed"),
 
     async execute(interaction) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Ping interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'ping'
+            });
+            return;
+        }
+
         try {
             const reply = await interaction.reply({
                 content: "Pinging...",

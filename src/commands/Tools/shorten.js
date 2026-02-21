@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -24,6 +25,16 @@ export default {
     category: "Tools",
 
     async execute(interaction) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Shorten interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'shorten'
+            });
+            return;
+        }
+
         try {
             const url = interaction.options.getString("url");
             const custom = interaction.options.getString("custom");
@@ -33,18 +44,16 @@ export default {
             } catch (e) {
                 const embed = errorEmbed("Invalid URL", "Invalid URL format. Include http:// or https://");
                 embed.setColor(getColor('error'));
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [embed],
-                    flags: ['Ephemeral']
                 });
             }
 
             if (custom && !/^[a-zA-Z0-9_-]+$/.test(custom)) {
                 const embed = errorEmbed("Invalid Custom URL", "Custom URL can only contain letters, numbers, underscores, and hyphens.");
                 embed.setColor(getColor('error'));
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [embed],
-                    flags: ['Ephemeral']
                 });
             }
 
@@ -62,29 +71,26 @@ export default {
                 if (shortUrl.includes("already exists")) {
                     const embed = errorEmbed("URL Already Taken", "That custom URL is already taken. Try a different one.");
                     embed.setColor(getColor('error'));
-                    return interaction.reply({
+                    return interaction.editReply({
                         embeds: [embed],
-                        flags: ['Ephemeral']
                     });
                 } else if (shortUrl.includes("invalid")) {
                     const embed = errorEmbed("Invalid URL", "Invalid URL. Include http:// or https://");
                     embed.setColor(getColor('error'));
-                    return interaction.reply({
+                    return interaction.editReply({
                         embeds: [embed],
-                        flags: ['Ephemeral']
                     });
                 }
                 const embed = errorEmbed("URL Shortening Failed", `URL shortening failed: ${shortUrl}`);
                 embed.setColor(getColor('error'));
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [embed],
-                    flags: ['Ephemeral']
                 });
             }
 
             const embed = successEmbed("URL Shortened", `Here's your shortened URL: ${shortUrl}`);
             embed.setColor(getColor('success'));
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [embed],
             });
         } catch (error) {

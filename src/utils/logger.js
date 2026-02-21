@@ -30,7 +30,7 @@ if (requestedLogLevel && !validLogLevels.has(requestedLogLevel)) {
   );
 }
 
-const shouldPromoteStartupLogs = process.env.NODE_ENV === 'production' && resolvedLogLevel === 'warn';
+const shouldPromoteUserFacingLogs = process.env.NODE_ENV === 'production' && resolvedLogLevel === 'warn';
 
 const logFormat = printf(({ level, message, timestamp, stack, displayLevel }) => {
   const visibleLevel = displayLevel || level;
@@ -108,7 +108,7 @@ logger.stream = {
 };
 
 function startupLog(message) {
-  if (shouldPromoteStartupLogs) {
+  if (shouldPromoteUserFacingLogs) {
     logger.log({
       level: 'warn',
       message,
@@ -124,7 +124,24 @@ function startupLog(message) {
   });
 }
 
-export { logger, startupLog };
+function shutdownLog(message) {
+  if (shouldPromoteUserFacingLogs) {
+    logger.log({
+      level: 'warn',
+      message,
+      displayLevel: 'status',
+    });
+    return;
+  }
+
+  logger.log({
+    level: 'info',
+    message,
+    displayLevel: 'status',
+  });
+}
+
+export { logger, startupLog, shutdownLog };
 
 export default logger;
 

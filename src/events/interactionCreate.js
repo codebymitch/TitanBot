@@ -91,6 +91,10 @@ const buttonType = parts.slice(0, 3).join('_');
         const button = client.buttons.get(customId);
 
         if (!button) {
+          if (!interaction.customId.includes(':')) {
+            return;
+          }
+
           throw createError(
             `No button handler found for ${customId}`,
             ErrorTypes.CONFIGURATION,
@@ -155,6 +159,13 @@ const buttonType = parts.slice(0, 3).join('_');
               handler: 'application_review'
             });
           }
+          return;
+        }
+        
+        // Skip modals that are awaited inline by commands (Join to Create modals)
+        if (interaction.customId.startsWith('jtc_')) {
+          // These modals are handled by awaitModalSubmit() in the command
+          logger.debug(`Skipping modal handler lookup for inline-awaited modal: ${interaction.customId}`);
           return;
         }
         

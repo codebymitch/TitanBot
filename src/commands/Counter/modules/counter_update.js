@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
+import { PermissionFlagsBits, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter } from '../../../services/counterService.js';
 import { logger } from '../../../utils/logger.js';
@@ -14,31 +14,35 @@ export async function handleUpdate(interaction, client) {
     const newType = interaction.options.getString("type");
     const newChannel = interaction.options.getChannel("channel");
 
+    // Defer reply immediately to ensure interaction is acknowledged
+    try {
+        await interaction.deferReply();
+    } catch (error) {
+        logger.error("Failed to defer reply:", error);
+        return;
+    }
+
+    // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({ 
-            embeds: [errorEmbed("You need **Manage Channels** permission to update counters.")],
-            flags: MessageFlags.Ephemeral 
-        });
+        await interaction.editReply({ 
+            embeds: [errorEmbed("You need **Manage Channels** permission to update counters.")]
+        }).catch(logger.error);
         return;
     }
 
     if (newChannel && newChannel.type !== ChannelType.GuildText && newChannel.type !== ChannelType.GuildVoice) {
-        await interaction.reply({
-            embeds: [errorEmbed("Counters can only be placed on text or voice channels.")],
-            flags: MessageFlags.Ephemeral
-        });
+        await interaction.editReply({
+            embeds: [errorEmbed("Counters can only be placed on text or voice channels.")]
+        }).catch(logger.error);
         return;
     }
 
     if (!newType && !newChannel) {
-        await interaction.reply({
-            embeds: [errorEmbed("You must provide at least one option to update (type or channel).")],
-            flags: MessageFlags.Ephemeral
-        });
+        await interaction.editReply({
+            embeds: [errorEmbed("You must provide at least one option to update (type or channel).")]
+        }).catch(logger.error);
         return;
     }
-
-    await interaction.deferReply();
 
     try {
         const counters = await getServerCounters(client, guild.id);
@@ -47,7 +51,7 @@ export async function handleUpdate(interaction, client) {
         if (counterIndex === -1) {
             await interaction.editReply({
                 embeds: [errorEmbed(`Counter with ID \`${counterId}\` not found. Use \`/counter list\` to see all counters.`)]
-            });
+            }).catch(logger.error);
             return;
         }
 
@@ -56,8 +60,8 @@ export async function handleUpdate(interaction, client) {
 
         if (!oldChannel) {
             await interaction.editReply({
-                embeds: [errorEmbed("The channel for this counter no longer exists. You cannot update a counter for a deleted channel.")]}
-            );
+                embeds: [errorEmbed("The channel for this counter no longer exists. You cannot update a counter for a deleted channel.")]
+            }).catch(logger.error);
             return;
         }
 
@@ -65,8 +69,8 @@ export async function handleUpdate(interaction, client) {
             const existingCounter = counters.find(c => c.channelId === newChannel.id);
             if (existingCounter) {
                 await interaction.editReply({
-                    embeds: [errorEmbed("The selected channel already has a counter. Please choose a different channel.")]}
-                );
+                    embeds: [errorEmbed("The selected channel already has a counter. Please choose a different channel.")]
+                }).catch(logger.error);
                 return;
             }
         }
@@ -81,8 +85,8 @@ export async function handleUpdate(interaction, client) {
         const saved = await saveServerCounters(client, guild.id, counters);
         if (!saved) {
             await interaction.editReply({
-                embeds: [errorEmbed("Failed to save updated counter data. Please try again.")]}
-            );
+                embeds: [errorEmbed("Failed to save updated counter data. Please try again.")]
+            }).catch(logger.error);
             return;
         }
 
@@ -90,8 +94,8 @@ export async function handleUpdate(interaction, client) {
         const updated = await updateCounter(client, guild, updatedCounter);
         if (!updated) {
             await interaction.editReply({
-                embeds: [errorEmbed("Counter updated but failed to update channel name. The counter will update on the next scheduled run.")]}
-            );
+                embeds: [errorEmbed("Counter updated but failed to update channel name. The counter will update on the next scheduled run.")]
+            }).catch(logger.error);
             return;
         }
 
@@ -118,13 +122,13 @@ export async function handleUpdate(interaction, client) {
 
         await interaction.editReply({
             embeds: [successEmbed(`✅ **Counter Updated Successfully!**\n\n**Counter ID:** \`${counterId}\`\n\n${changes.join('\n')}\n\n**New Settings:**\n**Type:** ${typeEmoji[updatedCounter.type]} ${typeDisplay[updatedCounter.type]}\n**Channel:** ${finalChannel}\n**Channel Name:** ${finalChannel.name}\n\nThe counter will automatically update every 15 minutes.`)]
-        });
+        }).catch(logger.error);
 
     } catch (error) {
         logger.error("Error updating counter:", error);
         await interaction.editReply({
-            embeds: [errorEmbed("An error occurred while updating the counter. Please try again.")]}
-        );
+            embeds: [errorEmbed("An error occurred while updating the counter. Please try again.")]
+        }).catch(logger.error);
     }
 }
 

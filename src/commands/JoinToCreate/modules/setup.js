@@ -1,5 +1,7 @@
 import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { logger } from '../../../utils/logger.js';
+import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { addJoinToCreateTrigger, getJoinToCreateConfig } from '../../../utils/database.js';
 
 export default {
@@ -50,19 +52,26 @@ export default {
                     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
                 }
             } catch (responseError) {
-                console.error('Error responding to interaction:', responseError);
+                logger.error('Error responding to interaction:', responseError);
                 
                 try {
                     if (!interaction.replied) {
                         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
                     }
                 } catch (e) {
-                    console.error('All response attempts failed:', e);
+                    logger.error('All response attempts failed:', e);
                 }
             }
         } catch (error) {
-            console.error('Error in JoinToCreate setup:', error);
-            throw new Error(`Failed to set up Join to Create: ${error.message}`);
+            if (error instanceof TitanBotError) {
+                throw error;
+            }
+            logger.error('Error in JoinToCreate setup:', error);
+            throw new TitanBotError(
+                `Setup failed: ${error.message}`,
+                ErrorTypes.DISCORD_API,
+                'Failed to set up Join to Create system.'
+            );
         }
     }
 };

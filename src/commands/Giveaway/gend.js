@@ -196,7 +196,6 @@ export default {
             });
 
         } catch (error) {
-            logger.error('Error in gend command:', error);
             await handleInteractionError(interaction, error, {
                 type: 'command',
                 commandName: 'gend',

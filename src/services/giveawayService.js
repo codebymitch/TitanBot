@@ -389,10 +389,11 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
             participantCount: participants.length
         };
     } catch (error) {
-        logger.error('Error ending giveaway:', error);
         if (error instanceof TitanBotError) {
+            logger.debug(`Giveaway end validation error: ${error.message}`, error.context || {});
             throw error;
         }
+        logger.error('Error ending giveaway:', error);
         throw new TitanBotError(
             'Failed to end giveaway',
             ErrorTypes.UNKNOWN,

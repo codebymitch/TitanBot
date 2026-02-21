@@ -6,25 +6,24 @@ Are all commands within the Welcome subfolder within the commands folder up to d
 - Scan each subfolder with this:
   - ✅ Welcome
   - ✅ Voice
-
+  - ✅ Verification
   - ✅ Utility 
   - ✅ Tools 
   - ✅ Ticket
   - ✅ Search 
   - ✅ Reaction roles
-
-
-
-
-
-
+  - ✅ Moderation
+  - ✅ Leveling
+  - ✅ JoinToCreate
+  - ✅ Giveaway
+  - ✅ Fun
+  - ✅ Economy
   - ✅ Counter 
   - ✅ Core
-
-
+  - ✅ Config
+  - ✅ Community
   - ✅ Birthday
 
-- Implement better security using tiktok vid (on phone)
 - Review each file within events, handlers, interactions, services and utils (Remove comments and ensure production-ready). (Done: config)
 
 

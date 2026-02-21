@@ -1,6 +1,6 @@
 import { getColor } from '../../../config/bot.js';
-import { PermissionFlagsBits, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { PermissionFlagsBits } from 'discord.js';
+import { createEmbed, errorEmbed } from '../../../utils/embeds.js';
 import { getServerCounters } from '../../../services/counterService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -12,15 +12,21 @@ import { logger } from '../../../utils/logger.js';
 export async function handleList(interaction, client) {
     const guild = interaction.guild;
     
-    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({ 
-            embeds: [errorEmbed("You need **Manage Channels** permission to view counters.")],
-            flags: MessageFlags.Ephemeral 
-        });
+    // Defer reply immediately to ensure interaction is acknowledged
+    try {
+        await interaction.deferReply();
+    } catch (error) {
+        logger.error("Failed to defer reply:", error);
         return;
     }
-
-    await interaction.deferReply();
+    
+    // Check permissions after deferring
+    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        await interaction.editReply({ 
+            embeds: [errorEmbed("You need **Manage Channels** permission to view counters.")]
+        }).catch(logger.error);
+        return;
+    }
 
     try {
         const counters = await getServerCounters(client, guild.id);
@@ -40,7 +46,7 @@ export async function handleList(interaction, client) {
 
             embed.addFields({
                 name: "📝 **Usage Examples**",
-                value: "`/counter create type:Members channel:#general`\n`/counter create type:Bots channel:#member-count`\n`/counter list`",
+                value: "`/counter create type:members channel_type:voice category:Stats`\n`/counter create type:bots channel_type:text category:Server Info`\n`/counter list`",
                 inline: false
             });
 
@@ -48,7 +54,7 @@ export async function handleList(interaction, client) {
                 text: "Counter System • Automatic updates every 15 minutes" 
             });
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] }).catch(logger.error);
             return;
         }
 
@@ -101,13 +107,13 @@ export async function handleList(interaction, client) {
         });
         embed.setTimestamp();
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] }).catch(logger.error);
 
     } catch (error) {
         logger.error("Error displaying counters:", error);
         await interaction.editReply({
             embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]
-        });
+        }).catch(logger.error);
     }
 }
 

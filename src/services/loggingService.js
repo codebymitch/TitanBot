@@ -53,6 +53,7 @@ const EVENT_TYPES = {
   GIVEAWAY_CREATE: 'giveaway.create',
   GIVEAWAY_WINNER: 'giveaway.winner',
   GIVEAWAY_REROLL: 'giveaway.reroll',
+  GIVEAWAY_DELETE: 'giveaway.delete',
   
   
   COUNTER_UPDATE: 'counter.update'
@@ -89,6 +90,7 @@ const EVENT_COLORS = {
   'giveaway.create': 0x57F287,
   'giveaway.winner': 0xFEE75C,
   'giveaway.reroll': 0x3498DB,
+  'giveaway.delete': 0xE74C3C,
   'counter.update': 0x0099ff,
 };
 
@@ -123,6 +125,7 @@ const EVENT_ICONS = {
   'giveaway.create': '🎁',
   'giveaway.winner': '🎉',
   'giveaway.reroll': '🔄',
+  'giveaway.delete': '🗑️',
   'counter.update': '📊',
 };
 
@@ -219,6 +222,11 @@ function isLoggingEnabled(config, eventType) {
     return false;
   }
 
+  if (!eventType || typeof eventType !== 'string') {
+    logger.debug('isLoggingEnabled called with invalid eventType', { eventType });
+    return false;
+  }
+
   const category = eventType.split('.')[0];
   const enabledEvents = config.logging.enabledEvents || {};
 
@@ -299,6 +307,10 @@ function createLogEmbed(guild, eventType, data) {
 
 
 function formatEventType(eventType) {
+  if (!eventType || typeof eventType !== 'string') {
+    return 'Unknown Event';
+  }
+
   return eventType
     .split('.')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))

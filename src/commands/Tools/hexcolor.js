@@ -24,8 +24,8 @@ try {
             } else {
                 hexColor = hexColor.replace('#', '');
                 if (!/^[0-9A-Fa-f]{3,6}$/.test(hexColor)) {
-                    return interaction.editReply({
-                        embeds: [errorEmbed('Error', 'Please provide a valid hex color code (e.g., #FF5733 or FF5733)')],
+                    return interaction.reply({
+                        embeds: [errorEmbed('❌ Invalid Hex Color', 'Please provide a valid hex code.\n\n**Valid formats:**\n• `#FF5733` (with hash)\n• `FF5733` (without hash)\n• `F57` (3-digit shorthand)\n\n**Invalid:** `#GG5733` (G is not a hex digit)')],
                         flags: ["Ephemeral"]
                     });
                 }
@@ -62,7 +62,7 @@ try {
                 embed.setFooter({ text: '✨ Randomly generated color' });
             }
             
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed] });
             
         } catch (error) {
             await handleInteractionError(interaction, error, {

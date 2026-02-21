@@ -448,13 +448,14 @@ class PostgreSQLDatabase {
 
             const parsedKey = this.parseKey(key);
             const expiresAt = ttl ? new Date(Date.now() + ttl * 1000) : null;
+            const jsonValue = JSON.stringify(value ?? null);
             
             if (parsedKey.type === 'temp') {
                 await this.pool.query(
                     `INSERT INTO ${pgConfig.tables.temp_data} (key, value, expires_at) 
                      VALUES ($1, $2, $3) 
                      ON CONFLICT (key) DO UPDATE SET value = $2, expires_at = $3`,
-                    [parsedKey.fullKey, value, expiresAt]
+                    [parsedKey.fullKey, jsonValue, expiresAt]
                 );
                 return true;
             }
@@ -464,7 +465,7 @@ class PostgreSQLDatabase {
                     `INSERT INTO ${pgConfig.tables.cache_data} (key, value, expires_at) 
                      VALUES ($1, $2, $3) 
                      ON CONFLICT (key) DO UPDATE SET value = $2, expires_at = $3`,
-                    [parsedKey.fullKey, value, expiresAt]
+                    [parsedKey.fullKey, jsonValue, expiresAt]
                 );
                 return true;
             }
@@ -870,8 +871,15 @@ class PostgreSQLDatabase {
                     );
                     
                     await this.pool.query(`DELETE FROM ${pgConfig.tables.giveaways} WHERE guild_id = $1`, [parsedKey.guildId]);
-                    
-                    for (const giveaway of value) {
+
+                    const giveaways = Array.isArray(value)
+                        ? value
+                        : (value && typeof value === 'object' ? Object.values(value) : []);
+
+                    for (const giveaway of giveaways) {
+                        if (!giveaway?.messageId) {
+                            continue;
+                        }
                         await this.pool.query(
                             `INSERT INTO ${pgConfig.tables.giveaways} (guild_id, message_id, data, ends_at) 
                              VALUES ($1, $2, $3, $4)`,
@@ -1030,31 +1038,20 @@ class PostgreSQLDatabase {
                     }
                     
                     logger.debug('Saving counter data to PostgreSQL', { type: typeof value, isArray: Array.isArray(value) });
-                    
+
+                    const normalizedCounters = Array.isArray(value) ? value : [];
+                    const jsonString = JSON.stringify(normalizedCounters);
+
                     try {
                         await this.pool.query(
                             `INSERT INTO ${pgConfig.tables.guilds} (id, counters, updated_at) 
-                             VALUES ($1, $2, CURRENT_TIMESTAMP) 
-                             ON CONFLICT (id) DO UPDATE SET counters = $2, updated_at = CURRENT_TIMESTAMP`,
-                            [parsedKey.guildId, value]
+                             VALUES ($1, $2::jsonb, CURRENT_TIMESTAMP) 
+                             ON CONFLICT (id) DO UPDATE SET counters = $2::jsonb, updated_at = CURRENT_TIMESTAMP`,
+                            [parsedKey.guildId, jsonString]
                         );
                     } catch (queryError) {
                         logger.error('PostgreSQL query error', { message: queryError.message, detail: queryError.detail, hint: queryError.hint });
-                        
-                        try {
-                            const jsonString = JSON.stringify(value);
-                            logger.debug('Attempting fallback: save counter data as stringified JSON');
-                            await this.pool.query(
-                                `INSERT INTO ${pgConfig.tables.guilds} (id, counters, updated_at) 
-                                 VALUES ($1, $2::jsonb, CURRENT_TIMESTAMP) 
-                                 ON CONFLICT (id) DO UPDATE SET counters = $2::jsonb, updated_at = CURRENT_TIMESTAMP`,
-                                [parsedKey.guildId, jsonString]
-                            );
-                            logger.debug('Successfully saved counter data as stringified JSON');
-                        } catch (fallbackError) {
-                            logger.error('Fallback approach for counter data also failed', fallbackError);
-                            throw queryError;
-                        }
+                        throw queryError;
                     }
                     return true;
                 

@@ -447,12 +447,18 @@ export function getColor(path, fallback = "#99AAB5") {
     
     return parseInt(path.replace("#", ""), 16);
   }
-  return path
+  const result = path
     .split(".")
     .reduce(
       (obj, key) => (obj && obj[key] !== undefined ? obj[key] : fallback),
       botConfig.embeds.colors,
     );
+  
+  // Convert the result to integer if it's a hex string
+  if (typeof result === "string" && result.startsWith("#")) {
+    return parseInt(result.replace("#", ""), 16);
+  }
+  return result;
 }
 
 export function getRandomColor() {
