@@ -38,7 +38,7 @@ export default {
         ),
 
     execute: withErrorHandling(async (interaction, config, client) => {
-        await interaction.deferReply();
+        await InteractionHelper.safeDefer(interaction);
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -100,7 +100,7 @@ export default {
                     `You successfully committed ${crime.name} and earned **${amountEarned}** coins!`
                 );
                 
-                await interaction.editReply({ embeds: [embed] });
+                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             } else {
                 const fine = Math.floor(amountEarned * 0.2);
                 userData.wallet = Math.max(0, (userData.wallet || 0) - fine);
@@ -114,7 +114,7 @@ export default {
                     `You were fined ${fine} coins and will be in jail for 2 hours.`
                 );
                 
-                await interaction.editReply({ embeds: [embed] });
+                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             }
     }, { command: 'crime' })
 };

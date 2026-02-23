@@ -9,6 +9,7 @@ import {
     createGiveawayButtons 
 } from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -185,7 +186,7 @@ export default {
 
             logger.info(`Giveaway successfully ended by ${interaction.user.tag}: ${messageId}`);
 
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
                         "Giveaway Ended ✅",

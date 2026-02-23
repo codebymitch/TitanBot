@@ -3,6 +3,7 @@ import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("roll")
@@ -18,7 +19,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
 
       const notation = interaction.options
         .getString("notation")
@@ -76,7 +77,7 @@ export default {
         `${resultsDetail}**Total Roll:** ${totalRoll}${modifierText} = **${finalTotal}**`,
       );
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.debug(`Roll command executed by user ${interaction.user.id} with notation ${notation} in guild ${interaction.guildId}`);
     } catch (error) {
       await handleInteractionError(interaction, error, {

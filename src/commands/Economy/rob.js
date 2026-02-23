@@ -90,7 +90,7 @@ export default {
                 robberData.lastRob = now;
                 await setEconomyData(client, guildId, robberId, robberData);
 
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         MessageTemplates.ERRORS.CONFIGURATION_REQUIRED(
                             "robbery protection",
@@ -148,7 +148,7 @@ export default {
                 )
                 .setFooter({ text: `Next robbery available in 4 hours.` });
 
-            await interaction.editReply({ embeds: [resultEmbed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [resultEmbed] });
     }, { command: 'rob' })
 };
 

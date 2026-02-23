@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
         const channel = interaction.options.getChannel("channel");
@@ -13,7 +14,7 @@ export default {
 
             await setGuildConfig(client, guildId, guildConfig);
 
-            await interaction.reply({
+            await InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
                         "✅ Report Channel Set!",
@@ -23,7 +24,7 @@ export default {
             });
         } catch (error) {
             console.error("Error setting report channel:", error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Database Error",

@@ -1,5 +1,6 @@
 import createTicketHandler, { 
   createTicketModalHandler, 
+  closeTicketModalHandler,
   closeTicketHandler, 
   claimTicketHandler, 
   priorityTicketHandler,
@@ -22,6 +23,7 @@ export default async function loadTicketButtons(client) {
     client.buttons.set('ticket_delete', deleteTicketHandler);
     
     client.modals.set('create_ticket_modal', createTicketModalHandler);
+    client.modals.set('ticket_close_modal', closeTicketModalHandler);
     
     logger.info('Ticket button handlers loaded');
   } catch (error) {

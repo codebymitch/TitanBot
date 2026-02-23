@@ -96,7 +96,7 @@ userData.lastBeg = Date.now();
 
             await setEconomyData(client, guildId, userId, userData);
 
-            await interaction.editReply({ embeds: [replyEmbed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [replyEmbed] });
     }, { command: 'beg' })
 };
 

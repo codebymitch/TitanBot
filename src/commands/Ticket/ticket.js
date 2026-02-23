@@ -143,7 +143,7 @@ export default {
                     guildId: interaction.guildId,
                     commandName: 'ticket'
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Permission Denied",
@@ -165,7 +165,7 @@ export default {
                 case "toggle_dm":
                     return ticketLimitsToggleDM.execute(interaction, config, client);
                 default:
-                    return interaction.editReply({
+                    return InteractionHelper.safeEditReply(interaction, {
                         embeds: [
                             errorEmbed(
                                 "Invalid Subcommand",
@@ -252,7 +252,7 @@ description: panelMessage,
                 
                 successMessage += `\n\n**Max Tickets Per User:** ${maxTicketsPerUser}\n**DM on Close:** ${dmOnClose ? 'Enabled' : 'Disabled'}`;
 
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             "Ticket Panel Set Up",
@@ -342,7 +342,7 @@ description: panelMessage,
                     commandName: 'ticket_setup'
                 });
                 if (interaction.deferred || interaction.replied) {
-                    await interaction.editReply({
+                    await InteractionHelper.safeEditReply(interaction, {
                         embeds: [
                             errorEmbed(
                                 "Setup Failed",

@@ -9,6 +9,7 @@ import {
     createGiveawayButtons 
 } from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -128,7 +129,7 @@ export default {
                 
                 logger.warn(`Could not find channel for giveaway ${messageId}, but saved new winners to database`);
                 
-                return interaction.reply({
+                return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         successEmbed(
                             "Reroll Complete",
@@ -197,7 +198,7 @@ export default {
                     logger.debug('Error logging giveaway reroll:', logError);
                 }
 
-                return interaction.reply({
+                return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         successEmbed(
                             "Reroll Complete",
@@ -266,7 +267,7 @@ export default {
                 logger.debug('Error logging giveaway reroll event:', logError);
             }
 
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
                         "Reroll Successful ✅",

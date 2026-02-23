@@ -55,7 +55,7 @@ export default {
                     guildId: guildId,
                     commandName: 'report'
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Setup Required",
@@ -74,7 +74,7 @@ export default {
                     reportChannelId: reportChannelId,
                     commandName: 'report'
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Channel Missing",
@@ -109,7 +109,7 @@ export default {
                 embeds: [reportEmbed],
             });
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     createEmbed({ title: "✅ Report Submitted", description: `Your report against **${targetUser.tag}** has been successfully filed and sent to the moderation team. Thank you!`, }),
                 ],

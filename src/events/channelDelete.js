@@ -3,6 +3,7 @@ import {
     removeJoinToCreateTrigger,
     unregisterTemporaryChannel
 } from '../utils/database.js';
+import { getServerCounters, saveServerCounters } from '../services/counterService.js';
 import { logger } from '../utils/logger.js';
 
 export default {
@@ -15,6 +16,23 @@ if (channel.type !== 2 && channel.type !== 4) {
         const guildId = channel.guild.id;
 
         try {
+            // Check if this channel is a counter channel
+            const counters = await getServerCounters(client, guildId);
+            const orphanedCounter = counters.find(c => c.channelId === channel.id);
+            
+            if (orphanedCounter) {
+                logger.info(`Counter channel ${channel.name} (${channel.id}) was deleted, removing counter ${orphanedCounter.id} from database`);
+                
+                const updatedCounters = counters.filter(c => c.channelId !== channel.id);
+                const success = await saveServerCounters(client, guildId, updatedCounters);
+                
+                if (success) {
+                    logger.info(`Successfully removed orphaned counter ${orphanedCounter.id} (type: ${orphanedCounter.type}) from guild ${guildId}`);
+                } else {
+                    logger.warn(`Failed to remove orphaned counter ${orphanedCounter.id} from guild ${guildId}`);
+                }
+            }
+
             const config = await getJoinToCreateConfig(client, guildId);
 
             if (!config.enabled) {

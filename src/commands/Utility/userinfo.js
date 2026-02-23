@@ -64,7 +64,7 @@ export default {
           },
         );
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.info(`UserInfo command executed`, {
         userId: interaction.user.id,
         targetUserId: user.id,

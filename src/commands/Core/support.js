@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 const SUPPORT_SERVER_URL = "https://discord.gg/QnWNz2dKCE";
 export default {
     data: new SlashCommandBuilder()
@@ -16,7 +17,7 @@ export default {
 
       const actionRow = new ActionRowBuilder().addComponents(supportButton);
 
-      await interaction.reply({
+      await InteractionHelper.safeReply(interaction, {
         embeds: [
           createEmbed({ title: "🚑 Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!" }),
         ],
@@ -27,7 +28,7 @@ export default {
       console.error('Support command error:', error);
       
       try {
-        return await interaction.reply({
+        return await InteractionHelper.safeReply(interaction, {
           embeds: [createEmbed({ title: 'System Error', description: 'Could not display support information.', color: 'error' })],
           flags: MessageFlags.Ephemeral,
         });

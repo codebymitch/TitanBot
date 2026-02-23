@@ -49,7 +49,7 @@ export default {
           },
         );
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.info(`ServerInfo command executed`, {
         userId: interaction.user.id,
         guildId: guild.id,

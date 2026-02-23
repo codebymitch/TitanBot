@@ -42,7 +42,7 @@ export default {
                     city: city,
                     guildId: interaction.guildId
                 });
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "City Not Found",
@@ -68,7 +68,7 @@ export default {
                     userId: interaction.user.id,
                     guildId: interaction.guildId
                 });
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "API Error",
@@ -109,7 +109,7 @@ export default {
                     text: `Latitude: ${latitude.toFixed(2)} | Longitude: ${longitude.toFixed(2)}`,
                 });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             logger.info(`Weather command executed`, {
                 userId: interaction.user.id,
                 city: cityDisplay,

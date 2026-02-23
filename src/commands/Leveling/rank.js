@@ -8,6 +8,7 @@ import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getUserLevelData, getLevelingConfig, getXpForLevel } from '../../services/leveling.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('rank')
@@ -29,7 +30,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
 
       const targetUser = interaction.options.getUser('user') || interaction.user;
       const member = await interaction.guild.members
@@ -94,7 +95,7 @@ export default {
         .setColor('#2ecc71')
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.debug(`Rank checked for user ${targetUser.id} in guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Rank command error:', error);

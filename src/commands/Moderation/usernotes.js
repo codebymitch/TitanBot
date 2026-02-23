@@ -9,6 +9,7 @@ import { sanitizeInput } from '../../utils/sanitization.js';
 
 
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 function getUserNotesKey(guildId, userId) {
     return `moderation_user_notes_${guildId}_${userId}`;
 }
@@ -100,7 +101,7 @@ export default {
 
     async execute(interaction, config, client) {
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -115,7 +116,7 @@ export default {
         const guildId = interaction.guild.id;
 
         if (subcommand !== "view" && subcommand !== "remove" && subcommand !== "clear" && subcommand !== "add") {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Invalid Subcommand",
@@ -142,7 +143,7 @@ export default {
                 case "clear":
                     return await handleClearNotes(interaction, targetUser, notes, guildId);
                 default:
-                    return interaction.reply({
+                    return InteractionHelper.safeReply(interaction, {
                         embeds: [
                             errorEmbed(
                                 "Invalid Subcommand",
@@ -153,7 +154,7 @@ export default {
             }
         } catch (error) {
             logger.error(`Error in usernotes command (${subcommand}):`, error);
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "System Error",
@@ -171,7 +172,7 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
     const type = interaction.options.getString("type") || "neutral";
 
     if (note.length > 1000) {
-        return interaction.reply({
+        return InteractionHelper.safeReply(interaction, {
             embeds: [
                 errorEmbed(
                     "Note Too Long",
@@ -182,7 +183,7 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
     }
 
     if (note.length === 0) {
-        return interaction.reply({
+        return InteractionHelper.safeReply(interaction, {
             embeds: [
                 errorEmbed(
                     "Empty Note",
@@ -211,7 +212,7 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
 
     const typeInfo = getNoteTypeInfo(type);
 
-    return interaction.reply({
+    return InteractionHelper.safeReply(interaction, {
         embeds: [
             successEmbed(
                 `${typeInfo.emoji} Note Added`,
@@ -226,7 +227,7 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
 
 async function handleViewNotes(interaction, targetUser, notes) {
     if (notes.length === 0) {
-        return interaction.reply({
+        return InteractionHelper.safeReply(interaction, {
             embeds: [
                 infoEmbed(
                     "📝 No Notes",
@@ -252,7 +253,7 @@ async function handleViewNotes(interaction, targetUser, notes) {
         description = description.substring(0, 3900) + "\n... *(truncated)*";
     }
 
-    return interaction.reply({
+    return InteractionHelper.safeReply(interaction, {
         embeds: [
             infoEmbed(
                 `📝 User Notes (${notes.length})`,
@@ -266,7 +267,7 @@ async function handleRemoveNote(interaction, targetUser, notes, guildId) {
 const index = interaction.options.getInteger("index") - 1;
 
     if (index < 0 || index >= notes.length) {
-        return interaction.reply({
+        return InteractionHelper.safeReply(interaction, {
             embeds: [
                 errorEmbed(
                     "Invalid Index",
@@ -284,7 +285,7 @@ const index = interaction.options.getInteger("index") - 1;
 
     const typeInfo = getNoteTypeInfo(removedNote.type);
 
-    return interaction.reply({
+    return InteractionHelper.safeReply(interaction, {
         embeds: [
             successEmbed(
                 `${typeInfo.emoji} Note Removed`,
@@ -300,7 +301,7 @@ async function handleClearNotes(interaction, targetUser, notes, guildId) {
     const noteCount = notes.length;
     
     if (noteCount === 0) {
-        return interaction.reply({
+        return InteractionHelper.safeReply(interaction, {
             embeds: [
                 infoEmbed(
                     "No Notes to Clear",
@@ -315,7 +316,7 @@ async function handleClearNotes(interaction, targetUser, notes, guildId) {
     const notesKey = getUserNotesKey(guildId, targetUser.id);
     await setInDb(notesKey, notes);
 
-    return interaction.reply({
+    return InteractionHelper.safeReply(interaction, {
         embeds: [
             successEmbed(
                 "🗑️ Notes Cleared",

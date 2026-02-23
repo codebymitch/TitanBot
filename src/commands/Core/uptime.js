@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("uptime")
@@ -8,7 +9,7 @@ export default {
 
   async execute(interaction) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
       
       let totalSeconds = interaction.client.uptime / 1000;
       let days = Math.floor(totalSeconds / 86400);
@@ -20,7 +21,7 @@ export default {
 
       const uptimeStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
-      await interaction.editReply({
+      await InteractionHelper.safeEditReply(interaction, {
         embeds: [createEmbed({ 
           title: "⏱️ System Uptime", 
           description: `\`\`\`${uptimeStr}\`\`\`` 
@@ -30,7 +31,7 @@ export default {
       console.error('Uptime command error:', error);
       
       try {
-        return await interaction.editReply({
+        return await InteractionHelper.safeEditReply(interaction, {
           embeds: [createEmbed({ title: 'System Error', description: 'Could not compute uptime.', color: 'error' })],
           flags: MessageFlags.Ephemeral,
         });

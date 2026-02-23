@@ -4,6 +4,7 @@ import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import ApplicationService from '../../services/applicationService.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { 
     getApplicationSettings, 
     getUserApplications, 
@@ -49,13 +50,13 @@ export default {
 
     execute: withErrorHandling(async (interaction) => {
         if (!interaction.inGuild()) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [errorEmbed("This command can only be used in a server.")],
                 flags: ["Ephemeral"],
             });
         }
 
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+        await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
 
         const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
@@ -102,7 +103,7 @@ export async function handleApplicationModal(interaction) {
     const applicationRole = applicationRoles.find(appRole => appRole.roleId === roleId);
     
     if (!applicationRole) {
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed('Application configuration not found.')],
             flags: ["Ephemeral"]
         });
@@ -111,7 +112,7 @@ export async function handleApplicationModal(interaction) {
     const role = interaction.guild.roles.cache.get(roleId);
     
     if (!role) {
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed('Role not found.')],
             flags: ["Ephemeral"]
         });
@@ -147,7 +148,7 @@ export async function handleApplicationModal(interaction) {
             `You can check the status with \`/apply status id:${application.id}\``
         );
         
-        await interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
+        await InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
         
         const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
         if (settings.logChannelId) {
@@ -192,7 +193,7 @@ async function handleList(interaction) {
         const applicationRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
         
         if (applicationRoles.length === 0) {
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed("No applications are currently available.")],
                 flags: ["Ephemeral"],
             });
@@ -217,7 +218,7 @@ async function handleList(interaction) {
             text: "Use /apply submit application:<name> to apply for any of these roles."
         });
 
-        return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
+        return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
     } catch (error) {
         logger.error('Error listing applications:', {
             error: error.message,
@@ -245,7 +246,7 @@ async function handleSubmit(interaction, settings) {
     );
 
     if (!applicationRole) {
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 errorEmbed(
                     "Application not found.",
@@ -264,7 +265,7 @@ async function handleSubmit(interaction, settings) {
     const pendingApp = userApps.find((app) => app.status === "pending");
 
     if (pendingApp) {
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 errorEmbed(
                     `You already have a pending application. Please wait for it to be reviewed.`,
@@ -276,7 +277,7 @@ async function handleSubmit(interaction, settings) {
 
     const role = interaction.guild.roles.cache.get(applicationRole.roleId);
     if (!role) {
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed('The role for this application no longer exists.')],
             flags: ["Ephemeral"]
         });
@@ -319,7 +320,7 @@ async function handleStatus(interaction) {
         );
 
         if (!application || application.userId !== interaction.user.id) {
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Application not found or you do not have permission to view it.",
@@ -331,7 +332,7 @@ async function handleStatus(interaction) {
 
         const embed = createEmbed({ title: `Application #${application.id} - ${application.roleName}`, description: `**Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}` });
 
-        return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
+        return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
     } else {
         const applications = await getUserApplications(
             interaction.client,
@@ -340,7 +341,7 @@ async function handleStatus(interaction) {
         );
 
         if (applications.length === 0) {
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed("You have not submitted any applications yet."),
                 ],
@@ -350,7 +351,7 @@ async function handleStatus(interaction) {
 
         const embed = createEmbed({ title: "Your Applications", description: "Here are your recent applications." });
 
-        return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
+        return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
     }
 }
 

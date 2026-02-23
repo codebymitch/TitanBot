@@ -6,6 +6,7 @@ import { handleInteractionError, withErrorHandling, createError, ErrorTypes } fr
 import { removeVerification, verifyUser } from '../../services/verificationService.js';
 import { ContextualMessages, MessageTemplates } from '../../utils/messageTemplates.js';
 import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -160,7 +161,7 @@ async function handleSetup(interaction, guild, client) {
         );
     }
 
-    await interaction.deferReply();
+    await InteractionHelper.safeDefer(interaction);
 
     const verifyEmbed = createEmbed({
         title: "✅ Server Verification",
@@ -193,7 +194,7 @@ async function handleSetup(interaction, guild, client) {
 
     await setGuildConfig(client, guild.id, guildConfig);
 
-    await interaction.editReply({
+    await InteractionHelper.safeEditReply(interaction, {
         embeds: [ContextualMessages.configUpdated(
             "Verification System",
             [
@@ -213,13 +214,13 @@ async function handleVerify(interaction, guild, client) {
 
     if (!result.success) {
         if (result.alreadyVerified) {
-            return await interaction.reply({
+            return await InteractionHelper.safeReply(interaction, {
                 embeds: [MessageTemplates.INFO.ALREADY_CONFIGURED("verified")],
                 flags: MessageFlags.Ephemeral
             });
         }
 
-        return await interaction.reply({
+        return await InteractionHelper.safeReply(interaction, {
             embeds: [errorEmbed(
                 "Verification Failed",
                 "An error occurred during verification. Please try again or contact an administrator."
@@ -228,7 +229,7 @@ async function handleVerify(interaction, guild, client) {
         });
     }
 
-    await interaction.reply({
+    await InteractionHelper.safeReply(interaction, {
         embeds: [MessageTemplates.SUCCESS.ACTION_COMPLETE(
             `You have been verified and given the **${result.roleName}** role! Welcome to the server! 🎉`
         )],
@@ -247,7 +248,7 @@ async function handleRemove(interaction, guild, client) {
 
         if (!result.success) {
             if (result.notVerified) {
-                return await interaction.reply({
+                return await InteractionHelper.safeReply(interaction, {
                     embeds: [MessageTemplates.INFO.NO_DATA("verified role")],
                     flags: MessageFlags.Ephemeral
                 });
@@ -260,7 +261,7 @@ async function handleRemove(interaction, guild, client) {
             moderatorId: interaction.user.id
         });
 
-        return await interaction.reply({
+        return await InteractionHelper.safeReply(interaction, {
             embeds: [MessageTemplates.SUCCESS.OPERATION_COMPLETE(
                 `Verification removed from ${targetUser.tag}.`
             )]
@@ -279,13 +280,13 @@ async function handleDisable(interaction, guild, client) {
     const guildConfig = await getGuildConfig(client, guild.id);
     
     if (!guildConfig.verification?.enabled) {
-        return await interaction.reply({
+        return await InteractionHelper.safeReply(interaction, {
             embeds: [MessageTemplates.INFO.ALREADY_CONFIGURED("disabled")],
             flags: MessageFlags.Ephemeral
         });
     }
 
-    await interaction.deferReply();
+    await InteractionHelper.safeDefer(interaction);
 
     if (guildConfig.verification.channelId && guildConfig.verification.messageId) {
         const channel = guild.channels.cache.get(guildConfig.verification.channelId);
@@ -304,7 +305,7 @@ async function handleDisable(interaction, guild, client) {
     guildConfig.verification.enabled = false;
     await setGuildConfig(client, guild.id, guildConfig);
 
-    await interaction.editReply({
+    await InteractionHelper.safeEditReply(interaction, {
         embeds: [MessageTemplates.SUCCESS.OPERATION_COMPLETE(
             "The verification system has been disabled and the verification message has been removed."
         )]
@@ -315,7 +316,7 @@ async function handleStatus(interaction, guild, client) {
     const guildConfig = await getGuildConfig(client, guild.id);
     
     if (!guildConfig.verification?.enabled) {
-        return await interaction.reply({
+        return await InteractionHelper.safeReply(interaction, {
             embeds: [infoEmbed(
                 "Verification Status",
                 "🔴 **Status:** Disabled\n\nThe verification system is not currently enabled on this server.\n\nUse `/verification setup` to enable it."
@@ -360,7 +361,7 @@ async function handleStatus(interaction, guild, client) {
         }
     );
 
-    await interaction.reply({
+    await InteractionHelper.safeReply(interaction, {
         embeds: [statusEmbed],
         flags: MessageFlags.Ephemeral
     });

@@ -1,6 +1,6 @@
-import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder, MessageFlags } from 'discord.js';
 import { shopItems } from '../../config/shop/items.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getColor } from '../../config/bot.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -9,7 +9,8 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            const ITEMS_PER_PAGE = 2;
+            const TARGET_MAX_PAGES = 3;
+            const ITEMS_PER_PAGE = Math.max(1, Math.ceil(shopItems.length / TARGET_MAX_PAGES));
             const totalPages = Math.ceil(shopItems.length / ITEMS_PER_PAGE);
             let currentPage = 1;
 
@@ -20,13 +21,13 @@ export default {
 
                 const embed = new EmbedBuilder()
                     .setTitle("🛒 Store")
-                    .setColor(0x2b2d31)
-                    .setDescription(`Click a button below to instantly buy an item, or use the \`/item buy\` command.\nFor more details before purchasing, use the \`/item info\` command.`);
+                    .setColor(getColor('primary'))
+                    .setDescription('Use `/buy item_id:<id> quantity:<amount>` to purchase an item.');
 
                 pageItems.forEach(item => {
                     embed.addFields({
-                        name: `${item.name}`,
-                        value: `🏷️ **Type:** ${item.type}\n${item.description}\n💚 **Price:** ${item.price}`,
+                        name: `${item.name} (${item.id})`,
+                        value: `🏷️ **Type:** ${item.type}\n💚 **Price:** $${item.price.toLocaleString()}\n${item.description}`,
                         inline: false,
                     });
                 });
@@ -36,42 +37,24 @@ export default {
             };
 
             const createShopComponents = (page) => {
-                const startIndex = (page - 1) * ITEMS_PER_PAGE;
-                const endIndex = startIndex + ITEMS_PER_PAGE;
-                const pageItems = shopItems.slice(startIndex, endIndex);
+                if (totalPages <= 1) {
+                    return [];
+                }
 
-                const components = [];
-
-                pageItems.forEach((item, index) => {
-                    const isLastItem = index === pageItems.length - 1;
-                    const row = new ActionRowBuilder();
-
-                    row.addComponents(
+                return [
+                    new ActionRowBuilder().addComponents(
                         new ButtonBuilder()
-                            .setCustomId(`shop_buy:${item.id}`)
-                            .setLabel('Buy')
-                            .setStyle(ButtonStyle.Primary)
-                    );
-
-                    if (isLastItem && totalPages > 1) {
-                        row.addComponents(
-                            new ButtonBuilder()
-                                .setCustomId('shop_prev')
-                                .setLabel('⬅️ Previous')
-                                .setStyle(ButtonStyle.Secondary)
-                                .setDisabled(page === 1),
-                            new ButtonBuilder()
-                                .setCustomId('shop_next')
-                                .setLabel('Next ➡️')
-                                .setStyle(ButtonStyle.Secondary)
-                                .setDisabled(page === totalPages)
-                        );
-                    }
-
-                    components.push(row);
-                });
-
-                return components;
+                            .setCustomId('shop_prev')
+                            .setLabel('⬅️ Previous')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(page === 1),
+                        new ButtonBuilder()
+                            .setCustomId('shop_next')
+                            .setLabel('Next ➡️')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(page === totalPages)
+                    )
+                ];
             };
 
             const message = await interaction.reply({
@@ -107,81 +90,6 @@ export default {
                         embeds: [createShopEmbed(currentPage)],
                         components: createShopComponents(currentPage)
                     });
-                    return;
-                }
-
-                if (customId.startsWith('shop_buy:')) {
-                    const deferred = await InteractionHelper.safeDefer(buttonInteraction, { flags: 64 });
-                    if (!deferred) return;
-
-                    const itemId = customId.split(':')[1];
-                    const item = shopItems.find(i => i.id === itemId);
-
-                    if (!item) {
-                        return await buttonInteraction.editReply({
-                            content: '❌ Item not found.'
-                        });
-                    }
-
-                    try {
-                        const { getEconomyData, setEconomyData } = await import('../../utils/economy.js');
-                        const { getGuildConfig } = await import('../../services/guildConfig.js');
-                        const { successEmbed, errorEmbed } = await import('../../utils/embeds.js');
-
-                        const userId = buttonInteraction.user.id;
-                        const guildId = buttonInteraction.guildId;
-                        const totalCost = item.price;
-
-                        const userData = await getEconomyData(client, guildId, userId);
-
-                        if (userData.wallet < totalCost) {
-                            return await buttonInteraction.editReply({
-                                embeds: [errorEmbed(
-                                    'Insufficient Funds',
-                                    `You need **$${totalCost.toLocaleString()}** but only have **$${userData.wallet.toLocaleString()}**`
-                                )]
-                            });
-                        }
-
-                        if (item.type === 'role' && itemId === 'premium_role') {
-                            const guildConfig = await getGuildConfig(client, guildId);
-                            const roleId = guildConfig.premiumRoleId;
-
-                            if (!roleId) {
-                                return await buttonInteraction.editReply({
-                                    embeds: [errorEmbed('Error', 'Premium role not configured')]
-                                });
-                            }
-
-                            if (buttonInteraction.member.roles.cache.has(roleId)) {
-                                return await buttonInteraction.editReply({
-                                    embeds: [errorEmbed('Already Own', `You already have this role`)]
-                                });
-                            }
-
-                            await buttonInteraction.member.roles.add(roleId);
-                        }
-
-                        if (!userData.inventory) userData.inventory = {};
-                        userData.inventory[itemId] = (userData.inventory[itemId] || 0) + 1;
-                        userData.wallet -= totalCost;
-
-                        await setEconomyData(client, guildId, userId, userData);
-
-                        await buttonInteraction.editReply({
-                            embeds: [successEmbed(
-                                `✅ Purchased **${item.name}** for **$${totalCost.toLocaleString()}**\n\n**New Balance:** $${userData.wallet.toLocaleString()}`,
-                                '🛒 Purchase Complete'
-                            )]
-                        });
-
-                        console.log(`✅ User ${buttonInteraction.user.tag} purchased ${item.id} for $${totalCost}`);
-                    } catch (error) {
-                        console.error('Purchase error:', error);
-                        await buttonInteraction.editReply({
-                            embeds: [errorEmbed('Error', 'Failed to process purchase')]
-                        });
-                    }
                 }
             });
 
@@ -203,7 +111,7 @@ export default {
             console.error('Shop command error:', error);
             await interaction.reply({
                 content: '❌ An error occurred while loading the shop.',
-                flags: 64
+                flags: MessageFlags.Ephemeral
             });
         }
     },

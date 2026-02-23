@@ -4,10 +4,11 @@ import { getUserBirthday } from '../../../services/birthdayService.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
         try {
-            await interaction.deferReply();
+            await InteractionHelper.safeDefer(interaction);
 
             const targetUser = interaction.options.getUser("user") || interaction.user;
             const userId = targetUser.id;
@@ -17,7 +18,7 @@ export default {
             const birthdayData = await getUserBirthday(client, guildId, userId);
 
             if (!birthdayData) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [createEmbed({
                         title: '❌ No Birthday Found',
                         description: targetUser.id === interaction.user.id 
@@ -35,7 +36,7 @@ export default {
                 footer: targetUser.id === interaction.user.id ? "Your Birthday" : `${targetUser.username}'s Birthday`
             });
             
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Birthday info retrieved successfully', {
                 userId: interaction.user.id,

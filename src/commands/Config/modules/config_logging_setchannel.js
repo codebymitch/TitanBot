@@ -4,10 +4,11 @@ import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js
 import { logEvent } from '../../../utils/moderation.js';
 import { validateLogChannel } from '../../../utils/ticketLogging.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
 if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -18,7 +19,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
         }
 
         if (!client.db) {
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed("Database Error", "Database not initialized."),
                 ],
@@ -38,7 +39,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
             if (ticketLifecycle) {
                 const validation = validateLogChannel(ticketLifecycle, interaction.guild.members.me);
                 if (!validation.valid) {
-                    return interaction.editReply({
+                    return InteractionHelper.safeEditReply(interaction, {
                         embeds: [errorEmbed("Invalid Channel", validation.error)],
                     });
                 }
@@ -49,7 +50,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 currentConfig.ticketLogging.lifecycleChannelId = ticketLifecycle.id;
                 await setGuildConfig(client, guildId, currentConfig);
 
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             "🎫 Ticket Lifecycle Channel Set",
@@ -62,7 +63,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
             if (ticketTranscript) {
                 const validation = validateLogChannel(ticketTranscript, interaction.guild.members.me);
                 if (!validation.valid) {
-                    return interaction.editReply({
+                    return InteractionHelper.safeEditReply(interaction, {
                         embeds: [errorEmbed("Invalid Channel", validation.error)],
                     });
                 }
@@ -73,7 +74,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 currentConfig.ticketLogging.transcriptChannelId = ticketTranscript.id;
                 await setGuildConfig(client, guildId, currentConfig);
 
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             "📜 Ticket Transcript Channel Set",
@@ -93,7 +94,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 };
                 await setGuildConfig(client, guildId, currentConfig);
 
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             "Logging Disabled 🚫",
@@ -113,7 +114,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                     ) ||
                     !permissionsInChannel.has(PermissionsBitField.Flags.EmbedLinks)
                 ) {
-                    return interaction.editReply({
+                    return InteractionHelper.safeEditReply(interaction, {
                         embeds: [
                             errorEmbed(
                                 "Bot Permission Error",
@@ -133,7 +134,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
 
                 await setGuildConfig(client, guildId, currentConfig);
 
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             "Log Channel Set 📝",
@@ -160,7 +161,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 return;
             }
 
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "No Option Provided",
@@ -171,7 +172,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
 
         } catch (error) {
             console.error("Error setting log channel:", error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Configuration Error",

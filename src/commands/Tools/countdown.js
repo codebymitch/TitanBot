@@ -90,7 +90,7 @@ export default {
             activeCountdowns.set(countdownId, countdownData);
             startCountdown(countdownId, countdownData, activeCountdowns);
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 content: "✅ Countdown started!",
                 flags: MessageFlags.Ephemeral,
             });

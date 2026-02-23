@@ -2,10 +2,11 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -25,7 +26,7 @@ export default {
 
             await setGuildConfig(client, guildId, currentConfig);
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
                         "✅ Configuration Saved",
@@ -35,7 +36,7 @@ export default {
             });
         } catch (error) {
             console.error("SetPremiumRole command error:", error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "System Error",

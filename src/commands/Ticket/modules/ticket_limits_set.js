@@ -32,7 +32,7 @@ export default {
                 `Users will now be limited to ${maxTickets} open ticket${maxTickets !== 1 ? 's' : ''} at a time.`
             );
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Ticket limit updated', {
                 userId: interaction.user.id,

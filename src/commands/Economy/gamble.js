@@ -127,7 +127,7 @@ userData.lastGamble = now;
                 });
             }
 
-            await interaction.editReply({ embeds: [resultEmbed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [resultEmbed] });
     }, { command: 'gamble' })
 };
 

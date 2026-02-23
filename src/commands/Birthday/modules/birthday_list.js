@@ -4,10 +4,11 @@ import { getAllBirthdays } from '../../../services/birthdayService.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
         try {
-            await interaction.deferReply();
+            await InteractionHelper.safeDefer(interaction);
 
             const guildId = interaction.guildId;
             
@@ -15,7 +16,7 @@ export default {
             const sortedBirthdays = await getAllBirthdays(client, guildId);
 
             if (sortedBirthdays.length === 0) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [createEmbed({
                         title: '❌ No Birthdays',
                         description: 'No birthdays have been set in this server yet.',
@@ -39,7 +40,7 @@ export default {
             embed.setDescription(birthdayList || "No birthdays found");
             embed.setFooter({ text: `Total: ${sortedBirthdays.length} birthdays` });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Birthday list retrieved successfully', {
                 userId: interaction.user.id,

@@ -130,6 +130,6 @@ export default {
                 )
                 .setFooter({ text: `Next fishing trip available in 45 minutes.` });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'fish' })
 };

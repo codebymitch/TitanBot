@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
 try {
@@ -14,7 +15,7 @@ try {
                 guildConfig.birthdayChannelId = channel.id;
                 await setGuildConfig(client, guildId, guildConfig);
 
-                return interaction.reply({
+                return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         successEmbed(
                             "🎂 Birthday Announcements Enabled",
@@ -27,7 +28,7 @@ try {
                 guildConfig.birthdayChannelId = null;
                 await setGuildConfig(client, guildId, guildConfig);
 
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             "🎂 Birthday Announcements Disabled",
@@ -39,7 +40,7 @@ try {
             }
         } catch (error) {
             console.error("config_birthday_toggle error:", error);
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Configuration Error",

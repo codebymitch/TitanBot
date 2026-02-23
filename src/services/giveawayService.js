@@ -197,7 +197,6 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
             embed.addFields({ name: '⏰ Ends', value: `<t:${Math.floor(endTime / 1000)}:R>`, inline: false });
         }
 
-        embed.setFooter({ text: `Giveaway ID: ${giveaway.messageId}` });
         embed.setTimestamp();
         
         return embed;

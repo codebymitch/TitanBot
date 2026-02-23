@@ -5,11 +5,14 @@ import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationButton, handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
 import { MessageTemplates } from '../utils/messageTemplates.js';
+import { InteractionHelper } from '../utils/interactionHelper.js';
 
 export default {
   name: Events.InteractionCreate,
   async execute(interaction, client) {
     try {
+      InteractionHelper.patchInteractionResponses(interaction);
+
       if (interaction.isChatInputCommand()) {
         try {
           logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`);

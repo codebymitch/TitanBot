@@ -2,10 +2,11 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logEvent } from '../../../utils/moderation.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
 if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -15,7 +16,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
             });
         }
         if (!client.db) {
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed("Database Error", "Database not initialized."),
                 ],
@@ -49,7 +50,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
             const channel = interaction.guild.channels.cache.get(entityId);
             entityName = channel ? `#${channel.name}` : `ID: ${entityId}`;
         } else {
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Invalid Type",
@@ -63,7 +64,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
 
         if (subcommand === "add") {
             if (targetArray.includes(entityId)) {
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Already Filtered",
@@ -77,7 +78,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
         } else if (subcommand === "remove") {
             const index = targetArray.indexOf(entityId);
             if (index === -1) {
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Not Filtered",
@@ -123,12 +124,12 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 }
             });
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [successEmbed("Success!", successMessage)],
             });
         } catch (error) {
             console.error("Error saving log filter:", error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Database Error",

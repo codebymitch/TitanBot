@@ -5,6 +5,7 @@ import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("warnings")
@@ -28,7 +29,7 @@ export default {
             const totalWarns = validWarnings.length;
 
             if (totalWarns === 0) {
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         createEmbed({ 
                             title: `Warnings: ${target.tag}`, 
@@ -73,7 +74,7 @@ export default {
                 }
             });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
         } catch (error) {
             logger.error('Warnings command error:', error);
             await handleInteractionError(interaction, error, { subtype: 'warnings_view_failed' });

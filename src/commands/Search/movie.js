@@ -51,7 +51,7 @@ export default {
                     guildId: interaction.guildId,
                     commandName: 'movie'
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Command Disabled",
@@ -67,7 +67,7 @@ export default {
                     guildId: interaction.guildId,
                     commandName: 'movie'
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Configuration Error",
@@ -106,7 +106,7 @@ timeout: 8000,
             );
 
             if (!searchResponse.data?.results?.length) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Not Found",
@@ -186,7 +186,7 @@ timeout: 8000,
                     {
                         name: "Rating",
                         value: result.vote_average
-                            ? `â­ ${result.vote_average.toFixed(1)}/10 (${result.vote_count.toLocaleString()} votes)`
+                            ? `⭐ ${result.vote_average.toFixed(1)}/10 (${result.vote_count.toLocaleString()} votes)`
                             : "N/A",
                         inline: true,
                     },
@@ -218,7 +218,7 @@ timeout: 8000,
                 );
             }
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Movie information retrieved', {
                 userId: interaction.user.id,
@@ -240,11 +240,11 @@ timeout: 8000,
 
             
             if (error.response?.status === 404) {
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Not Found', 'The requested movie/TV show could not be found.')]
                 });
             } else if (error.response?.status === 401) {
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Configuration Error', 'Invalid TMDB API key. Please contact the bot administrator.')],
                     flags: MessageFlags.Ephemeral
                 });

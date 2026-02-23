@@ -122,7 +122,7 @@ return b.net_worth - a.net_worth;
                 text: `Your Rank: ${userRank > 0 ? userRank : "Not Ranked"} | Data sorted by ${fieldNameMap[sortBy]}`,
             });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'eleaderboard' })
 };
 

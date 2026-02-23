@@ -8,6 +8,7 @@ import { handleList } from './modules/counter_list.js';
 import { handleUpdate } from './modules/counter_update.js';
 import { handleDelete } from './modules/counter_delete.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("counter")
@@ -23,7 +24,7 @@ export default {
                         .setDescription("The type of counter to create")
                         .setRequired(true)
                         .addChoices(
-                            { name: "members and bots", value: "members" },
+                            { name: "members + bots", value: "members" },
                             { name: "members only", value: "members_only" },
                             { name: "bots only", value: "bots" }
                         )
@@ -67,16 +68,10 @@ export default {
                         .setDescription("The new counter type")
                         .setRequired(false)
                         .addChoices(
-                            { name: "members and bots", value: "members" },
+                            { name: "members + bots", value: "members" },
                             { name: "members only", value: "members_only" },
                             { name: "bots only", value: "bots" }
                         )
-                )
-                .addChannelOption(option =>
-                    option
-                        .setName("channel")
-                        .setDescription("The new channel for the counter")
-                        .setRequired(false)
                 )
         )
         .addSubcommand(subcommand =>
@@ -109,7 +104,7 @@ export default {
                     await handleDelete(interaction, client);
                     break;
                 default:
-                    await interaction.reply({
+                    await InteractionHelper.safeReply(interaction, {
                         embeds: [errorEmbed("Unknown subcommand.")],
                         flags: MessageFlags.Ephemeral
                     });
@@ -124,7 +119,7 @@ export default {
             });
 
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
+                await InteractionHelper.safeReply(interaction, { embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
             } else {
                 await interaction.followUp({ embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
             }

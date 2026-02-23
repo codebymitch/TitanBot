@@ -3,6 +3,7 @@ import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('generatepassword')
@@ -27,6 +28,19 @@ export default {
                 .setRequired(false)),
 
     async execute(interaction) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, {
+            flags: MessageFlags.Ephemeral
+        });
+
+        if (!deferSuccess) {
+            logger.warn('GeneratePassword interaction defer failed', {
+                userId: interaction.user?.id,
+                guildId: interaction.guildId,
+                commandName: 'generatepassword'
+            });
+            return;
+        }
+
         try {
             const length = interaction.options.getInteger('length') || 16;
                 const includeUppercase = interaction.options.getBoolean('uppercase') ?? true;
@@ -34,9 +48,8 @@ export default {
                 const includeSymbols = interaction.options.getBoolean('symbols') ?? true;
                 
                 if (length < 8 || length > 50) {
-                    await interaction.reply({
+                    await InteractionHelper.safeEditReply(interaction, {
                         embeds: [errorEmbed('❌ Invalid Length', 'Password must be 8-50 characters. You provided: ' + length)],
-                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -128,9 +141,8 @@ strengthColor = getColor('warning');
                 `**Contains:** ${hasLower ? 'Lowercase' : ''}${hasUpper ? ', Uppercase' : ''}${hasNumber ? ', Numbers' : ''}${hasSymbol ? ', Symbols' : ''}`
             ).setColor(strengthColor);
             
-            await interaction.reply({ 
+            await InteractionHelper.safeEditReply(interaction, { 
                 embeds: [embed],
-                flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             await handleInteractionError(interaction, error, {

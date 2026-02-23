@@ -74,7 +74,7 @@ try {
             if (
                 !/^[0-9+\-*/.()^%! ,<>=&|~?:\[\]{}a-z√π∞°]+$/i.test(expression)
             ) {
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "❌ Invalid Expression",
@@ -97,7 +97,7 @@ try {
 
             for (const pattern of dangerousPatterns) {
                 if (pattern.test(expression)) {
-                    return interaction.editReply({
+                    return InteractionHelper.safeEditReply(interaction, {
                         embeds: [
                             errorEmbed(
                                 "🔒 Security Alert",
@@ -187,7 +187,7 @@ try {
                         `*Use the buttons below to perform operations with the result.*`,
                 );
 
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [embed],
                     components: [row],
                 });
@@ -366,7 +366,7 @@ const BUTTON_TIMEOUT = 300000;
 
                 const embed = errorEmbed('Calculation Error', errorMessage);
                 embed.setColor(getColor('error'));
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [embed],
                 });
             }

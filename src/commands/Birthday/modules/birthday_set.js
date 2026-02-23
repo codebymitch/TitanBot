@@ -4,10 +4,11 @@ import { setBirthday } from '../../../services/birthdayService.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
         try {
-            await interaction.deferReply();
+            await InteractionHelper.safeDefer(interaction);
 
             const month = interaction.options.getInteger("month");
             const day = interaction.options.getInteger("day");
@@ -17,7 +18,7 @@ export default {
             
             const result = await setBirthday(client, guildId, userId, month, day);
             
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [successEmbed(
                     `Your birthday has been set to **${result.data.monthName} ${result.data.day}**!`,
                     "Birthday Set! 🎂"

@@ -89,7 +89,7 @@ userData.lastMine = now;
                 })
                 .setFooter({ text: `Next mine available in 1 hour.` });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'mine' })
 };
 

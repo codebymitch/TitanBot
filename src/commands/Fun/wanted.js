@@ -4,6 +4,7 @@ import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { sanitizeInput } from '../../utils/sanitization.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("wanted")
@@ -25,7 +26,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
 
       const targetUser = interaction.options.getUser("user");
       const crimeRaw = interaction.options.getString("crime");
@@ -54,8 +55,8 @@ export default {
       const bounty = `$${bountyAmount.toLocaleString()} USD`;
 
       const embed = createEmbed({
-        color: 0x964b00,
-        title: `💥 ððˆð† ððŽð”ðð“ð˜: WANTED! 💥`,
+        color: 'primary',
+        title: '💥 BIG BOUNTY: WANTED! 💥',
         description: `**CRIMINAL:** ${targetUser.tag}\n**CRIME:** ${crime}`,
         fields: [
           {
@@ -72,7 +73,7 @@ export default {
         },
       });
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.debug(`Wanted command executed by user ${interaction.user.id} for ${targetUser.id} in guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Wanted command error:', error);

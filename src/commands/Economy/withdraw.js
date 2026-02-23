@@ -4,6 +4,7 @@ import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../../utils/
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('withdraw')
@@ -17,7 +18,7 @@ export default {
         ),
 
     execute: withErrorHandling(async (interaction, config, client) => {
-        await interaction.deferReply();
+        await InteractionHelper.safeDefer(interaction);
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -80,6 +81,6 @@ export default {
                     },
                 );
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'withdraw' })
 };

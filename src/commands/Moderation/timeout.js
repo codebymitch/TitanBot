@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 const durationChoices = [
     { name: "5 minutes", value: 5 },
     { name: "10 minutes", value: 10 },
@@ -108,7 +109,7 @@ export default {
                 }
             });
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
                         `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
@@ -118,7 +119,7 @@ export default {
             });
         } catch (error) {
             logger.error('Timeout command error:', error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         error.userMessage || "An unexpected error occurred during the timeout action. Please check my role permissions.",

@@ -1,6 +1,81 @@
 import { logger } from '../utils/logger.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
+export const COUNTER_TYPE_CONFIG = {
+  members: {
+    label: 'Members + Bots',
+    baseName: 'Members & Bots',
+    emoji: '👥'
+  },
+  members_only: {
+    label: 'Members Only',
+    baseName: 'Members',
+    emoji: '👤'
+  },
+  bots: {
+    label: 'Bots Only',
+    baseName: 'Bots',
+    emoji: '🤖'
+  }
+};
+
+function getCounterConfig(type) {
+  return COUNTER_TYPE_CONFIG[type] || {
+    label: 'Unknown',
+    baseName: 'Counter',
+    emoji: '❓'
+  };
+}
+
+export function getCounterTypeLabel(type) {
+  return getCounterConfig(type).label;
+}
+
+export function getCounterBaseName(type) {
+  return getCounterConfig(type).baseName;
+}
+
+export function getCounterEmoji(type) {
+  return getCounterConfig(type).emoji;
+}
+
+export async function getGuildCounterStats(guild) {
+  let memberCollection = guild.members.cache;
+
+  try {
+    memberCollection = await guild.members.fetch();
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug(`Failed to fetch all guild members for ${guild.id}, using cache only`, error);
+    }
+  }
+
+  const botCount = memberCollection.filter((member) => member.user.bot).size;
+  const totalCount = typeof guild.memberCount === 'number' ? guild.memberCount : memberCollection.size;
+  const humanCount = Math.max(totalCount - botCount, 0);
+
+  return {
+    totalCount,
+    botCount,
+    humanCount
+  };
+}
+
+export async function getCounterCount(guild, type) {
+  const stats = await getGuildCounterStats(guild);
+
+  switch (type) {
+    case 'members':
+      return stats.totalCount;
+    case 'bots':
+      return stats.botCount;
+    case 'members_only':
+      return stats.humanCount;
+    default:
+      return null;
+  }
+}
+
 
 function isValidCounterShape(counter) {
   return Boolean(
@@ -62,32 +137,13 @@ export async function updateCounter(client, guild, counter) {
       return false;
     }
 
-    let count;
-    switch (type) {
-      case "members":
-        count = guild.memberCount;
-        if (process.env.NODE_ENV !== 'production') {
-          logger.debug(`Member count for guild ${guild.id}: ${count}`);
-        }
-        break;
-      case "bots":
-        count = guild.members.cache.filter((m) => m.user.bot).size;
-        if (process.env.NODE_ENV !== 'production') {
-          logger.debug(`Bot count for guild ${guild.id}: ${count}`);
-        }
-        break;
-      case "members_only":
-        count = guild.members.cache.filter((m) => !m.user.bot).size;
-        if (process.env.NODE_ENV !== 'production') {
-          logger.debug(`Human count for guild ${guild.id}: ${count}`);
-        }
-        break;
-      default:
-        logger.error('Unknown counter type:', type);
-        return false;
+    const count = await getCounterCount(guild, type);
+    if (count === null) {
+      logger.error('Unknown counter type:', type);
+      return false;
     }
 
-    const baseName = channel.name.replace(/\s*[:]\s*\d+$/, '').trim();
+    const baseName = getCounterBaseName(type);
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`Base name: "${baseName}", Current name: "${channel.name}"`);
     }
@@ -116,7 +172,7 @@ export async function updateCounter(client, guild, counter) {
               fields: [
                 {
                   name: '📊 Counter Type',
-                  value: type.charAt(0).toUpperCase() + type.slice(1),
+                  value: getCounterTypeLabel(type),
                   inline: true
                 },
                 {

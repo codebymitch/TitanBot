@@ -8,6 +8,7 @@ import loggingFilter from './modules/config_logging_filter.js';
 import reportsSetchannel from './modules/config_reports_setchannel.js';
 import premiumSetrole from './modules/config_premium_setrole.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("config")
@@ -155,7 +156,7 @@ export default {
 
     async execute(interaction, config, client) {
         if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -192,7 +193,7 @@ export default {
                 }
             }
 
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed("Error", "Unknown subcommand or subcommand group."),
                 ],
@@ -212,9 +213,9 @@ export default {
             };
             
             if (interaction.deferred || interaction.replied) {
-                return interaction.editReply(errorMessage);
+                return InteractionHelper.safeEditReply(interaction, errorMessage);
             } else {
-                return interaction.editReply(errorMessage);
+                return InteractionHelper.safeEditReply(interaction, errorMessage);
             }
         }
     },

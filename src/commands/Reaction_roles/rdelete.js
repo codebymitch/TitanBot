@@ -118,7 +118,7 @@ export default {
                 ? '✅ Reaction role message has been deleted from both Discord and the database.'
                 : '✅ Reaction role message has been deleted from the database.\n⚠️ The Discord message could not be found or deleted.';
             
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [successEmbed('Success', responseMessage)]
             });
 

@@ -1,5 +1,6 @@
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
+import { getUserTicketCount } from '../../../services/ticket.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
@@ -21,13 +22,7 @@ export default {
             const guildConfig = await getGuildConfig(client, guildId);
             const maxTickets = guildConfig.maxTicketsPerUser || 3;
 
-            const ticketChannels = interaction.guild.channels.cache.filter(
-                channel => channel.name.startsWith('ticket-') && 
-                channel.topic && 
-                channel.topic.includes(user.id)
-            );
-
-            const openTicketCount = ticketChannels.size;
+            const openTicketCount = await getUserTicketCount(guildId, user.id);
 
             const embed = infoEmbed(
                 `🎫 Ticket Limit Check: ${user.tag}`,
@@ -38,7 +33,7 @@ export default {
                     : '✅ This user can create more tickets.')
             );
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Ticket limit check completed', {
                 userId: interaction.user.id,
