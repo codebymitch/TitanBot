@@ -65,7 +65,7 @@ export default {
             
             if (!message || message.trim().length === 0) {
                 logger.warn(`[Welcome] Empty message provided by ${interaction.user.tag} in ${guild.name}`);
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Invalid Input', 'Welcome message cannot be empty')],
                     flags: MessageFlags.Ephemeral
                 });
@@ -77,7 +77,7 @@ export default {
                     new URL(image);
                 } catch (e) {
                     logger.warn(`[Welcome] Invalid image URL provided by ${interaction.user.tag}: ${image}`);
-                    return await interaction.editReply({
+                    return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [errorEmbed('Invalid Image URL', 'Please provide a valid image URL (must start with http:// or https://')],
                         flags: MessageFlags.Ephemeral
                     });
@@ -115,10 +115,10 @@ export default {
                     embed.setImage(image);
                 }
 
-                await interaction.editReply({ embeds: [embed] });
+                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             } catch (error) {
                 logger.error(`[Welcome] Failed to setup welcome system for guild ${guild.id}:`, error);
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
                         'Setup Failed',
                         'An error occurred while configuring the welcome system. Please try again.',
@@ -139,13 +139,13 @@ export default {
                 });
 
                 logger.info(`[Welcome] Toggled to ${newStatus ? 'enabled' : 'disabled'} by ${interaction.user.tag} in guild ${guild.name} (${guild.id})`);
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     content: `✅ Welcome messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
                     flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
                 logger.error(`[Welcome] Failed to toggle welcome system for guild ${guild.id}:`, error);
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
                         'Toggle Failed',
                         'An error occurred while toggling welcome messages. Please try again.',

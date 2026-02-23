@@ -10,6 +10,7 @@ import { checkUserPermissions, botHasPermission } from '../../utils/permissionGu
 import { getLevelingConfig, saveLevelingConfig } from '../../services/leveling.js';
 import { createEmbed } from '../../utils/embeds.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('levelconfig')
@@ -79,7 +80,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
 
       
       const hasPermission = await checkUserPermissions(
@@ -99,7 +100,7 @@ export default {
 
           await saveLevelingConfig(client, interaction.guildId, levelingConfig);
 
-          await interaction.editReply({
+          await InteractionHelper.safeEditReply(interaction, {
             embeds: [
               createEmbed({
                 title: '✅ Leveling System Updated',
@@ -129,7 +130,7 @@ export default {
 
           await saveLevelingConfig(client, interaction.guildId, levelingConfig);
 
-          await interaction.editReply({
+          await InteractionHelper.safeEditReply(interaction, {
             embeds: [
               createEmbed({
                 title: '✅ Level Up Channel Set',
@@ -158,7 +159,7 @@ export default {
           levelingConfig.xpRange = { min, max };
           await saveLevelingConfig(client, interaction.guildId, levelingConfig);
 
-          await interaction.editReply({
+          await InteractionHelper.safeEditReply(interaction, {
             embeds: [
               createEmbed({
                 title: '✅ XP Range Updated',
@@ -184,7 +185,7 @@ export default {
 
           await saveLevelingConfig(client, interaction.guildId, levelingConfig);
 
-          await interaction.editReply({
+          await InteractionHelper.safeEditReply(interaction, {
             embeds: [
               createEmbed({
                 title: '✅ Level Up Message Updated',

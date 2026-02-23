@@ -1,7 +1,7 @@
 import { getColor } from '../../../config/bot.js';
 import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed } from '../../../utils/embeds.js';
-import { getServerCounters, saveServerCounters } from '../../../services/counterService.js';
+import { getServerCounters, saveServerCounters, getCounterEmoji, getCounterTypeLabel } from '../../../services/counterService.js';
 import { logger } from '../../../utils/logger.js';
 
 
@@ -9,13 +9,14 @@ import { logger } from '../../../utils/logger.js';
 
 
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export async function handleDelete(interaction, client) {
     const guild = interaction.guild;
     const counterId = interaction.options.getString("counter-id");
     
     // Defer reply immediately to ensure interaction is acknowledged
     try {
-        await interaction.deferReply();
+        await InteractionHelper.safeDefer(interaction);
     } catch (error) {
         logger.error("Failed to defer reply:", error);
         return;
@@ -23,7 +24,7 @@ export async function handleDelete(interaction, client) {
 
     // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.editReply({ 
+        await InteractionHelper.safeEditReply(interaction, { 
             embeds: [errorEmbed("You need **Manage Channels** permission to delete counters.")]
         }).catch(logger.error);
         return;
@@ -33,7 +34,7 @@ export async function handleDelete(interaction, client) {
         const counters = await getServerCounters(client, guild.id);
 
         if (counters.length === 0) {
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed("No counters found to delete.")]
             }).catch(logger.error);
             return;
@@ -41,7 +42,7 @@ export async function handleDelete(interaction, client) {
 
         const counterToDelete = counters.find(c => c.id === counterId);
         if (!counterToDelete) {
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed(`Counter with ID \`${counterId}\` not found. Use \`/counter list\` to see all counters.`)]
             }).catch(logger.error);
             return;
@@ -66,11 +67,11 @@ export async function handleDelete(interaction, client) {
                 .setStyle(ButtonStyle.Secondary)
         );
 
-        await interaction.editReply({ embeds: [embed], components: [row] }).catch(logger.error);
+        await InteractionHelper.safeEditReply(interaction, { embeds: [embed], components: [row] }).catch(logger.error);
 
     } catch (error) {
         logger.error("Error in handleDelete:", error);
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]
         }).catch(logger.error);
     }
@@ -146,12 +147,7 @@ export async function performDeletionByCounterId(client, guild, counterId) {
 
 
 function getCounterTypeDisplay(type) {
-    const types = {
-        members: "👥 Members",
-        bots: "🤖 Bots",
-        members_only: "👤 Humans"
-    };
-    return types[type] || "❓ Unknown";
+    return `${getCounterEmoji(type)} ${getCounterTypeLabel(type)}`;
 }
 
 

@@ -37,18 +37,18 @@ export default {
                     channelId: interaction.channelId,
                     guildId: interaction.guildId
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [successEmbed("First Message", "No messages found in this channel!")],
                 });
             }
             
             const messageLink = `https://discord.com/channels/${interaction.guildId}/${interaction.channelId}/${firstMessage.id}`;
             
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
                         "First Message in #" + interaction.channel.name,
-                        `[Jump to first message](${messageLink})`
+                        `Message Link: ${messageLink}`
                     ),
                 ],
             });

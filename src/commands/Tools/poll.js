@@ -107,7 +107,7 @@ export default {
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
                 
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     content: '✅ Poll created successfully!',
                 });
         } catch (error) {

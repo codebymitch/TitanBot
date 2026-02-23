@@ -10,6 +10,7 @@ import {
     ButtonBuilder,
     ButtonStyle
 } from 'discord.js';
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
@@ -88,7 +89,7 @@ export default {
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
 
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [embed],
             components: [row],
         }).catch(error => {
@@ -148,7 +149,7 @@ time: 60000
                     selectMenu.setDisabled(true)
                 );
                 
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     components: [disabledRow],
                 }).catch(() => {});
             }

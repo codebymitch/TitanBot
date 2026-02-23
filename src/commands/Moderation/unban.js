@@ -4,6 +4,7 @@ import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unban")
@@ -35,7 +36,7 @@ export default {
                     reason
                 });
 
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             "✅ User Unbanned",

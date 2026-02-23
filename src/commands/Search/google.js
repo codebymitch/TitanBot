@@ -4,6 +4,7 @@ import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('google')
@@ -24,7 +25,7 @@ export default {
             })
             .setFooter({ text: 'Google Search Results' });
 
-            await interaction.reply({ embeds: [embed] });
+            await InteractionHelper.safeReply(interaction, { embeds: [embed] });
             
             logger.info('Google search link generated', {
                 userId: interaction.user.id,

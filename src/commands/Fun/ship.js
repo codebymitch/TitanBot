@@ -4,6 +4,7 @@ import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { sanitizeInput } from '../../utils/sanitization.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 function stringToHash(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -36,7 +37,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
 
       const name1Raw = interaction.options.getString("name1");
       const name2Raw = interaction.options.getString("name2");
@@ -60,7 +61,7 @@ export default {
           "💖 Ship Score",
           `**${name1}** can't be shipped with themselves! Please choose two different people.`
         );
-        return await interaction.editReply({ embeds: [embed] });
+        return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       }
 
       const sortedNames = [name1, name2].sort();
@@ -91,7 +92,7 @@ export default {
         `Compatibility: **${score}%**\n\n\`${progressBar}\`\n\n*${description}*`,
       );
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.debug(`Ship command executed by user ${interaction.user.id} in guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Ship command error:', error);

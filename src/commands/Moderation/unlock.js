@@ -4,6 +4,7 @@ import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unlock")
@@ -20,7 +21,7 @@ export default {
                 PermissionFlagsBits.ManageChannels,
             )
         )
-            return await interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -40,7 +41,7 @@ export default {
                 currentPermissions.has(PermissionFlagsBits.SendMessages) ===
                     null
             ) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Channel Already Unlocked",
@@ -91,7 +92,7 @@ export default {
                 }
             });
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
                         `🔓 **Channel Unlocked**`,
@@ -101,7 +102,7 @@ export default {
             });
         } catch (error) {
             logger.error('Unlock command error:', error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "An unexpected error occurred while trying to unlock the channel. Check my permissions (I need 'Manage Channels').",

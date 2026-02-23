@@ -34,7 +34,7 @@ export default {
                     : '📭 Users will NOT receive a DM when their ticket is closed.')
             );
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Ticket DM notification setting toggled', {
                 userId: interaction.user.id,

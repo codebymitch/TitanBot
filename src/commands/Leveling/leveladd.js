@@ -10,6 +10,7 @@ import { checkUserPermissions } from '../../utils/permissionGuard.js';
 import { addLevels } from '../../services/leveling.js';
 import { createEmbed } from '../../utils/embeds.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('leveladd')
@@ -39,7 +40,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
 
       
       const hasPermission = await checkUserPermissions(
@@ -65,7 +66,7 @@ export default {
       
       const userData = await addLevels(client, interaction.guildId, targetUser.id, levelsToAdd);
 
-      await interaction.editReply({
+      await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           createEmbed({
             title: '✅ Levels Added',

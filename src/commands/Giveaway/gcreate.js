@@ -11,6 +11,7 @@ import {
     createGiveawayButtons 
 } from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -174,7 +175,7 @@ export default {
             logger.info(`Giveaway created successfully: ${giveawayMessage.id} in ${targetChannel.name}`);
 
             
-            await interaction.reply({
+            await InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
                         `Giveaway Started! 🎉`,

@@ -4,6 +4,7 @@ import { getConfirmationButtons } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('wipedata')
@@ -27,7 +28,7 @@ export default {
 
             const confirmButtons = getConfirmationButtons('wipedata');
 
-            await interaction.reply({
+            await InteractionHelper.safeReply(interaction, {
                 embeds: [embed],
                 components: [confirmButtons],
                 flags: MessageFlags.Ephemeral

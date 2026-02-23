@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("flip")
@@ -19,7 +20,7 @@ export default {
         `The coin landed on... **${result}** ${emoji}!`,
       );
 
-      await interaction.reply({ embeds: [embed] });
+      await InteractionHelper.safeReply(interaction, { embeds: [embed] });
       logger.debug(`Flip command executed by user ${interaction.user.id} in guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Flip command error:', error);

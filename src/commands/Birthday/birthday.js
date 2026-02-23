@@ -9,6 +9,7 @@ import birthdayList from './modules/birthday_list.js';
 import birthdayRemove from './modules/birthday_remove.js';
 import nextBirthdays from './modules/next_birthdays.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('birthday')
@@ -77,7 +78,7 @@ export default {
                 case 'next':
                     return await nextBirthdays.execute(interaction, config, client);
                 default:
-                    return interaction.reply({
+                    return InteractionHelper.safeReply(interaction, {
                         embeds: [errorEmbed('Error', 'Unknown subcommand')],
                         flags: MessageFlags.Ephemeral
                     });

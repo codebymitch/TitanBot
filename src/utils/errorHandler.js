@@ -201,8 +201,9 @@ export async function handleInteractionError(interaction, error, context = {}) {
     };
     
     if (isUserError) {
-        
-        logger.debug(`User Error [${errorType.toUpperCase()}]: ${error.message}`, logData);
+        if (errorType !== ErrorTypes.RATE_LIMIT) {
+            logger.debug(`User Error [${errorType.toUpperCase()}]: ${error.message}`, logData);
+        }
     } else {
         // System errors (database, network, etc.) - unexpected failures
         logger.error(`System Error [${errorType.toUpperCase()}]`, {

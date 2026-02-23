@@ -4,16 +4,17 @@ import { getUpcomingBirthdays } from '../../../services/birthdayService.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
         try {
-            await interaction.deferReply();
+            await InteractionHelper.safeDefer(interaction);
             
             
             const next5 = await getUpcomingBirthdays(client, interaction.guildId, 5);
 
             if (next5.length === 0) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         createEmbed({
                             title: '❌ No Birthdays Found',
@@ -56,7 +57,7 @@ export default {
                 iconURL: interaction.guild.iconURL()
             });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Next birthdays retrieved successfully', {
                 userId: interaction.user.id,

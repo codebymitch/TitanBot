@@ -55,7 +55,7 @@ export default {
             
             if (!message || message.trim().length === 0) {
                 logger.warn(`[Goodbye] Empty message provided by ${interaction.user.tag} in ${guild.name}`);
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Invalid Input', 'Goodbye message cannot be empty')],
                     flags: MessageFlags.Ephemeral
                 });
@@ -67,7 +67,7 @@ export default {
                     new URL(image);
                 } catch (e) {
                     logger.warn(`[Goodbye] Invalid image URL provided by ${interaction.user.tag}: ${image}`);
-                    return await interaction.editReply({
+                    return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [errorEmbed('Invalid Image URL', 'Please provide a valid image URL (must start with http:// or https://')],
                         flags: MessageFlags.Ephemeral
                     });
@@ -109,10 +109,10 @@ export default {
                     embed.setImage(image);
                 }
 
-                await interaction.editReply({ embeds: [embed] });
+                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             } catch (error) {
                 logger.error(`[Goodbye] Failed to setup goodbye system for guild ${guild.id}:`, error);
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
                         'Setup Failed',
                         'An error occurred while configuring the goodbye system. Please try again.',
@@ -133,13 +133,13 @@ export default {
                 });
 
                 logger.info(`[Goodbye] Toggled to ${newStatus ? 'enabled' : 'disabled'} by ${interaction.user.tag} in guild ${guild.name} (${guild.id})`);
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     content: `✅ Goodbye messages have been ${newStatus ? 'enabled' : 'disabled'}.`,
                     flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
                 logger.error(`[Goodbye] Failed to toggle goodbye system for guild ${guild.id}:`, error);
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
                         'Toggle Failed',
                         'An error occurred while toggling goodbye messages. Please try again.',

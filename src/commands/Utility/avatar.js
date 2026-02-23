@@ -3,6 +3,7 @@ import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("avatar")
@@ -26,7 +27,7 @@ export default {
       })
         .setImage(avatarUrl);
 
-      await interaction.reply({ embeds: [embed] });
+      await InteractionHelper.safeReply(interaction, { embeds: [embed] });
       logger.info(`Avatar command executed`, {
         userId: interaction.user.id,
         targetUserId: user.id,

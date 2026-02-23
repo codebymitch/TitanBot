@@ -4,10 +4,11 @@ import { deleteBirthday } from '../../../services/birthdayService.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
         try {
-            await interaction.deferReply();
+            await InteractionHelper.safeDefer(interaction);
 
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
@@ -16,14 +17,14 @@ export default {
             const result = await deleteBirthday(client, guildId, userId);
 
             if (result.success) {
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [successEmbed(
                         "Your birthday has been successfully removed from the server.",
                         "Birthday Removed 🗑️"
                     )]
                 });
             } else if (result.notFound) {
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [createEmbed({
                         title: '❌ No Birthday Found',
                         description: "You don't have a birthday set to remove.",

@@ -126,7 +126,7 @@ export default {
                     iconURL: receiver.displayAvatarURL(),
                 });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
 
             logger.info(`[ECONOMY] Payment sent successfully`, {
                 senderId,

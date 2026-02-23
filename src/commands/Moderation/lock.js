@@ -4,6 +4,7 @@ import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("lock")
@@ -16,7 +17,7 @@ export default {
   async execute(interaction, config, client) {
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
-      return await interaction.editReply({
+      return await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
             "Permission Denied",
@@ -31,7 +32,7 @@ export default {
     try {
       const currentPermissions = channel.permissionsFor(everyoneRole);
       if (currentPermissions.has(PermissionFlagsBits.SendMessages) === false) {
-        return await interaction.editReply({
+        return await InteractionHelper.safeEditReply(interaction, {
           embeds: [
             errorEmbed(
               "Channel Already Locked",
@@ -76,7 +77,7 @@ export default {
         }
       });
 
-      await interaction.editReply({
+      await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           successEmbed(
             `🔒 **Channel Locked**`,
@@ -86,7 +87,7 @@ export default {
       });
     } catch (error) {
       logger.error('Lock command error:', error);
-      await interaction.editReply({
+      await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
             "An unexpected error occurred while trying to lock the channel. Check my permissions (I need 'Manage Channels').",

@@ -240,7 +240,7 @@ export default {
                             },
                             {
                                 name: '🔗 Message Link',
-                                value: `[Jump to Message](${message.url})`,
+                                value: message.url,
                                 inline: false
                             }
                         ]
@@ -250,8 +250,8 @@ export default {
                 logger.warn('Failed to log reaction role creation:', logError);
             }
 
-            await interaction.editReply({
-                embeds: [successEmbed('Success', `✅ Reaction role message created in ${channel}!\n\n[Jump to Message](${message.url})`)]
+            await InteractionHelper.safeEditReply(interaction, {
+                embeds: [successEmbed('Success', `✅ Reaction role message created in ${channel}!\n\n${message.url}`)]
             });
 
         } catch (error) {

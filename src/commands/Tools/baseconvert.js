@@ -138,7 +138,7 @@ export default {
             if (!cleanNumber) {
                 const embed = errorEmbed('❌ Empty Input', 'You must provide a number to convert.\n\n**Example:** `/baseconvert number:1010 from:BIN to:DEC`');
                 embed.setColor(getColor('error'));
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [embed],
                 });
             }
@@ -163,7 +163,7 @@ export default {
                 );
                 embed.setColor(getColor('error'));
                 logger.warn(`Invalid base conversion input: ${cleanNumber} for base ${fromBase}`);
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [embed],
                 });
             }
@@ -179,7 +179,7 @@ export default {
                 logger.error('Base conversion parse error:', error);
                 const embed = errorEmbed('⚠️ Conversion Failed', 'The number is too large to process.\n\nTry with a smaller number.');
                 embed.setColor(getColor('error'));
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [embed],
                 });
             }
@@ -199,13 +199,13 @@ export default {
                     );
                     embed.setColor(getColor('success'));
                     
-                    await interaction.editReply({ embeds: [embed] });
+                    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
                     
                 } catch (error) {
                     logger.error(`Base conversion error to ${toName}:`, error);
                     const embed = errorEmbed(`⚠️ Failed to Convert to ${toName}`, 'The result would be too large or incompatible.\n\nTry with a smaller number or different target base.');
                     embed.setColor(getColor('error'));
-                    await interaction.editReply({
+                    await InteractionHelper.safeEditReply(interaction, {
                         embeds: [embed]
                     });
                 }
@@ -232,7 +232,7 @@ export default {
                 );
                 embed.setColor(getColor('primary'));
                 
-                await interaction.editReply({ embeds: [embed] });
+                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             }
             
         } catch (error) {

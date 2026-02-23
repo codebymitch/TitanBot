@@ -6,10 +6,47 @@ import { handleInteractionError } from './errorHandler.js';
 const INTERACTION_TIMEOUT_MS = 15 * 60 * 1000; 
 const DEFAULT_DEFER_OPTIONS = { flags: MessageFlags.Ephemeral };
 
+function sanitizeEditReplyOptions(options = {}) {
+    if (!options || typeof options !== 'object') {
+        return options;
+    }
+
+    const { flags, ephemeral, ...rest } = options;
+    return rest;
+}
+
 
 
 
 export class InteractionHelper {
+        static patchInteractionResponses(interaction) {
+            if (!interaction || interaction.__titanResponsePatched) {
+                return;
+            }
+
+            const originalReply = interaction.reply?.bind(interaction);
+            const originalEditReply = interaction.editReply?.bind(interaction);
+            const originalFollowUp = interaction.followUp?.bind(interaction);
+
+            if (!originalReply || !originalEditReply || !originalFollowUp) {
+                return;
+            }
+
+            interaction.reply = async (options) => {
+                if (!interaction.deferred && !interaction.replied) {
+                    return await originalReply(options);
+                }
+
+                if (interaction.deferred && !interaction.replied) {
+                    return await originalEditReply(sanitizeEditReplyOptions(options));
+                }
+
+                return await originalFollowUp(options);
+            };
+
+            interaction.__titanResponsePatched = true;
+        }
+
     
 
 
@@ -99,7 +136,7 @@ if (error.code === 10062) {
                 return await this.safeReply(interaction, options);
             }
             
-            await interaction.editReply(options);
+            await interaction.editReply(sanitizeEditReplyOptions(options));
             return true;
         } catch (error) {
 if (error.code === 10062) {
@@ -131,7 +168,17 @@ if (error.code === 40060) {
                 logger.warn(`Interaction ${interaction.id} has expired before reply, ignoring`);
                 return false;
             }
-            
+
+            if (interaction.deferred && !interaction.replied) {
+                await interaction.editReply(sanitizeEditReplyOptions(options));
+                return true;
+            }
+
+            if (interaction.replied) {
+                await interaction.followUp(options);
+                return true;
+            }
+
             await interaction.reply(options);
             return true;
         } catch (error) {

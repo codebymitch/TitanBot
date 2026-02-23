@@ -12,7 +12,7 @@ if (typeof global.ReadableStream === 'undefined') {
 import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
-import { getServerCounters, updateCounter } from './services/counterService.js';
+import { getServerCounters, saveServerCounters, updateCounter } from './services/counterService.js';
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
@@ -247,10 +247,26 @@ class TitanBot extends Client {
     for (const [guildId, guild] of this.guilds.cache) {
       try {
         const counters = await getServerCounters(this, guildId);
+        const validCounters = [];
+        const orphanedCounters = [];
+        
         for (const counter of counters) {
           if (counter && counter.type && counter.channelId && counter.enabled !== false) {
-            await updateCounter(this, guild, counter);
+            const channel = guild.channels.cache.get(counter.channelId);
+            if (channel) {
+              validCounters.push(counter);
+              await updateCounter(this, guild, counter);
+            } else {
+              orphanedCounters.push(counter);
+              logger.info(`Removing orphaned counter ${counter.id} (type: ${counter.type}, deleted channel: ${counter.channelId}) from guild ${guildId}`);
+            }
           }
+        }
+        
+        // Save cleaned counters if any were orphaned
+        if (orphanedCounters.length > 0) {
+          await saveServerCounters(this, guildId, validCounters);
+          logger.info(`Cleaned up ${orphanedCounters.length} orphaned counter(s) from guild ${guildId} during scheduled update`);
         }
       } catch (error) {
         logger.error(`Error updating counters for guild ${guildId}:`, error);
@@ -265,7 +281,6 @@ class TitanBot extends Client {
       { path: 'todoButtonLoader', type: 'default', required: false },
       { path: 'counterButtonLoader', type: 'default', required: false },
       { path: 'ticketButtonLoader', type: 'default', required: false },
-      { path: 'shopButtonLoader', type: 'default', required: false },
       { path: 'giveawayButtonLoader', type: 'named:loadGiveawayButtons', required: false },
       { path: 'helpButtonLoader', type: 'default', required: false },
       { path: 'helpSelectMenuLoader', type: 'default', required: false },

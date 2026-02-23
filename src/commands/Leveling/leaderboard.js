@@ -8,6 +8,7 @@ import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getLeaderboard, getLevelingConfig, getXpForLevel } from '../../services/leveling.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('leaderboard')
@@ -23,7 +24,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
 
       const levelingConfig = await getLevelingConfig(client, interaction.guildId);
 
@@ -77,7 +78,7 @@ export default {
         value: leaderboardText.join('\n')
       });
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.debug(`Leaderboard displayed for guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Leaderboard command error:', error);

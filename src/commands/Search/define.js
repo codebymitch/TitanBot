@@ -30,7 +30,7 @@ export default {
                     word: word,
                     guildId: interaction.guildId
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Error', 'Please enter a word with at least 2 characters.')],
                     flags: MessageFlags.Ephemeral
                 });
@@ -42,7 +42,7 @@ export default {
             );
             
             if (!response.data || response.data.length === 0) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Not Found', `No definitions found for "${word}".`)]
                 });
             }
@@ -77,7 +77,7 @@ export default {
             
             embed.setFooter({ text: 'Powered by Free Dictionary API' });
             
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Dictionary definition retrieved', {
                 userId: interaction.user.id,
@@ -98,7 +98,7 @@ export default {
             
             
             if (error.response?.status === 404) {
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Not Found', `No definitions found for "${interaction.options.getString('word')}".`)]
                 });
             } else {

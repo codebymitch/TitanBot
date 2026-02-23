@@ -4,6 +4,7 @@ import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { sanitizeMarkdown } from '../../utils/sanitization.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("dm")
@@ -38,7 +39,7 @@ export default {
         try {
             
             if (message.length > 2000) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Message Too Long",
@@ -51,7 +52,7 @@ export default {
 
             
             if (targetUser.bot) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Cannot DM Bot",
@@ -95,7 +96,7 @@ export default {
                 }
             });
 
-            return await interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
                         "DM Sent",
@@ -107,14 +108,14 @@ export default {
             logger.error('DM command error:', error);
             
 if (error.code === 50007) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed("Error", `Could not send a DM to ${targetUser.tag}. They may have DMs disabled.`),
                     ],
                 });
             }
             
-            return await interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed("Error", `Failed to send DM: ${error.message}`),
                 ],

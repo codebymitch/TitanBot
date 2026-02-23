@@ -6,6 +6,7 @@ import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getTicketPermissionContext } from '../../utils/ticketPermissions.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -23,8 +24,7 @@ export default {
                     { name: "🟢 Low", value: "low" },
                     { name: "⚪ None", value: "none" },
                 ),
-        )
-        .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
+            )
         .setDMPermission(false),
     category: "Ticket",
 
@@ -34,6 +34,29 @@ export default {
             const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
             if (!deferred) {
                 return;
+            }
+
+            const permissionContext = await getTicketPermissionContext({ client, interaction });
+            if (!permissionContext.ticketData) {
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        errorEmbed(
+                            "Not a Ticket Channel",
+                            "This command can only be used in a valid ticket channel.",
+                        ),
+                    ],
+                });
+            }
+
+            if (!permissionContext.canManageTicket) {
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        errorEmbed(
+                            "Permission Denied",
+                            "You need the `Manage Channels` permission or the configured `Ticket Staff Role` to change ticket priority.",
+                        ),
+                    ],
+                });
             }
 
             const priorityLevel = interaction.options.getString("level");
@@ -46,7 +69,7 @@ export default {
                     guildId: interaction.guildId,
                     error: result.error
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Not a Ticket Channel",
@@ -56,7 +79,7 @@ export default {
                 });
             }
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
                         "Priority Updated",

@@ -20,11 +20,11 @@ export default {
         }
 
         try {
-            const reply = await interaction.reply({
+            await InteractionHelper.safeEditReply(interaction, {
                 content: "Pinging...",
             });
 
-            const latency = reply.createdTimestamp - interaction.createdTimestamp;
+            const latency = Date.now() - interaction.createdTimestamp;
             const apiLatency = Math.round(interaction.client.ws.ping);
 
             const embed = createEmbed({ title: "🏓 Pong!", description: null }).addFields(
@@ -32,14 +32,14 @@ export default {
                 { name: "API Latency", value: `${apiLatency}ms`, inline: true },
             );
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 content: null,
                 embeds: [embed],
             });
         } catch (error) {
             console.error('Ping command error:', error);
             try {
-                return await interaction.reply({
+                return await InteractionHelper.safeReply(interaction, {
                     embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.', color: 'error' })],
                     flags: MessageFlags.Ephemeral,
                 });

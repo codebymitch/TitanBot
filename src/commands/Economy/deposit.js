@@ -134,7 +134,7 @@ export default {
                     },
                 );
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'deposit' })
 };
 

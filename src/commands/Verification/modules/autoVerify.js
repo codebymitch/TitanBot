@@ -5,6 +5,7 @@ import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js
 import { withErrorHandling, createError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { validateAutoVerifyCriteria } from '../../../services/verificationService.js';
 import { logger } from '../../../utils/logger.js';
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 const autoVerifyDefaults = botConfig.verification?.autoVerify || {};
 const minAccountAgeDays = autoVerifyDefaults.minAccountAge ?? 1;
@@ -80,7 +81,7 @@ async function handleEnable(interaction, guild, client) {
     const criteria = interaction.options.getString("criteria");
     const accountAgeDays = interaction.options.getInteger("account_age_days") || defaultAccountAgeDays;
 
-    await interaction.deferReply();
+    await InteractionHelper.safeDefer(interaction);
 
     try {
         
@@ -119,7 +120,7 @@ async function handleEnable(interaction, guild, client) {
             accountAgeDays: criteria === 'account_age' ? accountAgeDays : null
         });
 
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [successEmbed(
                 "Auto-Verification Enabled",
                 `Automatic verification has been enabled!\n\n**Criteria:** ${criteriaDescription}\n\nUsers who meet these criteria will be automatically verified when they join the server.`
@@ -133,12 +134,12 @@ async function handleEnable(interaction, guild, client) {
 }
 
 async function handleDisable(interaction, guild, client) {
-    await interaction.deferReply();
+    await InteractionHelper.safeDefer(interaction);
 
     const guildConfig = await getGuildConfig(client, guild.id);
     
     if (!guildConfig.verification?.autoVerify?.enabled) {
-        return await interaction.editReply({
+        return await InteractionHelper.safeEditReply(interaction, {
             embeds: [infoEmbed("Already Disabled", "Auto-verification is already disabled.")],
         });
     }
@@ -148,7 +149,7 @@ async function handleDisable(interaction, guild, client) {
 
     logger.info('Auto-verify disabled', { guildId: guild.id });
 
-    await interaction.editReply({
+    await InteractionHelper.safeEditReply(interaction, {
         embeds: [successEmbed(
             "Auto-Verification Disabled",
             "Automatic verification has been disabled. Users will now need to verify manually."
@@ -160,7 +161,7 @@ async function handleStatus(interaction, guild, client) {
     const guildConfig = await getGuildConfig(client, guild.id);
     
     if (!guildConfig.verification?.autoVerify?.enabled) {
-        return await interaction.reply({
+        return await InteractionHelper.safeReply(interaction, {
             embeds: [infoEmbed(
                 "Auto-Verification Status",
                 "🔴 **Status:** Disabled\n\nAuto-verification is currently disabled. Users must verify manually.\n\nUse `/autoverify enable` to enable it."
@@ -199,7 +200,7 @@ async function handleStatus(interaction, guild, client) {
         }
     );
 
-    await interaction.reply({
+    await InteractionHelper.safeReply(interaction, {
         embeds: [statusEmbed],
         flags: MessageFlags.Ephemeral
     });

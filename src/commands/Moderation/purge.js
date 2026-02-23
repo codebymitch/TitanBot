@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { checkRateLimit } from '../../utils/rateLimiter.js';
 import { getColor } from '../../config/bot.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("purge")
@@ -21,7 +22,7 @@ export default {
   async execute(interaction, config, client) {
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages))
-      return await interaction.editReply({
+      return await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
             "Permission Denied",
@@ -34,7 +35,7 @@ export default {
     const channel = interaction.channel;
 
     if (amount < 1 || amount > 100)
-      return await interaction.editReply({
+      return await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
             "Invalid Amount",
@@ -48,7 +49,7 @@ export default {
       const rateLimitKey = `purge_${interaction.user.id}`;
       const isAllowed = await checkRateLimit(rateLimitKey, 5, 60000);
       if (!isAllowed) {
-        return await interaction.editReply({
+        return await InteractionHelper.safeEditReply(interaction, {
           embeds: [
             warningEmbed(
               "You're purging messages too fast. Please wait a minute before trying again.",
@@ -95,7 +96,7 @@ export default {
         }
       });
 
-      await interaction.editReply({
+      await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
         ],
@@ -109,7 +110,7 @@ flags: MessageFlags.Ephemeral,
       }, 3000);
     } catch (error) {
       logger.error('Purge command error:', error);
-      await interaction.editReply({
+      await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
             "An unexpected error occurred during message deletion. Note: Messages older than 14 days cannot be bulk deleted.",

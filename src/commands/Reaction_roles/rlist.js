@@ -25,7 +25,7 @@ export default {
 
             if (guildReactionRoles.length === 0) {
                 logger.debug(`No reaction role messages found in guild ${interaction.guild.name}`);
-                return interaction.editReply({
+                return InteractionHelper.safeEditReply(interaction, {
                     embeds: [infoEmbed('No Reaction Roles', 'There are no reaction role messages in this server.')]
                 });
             }
@@ -76,7 +76,7 @@ export default {
                 }
             }
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             logger.info(`Reaction role list displayed to ${interaction.user.tag}, showing ${guildReactionRoles.length} messages`);
 
         } catch (error) {

@@ -3,6 +3,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, Ac
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 import {
     initializeJoinToCreate,
     getChannelConfiguration,
@@ -84,7 +85,7 @@ export default {
             }
 
             const subcommand = interaction.options.getSubcommand();
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
 
             let responseEmbed;
 
@@ -111,9 +112,9 @@ export default {
                 const errorEmbedObj = errorEmbed("⚠️ Error", errorMessage);
 
                 if (interaction.deferred) {
-                    return await interaction.editReply({ embeds: [errorEmbedObj] });
+                    return await InteractionHelper.safeEditReply(interaction, { embeds: [errorEmbedObj] });
                 } else {
-                    return await interaction.reply({ embeds: [errorEmbedObj], flags: MessageFlags.Ephemeral });
+                    return await InteractionHelper.safeReply(interaction, { embeds: [errorEmbedObj], flags: MessageFlags.Ephemeral });
                 }
             } catch (replyError) {
                 logger.error('Failed to send error message:', replyError);
@@ -201,7 +202,7 @@ async function handleSetupSubcommand(interaction, client) {
             `${category ? `• Category: ${category.name}` : '• Category: Root level'}`
         );
 
-        return await interaction.editReply({ embeds: [responseEmbed] });
+        return await InteractionHelper.safeEditReply(interaction, { embeds: [responseEmbed] });
 
     } catch (error) {
         logger.error('Error in handleSetupSubcommand:', error);
@@ -273,7 +274,7 @@ async function handleConfigSubcommand(interaction, client) {
 
         const row = new ActionRowBuilder().addComponents(nameButton, limitButton, bitrateButton, deleteButton);
 
-        const message = await interaction.editReply({
+        const message = await InteractionHelper.safeEditReply(interaction, {
             embeds: [configEmbed],
             components: [row]
         });
@@ -568,7 +569,7 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
                 .setStyle(ButtonStyle.Secondary)
         );
 
-        await interaction.reply({
+        await InteractionHelper.safeReply(interaction, {
             embeds: [errorEmbed('⚠️ Confirm Deletion', `Are you sure you want to remove **${triggerChannel.name}** from the Join to Create system?\n\nThis action cannot be undone.`)],
             components: [confirmRow],
             flags: MessageFlags.Ephemeral

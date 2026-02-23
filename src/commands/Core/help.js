@@ -4,6 +4,7 @@ import {
     ButtonBuilder,
     ButtonStyle,
 } from "discord.js";
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { createEmbed } from "../../utils/embeds.js";
 import {
     createSelectMenu,
@@ -201,11 +202,11 @@ export default {
     async execute(interaction, guildConfig, client) {
         
         const { MessageFlags } = await import('discord.js');
-        await interaction.deferReply();
+        await InteractionHelper.safeDefer(interaction);
         
         const { embeds, components } = await createInitialHelpMenu();
 
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds,
             components,
         });
@@ -218,7 +219,7 @@ export default {
                     color: "secondary",
                 });
 
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [closedEmbed],
                     components: [],
                 });

@@ -4,6 +4,7 @@ import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { addJoinToCreateTrigger, getJoinToCreateConfig } from '../../../utils/database.js';
 
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
         const category = interaction.options.getChannel('category');
@@ -47,16 +48,16 @@ export default {
 
             try {
                 if (interaction.deferred) {
-                    await interaction.editReply({ embeds: [embed] });
+                    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
                 } else {
-                    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+                    await InteractionHelper.safeReply(interaction, { embeds: [embed], flags: MessageFlags.Ephemeral });
                 }
             } catch (responseError) {
                 logger.error('Error responding to interaction:', responseError);
                 
                 try {
                     if (!interaction.replied) {
-                        await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+                        await InteractionHelper.safeReply(interaction, { embeds: [embed], flags: MessageFlags.Ephemeral });
                     }
                 } catch (e) {
                     logger.error('All response attempts failed:', e);

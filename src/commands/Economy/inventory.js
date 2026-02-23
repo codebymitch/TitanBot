@@ -65,7 +65,7 @@ export default {
                 description: inventoryDescription, 
             }).setThumbnail(interaction.user.displayAvatarURL());
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'inventory' })
 };
 

@@ -1,4 +1,4 @@
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
@@ -7,6 +7,7 @@ import { logTicketEvent } from '../utils/ticketLogging.js';
 import { logger } from '../utils/logger.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
+import { getTicketPermissionContext } from '../utils/ticketPermissions.js';
 
 async function ensureGuildContext(interaction) {
   if (interaction.inGuild()) {
@@ -21,6 +22,35 @@ async function ensureGuildContext(interaction) {
   }
 
   return false;
+}
+
+async function ensureTicketPermission(interaction, client, actionLabel, options = {}) {
+  const { allowTicketCreator = false } = options;
+
+  const context = await getTicketPermissionContext({ client, interaction });
+
+  if (!context.ticketData) {
+    await interaction.reply({
+      embeds: [errorEmbed('Not a Ticket Channel', 'This action can only be used in a valid ticket channel.')],
+      flags: MessageFlags.Ephemeral
+    });
+    return null;
+  }
+
+  const allowed = allowTicketCreator ? context.canCloseTicket : context.canManageTicket;
+  if (!allowed) {
+    const permissionMessage = allowTicketCreator
+      ? 'You must have **Manage Channels**, the configured **Ticket Staff Role**, or be the **ticket creator**.'
+      : 'You must have **Manage Channels** or the configured **Ticket Staff Role**.';
+
+    await interaction.reply({
+      embeds: [errorEmbed('Permission Denied', `${permissionMessage}\n\nYou cannot ${actionLabel}.`)],
+      flags: MessageFlags.Ephemeral
+    });
+    return null;
+  }
+
+  return context;
 }
 
 const createTicketHandler = {
@@ -139,17 +169,64 @@ const closeTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
+      if (!(await ensureTicketPermission(interaction, client, 'close this ticket', { allowTicketCreator: true }))) return;
+
+      const modal = new ModalBuilder()
+        .setCustomId('ticket_close_modal')
+        .setTitle('Close Ticket');
+
+      const reasonInput = new TextInputBuilder()
+        .setCustomId('reason')
+        .setLabel('Reason for closing (optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Add an optional reason for closing this ticket...')
+        .setRequired(false)
+        .setMaxLength(1000);
+
+      const actionRow = new ActionRowBuilder().addComponents(reasonInput);
+      modal.addComponents(actionRow);
+
+      await interaction.showModal(modal);
+    } catch (error) {
+      logger.error('Error closing ticket:', error);
+
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          embeds: [errorEmbed('Error', 'Could not open ticket close form.')],
+          flags: MessageFlags.Ephemeral
+        });
+      } else {
+        await interaction.followUp({
+          embeds: [errorEmbed('Error', 'Could not open ticket close form.')],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    }
+  }
+};
+
+const closeTicketModalHandler = {
+  name: 'ticket_close_modal',
+  async execute(interaction, client) {
+    try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      if (!(await ensureTicketPermission(interaction, client, 'close this ticket', { allowTicketCreator: true }))) return;
+
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
-      
-      const result = await closeTicket(interaction.channel, interaction.user);
-      
+
+      const providedReason = interaction.fields.getTextInputValue('reason')?.trim();
+      const reason = providedReason || 'Closed via ticket button without a specific reason.';
+
+      const result = await closeTicket(interaction.channel, interaction.user, reason);
+
       if (result.success) {
         await interaction.editReply({
           embeds: [successEmbed('Ticket Closed', 'This ticket has been closed.')],
           flags: MessageFlags.Ephemeral
         });
-        
+
         await logEvent({
           client,
           guildId: interaction.guildId,
@@ -157,7 +234,7 @@ const closeTicketHandler = {
             action: 'Ticket Closed',
             target: interaction.channel.toString(),
             executor: interaction.user.toString(),
-            reason: 'Closed via ticket button'
+            reason
           }
         });
       } else {
@@ -167,7 +244,7 @@ const closeTicketHandler = {
         });
       }
     } catch (error) {
-      logger.error('Error closing ticket:', error);
+      logger.error('Error submitting close ticket modal:', error);
       await interaction.editReply({
         embeds: [errorEmbed('Error', 'An error occurred while closing the ticket.')],
         flags: MessageFlags.Ephemeral
@@ -182,13 +259,7 @@ const claimTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({
-          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to claim tickets.')],
-          flags: MessageFlags.Ephemeral
-        });
-        return;
-      }
+      if (!(await ensureTicketPermission(interaction, client, 'claim tickets'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -232,13 +303,7 @@ const priorityTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({
-          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to change ticket priority.')],
-          flags: MessageFlags.Ephemeral
-        });
-        return;
-      }
+      if (!(await ensureTicketPermission(interaction, client, 'change ticket priority'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -281,13 +346,7 @@ const transcriptTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({
-          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to create transcripts.')],
-          flags: MessageFlags.Ephemeral
-        });
-        return;
-      }
+      if (!(await ensureTicketPermission(interaction, client, 'create transcripts'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -463,13 +522,7 @@ const unclaimTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({
-          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to unclaim tickets.')],
-          flags: MessageFlags.Ephemeral
-        });
-        return;
-      }
+      if (!(await ensureTicketPermission(interaction, client, 'unclaim tickets'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -514,13 +567,7 @@ const reopenTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({
-          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to reopen tickets.')],
-          flags: MessageFlags.Ephemeral
-        });
-        return;
-      }
+      if (!(await ensureTicketPermission(interaction, client, 'reopen tickets'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -529,8 +576,13 @@ const reopenTicketHandler = {
       const result = await reopenTicket(interaction.channel, interaction.member);
       
       if (result.success) {
+        let reopenMessage = 'You have successfully reopened this ticket!';
+        if (result.openCategoryMoveFailed) {
+          reopenMessage += '\n\n⚠️ The ticket was reopened, but it could not be moved to the configured open ticket category.';
+        }
+
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Reopened', 'You have successfully reopened this ticket!')],
+          embeds: [successEmbed('Ticket Reopened', reopenMessage)],
           flags: MessageFlags.Ephemeral
         });
         
@@ -565,13 +617,7 @@ const deleteTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await interaction.reply({
-          embeds: [errorEmbed('Permission Denied', 'You need the **Manage Channels** permission to delete tickets.')],
-          flags: MessageFlags.Ephemeral
-        });
-        return;
-      }
+      if (!(await ensureTicketPermission(interaction, client, 'delete tickets'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -613,6 +659,7 @@ const deleteTicketHandler = {
 export default createTicketHandler;
 export { 
   createTicketModalHandler, 
+  closeTicketModalHandler,
   closeTicketHandler, 
   claimTicketHandler, 
   priorityTicketHandler,

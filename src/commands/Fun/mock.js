@@ -4,6 +4,7 @@ import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { sanitizeInput } from '../../utils/sanitization.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("mock")
@@ -45,7 +46,7 @@ export default {
 
       const embed = successEmbed("sPoNgEbOb cAsE", `"${mockedText}"`);
 
-      await interaction.reply({ embeds: [embed] });
+      await InteractionHelper.safeReply(interaction, { embeds: [embed] });
       logger.debug(`Mock command executed by user ${interaction.user.id} in guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Mock command error:', error);

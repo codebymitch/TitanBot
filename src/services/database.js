@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { pgDb } from '../utils/postgresDatabase.js';
 import { logger } from '../utils/logger.js';
+import { pgConfig } from '../config/postgres.js';
 
 let db = null;
 let useFallback = false;
@@ -197,6 +198,45 @@ export async function getTicketData(guildId, channelId) {
   }
   const key = getTicketKey(guildId, channelId);
   return await db.get(key);
+}
+
+export async function getOpenTicketCountForUser(guildId, userId) {
+  try {
+    if (!db) {
+      await initializeServicesDatabase();
+    }
+
+    if (db?.pool && typeof db.isAvailable === 'function' && db.isAvailable()) {
+      const result = await db.pool.query(
+        `SELECT COUNT(*)::int AS count FROM ${pgConfig.tables.tickets}
+         WHERE guild_id = $1
+           AND data->>'userId' = $2
+           AND COALESCE(data->>'status', 'open') = 'open'`,
+        [guildId, userId]
+      );
+
+      return Number(result.rows?.[0]?.count || 0);
+    }
+
+    if (typeof db?.list === 'function') {
+      const ticketKeys = await db.list(`guild:${guildId}:ticket:`);
+      let count = 0;
+
+      for (const key of ticketKeys) {
+        const ticket = await getFromDb(key, null);
+        if (ticket && ticket.userId === userId && ticket.status === 'open') {
+          count += 1;
+        }
+      }
+
+      return count;
+    }
+
+    return 0;
+  } catch (error) {
+    logger.error(`Error counting open tickets for user ${userId} in guild ${guildId}:`, error);
+    return 0;
+  }
 }
 
 export async function saveTicketData(guildId, channelId, data) {

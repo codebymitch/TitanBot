@@ -130,13 +130,7 @@ export default {
             const activityName = ACTIVITY_NAMES[activity] || activity;
 
             if (!member.voice.channel) {
-                logger.warn('Activity command - user not in voice channel', {
-                    userId: interaction.user.id,
-                    userTag: interaction.user.tag,
-                    guildId: interaction.guildId,
-                    activity: activity
-                });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Not in Voice Channel', 'You need to be in a voice channel to start an activity!')]
                 });
             }
@@ -157,7 +151,7 @@ export default {
                     activity: activity,
                     missingPermission: 'CreateInstantInvite'
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Missing Permissions', 'I need the `Create Invite` permission to start an activity!')]
                 });
             }
@@ -185,7 +179,7 @@ export default {
                 commandName: 'activity'
             });
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [createEmbed({
                     title: `🎮 ${activityName}`,
                     description: `Click the link below to start **${activityName}** in ${member.voice.channel.name}!\n\n[Join ${activityName} Activity](https://discord.gg/${invite.code})`,
@@ -210,7 +204,7 @@ export default {
                     source: 'discord_activity_api'
                 });
             } else {
-                await interaction.editReply({
+                await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed('Failed to Create Activity', 'An error occurred while trying to create the activity. Please try again later.')]
                 });
             }

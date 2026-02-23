@@ -5,12 +5,13 @@ import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getLoggingStatus } from '../../../services/loggingService.js';
 import { getLevelingConfig, getWelcomeConfig, getApplicationSettings, getModlogSettings } from '../../../utils/database.js';
 import { createStatusIndicatorButtons } from '../../../utils/loggingUi.js';
+import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 export default {
     async execute(interaction, config, client) {
         try {
 if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-                return interaction.reply({
+                return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Permission Denied",
@@ -20,7 +21,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
                 });
             }
 
-            await interaction.deferReply();
+            await InteractionHelper.safeDefer(interaction);
 
             const currentConfig = await getGuildConfig(client, interaction.guildId);
             const loggingStatus = await getLoggingStatus(client, interaction.guildId);
@@ -216,13 +217,13 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             
             const components = [...statusButtons, refreshButton];
 
-            await interaction.editReply({ 
+            await InteractionHelper.safeEditReply(interaction, { 
                 embeds: [statusEmbed],
                 components
             });
         } catch (error) {
             console.error("config_logging_status error:", error);
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Configuration Error",

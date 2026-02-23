@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, version, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("stats")
@@ -8,7 +9,7 @@ export default {
 
   async execute(interaction) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
       
       const totalGuilds = interaction.client.guilds.cache.size;
       const totalMembers = interaction.client.guilds.cache.reduce(
@@ -29,10 +30,10 @@ export default {
         },
       );
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     } catch (error) {
       console.error('Stats command error:', error);
-      return interaction.editReply({
+      return InteractionHelper.safeEditReply(interaction, {
         embeds: [createEmbed({ title: 'System Error', description: 'Could not fetch system statistics.', color: 'error' })],
         flags: MessageFlags.Ephemeral,
       });

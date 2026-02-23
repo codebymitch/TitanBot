@@ -4,6 +4,7 @@ import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { checkRateLimit } from '../../utils/rateLimiter.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("masskick")
@@ -24,7 +25,7 @@ export default {
 
     async execute(interaction, config, client) {
         if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
-            return await interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
@@ -42,7 +43,7 @@ export default {
             const rateLimitKey = `masskick_${interaction.user.id}`;
             const isAllowed = await checkRateLimit(rateLimitKey, 3, 60000);
             if (!isAllowed) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         warningEmbed(
                             "You're performing mass kicks too fast. Please wait a minute before trying again.",
@@ -60,7 +61,7 @@ export default {
 .slice(0, 20);
 
             if (userIds.length === 0) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Invalid Users",
@@ -71,7 +72,7 @@ export default {
             }
 
             if (userIds.includes(interaction.user.id)) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Cannot Kick Self",
@@ -82,7 +83,7 @@ export default {
             }
 
             if (userIds.includes(client.user.id)) {
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Cannot Kick Bot",
@@ -176,7 +177,7 @@ export default {
 
             const embed = results.successful.length > 0 ? successEmbed : warningEmbed;
             
-            return await interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     embed(
                         `👢 Mass Kick Completed`,
@@ -187,7 +188,7 @@ export default {
 
         } catch (error) {
             logger.error("Error in masskick command:", error);
-            return await interaction.editReply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "System Error",

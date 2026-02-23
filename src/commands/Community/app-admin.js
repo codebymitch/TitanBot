@@ -13,6 +13,7 @@ import {
     getApplicationRoles,
     saveApplicationRoles
 } from '../../utils/database.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -153,13 +154,13 @@ export default {
 
     execute: withErrorHandling(async (interaction) => {
         if (!interaction.inGuild()) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [errorEmbed("This command can only be used in a server.")],
                 flags: ["Ephemeral"],
             });
         }
 
-        await interaction.deferReply({ flags: ["Ephemeral"] });
+        await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
 
         const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
@@ -270,7 +271,7 @@ async function showCurrentSettings(interaction, settings) {
         },
     );
 
-    await interaction.editReply({
+    await InteractionHelper.safeEditReply(interaction, {
         embeds: [embed],
         flags: ["Ephemeral"],
     });
@@ -285,7 +286,7 @@ async function handleView(interaction) {
     );
 
     if (!application) {
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed("Application not found.")],
             flags: ["Ephemeral"],
         });
@@ -331,13 +332,13 @@ async function handleView(interaction) {
                 .setEmoji("❌"),
         );
 
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [embed],
             components: [row],
             flags: ["Ephemeral"],
         });
     } else {
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [embed],
             flags: ["Ephemeral"],
         });
@@ -356,14 +357,14 @@ async function handleReview(interaction) {
         appId,
     );
     if (!application) {
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed("Application not found.")],
             flags: ["Ephemeral"],
         });
     }
 
     if (application.status !== "pending") {
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 errorEmbed("This application has already been processed."),
             ],
@@ -459,7 +460,7 @@ components: [],
         }
     }
 
-    await interaction.editReply({
+    await InteractionHelper.safeEditReply(interaction, {
         embeds: [
             successEmbed(
                 `Application ${status}`,
@@ -510,9 +511,9 @@ async function handleList(interaction) {
                 text: "Users can apply with /apply submit or see available roles with /apply list"
             });
 
-            return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
+            return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
         } else {
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "No applications found and no application roles configured.\n" +
@@ -549,7 +550,7 @@ async function handleList(interaction) {
         });
     });
 
-    await interaction.editReply({
+    await InteractionHelper.safeEditReply(interaction, {
         embeds: [embed],
         flags: ["Ephemeral"],
     });
@@ -644,7 +645,7 @@ async function handleRoles(interaction) {
 
     if (action === "list") {
         if (currentRoles.length === 0) {
-            return interaction.editReply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed("No application roles have been configured.")],
                 flags: ["Ephemeral"],
             });
@@ -664,12 +665,12 @@ async function handleRoles(interaction) {
             });
         });
 
-        return interaction.editReply({ embeds: [embed], flags: ["Ephemeral"] });
+        return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
     }
 
     if (action === "add") {
         const customName = name || role.name;
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [successEmbed(
                 "Role Added",
                 `**${customName}** has been added to the application system.\nUsers can now apply for this role using \`/apply submit\`.`
@@ -680,7 +681,7 @@ async function handleRoles(interaction) {
 
     if (action === "remove") {
         const removedRole = currentRoles.find(r => r.roleId === role.id);
-        return interaction.editReply({
+        return InteractionHelper.safeEditReply(interaction, {
             embeds: [successEmbed(
                 "Role Removed",
                 `**${removedRole?.name || 'Role'}** has been removed from the application system.`
@@ -702,14 +703,14 @@ export async function handleApplicationButton(interaction) {
     try {
         const application = await getApplication(interaction.client, interaction.guild.id, appId);
         if (!application) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [errorEmbed('Application not found.')],
                 flags: ["Ephemeral"]
             });
         }
         
         if (application.status !== 'pending') {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [errorEmbed('This application has already been processed.')],
                 flags: ["Ephemeral"]
             });
@@ -720,7 +721,7 @@ export async function handleApplicationButton(interaction) {
             (settings.managerRoles && settings.managerRoles.some(roleId => interaction.member.roles.cache.has(roleId)));
         
         if (!isManager) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [errorEmbed('You do not have permission to manage applications.')],
                 flags: ["Ephemeral"]
             });
@@ -744,7 +745,7 @@ export async function handleApplicationButton(interaction) {
         
     } catch (error) {
         console.error('Error handling application button:', error);
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed('An error occurred while processing the application.')],
             flags: ["Ephemeral"]
         });
@@ -764,7 +765,7 @@ export async function handleApplicationReviewModal(interaction) {
     try {
         const application = await getApplication(interaction.client, interaction.guild.id, appId);
         if (!application) {
-            return interaction.reply({
+            return InteractionHelper.safeReply(interaction, {
                 embeds: [errorEmbed('Application not found.')],
                 flags: ["Ephemeral"]
             });
@@ -829,7 +830,7 @@ export async function handleApplicationReviewModal(interaction) {
             }
         }
         
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
                     `Application ${status}`,
@@ -841,7 +842,7 @@ export async function handleApplicationReviewModal(interaction) {
         
     } catch (error) {
         console.error('Error processing application review:', error);
-        await interaction.editReply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed('An error occurred while processing the application.')],
             flags: ["Ephemeral"]
         });

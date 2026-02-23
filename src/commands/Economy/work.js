@@ -62,7 +62,6 @@ export default {
                     usedConsumable = true;
                 } else {
                     const remaining = lastWork + WORK_COOLDOWN - now;
-                    logger.warn(`[ECONOMY] Work cooldown active`, { userId, timeRemaining: remaining });
                     throw createError(
                         "Work cooldown active",
                         ErrorTypes.RATE_LIMIT,
@@ -109,7 +108,7 @@ export default {
                         inline: true,
                     },
                     {
-                        name: "â° Next Work",
+                        name: "⏰ Next Work",
                         value: `<t:${Math.floor((now + WORK_COOLDOWN) / 1000)}:R>`,
                         inline: true,
                     }
@@ -119,7 +118,7 @@ export default {
                     iconURL: interaction.user.displayAvatarURL(),
                 });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'work' })
 };
 

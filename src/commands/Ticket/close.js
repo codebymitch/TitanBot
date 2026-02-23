@@ -6,6 +6,7 @@ import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getTicketPermissionContext } from '../../utils/ticketPermissions.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("close")
@@ -26,6 +27,29 @@ export default {
                 return;
             }
 
+            const permissionContext = await getTicketPermissionContext({ client, interaction });
+            if (!permissionContext.ticketData) {
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        errorEmbed(
+                            "Not a Ticket Channel",
+                            "This command can only be used in a valid ticket channel.",
+                        ),
+                    ],
+                });
+            }
+
+            if (!permissionContext.canCloseTicket) {
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        errorEmbed(
+                            "Permission Denied",
+                            "You need the `Manage Channels` permission, the configured `Ticket Staff Role`, or be the ticket creator to close this ticket.",
+                        ),
+                    ],
+                });
+            }
+
             const channel = interaction.channel;
             const reason =
                 interaction.options?.getString("reason") ||
@@ -40,7 +64,7 @@ export default {
                     guildId: interaction.guildId,
                     error: result.error
                 });
-                return await interaction.editReply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
                             "Not a Ticket Channel",
@@ -50,7 +74,7 @@ export default {
                 });
             }
 
-            await interaction.editReply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
                         "Ticket Closed!",

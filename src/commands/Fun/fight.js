@@ -3,7 +3,9 @@ import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const EMBED_DESCRIPTION_LIMIT = 4096;
 
 export default {
     data: new SlashCommandBuilder()
@@ -19,7 +21,7 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await interaction.deferReply();
+      await InteractionHelper.safeDefer(interaction);
 
       const challenger = interaction.user;
       const opponent = interaction.options.getUser("opponent");
@@ -27,19 +29,19 @@ export default {
       
       if (challenger.id === opponent.id) {
         const embed = warningEmbed(
-          "⚔️ Invalid Challenge",
-          `**${challenger.username}**, you can't fight yourself! That's a draw before it even starts.`
+          `**${challenger.username}**, you can't fight yourself! That's a draw before it even starts.`,
+          "⚔️ Invalid Challenge"
         );
-        return await interaction.editReply({ embeds: [embed] });
+        return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       }
 
       
       if (opponent.bot) {
         const embed = warningEmbed(
-          "⚔️ Invalid Opponent",
-          "You can't fight bots! Challenge a real person instead."
+          "You can't fight bots! Challenge a real person instead.",
+          "⚔️ Invalid Opponent"
         );
-        return await interaction.editReply({ embeds: [embed] });
+        return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       }
 
       const winner = rand(0, 1) === 0 ? challenger : opponent;
@@ -67,13 +69,19 @@ export default {
       }
 
       const outcomeText = log.join("\n");
+      const winnerText = `👑 **${winner.username}** has defeated ${loser.username} and claims the victory!`;
+      const fullDescription = `${outcomeText}\n\n${winnerText}`;
+
+      const description = fullDescription.length <= EMBED_DESCRIPTION_LIMIT
+        ? fullDescription
+        : `${fullDescription.slice(0, EMBED_DESCRIPTION_LIMIT - 15)}\n\n...`;
 
       const embed = successEmbed(
-        "🏆 Duel Complete!",
-        `${outcomeText}\n\n👑 **${winner.username}** has defeated ${loser.username} and claims the victory!`
+        description,
+        "🏆 Duel Complete!"
       );
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.debug(`Fight command executed between ${challenger.id} and ${opponent.id} in guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Fight command error:', error);

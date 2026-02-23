@@ -41,11 +41,10 @@ export default {
 
             if (now < lastDaily + DAILY_COOLDOWN) {
                 const timeRemaining = lastDaily + DAILY_COOLDOWN - now;
-                logger.warn(`[ECONOMY] Daily cooldown active`, { userId, timeRemaining });
                 throw createError(
                     "Daily cooldown active",
                     ErrorTypes.RATE_LIMIT,
-                    `You need to wait before claiming daily again. Try again in ${formatDuration(timeRemaining)}.`,
+                    `You need to wait before claiming daily again. Try again in **${formatDuration(timeRemaining)}**.`,
                     { timeRemaining, cooldownType: 'daily' }
                 );
             }
@@ -99,7 +98,7 @@ export default {
                         : `Next claim in 24 hours.`,
                 });
 
-            await interaction.editReply({ embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'daily' })
 };
 
