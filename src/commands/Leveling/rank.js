@@ -98,6 +98,7 @@ export default {
         .setTimestamp();
 
       await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+      logger.debug(`Rank checked for user ${targetUser.id} in guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Rank command error:', error);
       await handleInteractionError(interaction, error, {

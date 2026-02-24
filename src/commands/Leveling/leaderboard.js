@@ -82,6 +82,7 @@ export default {
       });
 
       await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+      logger.debug(`Leaderboard displayed for guild ${interaction.guildId}`);
     } catch (error) {
       logger.error('Leaderboard command error:', error);
       await handleInteractionError(interaction, error, {
