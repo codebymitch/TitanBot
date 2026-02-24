@@ -178,7 +178,7 @@ export async function getLevelingConfig(client, guildId) {
     return guildConfig.leveling || {
       enabled: true,
       xpPerMessage: { min: 15, max: 25 },
-      xpCooldown: 60,
+      xpCooldown: 20,
       levelUpMessage: '{user} has leveled up to level {level}!',
       levelUpChannel: null,
       ignoredChannels: [],
@@ -193,7 +193,7 @@ export async function getLevelingConfig(client, guildId) {
     return {
       enabled: true,
       xpPerMessage: { min: 15, max: 25 },
-      xpCooldown: 60,
+      xpCooldown: 20,
       levelUpMessage: '{user} has leveled up to level {level}!',
       levelUpChannel: null,
       ignoredChannels: [],
@@ -222,7 +222,7 @@ export async function getUserLevelData(client, guildId, userId) {
       );
     }
 
-    const key = `${guildId}:leveling:user:${userId}`;
+    const key = `${guildId}:leveling:users:${userId}`;
     const data = await client.db.get(key);
     
     if (!data) {
@@ -287,10 +287,8 @@ export async function saveUserLevelData(client, guildId, userId, data) {
       rank: Number(data.rank) || 0
     };
 
-    const key = `${guildId}:leveling:user:${userId}`;
+    const key = `${guildId}:leveling:users:${userId}`;
     await client.db.set(key, sanitizedData);
-    
-    logger.debug(`Saved level data for user ${userId} in guild ${guildId}`);
   } catch (error) {
     logger.error(`Error saving user level data for ${userId}:`, error);
     if (error instanceof TitanBotError) throw error;
@@ -362,6 +360,15 @@ export async function saveLevelingConfig(client, guildId, config) {
 
 export async function addLevels(client, guildId, userId, levels) {
   try {
+    const levelingConfig = await getLevelingConfig(client, guildId);
+    if (!levelingConfig?.enabled) {
+      throw new TitanBotError(
+        'Leveling system is disabled on this server',
+        ErrorTypes.CONFIGURATION,
+        'The leveling system is currently disabled on this server.'
+      );
+    }
+
     
     if (!Number.isInteger(levels) || levels <= 0) {
       throw new TitanBotError(
@@ -414,6 +421,15 @@ export async function addLevels(client, guildId, userId, levels) {
 
 export async function removeLevels(client, guildId, userId, levels) {
   try {
+    const levelingConfig = await getLevelingConfig(client, guildId);
+    if (!levelingConfig?.enabled) {
+      throw new TitanBotError(
+        'Leveling system is disabled on this server',
+        ErrorTypes.CONFIGURATION,
+        'The leveling system is currently disabled on this server.'
+      );
+    }
+
     
     if (!Number.isInteger(levels) || levels <= 0) {
       throw new TitanBotError(
@@ -458,6 +474,15 @@ export async function removeLevels(client, guildId, userId, levels) {
 
 export async function setUserLevel(client, guildId, userId, level) {
   try {
+    const levelingConfig = await getLevelingConfig(client, guildId);
+    if (!levelingConfig?.enabled) {
+      throw new TitanBotError(
+        'Leveling system is disabled on this server',
+        ErrorTypes.CONFIGURATION,
+        'The leveling system is currently disabled on this server.'
+      );
+    }
+
     
     if (!Number.isInteger(level) || level < MIN_LEVEL || level > MAX_LEVEL) {
       throw new TitanBotError(

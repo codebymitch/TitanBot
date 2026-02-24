@@ -3,11 +3,11 @@
 
 
 
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { checkUserPermissions } from '../../utils/permissionGuard.js';
-import { addLevels } from '../../services/leveling.js';
+import { addLevels, getLevelingConfig } from '../../services/leveling.js';
 import { createEmbed } from '../../utils/embeds.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -49,6 +49,19 @@ export default {
         'You need ManageGuild permission to use this command.'
       );
       if (!hasPermission) return;
+
+      const levelingConfig = await getLevelingConfig(client, interaction.guildId);
+      if (!levelingConfig?.enabled) {
+        await InteractionHelper.safeEditReply(interaction, {
+          embeds: [
+            new EmbedBuilder()
+              .setColor('#f1c40f')
+              .setDescription('The leveling system is currently disabled on this server.')
+          ],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
 
       const targetUser = interaction.options.getUser('user');
       const levelsToAdd = interaction.options.getInteger('levels');

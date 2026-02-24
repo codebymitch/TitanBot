@@ -27,7 +27,7 @@ export async function addXp(client, guild, member, xpToAdd) {
       return { success: false, reason: 'Leveling is disabled in this server' };
     }
     
-    const levelData = await getUserLevelData(client, guild.id, member.id);
+    const levelData = await getUserLevelData(client, guild.id, member.user.id);
     
     levelData.xp += xpToAdd;
     levelData.totalXp += xpToAdd;
@@ -62,11 +62,11 @@ export async function addXp(client, guild, member, xpToAdd) {
           eventType: EVENT_TYPES.LEVELING_LEVELUP,
           data: {
             description: `${member.user.tag} reached level ${levelData.level}`,
-            userId: member.id,
+            userId: member.user.id,
             fields: [
               {
                 name: '👤 Member',
-                value: `${member.user.tag} (${member.id})`,
+                value: `${member.user.tag} (${member.user.id})`,
                 inline: true
               },
               {
@@ -82,12 +82,11 @@ export async function addXp(client, guild, member, xpToAdd) {
             ]
           }
         });
-      } catch (error) {
-        logger.debug('Error logging level up event:', error);
+      } catch {
       }
     }
     
-    await saveUserLevelData(client, guild.id, member.id, levelData);
+    await saveUserLevelData(client, guild.id, member.user.id, levelData);
     
     return {
       success: true,
@@ -124,14 +123,13 @@ async function awardRoleReward(guild, member, roleId, level) {
 
     
     if (member.roles.cache.has(roleId)) {
-      logger.debug(`Member ${member.id} already has role ${roleId}`);
       return;
     }
 
     await member.roles.add(role, `Level ${level} reward`);
     logger.info(`✅ Awarded role ${role.name} to ${member.user.tag} for reaching level ${level}`);
   } catch (error) {
-    logger.error(`Failed to award role reward to ${member.id}:`, error);
+    logger.error(`Failed to award role reward to ${member.user.id}:`, error);
   }
 }
 
@@ -151,7 +149,6 @@ async function sendLevelUpAnnouncement(guild, member, levelData, config) {
       : guild.systemChannel;
     
     if (!levelUpChannel || !levelUpChannel.isTextBased()) {
-      logger.debug(`No valid levelup channel found for guild ${guild.id}`);
       return;
     }
 

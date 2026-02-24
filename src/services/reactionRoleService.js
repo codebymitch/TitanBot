@@ -502,4 +502,91 @@ export async function setReactionRoleChannel(client, guildId, messageId, channel
     }
 }
 
+/**
+ * Reconcile reaction role messages against Discord state and remove stale database entries.
+ * Useful on startup to clean records for messages/channels deleted while the bot was offline.
+ * @param {Object} client - The Discord client
+ * @param {string} [guildId] - Optional guild ID to reconcile. If omitted, reconciles all guilds.
+ * @returns {Promise<Object>} Cleanup summary
+ */
+export async function reconcileReactionRoleMessages(client, guildId = null) {
+    const summary = {
+        scannedGuilds: 0,
+        scannedMessages: 0,
+        removedMessages: 0,
+        errors: 0
+    };
+
+    try {
+        const targetGuildIds = guildId
+            ? [guildId]
+            : Array.from(client.guilds.cache.keys());
+
+        for (const targetGuildId of targetGuildIds) {
+            summary.scannedGuilds += 1;
+
+            let reactionRoleMessages = [];
+            try {
+                reactionRoleMessages = await getAllReactionRoleMessages(client, targetGuildId);
+            } catch (error) {
+                summary.errors += 1;
+                logger.warn(`Failed to fetch reaction role messages for reconciliation in guild ${targetGuildId}:`, error);
+                continue;
+            }
+
+            if (!reactionRoleMessages.length) {
+                continue;
+            }
+
+            const guild = client.guilds.cache.get(targetGuildId) || await client.guilds.fetch(targetGuildId).catch(() => null);
+            if (!guild) {
+                for (const reactionRoleMessage of reactionRoleMessages) {
+                    summary.scannedMessages += 1;
+                    await client.db.delete(`reaction_roles:${targetGuildId}:${reactionRoleMessage.messageId}`);
+                    summary.removedMessages += 1;
+                }
+                logger.info(`Removed ${reactionRoleMessages.length} stale reaction role message(s) for unavailable guild ${targetGuildId}`);
+                continue;
+            }
+
+            for (const reactionRoleMessage of reactionRoleMessages) {
+                summary.scannedMessages += 1;
+
+                try {
+                    const channel = guild.channels.cache.get(reactionRoleMessage.channelId)
+                        || await guild.channels.fetch(reactionRoleMessage.channelId).catch(() => null);
+
+                    if (!channel || !channel.isTextBased?.()) {
+                        await client.db.delete(`reaction_roles:${targetGuildId}:${reactionRoleMessage.messageId}`);
+                        summary.removedMessages += 1;
+                        continue;
+                    }
+
+                    const message = await channel.messages.fetch(reactionRoleMessage.messageId).catch(() => null);
+                    if (!message) {
+                        await client.db.delete(`reaction_roles:${targetGuildId}:${reactionRoleMessage.messageId}`);
+                        summary.removedMessages += 1;
+                    }
+                } catch (messageCheckError) {
+                    summary.errors += 1;
+                    logger.warn(
+                        `Failed to validate reaction role message ${reactionRoleMessage.messageId} during reconciliation:`,
+                        messageCheckError
+                    );
+                }
+            }
+        }
+
+        logger.info(
+            `Reaction role reconciliation complete: scanned ${summary.scannedMessages} message(s) across ${summary.scannedGuilds} guild(s), removed ${summary.removedMessages}, errors ${summary.errors}`
+        );
+
+        return summary;
+    } catch (error) {
+        logger.error('Unexpected error during reaction role reconciliation:', error);
+        summary.errors += 1;
+        return summary;
+    }
+}
+
 

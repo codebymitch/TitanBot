@@ -5,11 +5,18 @@ import { logger } from '../../utils/logger.js';
 import { errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
+function createAutoroleInfoEmbed(description) {
+    return new EmbedBuilder()
+        .setColor(getColor('primary'))
+        .setDescription(description)
+        .setFooter({ text: new Date().toLocaleString() });
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName('autorole')
         .setDescription('Manage roles that are automatically assigned to new members')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand
                 .setName('add')
@@ -42,6 +49,13 @@ export default {
             return;
         }
 
+        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+            return InteractionHelper.safeEditReply(interaction, {
+                embeds: [errorEmbed('Missing Permissions', 'You need the **Manage Server** permission to use `/autorole`.')],
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
 const { options, guild, client } = interaction;
         const subcommand = options.getSubcommand();
 
@@ -59,9 +73,10 @@ const { options, guild, client } = interaction;
             try {
                 const config = await getWelcomeConfig(client, guild.id);
                 const existingRoles = config.roleIds || [];
+                const currentRoleId = existingRoles[0] || null;
                 
                 
-                if (existingRoles.includes(role.id)) {
+                if (currentRoleId === role.id) {
                     logger.info(`[Autorole] User ${interaction.user.tag} tried to add duplicate role ${role.name} (${role.id}) in ${guild.name}`);
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [errorEmbed('Already Added', `The role ${role} is already set to be auto-assigned.`)],
@@ -69,16 +84,17 @@ const { options, guild, client } = interaction;
                     });
                 }
 
-                
-                const updatedRoles = [...new Set([...existingRoles, role.id])];
-                
                 await updateWelcomeConfig(client, guild.id, {
-                    roleIds: updatedRoles
+                    roleIds: [role.id]
                 });
 
-                logger.info(`[Autorole] Added role ${role.name} (${role.id}) to auto-assign in ${guild.name} by ${interaction.user.tag}`);
+                logger.info(`[Autorole] Set single auto-role to ${role.name} (${role.id}) in ${guild.name} by ${interaction.user.tag}`);
                 await InteractionHelper.safeEditReply(interaction, {
-                    content: `✅ Added ${role} to auto-assigned roles.`,
+                    embeds: [createAutoroleInfoEmbed(
+                        currentRoleId
+                            ? `✅ Auto-role updated to ${role}. Only one auto-role is allowed.`
+                            : `✅ Auto-role set to ${role}.`
+                    )],
                     flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
@@ -117,7 +133,7 @@ const { options, guild, client } = interaction;
 
                 logger.info(`[Autorole] Removed role ${role.name} (${role.id}) from auto-assign in ${guild.name} by ${interaction.user.tag}`);
                 await InteractionHelper.safeEditReply(interaction, {
-                    content: `✅ Removed ${role} from auto-assigned roles.`,
+                    embeds: [createAutoroleInfoEmbed(`✅ Removed ${role} from auto-assigned roles.`)],
                     flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
@@ -138,9 +154,17 @@ const { options, guild, client } = interaction;
                 const config = await getWelcomeConfig(client, guild.id);
                 const autoRoles = Array.isArray(config.roleIds) ? config.roleIds : [];
 
-                if (autoRoles.length === 0) {
+                const singleRoleIds = autoRoles.length > 1 ? [autoRoles[0]] : autoRoles;
+                if (singleRoleIds.length !== autoRoles.length) {
+                    await updateWelcomeConfig(client, guild.id, {
+                        roleIds: singleRoleIds
+                    });
+                    logger.info(`[Autorole] Trimmed auto-role list to one role in ${interaction.guild.name}`);
+                }
+
+                if (singleRoleIds.length === 0) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        content: 'ℹ️ No roles are set to be auto-assigned.',
+                        embeds: [createAutoroleInfoEmbed('ℹ️ No role is set to be auto-assigned.')],
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -149,7 +173,7 @@ const { options, guild, client } = interaction;
                 const validRoles = [];
                 const invalidRoleIds = [];
                 
-                for (const roleId of autoRoles) {
+                for (const roleId of singleRoleIds) {
                     const role = roles.get(roleId);
                     if (role) {
                         validRoles.push(role);
@@ -160,7 +184,7 @@ const { options, guild, client } = interaction;
 
                 if (invalidRoleIds.length > 0) {
                     logger.info(`[Autorole] Cleaning up ${invalidRoleIds.length} invalid role(s) from guild ${interaction.guild.name}`);
-                    const updatedRoles = autoRoles.filter(id => !invalidRoleIds.includes(id));
+                    const updatedRoles = singleRoleIds.filter(id => !invalidRoleIds.includes(id));
                     await updateWelcomeConfig(client, guild.id, {
                         roleIds: updatedRoles
                     });
@@ -168,16 +192,16 @@ const { options, guild, client } = interaction;
 
                 if (validRoles.length === 0) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        content: 'ℹ️ No valid auto-assigned roles found. Any invalid roles have been removed.',
+                        embeds: [createAutoroleInfoEmbed('ℹ️ No valid auto-role found. Any invalid role has been removed.')],
                         flags: MessageFlags.Ephemeral
                     });
                 }
 
                 const embed = new EmbedBuilder()
                     .setColor(getColor('info'))
-                    .setTitle('Auto-Assigned Roles')
-                    .setDescription(validRoles.map(r => `• ${r}`).join('\n'))
-                    .setFooter({ text: `Total: ${validRoles.length} role(s)` });
+                    .setTitle('Auto-Assigned Role')
+                    .setDescription(`${validRoles[0]}`)
+                    .setFooter({ text: 'Only one auto-role can be configured.' });
 
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [embed],

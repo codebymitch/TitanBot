@@ -132,7 +132,7 @@ if (error.code === 10062) {
             }
             
             if (!interaction.replied && !interaction.deferred) {
-                logger.warn(`Interaction ${interaction.id} not deferred, attempting reply instead of edit`);
+                logger.debug(`Interaction ${interaction.id} not deferred, using reply fallback instead of edit`);
                 return await this.safeReply(interaction, options);
             }
             
@@ -148,7 +148,7 @@ if (error.code === 40060) {
                 return false;
             }
             if (error.name === 'InteractionNotReplied' || error.message.includes('not been sent or deferred')) {
-                logger.warn(`Interaction ${interaction.id} not replied, attempting reply instead of edit:`, error.message);
+                logger.debug(`Interaction ${interaction.id} not replied, using reply fallback instead of edit:`, error.message);
                 return await this.safeReply(interaction, options);
             }
             logger.error('Failed to edit reply:', error);

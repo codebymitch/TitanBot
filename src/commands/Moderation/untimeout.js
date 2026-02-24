@@ -19,6 +19,16 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Untimeout interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'untimeout'
+            });
+            return;
+        }
+
         try {
                 const targetUser = interaction.options.getUser("target");
                 const member = interaction.options.getMember("target");

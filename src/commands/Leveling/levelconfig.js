@@ -80,7 +80,11 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      await InteractionHelper.safeDefer(interaction);
+      const deferSuccess = await InteractionHelper.safeDefer(interaction);
+      if (!deferSuccess) {
+        logger.warn(`LevelConfig defer failed for interaction ${interaction.id}`);
+        return;
+      }
 
       
       const hasPermission = await checkUserPermissions(

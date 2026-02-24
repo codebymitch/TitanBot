@@ -37,19 +37,24 @@ async function handleLeveling(message, client) {
   try {
     const rateLimitKey = `xp-event:${message.guild.id}:${message.author.id}`;
     const canProcess = await checkRateLimit(rateLimitKey, MESSAGE_XP_RATE_LIMIT_ATTEMPTS, MESSAGE_XP_RATE_LIMIT_WINDOW_MS);
-    if (!canProcess) return;
+    if (!canProcess) {
+      return;
+    }
 
     const levelingConfig = await getLevelingConfig(client, message.guild.id);
     
-    if (!levelingConfig?.enabled) return;
+    if (!levelingConfig?.enabled) {
+      return;
+    }
 
     
-    if (levelingConfig.ignoredChannels?.includes(message.channel.id)) return;
+    if (levelingConfig.ignoredChannels?.includes(message.channel.id)) {
+      return;
+    }
 
     
     if (levelingConfig.ignoredRoles?.length > 0) {
-      const member = await message.guild.members.fetch(message.author.id).catch((error) => {
-        logger.debug(`Unable to fetch member ${message.author.id} for leveling role checks in guild ${message.guild.id}:`, error);
+      const member = await message.guild.members.fetch(message.author.id).catch(() => {
         return null;
       });
       if (member && member.roles.cache.some(role => levelingConfig.ignoredRoles.includes(role.id))) {
@@ -58,10 +63,14 @@ async function handleLeveling(message, client) {
     }
 
     
-    if (levelingConfig.blacklistedUsers?.includes(message.author.id)) return;
+    if (levelingConfig.blacklistedUsers?.includes(message.author.id)) {
+      return;
+    }
 
     
-    if (!message.content || message.content.trim().length === 0) return;
+    if (!message.content || message.content.trim().length === 0) {
+      return;
+    }
 
     const userData = await getUserLevelData(client, message.guild.id, message.author.id);
     
@@ -71,7 +80,9 @@ async function handleLeveling(message, client) {
     const timeSinceLastMessage = now - (userData.lastMessage || 0);
     
     
-    if (timeSinceLastMessage < cooldownTime * 1000) return;
+    if (timeSinceLastMessage < cooldownTime * 1000) {
+      return;
+    }
 
     
     const minXP = levelingConfig.xpRange?.min || levelingConfig.xpPerMessage?.min || 15;

@@ -1,16 +1,17 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { errorEmbed } from '../../utils/embeds.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 import { formatWelcomeMessage } from '../../utils/welcome.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { buildWelcomeConfigPayload, hasWelcomeSetup } from './modules/welcomeConfig.js';
 
 export default {
     data: new SlashCommandBuilder()
         .setName('welcome')
         .setDescription('Configure the welcome system')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand
                 .setName('setup')
@@ -35,7 +36,11 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('toggle')
-                .setDescription('Enable or disable welcome messages')),
+                .setDescription('Enable or disable welcome messages'))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('config')
+                .setDescription('Customize your existing welcome setup with buttons')),
 
     async execute(interaction) {
         try {
@@ -54,6 +59,14 @@ export default {
         }
 
         const { options, guild, client } = interaction;
+
+        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+            return await InteractionHelper.safeEditReply(interaction, {
+                embeds: [errorEmbed('Missing Permissions', 'You need the **Manage Server** permission to use `/welcome`.')],
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
         const subcommand = options.getSubcommand();
 
         if (subcommand === 'setup') {
@@ -62,6 +75,17 @@ export default {
             const image = options.getString('image');
             const ping = options.getBoolean('ping') ?? false;
 
+            const existingConfig = await getWelcomeConfig(client, guild.id);
+            if (hasWelcomeSetup(existingConfig)) {
+                logger.info(`[Welcome] Setup blocked because config already exists in channel ${existingConfig.channelId} for guild ${guild.id}`);
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [errorEmbed(
+                        'Welcome Setup Already Exists',
+                        `Welcome is already configured for <#${existingConfig.channelId}>. Use **/welcome config** to customize channel, message, ping, or image.`
+                    )],
+                    flags: MessageFlags.Ephemeral
+                });
+            }
             
             if (!message || message.trim().length === 0) {
                 logger.warn(`[Welcome] Empty message provided by ${interaction.user.tag} in ${guild.name}`);
@@ -128,6 +152,36 @@ export default {
                 });
             }
         } 
+        else if (subcommand === 'config') {
+            try {
+                const currentConfig = await getWelcomeConfig(client, guild.id);
+
+                if (!hasWelcomeSetup(currentConfig)) {
+                    return await InteractionHelper.safeEditReply(interaction, {
+                        embeds: [errorEmbed(
+                            'No Welcome Setup Found',
+                            'Set up welcome first using **/welcome setup**.'
+                        )],
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                await InteractionHelper.safeEditReply(
+                    interaction,
+                    buildWelcomeConfigPayload(guild, currentConfig, 'Use the buttons below to customize your welcome setup.')
+                );
+            } catch (error) {
+                logger.error(`[Welcome] Failed to load welcome config panel for guild ${guild.id}:`, error);
+                await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [errorEmbed(
+                        'Config Panel Failed',
+                        'An error occurred while loading the welcome config panel. Please try again.',
+                        { showDetails: true }
+                    )],
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+        }
         
         else if (subcommand === 'toggle') {
             try {

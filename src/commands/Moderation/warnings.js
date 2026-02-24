@@ -20,6 +20,16 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Warnings interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'warnings'
+            });
+            return;
+        }
+
         try {
             const target = interaction.options.getUser("target");
             const guildId = interaction.guildId;
