@@ -3,7 +3,7 @@
 
 
 
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getUserLevelData, getLevelingConfig, getXpForLevel } from '../../services/leveling.js';
@@ -32,6 +32,19 @@ export default {
     try {
       await InteractionHelper.safeDefer(interaction);
 
+      const levelingConfig = await getLevelingConfig(client, interaction.guildId);
+      if (!levelingConfig?.enabled) {
+        await InteractionHelper.safeEditReply(interaction, {
+          embeds: [
+            new EmbedBuilder()
+              .setColor('#f1c40f')
+              .setDescription('The leveling system is currently disabled on this server.')
+          ],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const targetUser = interaction.options.getUser('user') || interaction.user;
       const member = await interaction.guild.members
         .fetch(targetUser.id)
@@ -45,18 +58,7 @@ export default {
         );
       }
 
-      const [userData, levelingConfig] = await Promise.all([
-        getUserLevelData(client, interaction.guildId, targetUser.id),
-        getLevelingConfig(client, interaction.guildId)
-      ]);
-
-      if (!levelingConfig?.enabled) {
-        throw new TitanBotError(
-          'Leveling system is disabled',
-          ErrorTypes.CONFIGURATION,
-          'The leveling system is currently disabled on this server.'
-        );
-      }
+      const userData = await getUserLevelData(client, interaction.guildId, targetUser.id);
 
       const safeUserData = {
         level: userData?.level ?? 0,

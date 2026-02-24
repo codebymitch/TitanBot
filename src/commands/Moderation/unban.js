@@ -24,6 +24,16 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Unban interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'unban'
+            });
+            return;
+        }
+
         try {
                 const targetUser = interaction.options.getUser("target");
                 const reason = interaction.options.getString("reason") || "No reason provided";

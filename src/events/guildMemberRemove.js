@@ -44,7 +44,10 @@ export default {
                 const canEmbed = permissions.has(PermissionFlagsBits.EmbedLinks);
 
                 if (!canEmbed) {
-                    await channel.send({ content: goodbyeMessage });
+                    await channel.send({
+                        content: welcomeConfig?.goodbyePing ? `<@${user.id}> ${goodbyeMessage}` : goodbyeMessage,
+                        allowedMentions: welcomeConfig?.goodbyePing ? { users: [user.id] } : { parse: [] }
+                    });
                 } else {
                     const embed = new EmbedBuilder()
                         .setTitle(embedTitle)
@@ -63,8 +66,12 @@ export default {
                     } else if (welcomeConfig.leaveEmbed?.image?.url) {
                         embed.setImage(welcomeConfig.leaveEmbed.image.url);
                     }
-                    
-                    await channel.send({ embeds: [embed] });
+
+                    await channel.send({
+                        content: welcomeConfig?.goodbyePing ? `<@${user.id}>` : undefined,
+                        allowedMentions: welcomeConfig?.goodbyePing ? { users: [user.id] } : { parse: [] },
+                        embeds: [embed]
+                    });
                 }
             }
         }

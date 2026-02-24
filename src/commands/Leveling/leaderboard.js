@@ -3,7 +3,7 @@
 
 
 
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getLeaderboard, getLevelingConfig, getXpForLevel } from '../../services/leveling.js';
@@ -29,11 +29,15 @@ export default {
       const levelingConfig = await getLevelingConfig(client, interaction.guildId);
 
       if (!levelingConfig?.enabled) {
-        throw new TitanBotError(
-          'Leveling system is disabled on this server',
-          ErrorTypes.CONFIGURATION,
-          'The leveling system is currently disabled on this server.'
-        );
+        await InteractionHelper.safeEditReply(interaction, {
+          embeds: [
+            new EmbedBuilder()
+              .setColor('#f1c40f')
+              .setDescription('The leveling system is currently disabled on this server.')
+          ],
+          flags: MessageFlags.Ephemeral
+        });
+        return;
       }
 
       const leaderboard = await getLeaderboard(client, interaction.guildId, 10);
@@ -66,8 +70,7 @@ export default {
             else rankPrefix = `**${index + 1}.**`;
 
             return `${rankPrefix} ${username} - Level ${user.level} (${user.xp}/${xpForNextLevel} XP)`;
-          } catch (error) {
-            logger.debug(`Error loading member ${user.userId} for leaderboard:`, error);
+          } catch {
             return `**${index + 1}.** Error loading user ${user.userId}`;
           }
         })

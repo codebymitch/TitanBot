@@ -752,10 +752,6 @@ export async function saveLevelingConfig(client, guildId, config) {
     const key = getLevelingKey(guildId);
     try {
         await setInDb(key, config);
-        
-        if (process.env.NODE_ENV !== 'production') {
-            logger.debug(`💾 Saved leveling config to database (guild: ${guildId})`);
-        }
         return true;
     } catch (error) {
         logger.error(`Error saving leveling config for guild ${guildId}:`, error);

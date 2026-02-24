@@ -15,6 +15,15 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Unlock interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'unlock'
+            });
+            return;
+        }
 
         if (
             !interaction.member.permissions.has(

@@ -32,6 +32,16 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Massban interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'massban'
+            });
+            return;
+        }
+
         if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [

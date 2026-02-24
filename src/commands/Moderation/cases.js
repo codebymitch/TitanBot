@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuild
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getModerationCases } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('cases')
@@ -31,6 +32,16 @@ export default {
         ),
 
     async execute(interaction, config, client) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`Cases interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'cases'
+            });
+            return;
+        }
+
         try {
             const filterType = interaction.options.getString('filter') || 'all';
             const targetUser = interaction.options.getUser('user');
@@ -157,7 +168,7 @@ time: 120000
 
         } catch (error) {
             logger.error('Error in cases command:', error);
-            return interaction.reply({
+            return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         'System Error',
