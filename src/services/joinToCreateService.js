@@ -258,6 +258,20 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
             );
         }
 
+        if (Array.isArray(config.triggerChannels) && config.triggerChannels.length > 0) {
+            throw new TitanBotError(
+                'Guild already has a Join to Create trigger configured',
+                ErrorTypes.VALIDATION,
+                'This server already has a Join to Create channel configured. Use `/jointocreate config` to modify it, or remove it before creating a new one.',
+                {
+                    guildId,
+                    existingTriggerChannelId: config.triggerChannels[0],
+                    expected: true,
+                    suppressErrorLog: true
+                }
+            );
+        }
+
         config.triggerChannels.push(channelId);
         config.enabled = true;
 

@@ -45,7 +45,7 @@ export const DEFAULT_GUILD_CONFIG = {
     welcomeChannel: null,
     autoRole: null,
     logging: {
-        enabled: true,
+        enabled: false,
         enabledEvents: {}
     },
     verification: {

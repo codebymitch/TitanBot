@@ -101,6 +101,16 @@ export async function verifyUser(client, guildId, userId, options = {}) {
 
         
         const verifiedRole = guild.roles.cache.get(guildConfig.verification.roleId);
+        const canAssignRole = await validateBotCanAssignRole(guild, verifiedRole.id);
+        if (!canAssignRole) {
+            throw createError(
+                'Bot cannot assign verified role',
+                ErrorTypes.PERMISSION,
+                "I can't assign the verified role. Please check my **Manage Roles** permission and role hierarchy.",
+                { guildId, roleId: verifiedRole.id }
+            );
+        }
+
         if (member.roles.cache.has(verifiedRole.id)) {
             return {
                 success: false,
@@ -213,8 +223,21 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             };
         }
 
+        const autoVerifyRoleId = verificationConfig.autoVerify?.roleId || verificationConfig.roleId;
+        if (!autoVerifyRoleId) {
+            return {
+                autoVerified: false,
+                reason: 'auto_verify_role_not_configured'
+            };
+        }
+
+        const effectiveVerificationConfig = {
+            ...verificationConfig,
+            roleId: autoVerifyRoleId
+        };
+
         
-        await validateVerificationSetup(guild, verificationConfig);
+        await validateVerificationSetup(guild, effectiveVerificationConfig);
 
         
         const shouldVerify = evaluateAutoVerifyCriteria(
@@ -231,7 +254,7 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
         }
 
         
-        const verifiedRole = guild.roles.cache.get(verificationConfig.roleId);
+        const verifiedRole = guild.roles.cache.get(autoVerifyRoleId);
         
         
         const canAssign = await validateBotCanAssignRole(guild, verifiedRole.id);
@@ -359,6 +382,16 @@ export async function removeVerification(client, guildId, userId, options = {}) 
             );
         }
 
+        const canAssignRole = await validateBotCanAssignRole(guild, verifiedRole.id);
+        if (!canAssignRole) {
+            throw createError(
+                'Bot cannot manage verified role',
+                ErrorTypes.PERMISSION,
+                "I can't remove the verified role right now. Please check my **Manage Roles** permission and role hierarchy.",
+                { guildId, roleId: verifiedRole.id }
+            );
+        }
+
         if (!member.roles.cache.has(verifiedRole.id)) {
             return {
                 success: false,
@@ -415,6 +448,16 @@ export async function removeVerification(client, guildId, userId, options = {}) 
 
 
 export async function validateVerificationSetup(guild, verificationConfig) {
+    const botMember = guild.members.me;
+    if (!botMember) {
+        throw createError(
+            'Bot member not available in guild cache',
+            ErrorTypes.CONFIGURATION,
+            "I couldn't verify my server permissions. Please try again.",
+            { guildId: guild.id }
+        );
+    }
+
     
     const verifiedRole = guild.roles.cache.get(verificationConfig.roleId);
     if (!verifiedRole) {
@@ -439,8 +482,8 @@ export async function validateVerificationSetup(guild, verificationConfig) {
         }
 
         
-        const botPerms = channel.permissionsFor(guild.members.me);
-        const requiredPerms = ['SendMessages', 'EmbedLinks'];
+        const botPerms = channel.permissionsFor(botMember);
+        const requiredPerms = ['ViewChannel', 'SendMessages', 'EmbedLinks'];
         const missingPerms = requiredPerms.filter(perm => !botPerms.has(perm));
 
         if (missingPerms.length > 0) {
@@ -475,6 +518,13 @@ export async function validateBotCanAssignRole(guild, roleId) {
     }
 
     const botMember = guild.members.me;
+    if (!botMember) {
+        logger.warn('Cannot assign role - bot member not found in guild cache', {
+            guildId: guild.id,
+            roleId
+        });
+        return false;
+    }
     
     
     if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {

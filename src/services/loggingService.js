@@ -348,7 +348,7 @@ export async function toggleEventLogging(client, guildId, eventTypes, enabled) {
     const { updateGuildConfig } = await import('./guildConfig.js');
     const config = await getGuildConfig(client, guildId);
     
-    const logging = config.logging || { enabled: true, enabledEvents: {} };
+    const logging = config.logging || { enabled: false, enabledEvents: {} };
     const types = Array.isArray(eventTypes) ? eventTypes : [eventTypes];
     
     types.forEach(type => {
@@ -386,7 +386,7 @@ export async function setLoggingChannel(client, guildId, channelId) {
     const { updateGuildConfig } = await import('./guildConfig.js');
     const config = await getGuildConfig(client, guildId);
     
-    const logging = config.logging || { enabled: true, enabledEvents: {} };
+    const logging = config.logging || { enabled: false, enabledEvents: {} };
     logging.channelId = channelId;
     logging.enabled = true;
 

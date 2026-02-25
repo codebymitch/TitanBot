@@ -1,16 +1,151 @@
 import { getColor } from '../../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
+import { PermissionsBitField, EmbedBuilder } from 'discord.js';
+import { errorEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
-import { getLoggingStatus } from '../../../services/loggingService.js';
-import { getLevelingConfig, getWelcomeConfig, getApplicationSettings, getModlogSettings } from '../../../utils/database.js';
-import { createStatusIndicatorButtons } from '../../../utils/loggingUi.js';
+import { getLoggingStatus, EVENT_TYPES } from '../../../services/loggingService.js';
+import { getWelcomeConfig, getApplicationSettings } from '../../../utils/database.js';
+import { createLoggingStatusComponents } from '../../../utils/loggingUi.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
+import { getConfiguration as getJoinToCreateConfiguration } from '../../../services/joinToCreateService.js';
+import { getLevelingConfig } from '../../../services/leveling.js';
+
+const EVENT_TYPES_BY_CATEGORY = Object.values(EVENT_TYPES).reduce((accumulator, eventType) => {
+    const [category] = eventType.split('.');
+    if (!accumulator[category]) {
+        accumulator[category] = [];
+    }
+    accumulator[category].push(eventType);
+    return accumulator;
+}, {});
+
+function asEnabledLabel(enabled) {
+    return enabled ? '✅ Enabled' : '❌ Disabled';
+}
+
+async function formatChannelMention(guild, id) {
+    if (!id) return '❌ Not Set';
+    const channel = guild.channels.cache.get(id) || await guild.channels.fetch(id).catch(() => null);
+    return channel ? channel.toString() : `⚠️ Missing (${id})`;
+}
+
+function formatRoleMention(guild, id) {
+    if (!id) return '❌ Not Set';
+    const role = guild.roles.cache.get(id);
+    return role ? role.toString() : `⚠️ Missing (${id})`;
+}
+
+function getCategoryStatus(enabledEvents, category, auditEnabled = true) {
+    if (!auditEnabled) {
+        return false;
+    }
+
+    const events = enabledEvents || {};
+    if (events[`${category}.*`] === false) {
+        return false;
+    }
+
+    const categoryEvents = EVENT_TYPES_BY_CATEGORY[category] || [];
+    if (categoryEvents.length === 0) {
+        return true;
+    }
+
+    return categoryEvents.every((eventType) => events[eventType] !== false);
+}
+
+export async function buildLoggingStatusView(interaction, client) {
+    const guildConfig = await getGuildConfig(client, interaction.guildId);
+    const loggingStatus = await getLoggingStatus(client, interaction.guildId);
+    const levelingConfig = await getLevelingConfig(client, interaction.guildId);
+    const welcomeConfig = await getWelcomeConfig(client, interaction.guildId);
+    const applicationConfig = await getApplicationSettings(client, interaction.guildId);
+    const joinToCreateConfig = await getJoinToCreateConfiguration(client, interaction.guildId);
+
+    const verificationEnabled = Boolean(guildConfig.verification?.enabled);
+    const autoVerifyEnabled = Boolean(guildConfig.verification?.autoVerify?.enabled);
+    const autoRoleConfigured = Boolean(guildConfig.autoRole) || (Array.isArray(welcomeConfig?.roleIds) && welcomeConfig.roleIds.length > 0);
+
+    const auditEnabled = Boolean(loggingStatus.enabled);
+    const auditChannelStatus = await formatChannelMention(
+        interaction.guild,
+        loggingStatus.channelId || guildConfig.logging?.channelId || guildConfig.logChannelId
+    );
+    const reportChannelStatus = await formatChannelMention(interaction.guild, guildConfig.reportChannelId);
+    const lifecycleChannelStatus = await formatChannelMention(interaction.guild, guildConfig.ticketLogging?.lifecycleChannelId);
+    const transcriptChannelStatus = await formatChannelMention(interaction.guild, guildConfig.ticketLogging?.transcriptChannelId);
+
+    const systems = [
+        { name: '🧾 Audit Logging', value: asEnabledLabel(auditEnabled), inline: true },
+        { name: '📈 Leveling', value: asEnabledLabel(Boolean(levelingConfig?.enabled)), inline: true },
+        { name: '👋 Welcome', value: asEnabledLabel(Boolean(welcomeConfig?.enabled)), inline: true },
+        { name: '👋 Goodbye', value: asEnabledLabel(Boolean(welcomeConfig?.goodbyeEnabled)), inline: true },
+        { name: '🎂 Birthday', value: asEnabledLabel(Boolean(guildConfig.birthdayChannelId)), inline: true },
+        { name: '📋 Applications', value: asEnabledLabel(Boolean(applicationConfig?.enabled)), inline: true },
+        { name: '✅ Verification', value: asEnabledLabel(verificationEnabled), inline: true },
+        { name: '🤖 AutoVerify', value: asEnabledLabel(autoVerifyEnabled), inline: true },
+        { name: '🎧 Join to Create', value: asEnabledLabel(Boolean(joinToCreateConfig?.enabled)), inline: true },
+        { name: '🛡️ Auto Role', value: autoRoleConfigured ? `✅ Configured (${formatRoleMention(interaction.guild, guildConfig.autoRole)})` : '❌ Disabled', inline: true }
+    ];
+
+    const categoryMap = [
+        ['moderation', '🔨 Moderation'],
+        ['ticket', '🎫 Ticket Events'],
+        ['message', '❌ Message Events'],
+        ['role', '🏷️ Role Events'],
+        ['member', '👥 Member Events'],
+        ['leveling', '📈 Leveling Events'],
+        ['reactionrole', '🎭 Reaction Role Events'],
+        ['giveaway', '🎁 Giveaway Events'],
+        ['counter', '📊 Counter Events']
+    ];
+
+    const eventStatusLines = categoryMap
+        .map(([key, label]) => `${getCategoryStatus(loggingStatus.enabledEvents, key, auditEnabled) ? '✅' : '❌'} ${label}`)
+        .join('\n');
+
+    const ignoredUsers = guildConfig.logIgnore?.users || [];
+    const ignoredChannels = guildConfig.logIgnore?.channels || [];
+
+    const statusEmbed = new EmbedBuilder()
+        .setTitle('⚙️ Configuration Status')
+        .setDescription(`Live status for **${interaction.guild.name}**. Toggle buttons update this embed instantly.`)
+        .setColor(getColor('info'))
+        .addFields(
+            ...systems,
+            {
+                name: '📡 Log Destinations',
+                value:
+                    `Audit: ${auditChannelStatus}\n` +
+                    `Reports: ${reportChannelStatus}\n` +
+                    `Ticket Lifecycle: ${lifecycleChannelStatus}\n` +
+                    `Ticket Transcripts: ${transcriptChannelStatus}`,
+                inline: false,
+            },
+            {
+                name: '📋 Event Categories',
+                value: eventStatusLines,
+                inline: false,
+            },
+            {
+                name: '🧹 Ignore Filters',
+                value: `Users: ${ignoredUsers.length}\nChannels: ${ignoredChannels.length}`,
+                inline: true,
+            },
+            {
+                name: '🕒 Last Refresh',
+                value: `<t:${Math.floor(Date.now() / 1000)}:R>`,
+                inline: true,
+            }
+        )
+        .setTimestamp();
+
+    const components = createLoggingStatusComponents(loggingStatus.enabledEvents, auditEnabled);
+    return { embed: statusEmbed, components };
+}
 
 export default {
     async execute(interaction, config, client) {
         try {
-if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+            if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
                 return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         errorEmbed(
@@ -22,203 +157,10 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) 
             }
 
             await InteractionHelper.safeDefer(interaction);
-
-            const currentConfig = await getGuildConfig(client, interaction.guildId);
-            const loggingStatus = await getLoggingStatus(client, interaction.guildId);
-
-            const getStatus = (id, type) => {
-                let status = "❌ Not Set";
-                if (id) {
-                    const item =
-                        type === "role"
-                            ? interaction.guild.roles.cache.get(id)
-                            : interaction.guild.channels.cache.get(id);
-
-                    status = item ? item.toString() : `⚠️ ID: ${id} (Missing)`;
-                }
-                return status;
-            };
-
-            const logChannelStatus = getStatus(
-                loggingStatus.channelId || currentConfig.logChannelId,
-                "channel",
-            );
-            const reportChannelStatus = getStatus(
-                currentConfig.reportChannelId,
-                "channel",
-            );
-            const premiumRoleStatus = getStatus(
-                currentConfig.premiumRoleId,
-                "role",
-            );
-
-            const levelingConfig = await getLevelingConfig(client, interaction.guildId);
-            const levelingStatus = levelingConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
-            
-            const welcomeConfig = await getWelcomeConfig(client, interaction.guildId);
-            const welcomeStatus = welcomeConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
-            const goodbyeStatus = welcomeConfig?.goodbyeEnabled ? "✅ **Enabled**" : "❌ **Disabled**";
-            
-            const autoRoleStatus = getStatus(currentConfig.autoRole, "role");
-            
-            const birthdayStatus = currentConfig.birthdayChannelId ? 
-                "✅ **Enabled**" : "❌ **Disabled**";
-
-            const aggregateLoggingStatus = loggingStatus.enabled && (loggingStatus.channelId || currentConfig.logChannelId)
-                ? "✅ **Enabled**" : "❌ **Disabled**";
-
-            const applicationConfig = await getApplicationSettings(client, interaction.guildId);
-            const applicationStatus = applicationConfig?.enabled ? "✅ **Enabled**" : "❌ **Disabled**";
-
-            const maxTicketsPerUser = currentConfig.maxTicketsPerUser || 3;
-            const dmOnClose = currentConfig.dmOnClose !== false;
-            
-            const ticketLogging = currentConfig.ticketLogging || {};
-            const lifecycleChannelStatus = getStatus(ticketLogging.lifecycleChannelId, "channel");
-            const transcriptChannelStatus = getStatus(ticketLogging.transcriptChannelId, "channel");
-            
-            let totalOpenTickets = 0;
-            try {
-                const { getFromDb } = await import('../../../utils/database.js');
-                const ticketKeys = await getFromDb(`guild:${interaction.guildId}:ticket:*`, {});
-                for (const key of Object.keys(ticketKeys)) {
-                    const ticketData = await getFromDb(key, null);
-                    if (ticketData && ticketData.status === 'open') totalOpenTickets++;
-                }
-            } catch (e) {
-                console.error('Error counting tickets:', e);
-            }
-            
-            const ticketLoggingStatus = ticketLogging.lifecycleChannelId || ticketLogging.transcriptChannelId 
-                ? "✅ **Enabled**" : "❌ **Disabled**";
-                
-            const ticketLimitsStatus = `🎫 **${maxTicketsPerUser}** per user\n📩 DM on Close: ${dmOnClose ? '✅' : '❌'}\n📊 Open Tickets: ${totalOpenTickets}\n📝 Ticket Logging: ${ticketLoggingStatus}`;
-
-            const ignoredUsers = currentConfig.logIgnore?.users || [];
-            const ignoredChannels = currentConfig.logIgnore?.channels || [];
-
-            const formatIdList = (list) => {
-                if (list.length === 0) return "None";
-                if (list.length > 5)
-                    return `${list.length} IDs (see console for full list)`;
-                return list.map((id) => `\`${id}\``).join("\n");
-            };
-
-            
-            let eventStatus = '';
-            const categories = {
-                'moderation': '🔨 Moderation',
-                'ticket': '🎫 Tickets',
-                'message': '❌ Messages',
-                'role': '🏷️ Roles',
-                'member': '👋 Join/Leave',
-                'leveling': '📈 Leveling',
-                'reactionrole': '🎭 Reaction Roles',
-                'giveaway': '🎁 Giveaway',
-                'counter': '📊 Counter'
-            };
-
-            for (const [category, display] of Object.entries(categories)) {
-                const categoryEntries = Object.entries(loggingStatus.enabledEvents)
-                    .filter(([key]) => key.startsWith(category));
-                const isEnabled = categoryEntries.length === 0
-                    ? true
-                    : categoryEntries.some(([, value]) => value !== false);
-                
-                eventStatus += `${isEnabled ? '✅' : '❌'} ${display}\n`;
-            }
-
-            const statusEmbed = new EmbedBuilder()
-                .setTitle("⚙️ Server Configuration Status")
-                .setDescription(
-                    `Current settings fetched for **${interaction.guild.name}**.`,
-                )
-                .setColor(getColor('info'))
-                .setTimestamp()
-                .addFields(
-                    {
-                        name: "🎮 Leveling System",
-                        value: levelingStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "🎂 Birthday System",
-                        value: birthdayStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "👋 Welcome System",
-                        value: welcomeStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "👋 Goodbye System",
-                        value: goodbyeStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "🤖 Auto Role",
-                        value: autoRoleStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "📋 Applications",
-                        value: applicationStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "📊 Unified Logging System",
-                        value: aggregateLoggingStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "💎 Premium Role",
-                        value: premiumRoleStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "🎫 Ticket Limits",
-                        value: ticketLimitsStatus,
-                        inline: true,
-                    },
-                    {
-                        name: "📊 Configuration Channels",
-                        value: "**Audit Logs:** " + logChannelStatus + 
-                               "\n**Report Logs:** " + reportChannelStatus +
-                               "\n**Ticket Lifecycle:** " + lifecycleChannelStatus +
-                               "\n**Ticket Transcripts:** " + transcriptChannelStatus,
-                        inline: false,
-                    },
-                    {
-                        name: "📋 Event Logging Status",
-                        value: eventStatus,
-                        inline: false,
-                    },
-                    {
-                        name: "❌ Log Filters",
-                        value: "**Users:** " + formatIdList(ignoredUsers) + "\n**Channels:** " + formatIdList(ignoredChannels),
-                        inline: false,
-                    },
-                );
-
-            
-            const statusButtons = createStatusIndicatorButtons(loggingStatus.enabledEvents);
-            const refreshButton = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('logging_toggle:all')
-                    .setLabel('Toggle All')
-                    .setStyle(ButtonStyle.Danger),
-                new ButtonBuilder()
-                    .setCustomId('logging_refresh_status')
-                    .setLabel('🔄 Refresh Status')
-                    .setStyle(ButtonStyle.Primary)
-            );
-
-            
-            const components = [...statusButtons, refreshButton];
+            const { embed, components } = await buildLoggingStatusView(interaction, client);
 
             await InteractionHelper.safeEditReply(interaction, { 
-                embeds: [statusEmbed],
+                embeds: [embed],
                 components
             });
         } catch (error) {

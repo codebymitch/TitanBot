@@ -1,15 +1,17 @@
-import { EmbedBuilder, PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import { 
   toggleEventLogging, 
   getLoggingStatus, 
-  EVENT_TYPES
+  EVENT_TYPES,
+  setLoggingEnabled
 } from '../services/loggingService.js';
 import { 
-  createStatusIndicatorButtons, 
   parseEventTypeFromButton 
 } from '../utils/loggingUi.js';
-import { getGuildConfig } from '../services/guildConfig.js';
 import { logger } from '../utils/logger.js';
+import { buildLoggingStatusView } from '../commands/Config/modules/config_logging_status.js';
+
+const LOGGING_CATEGORIES = [...new Set(Object.values(EVENT_TYPES).map((eventType) => eventType.split('.')[0]))];
 
 export default {
   customIds: ['logging_toggle', 'logging_refresh_status'],
@@ -53,37 +55,38 @@ async function handleToggle(interaction) {
     }
 
     const status = await getLoggingStatus(interaction.client, interaction.guildId);
+
+    if (eventType === 'audit_enabled') {
+      const newState = !Boolean(status.enabled);
+      await setLoggingEnabled(interaction.client, interaction.guildId, newState);
+
+      const { embed, components } = await buildLoggingStatusView(interaction, interaction.client);
+      return interaction.update({
+        embeds: [embed],
+        components
+      });
+    }
     
     if (eventType === 'all') {
       
       const newState = !Object.values(status.enabledEvents).every(v => v !== false);
       const allTypes = Object.values(EVENT_TYPES);
+      const categoryTypes = LOGGING_CATEGORIES.map((category) => `${category}.*`);
       
-      await toggleEventLogging(interaction.client, interaction.guildId, allTypes, newState);
-      
-      await interaction.reply({
-        content: `✅ All logging has been **${newState ? 'enabled' : 'disabled'}**.`,
-        ephemeral: true
-      });
+      await toggleEventLogging(interaction.client, interaction.guildId, [...allTypes, ...categoryTypes], newState);
     } else {
       
       const currentState = status.enabledEvents[eventType] !== false;
       const newState = !currentState;
       
       await toggleEventLogging(interaction.client, interaction.guildId, eventType, newState);
-      
-      const displayType = eventType.endsWith('.*')
-        ? `${eventType.replace('.*', '').toUpperCase()} (Category)`
-        : eventType
-            .split('.')
-            .map((part, idx) => idx === 0 ? part.toUpperCase() : part)
-            .join(' ');
-      
-      await interaction.reply({
-        content: `✅ ${displayType} logging has been **${newState ? 'enabled' : 'disabled'}**.`,
-        ephemeral: true
-      });
     }
+
+    const { embed, components } = await buildLoggingStatusView(interaction, interaction.client);
+    await interaction.update({
+      embeds: [embed],
+      components
+    });
 
   } catch (error) {
     logger.error('Error toggling logging:', error);
@@ -96,13 +99,7 @@ async function handleToggle(interaction) {
 
 async function handleRefresh(interaction) {
   try {
-    const status = await getLoggingStatus(interaction.client, interaction.guildId);
-    const config = await getGuildConfig(interaction.client, interaction.guildId);
-
-    const embed = createLoggingStatusEmbed(interaction.guild, status, config);
-    const buttons = createStatusIndicatorButtons(status.enabledEvents);
-
-    const components = buttons ? [buttons] : [];
+    const { embed, components } = await buildLoggingStatusView(interaction, interaction.client);
 
     await interaction.update({
       embeds: [embed],
@@ -116,73 +113,4 @@ async function handleRefresh(interaction) {
       ephemeral: true
     });
   }
-}
-
-
-
-
-function createLoggingStatusEmbed(guild, status, config) {
-  const embed = new EmbedBuilder()
-    .setTitle('📋 Logging Configuration')
-    .setColor(status.enabled ? 0x2ecc71 : 0xe74c3c)
-    .setDescription(`**Status:** ${status.enabled ? '✅ **Enabled**' : '❌ **Disabled**'}`)
-    .setTimestamp()
-    .setFooter({ text: guild.name, iconURL: guild.iconURL() });
-
-  
-  if (status.channelId) {
-    const channel = guild.channels.cache.get(status.channelId);
-    embed.addFields({
-      name: '📤 Log Channel',
-      value: channel ? channel.toString() : `⚠️ Channel ID: ${status.channelId}`,
-      inline: false
-    });
-  } else if (config.logChannelId) {
-    const channel = guild.channels.cache.get(config.logChannelId);
-    embed.addFields({
-      name: '📤 Log Channel (Fallback)',
-      value: channel ? channel.toString() : `⚠️ Channel ID: ${config.logChannelId}`,
-      inline: false
-    });
-  } else {
-    embed.addFields({
-      name: '⚠️ Log Channel',
-      value: 'Not configured',
-      inline: false
-    });
-  }
-
-  
-  const categories = {
-    'moderation': '🔨 Moderation',
-    'ticket': '🎫 Tickets',
-    'message': '❌ Messages',
-    'role': '🏷️ Roles',
-    'member': '👋 Join/Leave',
-    'leveling': '📈 Leveling',
-    'reactionrole': '🎭 Reaction Roles',
-    'giveaway': '🎁 Giveaway',
-    'counter': '📊 Counter'
-  };
-
-  let categoryStatus = '';
-  for (const [category, display] of Object.entries(categories)) {
-    const categoryEntries = Object.entries(status.enabledEvents)
-      .filter(([key]) => key.startsWith(category));
-    const isEnabled = categoryEntries.length === 0
-      ? true
-      : categoryEntries.some(([, value]) => value !== false);
-    
-    categoryStatus += `${isEnabled ? '✅' : '❌'} ${display}\n`;
-  }
-
-  if (categoryStatus) {
-    embed.addFields({
-      name: '📊 Event Categories',
-      value: categoryStatus,
-      inline: false
-    });
-  }
-
-  return embed;
 }

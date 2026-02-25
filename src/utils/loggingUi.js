@@ -1,6 +1,15 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { EVENT_TYPES } from '../services/loggingService.js';
 
+const EVENT_TYPES_BY_CATEGORY = Object.values(EVENT_TYPES).reduce((accumulator, eventType) => {
+  const [category] = eventType.split('.');
+  if (!accumulator[category]) {
+    accumulator[category] = [];
+  }
+  accumulator[category].push(eventType);
+  return accumulator;
+}, {});
+
 
 
 
@@ -81,16 +90,17 @@ export function getButtonStatusStyle(isEnabled) {
 
 
 
-export function createStatusIndicatorButtons(enabledEvents) {
+export function createStatusIndicatorButtons(enabledEvents = {}, loggingEnabled = false) {
   const eventCategories = ['moderation', 'ticket', 'message', 'role', 'member', 'leveling', 'reactionrole', 'giveaway', 'counter'];
   const buttons = [];
 
   for (const category of eventCategories) {
-    const categoryEntries = Object.entries(enabledEvents)
-      .filter(([key]) => key.startsWith(category));
-    const isEnabled = categoryEntries.length === 0
+    const categoryEvents = EVENT_TYPES_BY_CATEGORY[category] || [];
+    const categoryWildcardDisabled = enabledEvents[`${category}.*`] === false;
+    const categoryEventsEnabled = categoryEvents.length === 0
       ? true
-      : categoryEntries.some(([, value]) => value !== false);
+      : categoryEvents.every((eventType) => enabledEvents[eventType] !== false);
+    const isEnabled = loggingEnabled && !categoryWildcardDisabled && categoryEventsEnabled;
 
     const emoji = {
       'moderation': '🔨',
@@ -124,6 +134,27 @@ export function createStatusIndicatorButtons(enabledEvents) {
   }
 
   return rows;
+}
+
+export function createLoggingStatusComponents(enabledEvents, loggingEnabled = false) {
+  const categoryRows = createStatusIndicatorButtons(enabledEvents, loggingEnabled);
+
+  const actionRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('logging_toggle:audit_enabled')
+      .setLabel(loggingEnabled ? '🧾 Audit: ON' : '🧾 Audit: OFF')
+      .setStyle(loggingEnabled ? ButtonStyle.Success : ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('logging_toggle:all')
+      .setLabel('Toggle Categories')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('logging_refresh_status')
+      .setLabel('🔄 Refresh')
+      .setStyle(ButtonStyle.Primary)
+  );
+
+  return [...categoryRows, actionRow];
 }
 
 

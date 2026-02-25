@@ -1040,7 +1040,9 @@ minAccountAge: 0,
 cooldown: 7,
             allowMultipleApplications: false,
             requireVerification: false,
-            customWelcomeMessage: ""
+            customWelcomeMessage: "",
+            pendingApplicationRetentionDays: 30,
+            reviewedApplicationRetentionDays: 14
         };
         
         return { ...defaultSettings, ...unwrapped };
@@ -1068,8 +1070,117 @@ cooldown: 7,
             cooldown: 7,
             allowMultipleApplications: false,
             requireVerification: false,
-            customWelcomeMessage: ""
+            customWelcomeMessage: "",
+            pendingApplicationRetentionDays: 30,
+            reviewedApplicationRetentionDays: 14
         };
+    }
+}
+
+function getApplicationRetentionDays(settings = {}) {
+    const pendingRaw = Number(settings.pendingApplicationRetentionDays);
+    const reviewedRaw = Number(settings.reviewedApplicationRetentionDays);
+
+    const pendingDays = Number.isFinite(pendingRaw) ? Math.min(Math.max(pendingRaw, 1), 3650) : 30;
+    const reviewedDays = Number.isFinite(reviewedRaw) ? Math.min(Math.max(reviewedRaw, 1), 3650) : 14;
+
+    return { pendingDays, reviewedDays };
+}
+
+function isApplicationExpired(application, retentionDays, now = Date.now()) {
+    if (!application || typeof application !== 'object') {
+        return false;
+    }
+
+    const createdAt = Number(application.createdAt) || now;
+    const updatedAt = Number(application.updatedAt) || createdAt;
+    const reviewedAt = application.reviewedAt ? Number(new Date(application.reviewedAt)) : null;
+    const status = typeof application.status === 'string' ? application.status.toLowerCase() : 'pending';
+
+    const ageMsFromCreated = now - createdAt;
+    const ageMsFromReviewed = now - (reviewedAt || updatedAt || createdAt);
+    const pendingRetentionMs = retentionDays.pendingDays * 24 * 60 * 60 * 1000;
+    const reviewedRetentionMs = retentionDays.reviewedDays * 24 * 60 * 60 * 1000;
+
+    if (status === 'pending') {
+        return ageMsFromCreated > pendingRetentionMs;
+    }
+
+    if (status === 'approved' || status === 'denied') {
+        return ageMsFromReviewed > reviewedRetentionMs;
+    }
+
+    return ageMsFromCreated > pendingRetentionMs;
+}
+
+export async function deleteApplication(client, guildId, applicationId, userIdHint = null) {
+    const key = getApplicationKey(guildId, applicationId);
+
+    try {
+        const existing = unwrapReplitData(await client.db.get(key, null));
+        const userId = userIdHint || existing?.userId || null;
+
+        await client.db.delete(key);
+
+        if (userId) {
+            const userKey = getUserApplicationsKey(guildId, userId);
+            const userApplications = await client.db.get(userKey, []);
+            const unwrapped = unwrapReplitData(userApplications);
+            const ids = Array.isArray(unwrapped) ? unwrapped : [];
+            const filtered = ids.filter(id => id !== applicationId);
+            await client.db.set(userKey, filtered);
+        }
+
+        return true;
+    } catch (error) {
+        console.error(`Error deleting application ${applicationId} in guild ${guildId}:`, error);
+        return false;
+    }
+}
+
+export async function cleanupExpiredApplications(client, guildId) {
+    try {
+        if (!client.db || typeof client.db.list !== 'function') {
+            return { removed: 0, scanned: 0 };
+        }
+
+        const settings = await getApplicationSettings(client, guildId);
+        const retentionDays = getApplicationRetentionDays(settings);
+        const prefix = `guild:${guildId}:applications:`;
+        let keys = await client.db.list(prefix);
+
+        if (!Array.isArray(keys)) {
+            if (typeof keys === 'object' && keys !== null) {
+                keys = Object.keys(keys).filter(key => key.startsWith(prefix));
+            } else {
+                return { removed: 0, scanned: 0 };
+            }
+        }
+
+        const applicationKeyPattern = new RegExp(`^guild:${guildId}:applications:[^:]+$`);
+        const applicationKeys = keys.filter(key => applicationKeyPattern.test(key));
+
+        const now = Date.now();
+        let removed = 0;
+
+        for (const key of applicationKeys) {
+            const app = unwrapReplitData(await client.db.get(key, null));
+            if (!app) {
+                continue;
+            }
+
+            if (isApplicationExpired(app, retentionDays, now)) {
+                const deleted = await deleteApplication(client, guildId, app.id, app.userId);
+                if (deleted) {
+                    removed += 1;
+                }
+            }
+        }
+
+        return { removed, scanned: applicationKeys.length };
+    } catch (error) {
+        console.error(`Error cleaning expired applications for guild ${guildId}:`, error);
+        return { removed: 0, scanned: 0 };
     }
 }
 
@@ -1153,6 +1264,7 @@ status: 'pending',
 export async function getApplication(client, guildId, applicationId) {
     const key = getApplicationKey(guildId, applicationId);
     try {
+        await cleanupExpiredApplications(client, guildId);
         const application = await client.db.get(key, null);
         return unwrapReplitData(application);
     } catch (error) {
@@ -1206,6 +1318,8 @@ export async function getUserApplications(client, guildId, userId) {
             return [];
         }
 
+        await cleanupExpiredApplications(client, guildId);
+
         const applicationIds = await client.db.get(userKey, []);
         const unwrappedIds = unwrapReplitData(applicationIds);
         
@@ -1248,6 +1362,8 @@ export async function getApplications(client, guildId, filters = {}) {
             return [];
         }
 
+        await cleanupExpiredApplications(client, guildId);
+
         const prefix = `guild:${guildId}:applications:`;
         let keys = await client.db.list(prefix);
         
@@ -1260,7 +1376,8 @@ export async function getApplications(client, guildId, filters = {}) {
             }
         }
         
-        const applicationKeys = keys.filter(key => !key.endsWith('settings') && key.includes('applications:'));
+        const applicationKeyPattern = new RegExp(`^guild:${guildId}:applications:[^:]+$`);
+        const applicationKeys = keys.filter(key => applicationKeyPattern.test(key));
         
         const applicationPromises = applicationKeys.map(key => client.db.get(key));
         let applications = (await Promise.all(applicationPromises))

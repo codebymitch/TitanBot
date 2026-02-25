@@ -13,7 +13,7 @@ const GUILD_CONFIG_DEFAULTS = {
     dmOnClose: true,
     logIgnore: { users: [], channels: [] },
     logging: {
-        enabled: true,
+        enabled: false,
         channelId: null,
         enabledEvents: {}
     }

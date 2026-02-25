@@ -185,6 +185,7 @@ export async function handleInteractionError(interaction, error, context = {}) {
         ErrorTypes.USER_INPUT,
         ErrorTypes.PERMISSION
     ].includes(errorType);
+    const isExpectedError = Boolean(error?.context?.expected === true || error?.context?.suppressErrorLog === true);
     
     const logData = {
         error: error.message,
@@ -200,7 +201,7 @@ export async function handleInteractionError(interaction, error, context = {}) {
         context
     };
     
-    if (isUserError) {
+    if (isUserError || isExpectedError) {
         if (errorType !== ErrorTypes.RATE_LIMIT) {
             logger.debug(`User Error [${errorType.toUpperCase()}]: ${error.message}`, logData);
         }
