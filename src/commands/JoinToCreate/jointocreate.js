@@ -136,24 +136,41 @@ async function handleSetupSubcommand(interaction, client) {
         // Check if guild already has a Join to Create channel configured
         const existingConfig = await getConfiguration(client, guildId);
         
-        if (existingConfig.triggerChannels && existingConfig.triggerChannels.length > 0) {
-            // Guild has a JTC channel in database - verify it still exists in Discord
-            const existingChannelId = existingConfig.triggerChannels[0];
-            const existingChannel = await interaction.guild.channels.fetch(existingChannelId).catch(() => null);
-            
-            if (existingChannel) {
-                // Channel exists, show error
-                const errorMessage = `This server already has a Join to Create channel set up: ${existingChannel}\n\nUse \`/jointocreate config\` to modify it, or remove it first before creating a new one.`;
-                
+        if (Array.isArray(existingConfig.triggerChannels) && existingConfig.triggerChannels.length > 0) {
+            const activeTriggerChannels = [];
+            const staleTriggerChannelIds = [];
+
+            for (const existingChannelId of existingConfig.triggerChannels) {
+                const existingChannel = await interaction.guild.channels.fetch(existingChannelId).catch(() => null);
+                if (existingChannel) {
+                    activeTriggerChannels.push(existingChannel);
+                } else {
+                    staleTriggerChannelIds.push(existingChannelId);
+                }
+            }
+
+            if (staleTriggerChannelIds.length > 0) {
+                for (const staleChannelId of staleTriggerChannelIds) {
+                    logger.info(`Cleaning up stale JTC trigger ${staleChannelId} from guild ${guildId}`);
+                    await removeTriggerChannel(client, guildId, staleChannelId);
+                }
+            }
+
+            if (activeTriggerChannels.length > 0) {
+                const primaryTrigger = activeTriggerChannels[0];
+                const errorMessage = `This server already has a Join to Create channel set up: ${primaryTrigger}\n\nUse \`/jointocreate config\` to modify it, or remove it first before creating a new one.`;
+
                 throw new TitanBotError(
                     'Guild already has a Join to Create channel',
                     ErrorTypes.VALIDATION,
-                    errorMessage
+                    errorMessage,
+                    {
+                        guildId,
+                        activeTriggerCount: activeTriggerChannels.length,
+                        expected: true,
+                        suppressErrorLog: true
+                    }
                 );
-            } else {
-                // Channel in database but doesn't exist in Discord - clean it up
-                logger.info(`Cleaning up stale JTC trigger ${existingChannelId} from guild ${guildId}`);
-                await removeTriggerChannel(client, guildId, existingChannelId);
             }
         }
 
@@ -248,7 +265,7 @@ async function handleConfigSubcommand(interaction, client) {
                     inline: true
                 }
             )
-            .setFooter({ text: 'Use the buttons below to modify settings' })
+            .setFooter({ text: 'Use the buttons below to modify settings • Only one trigger channel is supported per guild' })
             .setTimestamp();
 
         
@@ -274,10 +291,20 @@ async function handleConfigSubcommand(interaction, client) {
 
         const row = new ActionRowBuilder().addComponents(nameButton, limitButton, bitrateButton, deleteButton);
 
-        const message = await InteractionHelper.safeEditReply(interaction, {
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [configEmbed],
             components: [row]
         });
+
+        const message = await interaction.fetchReply();
+
+        if (!message || typeof message.createMessageComponentCollector !== 'function') {
+            throw new TitanBotError(
+                'Failed to fetch interaction reply for collector setup',
+                ErrorTypes.DISCORD_API,
+                'Failed to open configuration controls. Please run `/jointocreate config` again.'
+            );
+        }
 
         
         const collector = message.createMessageComponentCollector({

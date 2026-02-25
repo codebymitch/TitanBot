@@ -14,6 +14,22 @@ import {
     updateApplication
 } from '../../utils/database.js';
 
+function getApplicationStatusPresentation(statusValue) {
+    const normalized = typeof statusValue === 'string' ? statusValue.trim().toLowerCase() : 'unknown';
+    const statusLabel =
+        normalized === 'pending' ? 'In Progress' :
+        normalized === 'approved' ? 'Accepted' :
+        normalized === 'denied' ? 'Denied' :
+        'Unknown';
+    const statusEmoji =
+        normalized === 'pending' ? '🟡' :
+        normalized === 'approved' ? '🟢' :
+        normalized === 'denied' ? '🔴' :
+        '⚪';
+
+    return { normalized, statusLabel, statusEmoji };
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName("apply")
@@ -56,10 +72,12 @@ export default {
             });
         }
 
-        await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-
         const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
+
+        if (subcommand !== "submit") {
+            await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
+        }
 
         logger.info(`Apply command executed: ${subcommand}`, {
             userId: interaction.user.id,
@@ -160,7 +178,7 @@ export async function handleApplicationModal(interaction) {
                         `**Application:** ${applicationRole.name}\n` +
                         `**Role:** ${role.name}\n` +
                         `**Application ID:** \`${application.id}\`\n` +
-                        `**Status:** Pending`
+                        `**Status:** 🟡 In Progress`
                 }).setColor(getColor('warning'));
                 
                 const logMessage = await logChannel.send({ embeds: [logEmbed] });
@@ -330,7 +348,18 @@ async function handleStatus(interaction) {
             });
         }
 
-        const embed = createEmbed({ title: `Application #${application.id} - ${application.roleName}`, description: `**Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}` });
+        const submittedAt = application?.createdAt ? new Date(application.createdAt) : null;
+        const submittedAtDisplay = submittedAt && !Number.isNaN(submittedAt.getTime())
+            ? submittedAt.toLocaleString()
+            : 'Unknown date';
+        const statusView = getApplicationStatusPresentation(application.status);
+        const embed = createEmbed({
+            title: `Application #${application.id} - ${application.roleName || 'Unknown Role'}`,
+            description:
+                `**Application ID:** \`${application.id}\`\n` +
+                `**Status:** ${statusView.statusEmoji} ${statusView.statusLabel}\n` +
+                `**Submitted:** ${submittedAtDisplay}`
+        });
 
         return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
     } else {
@@ -349,7 +378,35 @@ async function handleStatus(interaction) {
             });
         }
 
-        const embed = createEmbed({ title: "Your Applications", description: "Here are your recent applications." });
+        const recentApplications = applications
+            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+            .slice(0, 10);
+
+        const embed = createEmbed({
+            title: "Your Applications",
+            description: `Showing ${recentApplications.length} recent application(s).`
+        });
+
+        recentApplications.forEach((application) => {
+            const submittedAt = application?.createdAt ? new Date(application.createdAt) : null;
+            const submittedAtDisplay = submittedAt && !Number.isNaN(submittedAt.getTime())
+                ? submittedAt.toLocaleDateString()
+                : 'Unknown date';
+            const statusView = getApplicationStatusPresentation(application.status);
+
+            embed.addFields({
+                name: `${statusView.statusEmoji} ${application.roleName || 'Unknown Role'} (${statusView.statusLabel})`,
+                value:
+                    `**ID:** \`${application.id}\`\n` +
+                    `**Status:** ${statusView.statusEmoji} ${statusView.statusLabel}\n` +
+                    `**Submitted:** ${submittedAtDisplay}`,
+                inline: true,
+            });
+        });
+
+        if (applications.length > recentApplications.length) {
+            embed.setFooter({ text: `Showing latest ${recentApplications.length} of ${applications.length} applications.` });
+        }
 
         return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
     }

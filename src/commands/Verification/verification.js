@@ -1,12 +1,13 @@
 import { botConfig, getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, infoEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, infoEmbed, successEmbed } from '../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../services/guildConfig.js';
 import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { removeVerification, verifyUser } from '../../services/verificationService.js';
-import { ContextualMessages, MessageTemplates } from '../../utils/messageTemplates.js';
+import { ContextualMessages } from '../../utils/messageTemplates.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getWelcomeConfig } from '../../utils/database.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -72,7 +73,7 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        return withErrorHandling(async () => {
+        const wrappedExecute = withErrorHandling(async () => {
             const subcommand = interaction.options.getSubcommand();
             const guild = interaction.guild;
 
@@ -105,6 +106,8 @@ export default {
                     );
             }
         }, { command: 'verification', subcommand: interaction.options.getSubcommand() });
+
+        return await wrappedExecute(interaction, config, client);
     }
 };
 
@@ -151,6 +154,15 @@ async function handleSetup(interaction, guild, client) {
         );
     }
 
+    if (verifiedRole.id === guild.id || verifiedRole.managed) {
+        throw createError(
+            'Invalid verified role selected',
+            ErrorTypes.VALIDATION,
+            'Please choose a normal assignable role (not @everyone or an integration-managed role).',
+            { roleId: verifiedRole.id, managed: verifiedRole.managed }
+        );
+    }
+
     const botRole = botMember.roles.highest;
     if (verifiedRole.position >= botRole.position) {
         throw createError(
@@ -158,6 +170,26 @@ async function handleSetup(interaction, guild, client) {
             ErrorTypes.PERMISSION,
             "The verified role must be below my highest role in the server role hierarchy.",
             { rolePosition: verifiedRole.position, botRolePosition: botRole.position }
+        );
+    }
+
+    const guildConfig = await getGuildConfig(client, guild.id);
+    const welcomeConfig = await getWelcomeConfig(client, guild.id);
+    const hasAutoVerifyEnabled = Boolean(guildConfig.verification?.autoVerify?.enabled);
+    const hasAutoRoleConfigured = Boolean(guildConfig.autoRole) || (Array.isArray(welcomeConfig.roleIds) && welcomeConfig.roleIds.length > 0);
+
+    if (hasAutoVerifyEnabled || hasAutoRoleConfigured) {
+        throw createError(
+            'Verification setup blocked by conflicting onboarding system',
+            ErrorTypes.CONFIGURATION,
+            'You cannot enable the verification system while **AutoVerify** or **AutoRole** is configured. Disable those first.',
+            {
+                guildId: guild.id,
+                hasAutoVerifyEnabled,
+                hasAutoRoleConfigured,
+                expected: true,
+                suppressErrorLog: true
+            }
         );
     }
 
@@ -182,7 +214,6 @@ async function handleSetup(interaction, guild, client) {
         components: [verifyButton]
     });
 
-    const guildConfig = await getGuildConfig(client, guild.id);
     guildConfig.verification = {
         enabled: true,
         channelId: verificationChannel.id,
@@ -215,7 +246,7 @@ async function handleVerify(interaction, guild, client) {
     if (!result.success) {
         if (result.alreadyVerified) {
             return await InteractionHelper.safeReply(interaction, {
-                embeds: [MessageTemplates.INFO.ALREADY_CONFIGURED("verified")],
+                embeds: [infoEmbed("Already Verified", "You are already verified.")],
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -230,7 +261,8 @@ async function handleVerify(interaction, guild, client) {
     }
 
     await InteractionHelper.safeReply(interaction, {
-        embeds: [MessageTemplates.SUCCESS.ACTION_COMPLETE(
+        embeds: [successEmbed(
+            "Verification Complete",
             `You have been verified and given the **${result.roleName}** role! Welcome to the server! 🎉`
         )],
         flags: MessageFlags.Ephemeral
@@ -249,7 +281,7 @@ async function handleRemove(interaction, guild, client) {
         if (!result.success) {
             if (result.notVerified) {
                 return await InteractionHelper.safeReply(interaction, {
-                    embeds: [MessageTemplates.INFO.NO_DATA("verified role")],
+                    embeds: [infoEmbed("Not Verified", `${targetUser.tag} does not currently have the verified role.`)],
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -262,9 +294,7 @@ async function handleRemove(interaction, guild, client) {
         });
 
         return await InteractionHelper.safeReply(interaction, {
-            embeds: [MessageTemplates.SUCCESS.OPERATION_COMPLETE(
-                `Verification removed from ${targetUser.tag}.`
-            )]
+            embeds: [successEmbed("Verification Removed", `Verification removed from ${targetUser.tag}.`)]
         });
 
     } catch (error) {
@@ -281,7 +311,7 @@ async function handleDisable(interaction, guild, client) {
     
     if (!guildConfig.verification?.enabled) {
         return await InteractionHelper.safeReply(interaction, {
-            embeds: [MessageTemplates.INFO.ALREADY_CONFIGURED("disabled")],
+            embeds: [infoEmbed("Already Disabled", "The verification system is already disabled.")],
             flags: MessageFlags.Ephemeral
         });
     }
@@ -306,20 +336,25 @@ async function handleDisable(interaction, guild, client) {
     await setGuildConfig(client, guild.id, guildConfig);
 
     await InteractionHelper.safeEditReply(interaction, {
-        embeds: [MessageTemplates.SUCCESS.OPERATION_COMPLETE(
-            "The verification system has been disabled and the verification message has been removed."
-        )]
+        embeds: [successEmbed("Verification Disabled", "The verification system has been disabled and the verification message has been removed.")]
     });
 }
 
 async function handleStatus(interaction, guild, client) {
     const guildConfig = await getGuildConfig(client, guild.id);
+    const welcomeConfig = await getWelcomeConfig(client, guild.id);
+    const autoVerifyEnabled = Boolean(guildConfig.verification?.autoVerify?.enabled);
+    const autoRoleConfigured = Boolean(guildConfig.autoRole) || (Array.isArray(welcomeConfig.roleIds) && welcomeConfig.roleIds.length > 0);
+    const conflictSummary = [
+        autoVerifyEnabled ? 'AutoVerify is enabled' : null,
+        autoRoleConfigured ? 'AutoRole is configured' : null
+    ].filter(Boolean).join('\n');
     
     if (!guildConfig.verification?.enabled) {
         return await InteractionHelper.safeReply(interaction, {
             embeds: [infoEmbed(
                 "Verification Status",
-                "🔴 **Status:** Disabled\n\nThe verification system is not currently enabled on this server.\n\nUse `/verification setup` to enable it."
+                `🔴 **Status:** Disabled\n\nThe verification system is not currently enabled on this server.\n\nUse \`/verification setup\` to enable it.${conflictSummary ? `\n\n⚠️ **Setup Blockers:**\n${conflictSummary}` : ''}`
             )],
             flags: MessageFlags.Ephemeral
         });
@@ -358,6 +393,11 @@ async function handleStatus(interaction, guild, client) {
             name: "👥 Verified Users",
             value: verifiedRole ? `${verifiedRole.members.size} users` : "Unknown",
             inline: true
+        },
+        {
+            name: "⚠️ Setup Conflicts",
+            value: conflictSummary || "None",
+            inline: false
         }
     );
 

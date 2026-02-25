@@ -15,6 +15,22 @@ import {
 } from '../../utils/database.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
+function getApplicationStatusPresentation(statusValue) {
+    const normalized = typeof statusValue === 'string' ? statusValue.trim().toLowerCase() : 'unknown';
+    const statusLabel =
+        normalized === 'pending' ? 'In Progress' :
+        normalized === 'approved' ? 'Accepted' :
+        normalized === 'denied' ? 'Denied' :
+        'Unknown';
+    const statusEmoji =
+        normalized === 'pending' ? '🟡' :
+        normalized === 'approved' ? '🟢' :
+        normalized === 'denied' ? '🔴' :
+        '⚪';
+
+    return { normalized, statusLabel, statusEmoji };
+}
+
 export default {
     data: new SlashCommandBuilder()
     .setName("app-admin")
@@ -160,10 +176,12 @@ export default {
             });
         }
 
-        await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
-
         const { options, guild, member } = interaction;
         const subcommand = options.getSubcommand();
+
+        if (subcommand !== "questions") {
+            await InteractionHelper.safeDefer(interaction, { flags: ["Ephemeral"] });
+        }
 
         logger.info(`App-admin command executed: ${subcommand}`, {
             userId: interaction.user.id,
@@ -292,31 +310,52 @@ async function handleView(interaction) {
         });
     }
 
-    const statusColor = application.status === "approved" ? getColor('success') : (application.status === "denied" ? getColor('error') : getColor('warning'));
-    const embed = createEmbed({ title: `Application #${application.id} - ${application.roleName}`, description: `**User:** <@${application.userId}> (${application.userId})\n         **Status:** ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}\n` +
+    const { normalized: rawStatus, statusLabel, statusEmoji } = getApplicationStatusPresentation(application?.status);
+    const statusColor = rawStatus === "approved" ? getColor('success') : (rawStatus === "denied" ? getColor('error') : getColor('warning'));
+    const submittedAt = application?.createdAt ? new Date(application.createdAt) : null;
+    const submittedAtDisplay = submittedAt && !Number.isNaN(submittedAt.getTime())
+        ? submittedAt.toLocaleString()
+        : 'Unknown date';
+    const roleName = application?.roleName || 'Unknown Role';
+    const embed = createEmbed({ title: `${statusEmoji} Application #${application.id} - ${roleName}`, description: `**User:** <@${application.userId}> (${application.userId})\n         **Status:** ${statusEmoji} ${statusLabel}\n` +
             (application.reviewer
                 ? `**Reviewed by:** <@${application.reviewer}>\n`
                 : "") +
             (application.reviewMessage
                 ? `**Note:** ${application.reviewMessage}\n`
                 : "") +
-            `**Submitted on:** ${new Date(application.createdAt).toLocaleString()}`,
+            `**Submitted on:** ${submittedAtDisplay}`,
         }).setColor(statusColor);
 
     if (application.avatar) {
         embed.setThumbnail(application.avatar);
     }
 
-    application.answers.forEach((answer, index) => {
+    const answers = Array.isArray(application.answers) ? application.answers : [];
+    answers.forEach((answer) => {
+        const question = typeof answer?.question === 'string' && answer.question.trim().length > 0
+            ? answer.question
+            : 'Question';
+        const response = typeof answer?.answer === 'string' && answer.answer.length > 0
+            ? answer.answer
+            : 'No response provided.';
         embed.addFields({
-            name: answer.question,
+            name: question,
             value:
-                answer.answer.length > 1000
-                    ? answer.answer.substring(0, 997) + "..."
-                    : answer.answer,
+                response.length > 1000
+                    ? response.substring(0, 997) + "..."
+                    : response,
             inline: false,
         });
     });
+
+    if (answers.length === 0) {
+        embed.addFields({
+            name: 'Application Answers',
+            value: 'No answers were stored for this application.',
+            inline: false,
+        });
+    }
 
     if (application.status === "pending") {
         const row = new ActionRowBuilder().addComponents(
@@ -389,8 +428,9 @@ async function handleReview(interaction) {
     try {
         const user = await interaction.client.users.fetch(application.userId);
         const statusColor = status === "approved" ? getColor('success') : getColor('error');
+        const reviewStatus = getApplicationStatusPresentation(status);
         const dmEmbed = createEmbed(
-            `Application ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            `${reviewStatus.statusEmoji} Application ${reviewStatus.statusLabel}`,
             `Your application for **${application.roleName}** has been **${status}**.\n` +
                 `**Note:** ${reason}\n\n` +
                 `Use \`/apply status id:${appId}\` to view details.`
@@ -419,13 +459,12 @@ async function handleReview(interaction) {
                 if (logMessage) {
                     const embed = logMessage.embeds[0];
                     if (embed) {
+                        const reviewStatus = getApplicationStatusPresentation(status);
                         const newEmbed = EmbedBuilder.from(embed)
                             .setColor(statusColor)
                             .spliceFields(0, 1, {
                                 name: "Status",
-                                value:
-                                    status.charAt(0).toUpperCase() +
-                                    status.slice(1),
+                                value: `${reviewStatus.statusEmoji} ${reviewStatus.statusLabel}`,
                             });
 
                         await logMessage.edit({
@@ -532,20 +571,20 @@ async function handleList(interaction) {
     const embed = createEmbed({ title: "Submitted Applications", description: `Showing ${applications.length} applications.`, });
 
     applications.forEach((app) => {
-        const status = app.status.charAt(0).toUpperCase() + app.status.slice(1);
-        const statusEmoji =
-            {
-                Pending: "🟡",
-                Approved: "🟢",
-                Denied: "🔴",
-            }[status] || "⚪";
+        const statusView = getApplicationStatusPresentation(app?.status);
+        const roleName = app?.roleName || 'Unknown Role';
+        const username = app?.username || 'Unknown User';
+        const createdAt = app?.createdAt ? new Date(app.createdAt) : null;
+        const createdAtDisplay = createdAt && !Number.isNaN(createdAt.getTime())
+            ? createdAt.toLocaleString()
+            : 'Unknown date';
 
         embed.addFields({
-            name: `${statusEmoji} ${app.roleName} - ${app.username}`,
+            name: `${statusView.statusEmoji} ${roleName} - ${username}`,
             value:
                 `**ID:** \`${app.id}\`\n` +
-                `**Status:** ${status}\n` +
-                `**Date:** ${new Date(app.createdAt).toLocaleString()}`,
+                `**Status:** ${statusView.statusEmoji} ${statusView.statusLabel}\n` +
+                `**Date:** ${createdAtDisplay}`,
             inline: true,
         });
     });
@@ -697,8 +736,8 @@ export async function handleApplicationButton(interaction) {
     const customId = interaction.customId;
     if (!customId.startsWith('app_approve_') && !customId.startsWith('app_deny_')) return;
     
-    const [action, appId] = customId.split('_');
-    const isApprove = action === 'app';
+    const [, action, appId] = customId.split('_');
+    const isApprove = action === 'approve';
     
     try {
         const application = await getApplication(interaction.client, interaction.guild.id, appId);
@@ -781,8 +820,9 @@ export async function handleApplicationReviewModal(interaction) {
         
         try {
             const user = await interaction.client.users.fetch(application.userId);
+            const reviewStatus = getApplicationStatusPresentation(status);
             const dmEmbed = createEmbed(
-                `Application ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+                `${reviewStatus.statusEmoji} Application ${reviewStatus.statusLabel}`,
                 `Your application for **${application.roleName}** has been **${status}**.\n` +
                 `**Note:** ${reason}\n\n` +
                 `Use \`/apply status id:${appId}\` to view details.`,
@@ -802,11 +842,12 @@ export async function handleApplicationReviewModal(interaction) {
                     if (logMessage) {
                         const embed = logMessage.embeds[0];
                         if (embed) {
+                            const reviewStatus = getApplicationStatusPresentation(status);
                             const newEmbed = EmbedBuilder.from(embed)
                                 .setColor(isApprove ? '#00FF00' : '#FF0000')
                                 .spliceFields(0, 1, {
                                     name: 'Status',
-                                    value: status.charAt(0).toUpperCase() + status.slice(1)
+                                    value: `${reviewStatus.statusEmoji} ${reviewStatus.statusLabel}`
                                 });
                             
                             await logMessage.edit({
@@ -833,8 +874,8 @@ export async function handleApplicationReviewModal(interaction) {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
-                    `Application ${status}`,
-                    `The application has been ${status}.`
+                    `${getApplicationStatusPresentation(status).statusEmoji} Application ${getApplicationStatusPresentation(status).statusLabel}`,
+                    `The application has been marked as ${getApplicationStatusPresentation(status).statusLabel}.`
                 )
             ],
             flags: ["Ephemeral"]

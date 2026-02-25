@@ -1,8 +1,9 @@
-import { ButtonInteraction, PermissionFlagsBits, MessageFlags } from 'discord.js';
-import { createEmbed, successEmbed, errorEmbed } from '../utils/embeds.js';
+import { MessageFlags } from 'discord.js';
+import { successEmbed, errorEmbed } from '../utils/embeds.js';
 import { verifyUser } from '../services/verificationService.js';
 import { handleInteractionError } from '../utils/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { InteractionHelper } from '../utils/interactionHelper.js';
 
 
 
@@ -13,11 +14,11 @@ import { logger } from '../utils/logger.js';
 
 export async function handleVerificationButton(interaction, client) {
     try {
-        
+        await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+
         if (!interaction.guild) {
-            return await interaction.reply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed("Guild Only", "This button can only be used in a server.")],
-                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -38,21 +39,19 @@ export async function handleVerificationButton(interaction, client) {
 
         if (!result.success) {
             if (result.alreadyVerified) {
-                return await interaction.reply({
+                return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
                         "Already Verified",
                         "You are already verified and have access to all server channels."
                     )],
-                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            return await interaction.reply({
+            return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed(
                     "Verification Failed",
                     "An error occurred during verification. Please try again or contact an administrator."
                 )],
-                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -63,12 +62,11 @@ export async function handleVerificationButton(interaction, client) {
             roleName: result.roleName
         });
 
-        await interaction.reply({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [successEmbed(
                 "✅ Verification Successful!",
                 `You have been verified and given the **${result.roleName}** role!\n\nYou now have access to all server channels and features. Welcome! 🎉`
             )],
-            flags: MessageFlags.Ephemeral
         });
 
     } catch (error) {

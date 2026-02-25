@@ -9,11 +9,11 @@ const LogIgnoreSchema = z
 
 const LoggingConfigSchema = z
   .object({
-    enabled: z.boolean().default(true),
+    enabled: z.boolean().default(false),
     channelId: z.string().nullable().optional(),
     enabledEvents: z.record(z.boolean()).default({})
   })
-  .default({ enabled: true, enabledEvents: {} });
+  .default({ enabled: false, enabledEvents: {} });
 
 const TicketLoggingSchema = z
   .object({
@@ -26,7 +26,8 @@ const AutoVerifyConfigSchema = z
   .object({
     enabled: z.boolean().default(false),
     criteria: z.enum(['account_age', 'server_size', 'none']).default('none'),
-    accountAgeDays: z.number().int().min(1).max(365).nullable().optional()
+    accountAgeDays: z.number().int().min(1).max(365).nullable().optional(),
+    roleId: z.string().nullable().optional()
   })
   .optional();
 

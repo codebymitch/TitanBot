@@ -4,6 +4,7 @@ import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 import { logger } from '../../utils/logger.js';
 import { errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
 
 function createAutoroleInfoEmbed(description) {
     return new EmbedBuilder()
@@ -56,11 +57,25 @@ export default {
             });
         }
 
-const { options, guild, client } = interaction;
+    const { options, guild, client } = interaction;
         const subcommand = options.getSubcommand();
 
         if (subcommand === 'add') {
             const role = options.getRole('role');
+
+            const guildConfig = await getGuildConfig(client, guild.id);
+            const verificationEnabled = Boolean(guildConfig.verification?.enabled);
+            const autoVerifyEnabled = Boolean(guildConfig.verification?.autoVerify?.enabled);
+
+            if (verificationEnabled || autoVerifyEnabled) {
+                return InteractionHelper.safeEditReply(interaction, {
+                    embeds: [errorEmbed(
+                        'Setup Conflict',
+                        'You cannot add AutoRole while the verification system or AutoVerify is enabled. Disable those first.'
+                    )],
+                    flags: MessageFlags.Ephemeral
+                });
+            }
             
             if (role.position >= guild.members.me.roles.highest.position) {
                 logger.warn(`[Autorole] User ${interaction.user.tag} tried to add role ${role.name} (${role.id}) higher than bot's highest role in ${guild.name}`);
@@ -151,6 +166,14 @@ const { options, guild, client } = interaction;
         
         else if (subcommand === 'list') {
             try {
+                const guildConfig = await getGuildConfig(client, guild.id);
+                const verificationEnabled = Boolean(guildConfig.verification?.enabled);
+                const autoVerifyEnabled = Boolean(guildConfig.verification?.autoVerify?.enabled);
+                const conflictSummary = [
+                    verificationEnabled ? 'Verification system is enabled' : null,
+                    autoVerifyEnabled ? 'AutoVerify is enabled' : null
+                ].filter(Boolean).join('\n');
+
                 const config = await getWelcomeConfig(client, guild.id);
                 const autoRoles = Array.isArray(config.roleIds) ? config.roleIds : [];
 
@@ -164,7 +187,7 @@ const { options, guild, client } = interaction;
 
                 if (singleRoleIds.length === 0) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [createAutoroleInfoEmbed('ℹ️ No role is set to be auto-assigned.')],
+                        embeds: [createAutoroleInfoEmbed(`ℹ️ No role is set to be auto-assigned.${conflictSummary ? `\n\n⚠️ Setup blockers:\n${conflictSummary}` : ''}`)],
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -192,7 +215,7 @@ const { options, guild, client } = interaction;
 
                 if (validRoles.length === 0) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [createAutoroleInfoEmbed('ℹ️ No valid auto-role found. Any invalid role has been removed.')],
+                        embeds: [createAutoroleInfoEmbed(`ℹ️ No valid auto-role found. Any invalid role has been removed.${conflictSummary ? `\n\n⚠️ Setup blockers:\n${conflictSummary}` : ''}`)],
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -200,7 +223,7 @@ const { options, guild, client } = interaction;
                 const embed = new EmbedBuilder()
                     .setColor(getColor('info'))
                     .setTitle('Auto-Assigned Role')
-                    .setDescription(`${validRoles[0]}`)
+                    .setDescription(`${validRoles[0]}${conflictSummary ? `\n\n⚠️ Setup blockers:\n${conflictSummary}` : ''}`)
                     .setFooter({ text: 'Only one auto-role can be configured.' });
 
                 await InteractionHelper.safeEditReply(interaction, {
