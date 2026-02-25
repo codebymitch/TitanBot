@@ -57,7 +57,7 @@ export default {
             });
         }
 
-const { options, guild, client } = interaction;
+    const { options, guild, client } = interaction;
         const subcommand = options.getSubcommand();
 
         if (subcommand === 'add') {
