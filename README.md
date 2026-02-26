@@ -134,8 +134,8 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
    AUTO_MIGRATE=false
 
    # Bot Configuration
-   NODE_ENV=development
-   LOG_LEVEL=info
+   NODE_ENV=production
+   LOG_LEVEL=warn
    ```
 
    Production note:
