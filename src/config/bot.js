@@ -1,8 +1,3 @@
-
-
-
-
-
 import { logger } from '../utils/logger.js';
 
 
@@ -51,20 +46,6 @@ export const botConfig = {
 
   
   // IMPORTANT: This is the SINGLE SOURCE OF TRUTH for all bot colors
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   embeds: {
     colors: {
       
@@ -252,7 +233,7 @@ export const botConfig = {
     
     
     logAllVerifications: true,     
-    keepAuditTrail: true          // Store audit trail in database
+    keepAuditTrail: true         
   },
 
   
@@ -341,15 +322,8 @@ export const botConfig = {
     utility: true,
     community: true,
     fun: true,
-
-    
-    music: false,
   },
 };
-
-
-
-
 
 
 export function validateConfig(config) {
@@ -393,7 +367,7 @@ export function validateConfig(config) {
 
 const configErrors = validateConfig(botConfig);
 if (configErrors.length > 0) {
-  console.error("Bot configuration errors:", configErrors.join("\n"));
+  logger.error("Bot configuration errors:", configErrors.join("\n"));
   if (process.env.NODE_ENV === "production") {
     process.exit(1);
   }
@@ -401,44 +375,6 @@ if (configErrors.length > 0) {
 
 
 export const BotConfig = botConfig;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export function getColor(path, fallback = "#99AAB5") {
   

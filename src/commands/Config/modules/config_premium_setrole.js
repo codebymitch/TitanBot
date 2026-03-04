@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
+import { logger } from '../../../utils/logger.js';
 
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
@@ -35,7 +36,7 @@ export default {
                 ],
             });
         } catch (error) {
-            console.error("SetPremiumRole command error:", error);
+            logger.error("SetPremiumRole command error:", error);
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(

@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, version, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -32,7 +33,7 @@ export default {
 
       await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     } catch (error) {
-      console.error('Stats command error:', error);
+      logger.error('Stats command error:', error);
       return InteractionHelper.safeEditReply(interaction, {
         embeds: [createEmbed({ title: 'System Error', description: 'Could not fetch system statistics.', color: 'error' })],
         flags: MessageFlags.Ephemeral,

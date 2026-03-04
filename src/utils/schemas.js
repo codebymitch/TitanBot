@@ -1,13 +1,14 @@
 import { z } from 'zod';
+import { createError, ErrorTypes } from './errorHandler.js';
 
-const LogIgnoreSchema = z
+export const LogIgnoreSchema = z
   .object({
     users: z.array(z.string()).default([]),
     channels: z.array(z.string()).default([])
   })
   .default({ users: [], channels: [] });
 
-const LoggingConfigSchema = z
+export const LoggingConfigSchema = z
   .object({
     enabled: z.boolean().default(false),
     channelId: z.string().nullable().optional(),
@@ -98,6 +99,29 @@ export function normalizeEconomyData(raw, defaults = {}) {
   const merged = { ...defaults, ...base };
   const parsed = EconomyDataSchema.safeParse(merged);
   return parsed.success ? parsed.data : { ...defaults, ...base };
+}
+
+export function validateGuildConfigOrThrow(rawConfig, context = {}) {
+  const parsed = GuildConfigSchema.safeParse(rawConfig);
+
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  throw createError(
+    'Invalid guild configuration payload',
+    ErrorTypes.VALIDATION,
+    'Configuration payload is invalid. Please review provided values and try again.',
+    {
+      ...context,
+      errorCode: 'VALIDATION_FAILED',
+      issues: parsed.error.issues.map((issue) => ({
+        path: issue.path.join('.'),
+        message: issue.message,
+        code: issue.code
+      }))
+    }
+  );
 }
 
 

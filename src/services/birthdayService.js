@@ -369,7 +369,7 @@ export async function checkBirthdays(client) {
           }
           delete updatedTrackingData[userId];
         } catch (error) {
-          console.error(`Error removing birthday role from ${userId}:`, error);
+           logger.error(`Error removing birthday role from ${userId}:`, error);
         }
       }
 
@@ -389,7 +389,7 @@ export async function checkBirthdays(client) {
               await member.roles.add(birthdayRoleId, "Happy Birthday! 🎉");
               updatedTrackingData[userId] = true;
             } catch (error) {
-              console.error(`Error adding birthday role to ${member.user.tag}:`, error);
+                logger.error(`Error adding birthday role to ${member.user.tag}:`, error);
             }
           }
         }

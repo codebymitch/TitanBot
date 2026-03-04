@@ -2,6 +2,8 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from '../src/utils/logger.js';
+import { EXPECTED_SCHEMA_LABEL, EXPECTED_SCHEMA_VERSION } from '../src/config/schemaVersion.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -10,11 +12,52 @@ const { Pool } = pg;
 
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
-  ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: false,
 });
 
+const migrationTable = process.env.POSTGRES_MIGRATION_TABLE || 'schema_migrations';
+const migrationTablePattern = /^[a-z_][a-z0-9_]*$/;
+
+if (!migrationTablePattern.test(migrationTable)) {
+  throw new Error(`Invalid migration table name: ${migrationTable}`);
+}
+
+const ensureMigrationLedger = async (client) => {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS ${migrationTable} (
+      version INTEGER PRIMARY KEY,
+      label VARCHAR(255) NOT NULL,
+      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
+const recordSchemaVersion = async (client) => {
+  await ensureMigrationLedger(client);
+  await client.query(
+    `INSERT INTO ${migrationTable} (version, label)
+     VALUES ($1, $2)
+     ON CONFLICT (version)
+     DO UPDATE SET label = EXCLUDED.label, applied_at = CURRENT_TIMESTAMP`,
+    [EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL]
+  );
+};
+
+const getCurrentSchemaVersion = async (client) => {
+  await ensureMigrationLedger(client);
+  const result = await client.query(
+    `SELECT version, label, applied_at FROM ${migrationTable} ORDER BY version DESC LIMIT 1`
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0];
+};
+
 const createTables = async (client) => {
-  console.log('📊 Creating database tables...');
+  logger.info('📊 Creating database tables...');
 
   const tables = [
     
@@ -99,11 +142,11 @@ const createTables = async (client) => {
     
     `CREATE TABLE IF NOT EXISTS giveaway_entries (
       id SERIAL PRIMARY KEY,
-      giveaway_id VARCHAR(255) NOT NULL,
+      giveaway_id INTEGER NOT NULL,
       user_id VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(giveaway_id, user_id),
-      FOREIGN KEY(giveaway_id) REFERENCES giveaways(giveaway_id) ON DELETE CASCADE
+      FOREIGN KEY(giveaway_id) REFERENCES giveaways(id) ON DELETE CASCADE
     )`,
 
     
@@ -157,16 +200,16 @@ const createTables = async (client) => {
     try {
       await client.query(table);
     } catch (error) {
-      console.error('❌ Error creating table:', error.message);
+      logger.error(`❌ Error creating table: ${error.message}`);
       throw error;
     }
   }
 
-  console.log('✅ All tables created successfully');
+  logger.info('✅ All tables created successfully');
 };
 
 const createIndexes = async (client) => {
-  console.log('📈 Creating indexes...');
+  logger.info('📈 Creating indexes...');
 
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_user_levels_guild ON user_levels(guild_id)',
@@ -180,16 +223,16 @@ const createIndexes = async (client) => {
     try {
       await client.query(index);
     } catch (error) {
-      console.error('❌ Error creating index:', error.message);
+      logger.error(`❌ Error creating index: ${error.message}`);
       throw error;
     }
   }
 
-  console.log('✅ All indexes created successfully');
+  logger.info('✅ All indexes created successfully');
 };
 
 const createTriggers = async (client) => {
-  console.log('⏰ Setting up automatic timestamps...');
+  logger.info('⏰ Setting up automatic timestamps...');
 
   const triggers = [
     {
@@ -252,28 +295,30 @@ const createTriggers = async (client) => {
         EXECUTE FUNCTION update_timestamp_${table}();
       `);
     } catch (error) {
-      console.error(`❌ Error creating trigger for ${table}:`, error.message);
+      logger.error(`❌ Error creating trigger for ${table}: ${error.message}`);
       throw error;
     }
   }
 
-  console.log('✅ All triggers created successfully');
+  logger.info('✅ All triggers created successfully');
 };
 
 const migrate = async () => {
   const client = await pool.connect();
 
   try {
-    console.log('🚀 Starting database migration...\n');
+    logger.info('🚀 Starting database migration...');
 
     await createTables(client);
     await createIndexes(client);
     await createTriggers(client);
+    await recordSchemaVersion(client);
 
-    console.log('\n✨ Migration completed successfully!');
-    console.log('📚 Your database is now ready for TitanBot.\n');
+    logger.info('✨ Migration completed successfully!');
+    logger.info(`📌 Schema version recorded: v${EXPECTED_SCHEMA_VERSION} (${EXPECTED_SCHEMA_LABEL})`);
+    logger.info('📚 Your database is now ready for TitanBot.');
   } catch (error) {
-    console.error('\n❌ Migration failed:', error);
+    logger.error('❌ Migration failed:', error);
     process.exit(1);
   } finally {
     client.release();
@@ -281,4 +326,69 @@ const migrate = async () => {
   }
 };
 
-migrate();
+const checkMigrationVersion = async () => {
+  const client = await pool.connect();
+
+  try {
+    const current = await getCurrentSchemaVersion(client);
+
+    if (!current) {
+      logger.error(`❌ No schema version found in ${migrationTable}. Expected v${EXPECTED_SCHEMA_VERSION}.`);
+      process.exit(1);
+    }
+
+    const currentVersion = Number(current.version);
+    if (currentVersion !== EXPECTED_SCHEMA_VERSION) {
+      logger.error(
+        `❌ Schema drift detected. Expected v${EXPECTED_SCHEMA_VERSION}, found v${currentVersion}.`
+      );
+      process.exit(1);
+    }
+
+    logger.info(
+      `✅ Schema version check passed (v${currentVersion}, label: ${current.label}).`
+    );
+  } catch (error) {
+    logger.error('❌ Migration check failed:', error);
+    process.exit(1);
+  } finally {
+    client.release();
+    await pool.end();
+  }
+};
+
+const printMigrationStatus = async () => {
+  const client = await pool.connect();
+
+  try {
+    const current = await getCurrentSchemaVersion(client);
+    if (!current) {
+      logger.info(`ℹ️ No schema version recorded yet. Expected v${EXPECTED_SCHEMA_VERSION}.`);
+      return;
+    }
+
+    logger.info(`📌 Current schema version: v${current.version}`);
+    logger.info(`🏷️ Label: ${current.label}`);
+    logger.info(`🕒 Applied at: ${current.applied_at}`);
+    logger.info(`🎯 Expected: v${EXPECTED_SCHEMA_VERSION} (${EXPECTED_SCHEMA_LABEL})`);
+  } catch (error) {
+    logger.error('❌ Migration status failed:', error);
+    process.exit(1);
+  } finally {
+    client.release();
+    await pool.end();
+  }
+};
+
+const command = process.argv[2] || 'apply';
+
+if (command === 'apply') {
+  migrate();
+} else if (command === 'check') {
+  checkMigrationVersion();
+} else if (command === 'status') {
+  printMigrationStatus();
+} else {
+  logger.error(`Unknown command: ${command}. Use one of: apply, check, status`);
+  process.exit(1);
+}

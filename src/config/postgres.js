@@ -1,3 +1,50 @@
+import { assertAllowlistedIdentifier } from '../utils/sqlIdentifiers.js';
+import { EXPECTED_SCHEMA_LABEL, EXPECTED_SCHEMA_VERSION } from './schemaVersion.js';
+
+const configuredTables = {
+    guilds: 'guilds',
+    users: 'users',
+    guild_users: 'guild_users',
+    birthdays: 'birthdays',
+    giveaways: 'giveaways',
+    tickets: 'ticket_data',
+    afk_status: 'afk_status',
+    welcome_configs: 'welcome_configs',
+    leveling_configs: 'leveling_configs',
+    user_levels: 'user_levels',
+    economy: 'economy',
+    invite_tracking: 'invite_tracking',
+    application_roles: 'application_roles',
+    verification_audit: 'verification_audit',
+    temp_data: 'temp_data',
+    cache_data: 'cache_data',
+};
+
+const allowedTableIdentifiers = new Set([
+    'guilds',
+    'users',
+    'guild_users',
+    'birthdays',
+    'giveaways',
+    'ticket_data',
+    'afk_status',
+    'welcome_configs',
+    'leveling_configs',
+    'user_levels',
+    'economy',
+    'invite_tracking',
+    'application_roles',
+    'verification_audit',
+    'temp_data',
+    'cache_data',
+]);
+
+const validatedTables = Object.fromEntries(
+    Object.entries(configuredTables).map(([key, value]) => [
+        key,
+        assertAllowlistedIdentifier(value, allowedTableIdentifiers, `PostgreSQL table identifier (${key})`),
+    ])
+);
 
 
 
@@ -11,11 +58,7 @@ export const pgConfig = {
         database: process.env.POSTGRES_DB || 'titanbot',
         user: process.env.POSTGRES_USER || 'postgres',
         password: (process.env.POSTGRES_PASSWORD || '').toString(),
-        
-        
-        ssl: process.env.POSTGRES_SSL === 'true' ? {
-            rejectUnauthorized: false
-        } : false,
+        ssl: false,
         
         
         max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS) || 20,
@@ -35,24 +78,7 @@ export const pgConfig = {
         backoffMultiplier: parseInt(process.env.POSTGRES_BACKOFF_MULTIPLIER) || 2,
     },
     
-    tables: {
-        guilds: 'guilds',
-        users: 'users',
-        guild_users: 'guild_users',
-        birthdays: 'birthdays',
-        giveaways: 'giveaways',
-        tickets: 'ticket_data',
-        afk_status: 'afk_status',
-        welcome_configs: 'welcome_configs',
-        leveling_configs: 'leveling_configs',
-        user_levels: 'user_levels',
-        economy: 'economy',
-        invite_tracking: 'invite_tracking',
-        application_roles: 'application_roles',
-        verification_audit: 'verification_audit',
-        temp_data: 'temp_data',
-        cache_data: 'cache_data',
-    },
+    tables: validatedTables,
     
     defaultTTL: {
         userSession: 86400,
@@ -80,8 +106,7 @@ export const pgConfig = {
     
     features: {
         pooling: true,
-        
-        ssl: process.env.POSTGRES_SSL === 'true',
+        ssl: false,
         
         metrics: true,
         
@@ -89,7 +114,7 @@ export const pgConfig = {
         
         autoCreateTables: true,
         
-        autoMigrate: false,
+        autoMigrate: process.env.AUTO_MIGRATE !== 'false',
     },
     
     healthCheck: {
@@ -103,13 +128,17 @@ export const pgConfig = {
     },
     
     migration: {
-        enabled: false,
+        enabled: true,
         
-        table: 'migrations',
+        table: 'schema_migrations',
         
         directory: 'database/migrations',
         
         rollbackOnFailure: false,
+
+        expectedVersion: EXPECTED_SCHEMA_VERSION,
+
+        expectedLabel: EXPECTED_SCHEMA_LABEL,
     }
 };
 

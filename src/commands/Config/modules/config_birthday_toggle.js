@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
+import { logger } from '../../../utils/logger.js';
 
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
@@ -39,7 +40,7 @@ try {
                 });
             }
         } catch (error) {
-            console.error("config_birthday_toggle error:", error);
+            logger.error("config_birthday_toggle error:", error);
             return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(

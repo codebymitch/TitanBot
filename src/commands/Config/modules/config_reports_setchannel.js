@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
+import { logger } from '../../../utils/logger.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction, config, client) {
@@ -23,7 +24,7 @@ export default {
                 ],
             });
         } catch (error) {
-            console.error("Error setting report channel:", error);
+            logger.error("Error setting report channel:", error);
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(

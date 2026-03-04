@@ -29,6 +29,7 @@
 import { logger } from './logger.js';
 import { createEmbed } from './embeds.js';
 import { MessageFlags } from 'discord.js';
+import { getErrorMetadata, getDefaultErrorCodeByType, resolveErrorCode, ErrorCodes } from './errorRegistry.js';
 
 
 
@@ -55,6 +56,7 @@ export class TitanBotError extends Error {
         this.type = type;
         this.userMessage = userMessage;
         this.context = context;
+        this.code = context?.errorCode || getDefaultErrorCodeByType(type);
         this.timestamp = new Date().toISOString();
     }
 }
@@ -175,6 +177,9 @@ export function getUserMessage(error, context = {}) {
 export async function handleInteractionError(interaction, error, context = {}) {
     const errorType = categorizeError(error);
     const userMessage = getUserMessage(error, context);
+    const resolvedErrorCode = resolveErrorCode({ error, errorType, context });
+    const errorMetadata = getErrorMetadata(resolvedErrorCode);
+    const traceId = context.traceId || interaction?.traceContext?.traceId || interaction?.traceId || error?.context?.traceId;
     
     
     
@@ -188,8 +193,17 @@ export async function handleInteractionError(interaction, error, context = {}) {
     const isExpectedError = Boolean(error?.context?.expected === true || error?.context?.suppressErrorLog === true);
     
     const logData = {
+        event: 'interaction.error',
+        errorCode: resolvedErrorCode,
+        remediationHint: errorMetadata.remediation,
+        severity: errorMetadata.severity,
+        retryable: errorMetadata.retryable,
         error: error.message,
         type: errorType,
+        traceId,
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        command: interaction.commandName || context.command,
         interaction: {
             type: interaction.type,
             commandName: interaction.commandName,
@@ -240,13 +254,26 @@ export async function handleInteractionError(interaction, error, context = {}) {
     try {
         
         if (!interaction || !interaction.id) {
-            logger.warn('Interaction was null or invalid when handling error');
+            logger.warn('Interaction was null or invalid when handling error', {
+                event: 'interaction.error.invalid_interaction',
+                errorCode: ErrorCodes.INTERACTION_INVALID,
+                remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_INVALID).remediation,
+                traceId
+            });
             return;
         }
 
         
         if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
-            logger.warn('Interaction expired before error handler could send response');
+            logger.warn('Interaction expired before error handler could send response', {
+                event: 'interaction.error.expired',
+                errorCode: ErrorCodes.INTERACTION_EXPIRED,
+                remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_EXPIRED).remediation,
+                traceId,
+                guildId: interaction.guildId,
+                userId: interaction.user.id,
+                command: interaction.commandName || context.command
+            });
             return;
         }
 
@@ -266,10 +293,27 @@ export async function handleInteractionError(interaction, error, context = {}) {
     } catch (replyError) {
         
         if (replyError.code === 40060 || replyError.code === 10062) {
-            logger.warn('Interaction already acknowledged or expired, cannot send error response:', replyError.code);
+            logger.warn('Interaction already acknowledged or expired, cannot send error response:', {
+                event: 'interaction.error.response_unavailable',
+                errorCode: String(replyError.code),
+                traceId,
+                guildId: interaction.guildId,
+                userId: interaction.user.id,
+                command: interaction.commandName || context.command,
+                code: replyError.code
+            });
             return;
         }
-        logger.error('Failed to send error response:', replyError);
+        logger.error('Failed to send error response:', {
+            event: 'interaction.error.response_failed',
+            errorCode: String(replyError.code || ErrorCodes.INTERACTION_RESPONSE_FAILED),
+            remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_RESPONSE_FAILED).remediation,
+            traceId,
+            guildId: interaction.guildId,
+            userId: interaction.user.id,
+            command: interaction.commandName || context.command,
+            error: replyError
+        });
     }
 }
 
@@ -320,7 +364,12 @@ export function withErrorHandling(fn, context = {}) {
 
 
 export function createError(message, type = ErrorTypes.UNKNOWN, userMessage = null, context = {}) {
-    return new TitanBotError(message, type, userMessage, context);
+    const normalizedContext = {
+        ...context,
+        errorCode: context?.errorCode || getDefaultErrorCodeByType(type)
+    };
+
+    return new TitanBotError(message, type, userMessage, normalizedContext);
 }
 
 export default {

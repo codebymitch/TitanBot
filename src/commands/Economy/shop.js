@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder, MessageFlags } from 'discord.js';
 import { shopItems } from '../../config/shop/items.js';
 import { getColor } from '../../config/bot.js';
+import { logger } from '../../utils/logger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -108,7 +109,7 @@ export default {
                 }
             });
         } catch (error) {
-            console.error('Shop command error:', error);
+            logger.error('Shop command error:', error);
             await interaction.reply({
                 content: '❌ An error occurred while loading the shop.',
                 flags: MessageFlags.Ephemeral

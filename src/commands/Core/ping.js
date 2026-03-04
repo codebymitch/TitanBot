@@ -37,14 +37,14 @@ export default {
                 embeds: [embed],
             });
         } catch (error) {
-            console.error('Ping command error:', error);
+            logger.error('Ping command error:', error);
             try {
                 return await InteractionHelper.safeReply(interaction, {
                     embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.', color: 'error' })],
                     flags: MessageFlags.Ephemeral,
                 });
             } catch (replyError) {
-                console.error('Failed to send error reply:', replyError);
+                logger.error('Failed to send error reply:', replyError);
             }
         }
     },

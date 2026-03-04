@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
 import { errorEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
 
 import birthdayToggle from './modules/config_birthday_toggle.js';
 import loggingStatus from './modules/config_logging_status.js';
@@ -200,7 +201,7 @@ export default {
                 flags: MessageFlags.Ephemeral,
             });
         } catch (error) {
-            console.error("Config command error:", error);
+            logger.error("Config command error:", error);
             
             const errorMessage = {
                 embeds: [

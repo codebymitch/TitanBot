@@ -22,6 +22,9 @@ import { logger } from '../utils/logger.js';
 import { getGuildConfig, setGuildConfig } from './guildConfig.js';
 import { PermissionFlagsBits } from 'discord.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
+import { wrapServiceClassMethods } from '../utils/serviceErrorBoundary.js';
+import { z } from 'zod';
+import { LogIgnoreSchema, LoggingConfigSchema } from '../utils/schemas.js';
 
 
 const configChangeHistory = new Map();
@@ -50,6 +53,21 @@ const SETTING_CONFLICTS = {
     'reportChannelId': [],
     'logging': ['logChannelId']
 };
+
+const ConfigValueSchemas = Object.freeze({
+    logChannelId: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
+    reportChannelId: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
+    premiumRoleId: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
+    autoRole: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
+    modRole: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
+    adminRole: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
+    prefix: z.string().min(1).max(10),
+    dmOnClose: z.boolean(),
+    maxTicketsPerUser: z.number().int().min(1).max(50),
+    birthdayChannelId: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
+    logIgnore: LogIgnoreSchema,
+    logging: LoggingConfigSchema,
+});
 
 class ConfigService {
 
@@ -100,6 +118,27 @@ class ConfigService {
         
         if (rule.required === false && (value === null || value === undefined)) {
             return true;
+        }
+
+        const zodSchema = ConfigValueSchemas[key];
+        if (zodSchema) {
+            const parsed = zodSchema.safeParse(value);
+            if (!parsed.success) {
+                throw createError(
+                    'Invalid configuration value',
+                    ErrorTypes.VALIDATION,
+                    'Provided configuration value is invalid.',
+                    {
+                        key,
+                        errorCode: 'VALIDATION_FAILED',
+                        issues: parsed.error.issues.map((issue) => ({
+                            path: issue.path.join('.'),
+                            message: issue.message,
+                            code: issue.code
+                        }))
+                    }
+                );
+            }
         }
 
         
@@ -636,5 +675,12 @@ class ConfigService {
         ]);
     }
 }
+
+wrapServiceClassMethods(ConfigService, (methodName) => ({
+    service: 'ConfigService',
+    operation: methodName,
+    message: `Configuration service operation failed: ${methodName}`,
+    userMessage: 'A configuration operation failed. Please try again in a moment.'
+}));
 
 export default ConfigService;

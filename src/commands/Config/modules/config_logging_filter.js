@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logEvent } from '../../../utils/moderation.js';
+import { logger } from '../../../utils/logger.js';
 
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
@@ -128,7 +129,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
                 embeds: [successEmbed("Success!", successMessage)],
             });
         } catch (error) {
-            console.error("Error saving log filter:", error);
+            logger.error("Error saving log filter:", error);
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(

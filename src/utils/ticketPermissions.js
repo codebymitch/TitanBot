@@ -1,6 +1,6 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { getTicketData } from '../services/database.js';
+import { getTicketData } from './database.js';
 
 export async function getTicketPermissionContext({ client, interaction }) {
   const guildId = interaction.guildId;

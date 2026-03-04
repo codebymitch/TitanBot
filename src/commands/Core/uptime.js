@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -28,7 +29,7 @@ export default {
         })],
       });
     } catch (error) {
-      console.error('Uptime command error:', error);
+      logger.error('Uptime command error:', error);
       
       try {
         return await InteractionHelper.safeEditReply(interaction, {
@@ -36,7 +37,7 @@ export default {
           flags: MessageFlags.Ephemeral,
         });
       } catch (replyError) {
-        console.error('Failed to send error reply:', replyError);
+        logger.error('Failed to send error reply:', replyError);
       }
     }
   },

@@ -3,7 +3,7 @@ import { createButton, getPaginationRow } from '../utils/components.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Collection, ActionRowBuilder } from 'discord.js';
+import { Collection, ActionRowBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -367,27 +367,41 @@ export const helpCategorySelectMenu = {
     name: CATEGORY_SELECT_ID,
     async execute(interaction, client) {
         try {
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.deferUpdate();
+            }
+
             const selectedCategory = interaction.values[0];
 
             if (selectedCategory === ALL_COMMANDS_ID) {
                 const { embeds, components } = await createAllCommandsMenu(1, client);
-                await interaction.update({
+                await interaction.editReply({
                     embeds,
                     components,
                 });
             } else {
                 const { embeds, components } = await createCategoryCommandsMenu(selectedCategory, client);
-                await interaction.update({
+                await interaction.editReply({
                     embeds,
                     components,
                 });
             }
         } catch (error) {
+            if (error?.code === 40060 || error?.code === 10062) {
+                logger.warn('Help category select interaction already acknowledged or expired.', {
+                    event: 'interaction.help.select.unavailable',
+                    errorCode: String(error.code),
+                    customId: interaction.customId,
+                    interactionId: interaction.id,
+                });
+                return;
+            }
+
             logger.error('Error in help category select menu handler:', error);
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
                     content: 'An error occurred while loading help categories.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
         }

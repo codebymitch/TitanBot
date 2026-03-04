@@ -129,9 +129,14 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
    POSTGRES_USER=titanbot
    POSTGRES_PASSWORD=yourpassword
    POSTGRES_SSL=false
+   # Optional trusted CA for TLS validation (recommended in production)
+   # POSTGRES_CA_CERT="-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----"
+   # POSTGRES_CA_CERT_PATH=/path/to/postgres-ca.pem
 
    # Migration Settings
    AUTO_MIGRATE=false
+   SCHEMA_VERSION=1
+   SCHEMA_VERSION_LABEL=baseline-v1
 
    # Bot Configuration
    NODE_ENV=development
@@ -140,6 +145,7 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 
    Production note:
    - `NODE_ENV=production`
+   - `POSTGRES_SSL=true` (required in production; startup fails closed if disabled)
    - `LOG_LEVEL=warn` for a clean production console (critical issues + startup status)
    - `LOG_LEVEL=info` if you want more detailed operational logs
    - If your chosen `PORT` is already used, TitanBot automatically tries the next port(s)
@@ -178,6 +184,11 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
    ```bash
    npm start
    ```
+
+### Migration Version Guard
+- `npm run migrate` applies schema setup and records the expected schema version.
+- `npm run migrate:check` fails if the database schema version does not match the code's expected version.
+- `npm run migrate:status` prints current vs expected schema version metadata.
 
 ## 🗄️ Database System
 

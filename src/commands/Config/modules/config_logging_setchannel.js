@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 import { logEvent } from '../../../utils/moderation.js';
 import { validateLogChannel } from '../../../utils/ticketLogging.js';
+import { logger } from '../../../utils/logger.js';
 
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
@@ -171,7 +172,7 @@ if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)
             });
 
         } catch (error) {
-            console.error("Error setting log channel:", error);
+            logger.error("Error setting log channel:", error);
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(

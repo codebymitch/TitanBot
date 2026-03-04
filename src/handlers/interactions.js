@@ -18,24 +18,30 @@ export default async (client) => {
       
       try {
         const interactionFiles = (await readdir(typePath)).filter(file => file.endsWith('.js'));
+        let loadedCount = 0;
         
         for (const file of interactionFiles) {
           try {
-            const interaction = (await import(`../interactions/${type}/${file}`)).default;
-            
-            if (!interaction.name || !interaction.execute) {
-              logger.warn(`Interaction ${file} in ${type} is missing required properties.`);
-              continue;
+            const module = await import(`../interactions/${type}/${file}`);
+            const moduleExport = module.default;
+            const interactions = Array.isArray(moduleExport) ? moduleExport : [moduleExport];
+
+            for (const interaction of interactions) {
+              if (!interaction?.name || !interaction?.execute) {
+                logger.warn(`Interaction ${file} in ${type} is missing required properties.`);
+                continue;
+              }
+
+              client[type].set(interaction.name, interaction);
+              loadedCount += 1;
+              logger.info(`Loaded ${type.slice(0, -1)}: ${interaction.name}`);
             }
-            
-            client[type].set(interaction.name, interaction);
-            logger.info(`Loaded ${type.slice(0, -1)}: ${interaction.name}`);
           } catch (error) {
             logger.error(`Error loading interaction ${file} in ${type}:`, error);
           }
         }
-        
-        logger.info(`Loaded ${interactionFiles.length} ${type}`);
+
+        logger.info(`Loaded ${loadedCount} ${type}`);
       } catch (error) {
         if (error.code !== 'ENOENT') {
           logger.error(`Error loading ${type}:`, error);

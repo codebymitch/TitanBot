@@ -6,7 +6,13 @@
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
-    "migrate": "node scripts/migrate.js"
+    "test": "node --test tests/**/*.test.js",
+    "migrate": "node scripts/migrate.js apply",
+    "migrate:check": "node scripts/migrate.js check",
+    "migrate:status": "node scripts/migrate.js status",
+    "backup:db": "node scripts/backup.js",
+    "restore:db": "node scripts/restore.js",
+    "backup:drill": "node scripts/restore-drill.js"
   },
   "dependencies": {
     "axios": "^1.13.2",

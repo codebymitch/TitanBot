@@ -277,18 +277,7 @@ class TitanBot extends Client {
   async loadHandlers() {
     const handlers = [
       { path: 'events', type: 'default', required: true },
-      { path: 'interactions', type: 'default', required: true },
-      { path: 'todoButtonLoader', type: 'default', required: false },
-      { path: 'counterButtonLoader', type: 'default', required: false },
-      { path: 'ticketButtonLoader', type: 'default', required: false },
-      { path: 'giveawayButtonLoader', type: 'named:loadGiveawayButtons', required: false },
-      { path: 'helpButtonLoader', type: 'default', required: false },
-      { path: 'helpSelectMenuLoader', type: 'default', required: false },
-      { path: 'loggingButtonLoader', type: 'default', required: false },
-      { path: 'verificationButtonLoader', type: 'named:loadVerificationButtons', required: false },
-      { path: 'wipedataButtonLoader', type: 'default', required: false },
-      { path: 'countdownButtonLoader', type: 'default', required: false },
-      { path: 'calculateButtonLoader', type: 'default', required: false }
+      { path: 'interactions', type: 'default', required: true }
     ];
 
     for (const handler of handlers) {

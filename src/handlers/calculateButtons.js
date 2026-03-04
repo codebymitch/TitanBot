@@ -1,32 +1,9 @@
 import { errorEmbed, successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
+import { evaluateMathExpression } from '../utils/safeMathParser.js';
 
 function evaluate(expression) {
-    let expr = expression.replace(/\s/g, '').toLowerCase();
-    
-    const math = {
-        sin: Math.sin,
-        cos: Math.cos,
-        tan: Math.tan,
-        sqrt: Math.sqrt,
-        abs: Math.abs,
-        log: Math.log,
-        log10: Math.log10,
-        exp: Math.exp,
-        pi: Math.PI,
-        e: Math.E
-    };
-    
-    expr = expr.replace(/sin|cos|tan|sqrt|abs|log|log10|exp|pi|e/g, (match) => `math.${match}`);
-    expr = expr.replace(/(\d+)\s*deg/g, (match, num) => `(${num} * Math.PI / 180)`);
-    expr = expr.replace(/\^/g, '**');
-    
-    try {
-        const func = new Function('math', `return ${expr}`);
-        return func(math);
-    } catch (error) {
-        throw new Error(`Invalid expression: ${error.message}`);
-    }
+    return evaluateMathExpression(expression);
 }
 
 async function calculateModalHandler(interaction, client, args) {

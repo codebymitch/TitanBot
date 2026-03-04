@@ -147,7 +147,7 @@ export default {
                 });
                 await receiver.send({ embeds: [receiverEmbed] });
             } catch (e) {
-                console.log(`Could not DM user ${receiver.id}:`, e.message);
+                    logger.warn(`Could not DM user ${receiver.id}: ${e.message}`);
             }
     }, { command: 'pay' })
 };

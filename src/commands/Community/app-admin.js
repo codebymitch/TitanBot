@@ -783,7 +783,7 @@ export async function handleApplicationButton(interaction) {
         await interaction.showModal(modal);
         
     } catch (error) {
-        console.error('Error handling application button:', error);
+        logger.error('Error handling application button:', error);
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed('An error occurred while processing the application.')],
             flags: ["Ephemeral"]
@@ -831,7 +831,7 @@ export async function handleApplicationReviewModal(interaction) {
             
             await user.send({ embeds: [dmEmbed] });
         } catch (error) {
-            console.error('Error sending DM to user:', error);
+            logger.error('Error sending DM to user:', error);
         }
         
         if (application.logMessageId && application.logChannelId) {
@@ -858,7 +858,7 @@ export async function handleApplicationReviewModal(interaction) {
                     }
                 }
             } catch (error) {
-                console.error('Error updating log message:', error);
+                logger.error('Error updating log message:', error);
             }
         }
         
@@ -867,7 +867,7 @@ export async function handleApplicationReviewModal(interaction) {
                 const member = await interaction.guild.members.fetch(application.userId);
                 await member.roles.add(application.role);
             } catch (error) {
-                console.error('Error assigning role:', error);
+                logger.error('Error assigning role:', error);
             }
         }
         
@@ -882,7 +882,7 @@ export async function handleApplicationReviewModal(interaction) {
         });
         
     } catch (error) {
-        console.error('Error processing application review:', error);
+        logger.error('Error processing application review:', error);
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [errorEmbed('An error occurred while processing the application.')],
             flags: ["Ephemeral"]

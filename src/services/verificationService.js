@@ -18,6 +18,7 @@ import { logger } from '../utils/logger.js';
 import { getGuildConfig, setGuildConfig } from './guildConfig.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { insertVerificationAudit } from '../utils/database.js';
+import { ensureTypedServiceError } from '../utils/serviceErrorBoundary.js';
 
 
 const verificationCooldowns = new Map();
@@ -153,13 +154,22 @@ export async function verifyUser(client, guildId, userId, options = {}) {
         };
 
     } catch (error) {
+        const typedError = ensureTypedServiceError(error, {
+            service: 'verificationService',
+            operation: 'verifyUser',
+            type: ErrorTypes.UNKNOWN,
+            message: 'Verification operation failed: verifyUser',
+            userMessage: 'Verification failed. Please try again in a moment.',
+            context: { guildId, userId, source: options.source }
+        });
         logger.error('Error verifying user', {
             guildId,
             userId,
             source: options.source,
-            error: error.message
+            error: typedError.message,
+            errorCode: typedError.context?.errorCode
         });
-        throw error;
+        throw typedError;
     }
 }
 
@@ -312,16 +322,26 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
         };
 
     } catch (error) {
+        const typedError = ensureTypedServiceError(error, {
+            service: 'verificationService',
+            operation: 'autoVerifyOnJoin',
+            type: ErrorTypes.UNKNOWN,
+            message: 'Verification operation failed: autoVerifyOnJoin',
+            userMessage: 'Automatic verification failed. Please verify manually.',
+            context: { guildId: guild.id, userId: member.id }
+        });
         logger.error('Error in auto-verification on join', {
             guildId: guild.id,
             userId: member.id,
-            error: error.message
+            error: typedError.message,
+            errorCode: typedError.context?.errorCode
         });
         
         return {
             autoVerified: false,
             reason: 'auto_verify_error',
-            error: error.message
+            error: typedError.userMessage || typedError.message,
+            errorCode: typedError.context?.errorCode
         };
     }
 }
@@ -430,12 +450,21 @@ export async function removeVerification(client, guildId, userId, options = {}) 
         };
 
     } catch (error) {
+        const typedError = ensureTypedServiceError(error, {
+            service: 'verificationService',
+            operation: 'removeVerification',
+            type: ErrorTypes.UNKNOWN,
+            message: 'Verification operation failed: removeVerification',
+            userMessage: 'Failed to remove verification. Please try again in a moment.',
+            context: { guildId, userId, reason }
+        });
         logger.error('Error removing verification', {
             guildId,
             userId,
-            error: error.message
+            error: typedError.message,
+            errorCode: typedError.context?.errorCode
         });
-        throw error;
+        throw typedError;
     }
 }
 

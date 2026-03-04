@@ -20,6 +20,7 @@
 import { logger } from '../utils/logger.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../utils/economy.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
+import { wrapServiceClassMethods } from '../utils/serviceErrorBoundary.js';
 
 class EconomyService {
   
@@ -529,5 +530,12 @@ class EconomyService {
     return `**${duration}**`;
   }
 }
+
+wrapServiceClassMethods(EconomyService, (methodName) => ({
+  service: 'EconomyService',
+  operation: methodName,
+  message: `Economy service operation failed: ${methodName}`,
+  userMessage: 'An economy operation failed. Please try again in a moment.'
+}));
 
 export default EconomyService;

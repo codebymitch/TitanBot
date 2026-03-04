@@ -140,3 +140,7 @@ dist
 # Replit debugger
 .breakpoints
 .git.backup.*
+
+# Database backup artifacts
+backups/
+*.dump

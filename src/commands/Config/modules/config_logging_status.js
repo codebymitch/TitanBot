@@ -8,6 +8,7 @@ import { createLoggingStatusComponents } from '../../../utils/loggingUi.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { getConfiguration as getJoinToCreateConfiguration } from '../../../services/joinToCreateService.js';
 import { getLevelingConfig } from '../../../services/leveling.js';
+import { logger } from '../../../utils/logger.js';
 
 const EVENT_TYPES_BY_CATEGORY = Object.values(EVENT_TYPES).reduce((accumulator, eventType) => {
     const [category] = eventType.split('.');
@@ -164,7 +165,7 @@ export default {
                 components
             });
         } catch (error) {
-            console.error("config_logging_status error:", error);
+            logger.error("config_logging_status error:", error);
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(

@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { pgConfig } from '../config/postgres.js';
 import { logger } from './logger.js';
+import { assertAllowlistedIdentifier, quoteIdentifier } from './sqlIdentifiers.js';
 
 /**
  * PostgreSQL Database wrapper for Titan Bot
@@ -11,6 +12,10 @@ class PostgreSQLDatabase {
         this.pool = null;
         this.isConnected = false;
         this.connectionPromise = null;
+        this.allowedTableIdentifiers = new Set(Object.values(pgConfig.tables));
+        this.allowedMigrationIdentifiers = new Set([pgConfig.migration.table]);
+        this.lastFailureReason = null;
+        this.lastFailureMessage = null;
     }
 
     
@@ -62,6 +67,9 @@ class PostgreSQLDatabase {
                 await client.query('SELECT NOW()');
                 client.release();
 
+                this.lastFailureReason = null;
+                this.lastFailureMessage = null;
+
                 this.isConnected = true;
                 logger.info('✅ PostgreSQL Database initialized successfully');
 
@@ -87,8 +95,37 @@ class PostgreSQLDatabase {
                     }
                 }
 
+                if (pgConfig.migration.enabled) {
+                    const migrationCheck = await this.verifySchemaVersion();
+                    if (!migrationCheck.ok) {
+                        const shouldBootstrapSchema =
+                            migrationCheck.reason === 'MISSING_MIGRATION_VERSION'
+                            && pgConfig.features.autoMigrate;
+
+                        if (shouldBootstrapSchema) {
+                            await this.setSchemaVersion(
+                                pgConfig.migration.expectedVersion,
+                                pgConfig.migration.expectedLabel
+                            );
+                            logger.warn(
+                                `No schema version found. Bootstrapped schema ledger to version ${pgConfig.migration.expectedVersion} (${pgConfig.migration.expectedLabel}).`
+                            );
+                            return true;
+                        }
+
+                        const error = new Error(
+                            `Schema version check failed: expected ${migrationCheck.expectedVersion} but found ${migrationCheck.currentVersion === null ? 'none' : migrationCheck.currentVersion}`
+                        );
+                        error.code = 'SCHEMA_VERSION_MISMATCH';
+                        throw error;
+                    }
+                }
+
                 return true;
             } catch (error) {
+                this.lastFailureReason = error.code || 'POSTGRES_CONNECTION_FAILED';
+                this.lastFailureMessage = error.message || 'Unknown PostgreSQL error';
+
                 if (this.pool) {
                     try {
                         await this.pool.end();
@@ -99,7 +136,14 @@ class PostgreSQLDatabase {
                 }
 
                 const isLastAttempt = attempt >= attempts;
+                const isSchemaMismatch = error.code === 'SCHEMA_VERSION_MISMATCH';
                 if (isLastAttempt) {
+                    logger.error('❌ Failed to initialize PostgreSQL Database:', error);
+                    this.isConnected = false;
+                    return false;
+                }
+
+                if (isSchemaMismatch) {
                     logger.error('❌ Failed to initialize PostgreSQL Database:', error);
                     this.isConnected = false;
                     return false;
@@ -121,6 +165,82 @@ class PostgreSQLDatabase {
 
     isAvailable() {
         return this.isConnected && this.pool;
+    }
+
+    getLastFailure() {
+        return {
+            reason: this.lastFailureReason,
+            message: this.lastFailureMessage
+        };
+    }
+
+    async ensureMigrationLedger() {
+        const migrationTable = assertAllowlistedIdentifier(
+            pgConfig.migration.table,
+            this.allowedMigrationIdentifiers,
+            'PostgreSQL migration table identifier'
+        );
+        const safeMigrationTable = quoteIdentifier(migrationTable);
+
+        await this.pool.query(`
+            CREATE TABLE IF NOT EXISTS ${safeMigrationTable} (
+                version INTEGER PRIMARY KEY,
+                label VARCHAR(255) NOT NULL,
+                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        return safeMigrationTable;
+    }
+
+    async getLatestSchemaVersion() {
+        const safeMigrationTable = await this.ensureMigrationLedger();
+        const result = await this.pool.query(
+            `SELECT version, label, applied_at FROM ${safeMigrationTable} ORDER BY version DESC LIMIT 1`
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return result.rows[0];
+    }
+
+    async setSchemaVersion(version, label) {
+        const safeMigrationTable = await this.ensureMigrationLedger();
+        await this.pool.query(
+            `INSERT INTO ${safeMigrationTable} (version, label)
+             VALUES ($1, $2)
+             ON CONFLICT (version)
+             DO UPDATE SET label = EXCLUDED.label, applied_at = CURRENT_TIMESTAMP`,
+            [version, label]
+        );
+    }
+
+    async verifySchemaVersion() {
+        const latest = await this.getLatestSchemaVersion();
+        const expectedVersion = Number(pgConfig.migration.expectedVersion);
+
+        if (!latest) {
+            return {
+                ok: false,
+                expectedVersion,
+                currentVersion: null,
+                reason: 'MISSING_MIGRATION_VERSION'
+            };
+        }
+
+        const currentVersion = Number(latest.version);
+        const isValid = currentVersion === expectedVersion;
+
+        return {
+            ok: isValid,
+            expectedVersion,
+            currentVersion,
+            label: latest.label,
+            appliedAt: latest.applied_at,
+            reason: isValid ? 'OK' : 'SCHEMA_VERSION_MISMATCH'
+        };
     }
 
     /**
@@ -375,12 +495,27 @@ class PostgreSQLDatabase {
                 { name: 'update_afk_status_updated_at', table: pgConfig.tables.afk_status },
             ];
 
+            const allowedTriggerIdentifiers = new Set(triggers.map(trigger => trigger.name));
+
             for (const trigger of triggers) {
                 try {
-                    await this.pool.query(`DROP TRIGGER IF EXISTS ${trigger.name} ON ${trigger.table};`);
+                    const safeTriggerIdentifier = assertAllowlistedIdentifier(
+                        trigger.name,
+                        allowedTriggerIdentifiers,
+                        'Trigger identifier'
+                    );
+                    const safeTableIdentifier = assertAllowlistedIdentifier(
+                        trigger.table,
+                        this.allowedTableIdentifiers,
+                        'Trigger table identifier'
+                    );
+
                     await this.pool.query(
-                        `CREATE TRIGGER ${trigger.name}
-                         BEFORE UPDATE ON ${trigger.table}
+                        `DROP TRIGGER IF EXISTS ${quoteIdentifier(safeTriggerIdentifier)} ON ${quoteIdentifier(safeTableIdentifier)};`
+                    );
+                    await this.pool.query(
+                        `CREATE TRIGGER ${quoteIdentifier(safeTriggerIdentifier)}
+                         BEFORE UPDATE ON ${quoteIdentifier(safeTableIdentifier)}
                          FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`
                     );
                 } catch (error) {

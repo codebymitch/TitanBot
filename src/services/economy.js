@@ -1,5 +1,5 @@
 import { BotConfig } from "../config/bot.js";
-import { getEconomyKey } from './database.js';
+import { getEconomyKey } from '../utils/database.js';
 import { getFromDb, setInDb } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 import { normalizeEconomyData } from '../utils/schemas.js';
