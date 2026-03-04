@@ -139,8 +139,8 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
    SCHEMA_VERSION_LABEL=baseline-v1
 
    # Bot Configuration
-   NODE_ENV=development
-   LOG_LEVEL=info
+   NODE_ENV=production
+   LOG_LEVEL=warn
    ```
 
    Production note:
