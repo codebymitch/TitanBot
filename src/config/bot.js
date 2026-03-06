@@ -8,8 +8,8 @@ export const botConfig = {
     status: "online",
     activities: [
       {
-        name: "/help | Titan Bot",
-        type: 0, 
+        name: "test im cool",
+        type: 0, safafsfsaf
       },
     ],
   },
