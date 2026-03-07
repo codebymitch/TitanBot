@@ -346,11 +346,10 @@ export const botConfig = {
     maxAuditMetadataBytes: 4096,
     // Maximum number of audit entries kept in memory.
     maxInMemoryAuditEntries: 1000,
-
-    // If true, log every verification action.
-    logAllVerifications: true,
-    // If true, preserve verification audit history.
-    keepAuditTrail: true,
+  // If true, log every verification action.
+  logAllVerifications: true,
+  // If true, preserve verification audit history.
+  keepAuditTrail: true,
   },
 
   // =========================
