@@ -104,7 +104,7 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/TitanBot.git
+   git clone https://github.com/codebymitch/TitanBot.git
    cd TitanBot
    ```
 
