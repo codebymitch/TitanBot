@@ -1,6 +1,7 @@
 import { MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getAllBirthdays } from '../../../services/birthdayService.js';
+import { deleteBirthday } from '../../../utils/database.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
 
@@ -30,22 +31,52 @@ export default {
                 color: 'info'
             });
 
-            let birthdayList = `**${sortedBirthdays.length} birthdays in ${interaction.guild.name}**\n\n`;
-            sortedBirthdays.forEach((birthday, index) => {
-                const member = interaction.guild.members.cache.get(birthday.userId);
-                const userName = member ? member.user.username : `User ${birthday.userId}`;
-                birthdayList += `${index + 1}. **${userName}** - ${birthday.monthName} ${birthday.day}\n`;
-            });
+            // Batch fetch to verify which users are still in the guild
+            const userIds = sortedBirthdays.map(b => b.userId);
+            const fetchedMembers = await interaction.guild.members.fetch({ user: userIds }).catch(() => null);
 
-            embed.setDescription(birthdayList || "No birthdays found");
-            embed.setFooter({ text: `Total: ${sortedBirthdays.length} birthdays` });
+            let birthdayList = '';
+            let displayIndex = 0;
+            const staleUserIds = [];
+
+            for (const birthday of sortedBirthdays) {
+                if (fetchedMembers && !fetchedMembers.has(birthday.userId)) {
+                    staleUserIds.push(birthday.userId);
+                    continue;
+                }
+                displayIndex++;
+                birthdayList += `${displayIndex}. <@${birthday.userId}> - ${birthday.monthName} ${birthday.day}\n`;
+            }
+
+            // Clean up birthday entries for members who left the server
+            if (fetchedMembers && staleUserIds.length > 0) {
+                for (const userId of staleUserIds) {
+                    deleteBirthday(client, guildId, userId).catch(() => null);
+                }
+            }
+
+            if (displayIndex === 0) {
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [createEmbed({
+                        title: '❌ No Birthdays',
+                        description: 'No birthdays have been set by current server members.',
+                        color: 'error'
+                    })]
+                });
+            }
+
+            birthdayList = `**${displayIndex} birthday${displayIndex !== 1 ? 's' : ''} in ${interaction.guild.name}**\n\n` + birthdayList;
+
+            embed.setDescription(birthdayList);
+            embed.setFooter({ text: `Total: ${displayIndex} birthday${displayIndex !== 1 ? 's' : ''}` });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             
             logger.info('Birthday list retrieved successfully', {
                 userId: interaction.user.id,
                 guildId,
-                birthdayCount: sortedBirthdays.length,
+                birthdayCount: displayIndex,
+                staleRemoved: staleUserIds.length,
                 commandName: 'birthday_list'
             });
         } catch (error) {

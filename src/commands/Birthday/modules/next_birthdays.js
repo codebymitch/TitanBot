@@ -1,6 +1,7 @@
 import { MessageFlags } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getUpcomingBirthdays } from '../../../services/birthdayService.js';
+import { deleteBirthday } from '../../../utils/database.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
 
@@ -31,11 +32,15 @@ export default {
                 color: 'info'
             });
 
-            for (let i = 0; i < next5.length; i++) {
-                const birthday = next5[i];
+            let displayIndex = 0;
+            for (const birthday of next5) {
                 const member = await interaction.guild.members.fetch(birthday.userId).catch(() => null);
-                const userName = member ? member.user.username : `User ${birthday.userId}`;
-                
+                if (!member) {
+                    deleteBirthday(client, interaction.guildId, birthday.userId).catch(() => null);
+                    continue;
+                }
+                displayIndex++;
+
                 let timeUntil = '';
                 if (birthday.daysUntil === 0) {
                     timeUntil = '🎉 **Today!**';
@@ -46,9 +51,21 @@ export default {
                 }
 
                 embed.addFields({
-                    name: `${i + 1}. ${userName}`,
-                    value: `📅 **Date:** ${birthday.monthName} ${birthday.day}\n⏰ **Time:** ${timeUntil}`,
+                    name: `${displayIndex}. ${member.displayName}`,
+                    value: `<@${birthday.userId}>\n📅 **Date:** ${birthday.monthName} ${birthday.day}\n⏰ **Time:** ${timeUntil}`,
                     inline: false
+                });
+            }
+
+            if (displayIndex === 0) {
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        createEmbed({
+                            title: '❌ No Upcoming Birthdays',
+                            description: 'No upcoming birthdays found for current server members.',
+                            color: 'error'
+                        })
+                    ]
                 });
             }
 
@@ -62,7 +79,7 @@ export default {
             logger.info('Next birthdays retrieved successfully', {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                upcomingCount: next5.length,
+                upcomingCount: displayIndex,
                 commandName: 'next_birthdays'
             });
         } catch (error) {

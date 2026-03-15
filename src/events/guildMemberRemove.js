@@ -4,6 +4,7 @@ import { getWelcomeConfig } from '../utils/database.js';
 import { formatWelcomeMessage } from '../utils/welcome.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { getServerCounters, updateCounter } from '../services/counterService.js';
+import { getGuildBirthdays, deleteBirthday } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
 export default {
@@ -118,6 +119,21 @@ export default {
             }
         } catch (error) {
             logger.debug('Error updating counters on member leave:', error);
+        }
+        
+        // Backup and remove birthday data when a member leaves
+        try {
+            const birthdays = await getGuildBirthdays(member.client, guild.id);
+            if (birthdays[user.id]) {
+                const backupKey = `guild:${guild.id}:birthdays:left`;
+                const backup = (await member.client.db.get(backupKey)) || {};
+                backup[user.id] = birthdays[user.id];
+                await member.client.db.set(backupKey, backup);
+                await deleteBirthday(member.client, guild.id, user.id);
+                logger.debug(`Birthday backed up and removed for user ${user.id} in guild ${guild.id}`);
+            }
+        } catch (error) {
+            logger.debug('Error handling birthday on member leave:', error);
         }
         
     } catch (error) {
