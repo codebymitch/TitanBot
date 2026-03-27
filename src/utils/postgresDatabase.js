@@ -3,10 +3,6 @@ import { pgConfig } from '../config/postgres.js';
 import { logger } from './logger.js';
 import { assertAllowlistedIdentifier, quoteIdentifier } from './sqlIdentifiers.js';
 
-/**
- * PostgreSQL Database wrapper for Titan Bot
- * Replaces Redis with PostgreSQL for better data persistence and querying
- */
 class PostgreSQLDatabase {
     constructor() {
         this.pool = null;
@@ -775,36 +771,6 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Parse a Redis-style key to determine type and components
-     * Maps Redis-style hierarchical keys to specific database tables and operations
-     * 
-     * KEY FORMATS SUPPORTED:
-     * - Guild Config: 'guild:{guildId}:config' → guild_config
-     * - Guild Birthdays: 'guild:{guildId}:birthdays' → guild_birthdays
-     * - Guild Giveaways: 'guild:{guildId}:giveaways' → guild_giveaways
-     * - Welcome Config: 'guild:{guildId}:welcome' → welcome_config
-     * - Leveling Config: 'guild:{guildId}:leveling:config' → leveling_config
-     * - User Levels: 'guild:{guildId}:leveling:users:{userId}' → user_level
-     * - Economy: 'guild:{guildId}:economy:{userId}' → economy
-     * - AFK Status: 'guild:{guildId}:afk:{userId}' → afk_status
-     * - Tickets: 'guild:{guildId}:ticket:{channelId}' → ticket
-     * - Counters: 'counters:{guildId}' → counters
-     * - Temp Data: 'temp:*' → temp_data (auto-TTL)
-     * - Cache Data: 'cache:*' → cache_data (auto-TTL)
-     * 
-     * @param {string} key - The Redis-style key to parse (colon-separated format)
-     * @returns {Object} Parsed key information with type, IDs, and full key
-     * @example
-     * // Guild config key
-     * parseKey('guild:123456789:config')
-     * // Returns: { type: 'guild_config', guildId: '123456789', fullKey: 'guild:123456789:config' }
-     * 
-     * @example
-     * // User economy key
-     * parseKey('guild:123456789:economy:987654321')
-     * // Returns: { type: 'economy', guildId: '123456789', userId: '987654321', fullKey: '...' }
-     */
     parseKey(key) {
         
         if (key.startsWith('temp:')) {
@@ -915,12 +881,20 @@ class PostgreSQLDatabase {
                     );
                     return userLevelResult.rows.length > 0 ? userLevelResult.rows[0] : defaultValue;
                 
-                case 'economy':
+                case 'economy': {
                     const economyResult = await this.pool.query(
                         `SELECT balance, bank, data FROM ${pgConfig.tables.economy} WHERE guild_id = $1 AND user_id = $2`,
                         [parsedKey.guildId, parsedKey.userId]
                     );
-                    return economyResult.rows.length > 0 ? economyResult.rows[0] : defaultValue;
+                    if (economyResult.rows.length === 0) return defaultValue;
+                    const row = economyResult.rows[0];
+                    // Return the full data blob when available (contains wallet, bank, etc.)
+                    // Fall back to constructing a compatible object from the columns
+                    if (row.data && typeof row.data === 'object' && Object.keys(row.data).length > 0) {
+                        return row.data;
+                    }
+                    return { wallet: row.balance ?? 0, bank: row.bank ?? 0 };
+                }
                 
                 case 'afk_status':
                     const afkResult = await this.pool.query(
@@ -1099,7 +1073,7 @@ class PostgreSQLDatabase {
                          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) 
                          ON CONFLICT (guild_id, user_id) DO UPDATE SET 
                          balance = $3, bank = $4, data = $5, updated_at = CURRENT_TIMESTAMP`,
-                        [parsedKey.guildId, parsedKey.userId, value.balance || 0, value.bank || 0, value.data || {}]
+                        [parsedKey.guildId, parsedKey.userId, value.wallet ?? value.balance ?? 0, value.bank ?? 0, value]
                     );
                     return true;
                 
