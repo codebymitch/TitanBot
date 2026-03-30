@@ -49,6 +49,21 @@ export const botConfig = {
     // Optional server ID used for testing slash commands quickly.
     testGuildId: process.env.TEST_GUILD_ID,
   },
+    // =========================
+  // MUSIC & VOICE SETTINGS (24/7 Mode)
+  // =========================
+  music: {
+    // يجعل البوت يبقى في الروم الصوتي دائماً
+    stayInVoiceChannel: true, 
+    // هل يخرج إذا كان الروم فارغاً؟ (false = سيبقى)
+    leaveOnEmpty: false,
+    // هل يخرج عند انتهاء قائمة التشغيل؟ (false = سيبقى)
+    leaveOnEnd: false,
+    // هل يخرج إذا تم إيقاف الموسيقى يدوياً؟
+    leaveOnStop: false,
+    // لتفعيل خاصية الـ 24/7 برمجياً
+    twentyFourSeven: true,
+  },
 
   // =========================
   // APPLICATIONS SYSTEM
@@ -154,6 +169,13 @@ export const botConfig = {
   // ECONOMY SETTINGS
   // =========================
   economy: {
+    music: {
+    stayInVoiceChannel: true, 
+    leaveOnEmpty: false,
+    leaveOnEnd: false,
+    leaveOnStop: false,
+    twentyFourSeven: true,
+  },
     currency: {
       // Currency display name.
       name: "coins",
