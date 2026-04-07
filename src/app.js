@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+h﻿import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
@@ -386,6 +386,26 @@ try {
 }
 
 export default TitanBot;
+import expressApp from 'express';
+const webApp = expressApp();
+
+webApp.get('/', (req, res) => {
+  res.send(`
+    <body style="background: #000; color: gold; text-align: center; padding-top: 100px; font-family: sans-serif;">
+      <h1 style="font-size: 50px;">👑 MRB KINGDOM BOT 👑</h1>
+      <p style="font-size: 20px;">Aapka Bot aur Website dono mast chal rahe hain!</p>
+      <br>
+      <a href="https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&permissions=8&scope=bot%20applications.commands" 
+         style="background: gold; color: black; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 20px;">
+         INVITE BOT
+      </a>
+    </body>
+  `);
+});
+
+webApp.listen(process.env.PORT || 3000, () => {
+  console.log("Website is Live!");
+});
 
 
 
