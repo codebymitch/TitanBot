@@ -167,18 +167,18 @@ class TitanBot extends Client {
 
     app.get('/ready', (req, res) => {
       const dbStatus = this.db?.getStatus?.() || { isDegraded: true };
-      const isReady = this.ready && !dbStatus.isDegraded;
-      
+      const isReady = this.isReady() && !dbStatus.isDegraded;
+
       if (isReady) {
-        return res.status(200).json({ 
-          ready: true, 
-          message: 'Bot is ready' 
+        return res.status(200).json({
+          ready: true,
+          message: 'Bot is ready'
         });
       }
-      
-      res.status(503).json({ 
+
+      res.status(503).json({
         ready: false,
-        reason: !this.ready ? 'Bot not Ready' : 'Database degraded' 
+        reason: !this.isReady() ? 'Bot not Ready' : 'Database degraded'
       });
     });
 
