@@ -93,7 +93,6 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 ### 📹 Video Tutorial
 For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 [**TitanBot Setup Tutorial**](https://www.youtube.com/@TouchDisc)
-
 <a name="manual-installation-steps"></a>
 ## ⚙️ Manual Installation Steps
 
@@ -104,7 +103,7 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/TitanBot.git
+   git clone https://github.com/codebymitch/TitanBot.git
    cd TitanBot
    ```
 
@@ -178,7 +177,10 @@ For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 - `npm run migrate` applies schema setup and records the expected schema version.
 - `npm run migrate:check` fails if the database schema version does not match the code's expected version.
 - `npm run migrate:status` prints current vs expected schema version metadata.
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 <a name="database-system"></a>
 ## 🗄️ Database System
 
@@ -199,7 +201,10 @@ TitanBot uses **PostgreSQL** as its primary database with intelligent fallback t
 - **Graceful Degradation**: Bot continues functioning without database
 - **Backward Compatibility**: Maintains existing API structure
 - **Zero Downtime**: Seamless switching between database and memory
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 <a name="bot-architecture"></a>
 ## 🏗️ Bot Architecture
 
@@ -213,6 +218,7 @@ TitanBot uses **PostgreSQL** as its primary database with intelligent fallback t
 
 ### Bot Intents
 TitanBot requires the following Discord intents:
+<<<<<<< HEAD
 - Guilds
 - Guild Messages
 - Message Content
@@ -220,19 +226,29 @@ TitanBot requires the following Discord intents:
 - Guild Message Reactions
 - Guild Voice States
 - Direct Messages
+=======
+- Bot
+- Applications.commands
+>>>>>>> main
 
 ### Required Permissions
+- **View Channels**
 - **Send Messages**
 - **Embed Links**
 - **Attach Files**
 - **Read Message History**
+- **Manage Messages**
 - **Manage Channels**
 - **Manage Roles**
-- **Manage Nicknames**
-- **Ban Members**
 - **Kick Members**
+<<<<<<< HEAD
 - **Manage Messages**
 
+=======
+- **Ban Members**
+- **Moderate Members**
+- **Connect**
+>>>>>>> main
 <a name="contributing"></a>
 ## 🤝 Contributing
 
@@ -258,4 +274,12 @@ TitanBot is released under the MIT License. See [LICENSE](LICENSE) for details.
 
 Thank you for choosing TitanBot for your Discord server! We're constantly working to improve and add new features based on community feedback.
 
+<<<<<<< HEAD
 **Made with ❤️**
+=======
+**Made with ❤️**
+
+---
+
+*Last updated: March 2026*
+>>>>>>> main
