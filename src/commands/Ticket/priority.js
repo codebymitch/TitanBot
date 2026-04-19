@@ -1,8 +1,6 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { updateTicketPriority } from '../../services/ticket.js';
-import { logEvent } from '../../utils/moderation.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -96,17 +94,6 @@ export default {
                 guildId: interaction.guildId,
                 priority: priorityLevel,
                 commandName: 'priority'
-            });
-
-            await logEvent({
-                client,
-                guildId: interaction.guildId,
-                event: {
-                    action: "Priority Updated",
-                    target: interaction.channel.toString(),
-                    executor: interaction.user.toString(),
-                    reason: `Priority set to ${priorityLevel.toUpperCase()}`
-                }
             });
 
         } catch (error) {

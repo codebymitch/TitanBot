@@ -2,7 +2,6 @@ import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Attac
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { logEvent } from '../utils/moderation.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { logger } from '../utils/logger.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
@@ -352,16 +351,6 @@ const claimTicketHandler = {
           embeds: [successEmbed('Ticket Claimed', 'You have successfully claimed this ticket!')],
           flags: MessageFlags.Ephemeral
         });
-        
-        await logEvent({
-          client,
-          guildId: interaction.guildId,
-          event: {
-            action: 'Ticket Claimed',
-            target: interaction.channel.toString(),
-            executor: interaction.user.toString()
-          }
-        });
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to claim ticket.')],
@@ -490,11 +479,11 @@ const pinTicketHandler = {
       }
 
       // Check if channel name already has ping emoji
-      const hasPingEmoji = channel.name.startsWith('📍');
+      const hasPingEmoji = channel.name.startsWith('📌');
       
       if (hasPingEmoji) {
         // Unpin: remove emoji and update position
-        const newName = channel.name.replace(/^📍\s*/, '');
+        const newName = channel.name.replace(/^📌\s*/, '');
         await channel.edit({ 
           name: newName,
           position: 999 // Move to end
@@ -502,7 +491,7 @@ const pinTicketHandler = {
 
         await interaction.editReply({
           embeds: [createEmbed({
-            title: '📍 Ticket Unpinned',
+            title: '📌 Ticket Unpinned',
             description: 'This ticket has been unpinned and moved back to normal position.',
             color: 0x95A5A6
           })],
@@ -517,7 +506,7 @@ const pinTicketHandler = {
         });
       } else {
         // Pin: add emoji and update position
-        const newName = `📍 ${channel.name}`;
+        const newName = `📌 ${channel.name}`;
         await channel.edit({ 
           name: newName,
           position: 0 // Move to top
@@ -525,7 +514,7 @@ const pinTicketHandler = {
 
         await interaction.editReply({
           embeds: [createEmbed({
-            title: '📍 Ticket Pinned',
+            title: '📌 Ticket Pinned',
             description: 'This ticket has been pinned to the top of the category.',
             color: 0x3498db
           })],
@@ -551,7 +540,7 @@ const pinTicketHandler = {
           executorId: interaction.user.id,
           metadata: {
             isPinned: !hasPingEmoji,
-            newChannelName: hasPingEmoji ? channel.name.replace(/^📍\s*/, '') : `📍 ${channel.name}`
+            newChannelName: hasPingEmoji ? channel.name.replace(/^📌\s*/, '') : `📌 ${channel.name}`
           }
         }
       });
@@ -607,16 +596,6 @@ const unclaimTicketHandler = {
         await interaction.editReply({
           embeds: [successEmbed('Ticket Unclaimed', 'You have successfully unclaimed this ticket!')],
           flags: MessageFlags.Ephemeral
-        });
-        
-        await logEvent({
-          client,
-          guildId: interaction.guildId,
-          event: {
-            action: 'Ticket Unclaimed',
-            target: interaction.channel.toString(),
-            executor: interaction.user.toString()
-          }
         });
       } else {
         await interaction.editReply({
@@ -681,16 +660,6 @@ const reopenTicketHandler = {
           embeds: [successEmbed('Ticket Reopened', reopenMessage)],
           flags: MessageFlags.Ephemeral
         });
-        
-        await logEvent({
-          client,
-          guildId: interaction.guildId,
-          event: {
-            action: 'Ticket Reopened',
-            target: interaction.channel.toString(),
-            executor: interaction.user.toString()
-          }
-        });
       } else {
         await interaction.editReply({
           embeds: [errorEmbed('Error', result.error || 'Failed to reopen ticket.')],
@@ -749,16 +718,6 @@ const deleteTicketHandler = {
         await interaction.editReply({
           embeds: [successEmbed('Ticket Deleted', 'This ticket will be permanently deleted in 3 seconds.')],
           flags: MessageFlags.Ephemeral
-        });
-        
-        await logEvent({
-          client,
-          guildId: interaction.guildId,
-          event: {
-            action: 'Ticket Deleted',
-            target: interaction.channel.toString(),
-            executor: interaction.user.toString()
-          }
         });
       } else {
         await interaction.editReply({

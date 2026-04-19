@@ -1,8 +1,6 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { closeTicket } from '../../services/ticket.js';
-import { logEvent } from '../../utils/moderation.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -91,17 +89,6 @@ export default {
                 guildId: interaction.guildId,
                 reason: reason,
                 commandName: 'close'
-            });
-
-            await logEvent({
-                client,
-                guildId: interaction.guildId,
-                event: {
-                    action: "Ticket Closed",
-                    target: channel.toString(),
-                    executor: interaction.user.toString(),
-                    reason: reason
-                }
             });
 
         } catch (error) {

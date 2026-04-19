@@ -10,7 +10,7 @@ import {
   AttachmentBuilder,
 } from 'discord.js';
 import { getGuildConfig } from './guildConfig.js';
-import { getTicketData, saveTicketData, deleteTicketData, getOpenTicketCountForUser } from '../utils/database.js';
+import { getTicketData, saveTicketData, deleteTicketData, getOpenTicketCountForUser, incrementTicketCounter } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 import { createEmbed, errorEmbed } from '../utils/embeds.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
@@ -46,8 +46,6 @@ function getPriorityMap() {
 const PRIORITY_MAP = getPriorityMap();
 const TICKET_DELETE_DELAY_MS = 3000;
 const TICKET_DELETE_DELAY_SECONDS = Math.floor(TICKET_DELETE_DELAY_MS / 1000);
-const TICKET_NUMBER_BASE = 100;
-const TICKET_NUMBER_RANGE = 900;
 
 
 
@@ -1134,8 +1132,7 @@ export async function unclaimTicket(channel, unclaimer) {
 }
 
 async function getNextTicketNumber(guildId) {
-  const randomTicket = Math.floor(Math.random() * TICKET_NUMBER_RANGE) + TICKET_NUMBER_BASE;
-  return randomTicket.toString();
+  return await incrementTicketCounter(guildId);
 }
 
 export async function updateTicketPriority(channel, priority, updater) {

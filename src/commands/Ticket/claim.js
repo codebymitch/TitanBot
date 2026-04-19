@@ -1,8 +1,6 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { claimTicket } from '../../services/ticket.js';
-import { logEvent } from '../../utils/moderation.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -80,16 +78,6 @@ export default {
                 channelName: channel.name,
                 guildId: interaction.guildId,
                 commandName: 'claim'
-            });
-
-            await logEvent({
-                client,
-                guildId: interaction.guildId,
-                event: {
-                    action: "Ticket Claimed",
-                    target: channel.toString(),
-                    executor: interaction.user.toString()
-                }
             });
 
         } catch (error) {

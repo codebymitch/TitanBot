@@ -676,6 +676,35 @@ export async function deleteTicketData(guildId, channelId) {
     await db.delete(key);
 }
 
+export function getTicketCounterKey(guildId) {
+    return `guild:${guildId}:ticket:counter`;
+}
+
+export async function getTicketCounter(guildId) {
+    if (!db.initialized) {
+        await db.initialize();
+    }
+
+    const key = getTicketCounterKey(guildId);
+    const counter = await db.get(key);
+    return counter || 0;
+}
+
+export async function incrementTicketCounter(guildId) {
+    if (!db.initialized) {
+        await db.initialize();
+    }
+
+    const key = getTicketCounterKey(guildId);
+    const currentCounter = await getTicketCounter(guildId);
+    const nextCounter = currentCounter + 1;
+    
+    await db.set(key, nextCounter);
+    
+    // Return padded to 3 digits (001, 002, etc.)
+    return nextCounter.toString().padStart(3, '0');
+}
+
 
 
 
@@ -745,6 +774,7 @@ function normalizeWelcomeConfig(raw = {}) {
         leaveMessage,
         leaveEmbed,
         dmMessage: base.dmMessage ?? "",
+        goodbyePing: Boolean(base.goodbyePing),
         roleIds,
         autoRoleDelay: base.autoRoleDelay ?? 0,
         joinLogs: base.joinLogs ?? { enabled: false, channelId: null },
