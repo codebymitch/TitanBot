@@ -44,7 +44,7 @@ const CATEGORY_ICONS = {
 
 
 
-async function createInitialHelpMenu() {
+async function createInitialHelpMenu(client) {
     const commandsPath = path.join(__dirname, "../../commands");
     const categoryDirs = (
         await fs.readdir(commandsPath, { withFileTypes: true })
@@ -72,8 +72,9 @@ async function createInitialHelpMenu() {
         }),
     ];
 
+    const botName = client.user.username;
     const embed = createEmbed({ 
-        title: "🤖 TitanBot Help Center",
+        title: `🤖 ${botName} Help Center`,
         description: "Your all-in-one Discord companion for moderation, economy, fun, and server management.",
         color: 'primary'
     });
@@ -204,7 +205,7 @@ export default {
         const { MessageFlags } = await import('discord.js');
         await InteractionHelper.safeDefer(interaction);
         
-        const { embeds, components } = await createInitialHelpMenu();
+        const { embeds, components } = await createInitialHelpMenu(client);
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds,
