@@ -1,5 +1,5 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, RoleSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, RoleSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType, EmbedBuilder, LabelBuilder, CheckboxBuilder, TextDisplayBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, createError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -991,19 +991,22 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
 
     const deleteModal = new ModalBuilder()
         .setCustomId('rr_delete_confirm_modal')
-        .setTitle('Delete Reaction Role Panel')
-        .addComponents(
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('delete_confirmation')
-                    .setLabel('Type "DELETE" to confirm')
-                    .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('DELETE')
-                    .setMaxLength(6)
-                    .setMinLength(6)
-                    .setRequired(true)
-            )
-        );
+        .setTitle('Delete Reaction Role Panel');
+
+    const deleteWarningText = new TextDisplayBuilder()
+        .setContent(`⚠️ You are about to permanently delete the panel **${title}**. This will remove the Discord message and all associated reaction role assignments.`);
+
+    const deleteCheckbox = new CheckboxBuilder()
+        .setCustomId('delete_confirmation')
+        .setDefault(false);
+
+    const deleteCheckboxLabel = new LabelBuilder()
+        .setLabel('I confirm — this cannot be undone')
+        .setCheckboxComponent(deleteCheckbox);
+
+    deleteModal
+        .addTextDisplayComponents(deleteWarningText)
+        .addLabelComponents(deleteCheckboxLabel);
 
     await btnInteraction.showModal(deleteModal);
 
@@ -1019,11 +1022,11 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
         return;
     }
 
-    const confirmation = submitted.fields.getTextInputValue('delete_confirmation').trim();
+    const confirmed = submitted.fields.getCheckbox('delete_confirmation');
 
-    if (confirmation !== 'DELETE') {
+    if (!confirmed) {
         await submitted.reply({
-            embeds: [errorEmbed('Incorrect Confirmation', 'You must type "DELETE" exactly to confirm deletion.')],
+            embeds: [errorEmbed('Not Confirmed', 'You must tick the confirmation checkbox to delete the panel.')],
             flags: MessageFlags.Ephemeral,
         });
         await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild);

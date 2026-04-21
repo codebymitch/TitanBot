@@ -14,6 +14,9 @@ import {
     MessageFlags,
     ComponentType,
     EmbedBuilder,
+    LabelBuilder,
+    CheckboxBuilder,
+    TextDisplayBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
@@ -511,27 +514,28 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
         });
 
         btnCollector.on('collect', async btnInteraction => {
-            // Defer the interaction to prevent timeout errors
-            const deferred = await safeDeferInteraction(btnInteraction);
-            if (!deferred) return;
-            
             // Show confirmation modal
+            const appRoleForDelete = roles.find(r => r.roleId === selectedRoleId);
+            const appNameForDelete = appRoleForDelete?.name ?? 'this application';
+
             const confirmModal = new ModalBuilder()
                 .setCustomId('app_delete_confirm')
                 .setTitle('Confirm Application Deletion');
 
-            confirmModal.addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('confirm_text')
-                        .setLabel(`Type "DELETE" to confirm deletion`)
-                        .setStyle(TextInputStyle.Short)
-                        .setPlaceholder('Type DELETE here')
-                        .setMaxLength(6)
-                        .setMinLength(6)
-                        .setRequired(true),
-                ),
-            );
+            const deleteWarningText = new TextDisplayBuilder()
+                .setContent(`⚠️ You are about to permanently delete **${appNameForDelete}**. All stored applications and settings for this role will be removed and cannot be recovered.`);
+
+            const deleteCheckbox = new CheckboxBuilder()
+                .setCustomId('confirm_delete')
+                .setDefault(false);
+
+            const deleteCheckboxLabel = new LabelBuilder()
+                .setLabel('I confirm — this cannot be undone')
+                .setCheckboxComponent(deleteCheckbox);
+
+            confirmModal
+                .addTextDisplayComponents(deleteWarningText)
+                .addLabelComponents(deleteCheckboxLabel);
 
             try {
                 await btnInteraction.showModal(confirmModal);
@@ -559,10 +563,10 @@ function setupCollectors(interaction, settings, roles, guildId, client, selected
                     return;
                 }
 
-                const confirmText = confirmSubmit.fields.getTextInputValue('confirm_text').trim();
-                if (confirmText !== 'DELETE') {
+                const confirmed = confirmSubmit.fields.getCheckbox('confirm_delete');
+                if (!confirmed) {
                     await confirmSubmit.reply({
-                        embeds: [errorEmbed('Incorrect Confirmation', 'You must type exactly "DELETE" to confirm.')],
+                        embeds: [errorEmbed('Not Confirmed', 'You must tick the confirmation checkbox to delete the application.')],
                         flags: MessageFlags.Ephemeral,
                     });
                     return;
@@ -1150,29 +1154,42 @@ async function handleRoleRemove(selectInteraction, rootInteraction, settings, ro
 async function handleRetention(selectInteraction, rootInteraction, settings, roles, guildId, client) {
     const modal = new ModalBuilder()
         .setCustomId('app_cfg_retention')
-        .setTitle('Application Retention Periods')
-        .addComponents(
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('pending_days')
-                    .setLabel('Pending retention (days, 1–3650)')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue(String(settings.pendingApplicationRetentionDays ?? 30))
-                    .setMaxLength(4)
-                    .setMinLength(1)
-                    .setRequired(true),
-            ),
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('reviewed_days')
-                    .setLabel('Reviewed retention (days, 1–3650)')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue(String(settings.reviewedApplicationRetentionDays ?? 14))
-                    .setMaxLength(4)
-                    .setMinLength(1)
-                    .setRequired(true),
-            ),
+        .setTitle('Application Retention Periods');
+
+    const retentionInfo = new TextDisplayBuilder()
+        .setContent(
+            '**Pending** — how long unanswered/in-progress applications are kept before being automatically removed.\n' +
+            '**Reviewed** — how long approved or denied applications are kept.\n' +
+            '-# Enter a whole number between 1 and 3650 (max 10 years).',
         );
+
+    const pendingLabel = new LabelBuilder()
+        .setLabel('Pending retention (days)')
+        .setTextInputComponent(
+            new TextInputBuilder()
+                .setCustomId('pending_days')
+                .setStyle(TextInputStyle.Short)
+                .setValue(String(settings.pendingApplicationRetentionDays ?? 30))
+                .setMaxLength(4)
+                .setMinLength(1)
+                .setRequired(true),
+        );
+
+    const reviewedLabel = new LabelBuilder()
+        .setLabel('Reviewed retention (days)')
+        .setTextInputComponent(
+            new TextInputBuilder()
+                .setCustomId('reviewed_days')
+                .setStyle(TextInputStyle.Short)
+                .setValue(String(settings.reviewedApplicationRetentionDays ?? 14))
+                .setMaxLength(4)
+                .setMinLength(1)
+                .setRequired(true),
+        );
+
+    modal
+        .addTextDisplayComponents(retentionInfo)
+        .addLabelComponents(pendingLabel, reviewedLabel);
 
     await selectInteraction.showModal(modal);
 

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ComponentType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ComponentType, LabelBuilder, RoleSelectMenuBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { getColor } from '../../config/bot.js';
 import { logger } from '../../utils/logger.js';
@@ -148,141 +148,150 @@ async function handleSetup(interaction) {
         });
     }
 
-    // Show modal for setting up a new application
+    // Build modal using LabelBuilder API with a native role select dropdown
     const modal = new ModalBuilder()
         .setCustomId('app_setup_modal')
         .setTitle('Set Up New Application');
 
-    const rows = [
-        new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-                .setCustomId('app_name')
-                .setLabel('Application Name')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('e.g., Moderator, Helper, Developer')
-                .setMaxLength(50)
-                .setMinLength(1)
-                .setRequired(true),
-        ),
-        new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-                .setCustomId('role_id')
-                .setLabel('Role ID')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Right-click a role and copy its ID')
-                .setMaxLength(20)
-                .setMinLength(1)
-                .setRequired(true),
-        ),
-        new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-                .setCustomId('app_question_1')
-                .setLabel('Question 1 (required)')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Why do you want this role?')
-                .setMaxLength(100)
-                .setMinLength(1)
-                .setRequired(true),
-        ),
-        new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-                .setCustomId('app_question_2')
-                .setLabel('Question 2 (optional)')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('What experience do you have?')
-                .setMaxLength(100)
-                .setRequired(false),
-        ),
-        new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-                .setCustomId('app_question_3')
-                .setLabel('Question 3 (optional)')
-                .setStyle(TextInputStyle.Short)
-                .setMaxLength(100)
-                .setRequired(false),
-        ),
-    ];
+    const roleSelect = new RoleSelectMenuBuilder()
+        .setCustomId('role_id')
+        .setPlaceholder('Select the role users will apply for')
+        .setRequired(true);
 
-    modal.addComponents(...rows);
-    
+    const roleLabel = new LabelBuilder()
+        .setLabel('Application Role')
+        .setDescription('The role that users will be applying for')
+        .setRoleSelectMenuComponent(roleSelect);
+
+    const appNameInput = new TextInputBuilder()
+        .setCustomId('app_name')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., Moderator, Helper, Developer')
+        .setMaxLength(50)
+        .setMinLength(1)
+        .setRequired(true);
+
+    const appNameLabel = new LabelBuilder()
+        .setLabel('Application Name')
+        .setTextInputComponent(appNameInput);
+
+    const q1Input = new TextInputBuilder()
+        .setCustomId('app_question_1')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Why do you want this role?')
+        .setMaxLength(100)
+        .setMinLength(1)
+        .setRequired(true);
+
+    const q1Label = new LabelBuilder()
+        .setLabel('Question 1 (required)')
+        .setTextInputComponent(q1Input);
+
+    const q2Input = new TextInputBuilder()
+        .setCustomId('app_question_2')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('What experience do you have?')
+        .setMaxLength(100)
+        .setRequired(false);
+
+    const q2Label = new LabelBuilder()
+        .setLabel('Question 2 (optional)')
+        .setTextInputComponent(q2Input);
+
+    const q3Input = new TextInputBuilder()
+        .setCustomId('app_question_3')
+        .setStyle(TextInputStyle.Short)
+        .setMaxLength(100)
+        .setRequired(false);
+
+    const q3Label = new LabelBuilder()
+        .setLabel('Question 3 (optional)')
+        .setTextInputComponent(q3Input);
+
+    modal.addLabelComponents(roleLabel, appNameLabel, q1Label, q2Label, q3Label);
+
     await interaction.showModal(modal);
 
-    try {
-        const submitted = await interaction.awaitModalSubmit({
-            time: 15 * 60 * 1000, // 15 minutes
-            filter: (i) =>
-                i.customId === 'app_setup_modal' &&
-                i.user.id === interaction.user.id,
-        });
+    const submitted = await interaction.awaitModalSubmit({
+        time: 15 * 60 * 1000, // 15 minutes
+        filter: (i) =>
+            i.customId === 'app_setup_modal' &&
+            i.user.id === interaction.user.id,
+    }).catch(() => null);
 
-        const appName = submitted.fields.getTextInputValue('app_name').trim();
-        const roleId = submitted.fields.getTextInputValue('role_id').trim();
-        const questions = [
-            submitted.fields.getTextInputValue('app_question_1').trim(),
-            submitted.fields.getTextInputValue('app_question_2').trim(),
-            submitted.fields.getTextInputValue('app_question_3').trim(),
-        ].filter(q => q.length > 0);
+    if (!submitted) {
+        logger.info('App setup modal dismissed or timed out', { guildId: interaction.guild.id, userId: interaction.user.id });
+        return;
+    }
 
-        // Get the role to verify it exists
-        let role;
-        try {
-            role = await interaction.guild.roles.fetch(roleId);
-        } catch (error) {
-            await submitted.reply({
-                embeds: [errorEmbed('Invalid Role', 'The role ID you provided does not exist.')],
-                flags: ['Ephemeral'],
-            });
-            return;
-        }
+    const appName = submitted.fields.getTextInputValue('app_name').trim();
+    const selectedRoles = submitted.fields.getSelectedRoles('role_id');
+    const roleId = selectedRoles.first()?.id;
 
-        // Check if this role is already an application
-        const existingRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
-        if (existingRoles.some(r => r.roleId === roleId)) {
-            await submitted.reply({
-                embeds: [errorEmbed('Already Configured', `The role ${role} is already configured as an application.`)],
-                flags: ['Ephemeral'],
-            });
-            return;
-        }
-
-        // Add the role to applications with enabled status
-        existingRoles.push({
-            roleId: roleId,
-            name: appName,
-            enabled: true,  // New applications start enabled
-        });
-
-        await saveApplicationRoles(interaction.client, interaction.guild.id, existingRoles);
-
-        // Enable the system
-        const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
-        if (!settings.enabled) {
-            await ApplicationService.updateSettings(interaction.client, interaction.guild.id, { enabled: true });
-        }
-
-        // Save the questions for this specific role
-        await saveApplicationRoleSettings(interaction.client, interaction.guild.id, roleId, { questions });
-
+    if (!roleId) {
         await submitted.reply({
-            embeds: [successEmbed(
-                '✅ Application Created',
-                `**${appName}** application has been created for ${role}.\n\nYou can customize the log channel, manager roles, questions, and retention period in the dashboard.`,
-            )],
+            embeds: [errorEmbed('No Role Selected', 'You must select a role for the application.')],
             flags: ['Ephemeral'],
         });
-
-        // Auto-open dashboard with this app selected
-        setTimeout(() => {
-            appDashboard.execute(submitted, null, interaction.client, appName);
-        }, 500);
-
-    } catch (error) {
-        if (error.message.includes('timeout')) {
-            logger.info('App setup modal timed out', { guildId: interaction.guild.id, userId: interaction.user.id });
-            return;
-        }
-        throw error;
+        return;
     }
+
+    const questions = [
+        submitted.fields.getTextInputValue('app_question_1').trim(),
+        submitted.fields.getTextInputValue('app_question_2').trim(),
+        submitted.fields.getTextInputValue('app_question_3').trim(),
+    ].filter(q => q.length > 0);
+
+    // Get the role to verify it exists
+    const role = await interaction.guild.roles.fetch(roleId).catch(() => null);
+    if (!role) {
+        await submitted.reply({
+            embeds: [errorEmbed('Invalid Role', 'The selected role could not be found.')],
+            flags: ['Ephemeral'],
+        });
+        return;
+    }
+
+    // Check if this role is already an application
+    const existingRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
+    if (existingRoles.some(r => r.roleId === roleId)) {
+        await submitted.reply({
+            embeds: [errorEmbed('Already Configured', `The role ${role} is already configured as an application.`)],
+            flags: ['Ephemeral'],
+        });
+        return;
+    }
+
+    // Add the role to applications with enabled status
+    existingRoles.push({
+        roleId: roleId,
+        name: appName,
+        enabled: true,  // New applications start enabled
+    });
+
+    await saveApplicationRoles(interaction.client, interaction.guild.id, existingRoles);
+
+    // Enable the system
+    const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
+    if (!settings.enabled) {
+        await ApplicationService.updateSettings(interaction.client, interaction.guild.id, { enabled: true });
+    }
+
+    // Save the questions for this specific role
+    await saveApplicationRoleSettings(interaction.client, interaction.guild.id, roleId, { questions });
+
+    await submitted.reply({
+        embeds: [successEmbed(
+            '✅ Application Created',
+            `**${appName}** application has been created for ${role}.\n\nYou can customize the log channel, manager roles, questions, and retention period in the dashboard.`,
+        )],
+        flags: ['Ephemeral'],
+    });
+
+    // Auto-open dashboard with this app selected
+    setTimeout(() => {
+        appDashboard.execute(submitted, null, interaction.client, appName);
+    }, 500);
 }
 
 

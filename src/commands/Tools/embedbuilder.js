@@ -14,6 +14,8 @@ import {
     ComponentType,
     ChannelType,
     EmbedBuilder,
+    LabelBuilder,
+    RadioGroupBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { successEmbed, errorEmbed } from '../../utils/embeds.js';
@@ -627,37 +629,43 @@ async function handleAddField(selectInteraction, rootInteraction, state) {
 
     const modal = new ModalBuilder()
         .setCustomId('eb_add_field')
-        .setTitle('Add Field')
-        .addComponents(
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('field_name')
-                    .setLabel('Field Name (max 256 characters)')
-                    .setStyle(TextInputStyle.Short)
-                    .setMaxLength(256)
-                    .setRequired(true)
-                    .setPlaceholder('Field Title'),
-            ),
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('field_value')
-                    .setLabel('Field Value (max 1024 characters)')
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setMaxLength(1024)
-                    .setRequired(true)
-                    .setPlaceholder('Field content goes here...'),
-            ),
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('field_inline')
-                    .setLabel('Inline? Type "yes" to place side-by-side')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue('no')
-                    .setMaxLength(3)
-                    .setRequired(false)
-                    .setPlaceholder('yes or no'),
-            ),
+        .setTitle('Add Field');
+
+    const fieldNameLabel = new LabelBuilder()
+        .setLabel('Field Name (max 256 characters)')
+        .setTextInputComponent(
+            new TextInputBuilder()
+                .setCustomId('field_name')
+                .setStyle(TextInputStyle.Short)
+                .setMaxLength(256)
+                .setRequired(true)
+                .setPlaceholder('Field Title'),
         );
+
+    const fieldValueLabel = new LabelBuilder()
+        .setLabel('Field Value (max 1024 characters)')
+        .setTextInputComponent(
+            new TextInputBuilder()
+                .setCustomId('field_value')
+                .setStyle(TextInputStyle.Paragraph)
+                .setMaxLength(1024)
+                .setRequired(true)
+                .setPlaceholder('Field content goes here...'),
+        );
+
+    const inlineRadio = new RadioGroupBuilder()
+        .setCustomId('field_inline')
+        .setRequired(false)
+        .addOptions([
+            { label: 'No — full width', value: 'no' },
+            { label: 'Yes — side-by-side', value: 'yes' },
+        ]);
+
+    const inlineLabel = new LabelBuilder()
+        .setLabel('Display inline?')
+        .setRadioGroupComponent(inlineRadio);
+
+    modal.addLabelComponents(fieldNameLabel, fieldValueLabel, inlineLabel);
 
     await selectInteraction.showModal(modal);
 
@@ -672,8 +680,7 @@ async function handleAddField(selectInteraction, rootInteraction, state) {
 
     const name     = submitted.fields.getTextInputValue('field_name').trim();
     const value    = submitted.fields.getTextInputValue('field_value').trim();
-    const inlineRaw = submitted.fields.getTextInputValue('field_inline').trim().toLowerCase();
-    const inline   = inlineRaw === 'yes' || inlineRaw === 'y' || inlineRaw === 'true';
+    const inline   = submitted.fields.getRadioGroup('field_inline') === 'yes';
 
     state.fields.push({ name, value, inline });
 
@@ -725,36 +732,50 @@ async function handleEditField(selectInteraction, rootInteraction, state) {
 
         const modal = new ModalBuilder()
             .setCustomId('eb_edit_field_modal')
-            .setTitle(`Edit Field ${idx + 1}`)
-            .addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('field_name')
-                        .setLabel('Field Name')
-                        .setStyle(TextInputStyle.Short)
-                        .setValue(field.name)
-                        .setMaxLength(256)
-                        .setRequired(true),
-                ),
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('field_value')
-                        .setLabel('Field Value')
-                        .setStyle(TextInputStyle.Paragraph)
-                        .setValue(field.value.substring(0, 4000))
-                        .setMaxLength(1024)
-                        .setRequired(true),
-                ),
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('field_inline')
-                        .setLabel('Inline? (yes / no)')
-                        .setStyle(TextInputStyle.Short)
-                        .setValue(field.inline ? 'yes' : 'no')
-                        .setMaxLength(3)
-                        .setRequired(false),
-                ),
+            .setTitle(`Edit Field ${idx + 1}`);
+
+        const editNameLabel = new LabelBuilder()
+            .setLabel('Field Name')
+            .setTextInputComponent(
+                new TextInputBuilder()
+                    .setCustomId('field_name')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(field.name)
+                    .setMaxLength(256)
+                    .setRequired(true),
             );
+
+        const editValueLabel = new LabelBuilder()
+            .setLabel('Field Value')
+            .setTextInputComponent(
+                new TextInputBuilder()
+                    .setCustomId('field_value')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setValue(field.value.substring(0, 4000))
+                    .setMaxLength(1024)
+                    .setRequired(true),
+            );
+
+        const editInlineRadio = new RadioGroupBuilder()
+            .setCustomId('field_inline')
+            .setRequired(false)
+            .addOptions([
+                { label: 'No — full width', value: 'no' },
+                { label: 'Yes — side-by-side', value: 'yes' },
+            ]);
+        // Pre-select the current value
+        if (field.inline) {
+            editInlineRadio.setOptions([
+                { label: 'No — full width', value: 'no' },
+                { label: 'Yes — side-by-side', value: 'yes', default: true },
+            ]);
+        }
+
+        const editInlineLabel = new LabelBuilder()
+            .setLabel('Display inline?')
+            .setRadioGroupComponent(editInlineRadio);
+
+        modal.addLabelComponents(editNameLabel, editValueLabel, editInlineLabel);
 
         await pickInter.showModal(modal);
 
@@ -768,10 +789,9 @@ async function handleEditField(selectInteraction, rootInteraction, state) {
 
         if (!submitted) return;
 
-        const name      = submitted.fields.getTextInputValue('field_name').trim();
-        const value     = submitted.fields.getTextInputValue('field_value').trim();
-        const inlineRaw = submitted.fields.getTextInputValue('field_inline').trim().toLowerCase();
-        const inline    = inlineRaw === 'yes' || inlineRaw === 'y' || inlineRaw === 'true';
+        const name   = submitted.fields.getTextInputValue('field_name').trim();
+        const value  = submitted.fields.getTextInputValue('field_value').trim();
+        const inline = submitted.fields.getRadioGroup('field_inline') === 'yes';
 
         state.fields[idx] = { name, value, inline };
 

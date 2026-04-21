@@ -13,6 +13,9 @@ import {
     MessageFlags,
     ComponentType,
     EmbedBuilder,
+    LabelBuilder,
+    FileUploadBuilder,
+    TextDisplayBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
@@ -339,7 +342,11 @@ export default {
 // ─── Welcome Channel ──────────────────────────────────────────────────────────
 
 async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, guildId, client) {
-    await selectInteraction.deferUpdate();
+    try {
+        await selectInteraction.deferUpdate();
+    } catch {
+        return;
+    }
 
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('greet_cfg_welcome_channel')
@@ -427,7 +434,11 @@ async function handleWelcomeMessage(selectInteraction, rootInteraction, cfg, gui
             ),
         );
 
-    await selectInteraction.showModal(modal);
+    try {
+        await selectInteraction.showModal(modal);
+    } catch {
+        return;
+    }
 
     const submitted = await selectInteraction
         .awaitModalSubmit({
@@ -455,20 +466,39 @@ async function handleWelcomeMessage(selectInteraction, rootInteraction, cfg, gui
 async function handleWelcomeImage(selectInteraction, rootInteraction, cfg, guildId, client) {
     const modal = new ModalBuilder()
         .setCustomId('greet_cfg_welcome_image')
-        .setTitle('Set Welcome Image')
-        .addComponents(
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('image_input')
-                    .setLabel('Image URL (leave blank to remove)')
-                    .setPlaceholder('https://example.com/welcome.png')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue(cfg.welcomeImage || '')
-                    .setRequired(false),
-            ),
+        .setTitle('Set Welcome Image');
+
+    const imageHint = new TextDisplayBuilder()
+        .setContent('Provide a direct image URL **or** upload a file below. If both are given, the uploaded file takes priority. Leave the URL blank and skip the upload to remove the image.');
+
+    const urlLabel = new LabelBuilder()
+        .setLabel('Image URL (optional)')
+        .setTextInputComponent(
+            new TextInputBuilder()
+                .setCustomId('image_input')
+                .setPlaceholder('https://example.com/welcome.png')
+                .setStyle(TextInputStyle.Short)
+                .setValue(cfg.welcomeImage || '')
+                .setRequired(false),
         );
 
-    await selectInteraction.showModal(modal);
+    const uploadLabel = new LabelBuilder()
+        .setLabel('Or upload an image file (optional)')
+        .setFileUploadComponent(
+            new FileUploadBuilder()
+                .setCustomId('image_upload')
+                .setRequired(false),
+        );
+
+    modal
+        .addTextDisplayComponents(imageHint)
+        .addLabelComponents(urlLabel, uploadLabel);
+
+    try {
+        await selectInteraction.showModal(modal);
+    } catch {
+        return;
+    }
 
     const submitted = await selectInteraction
         .awaitModalSubmit({
@@ -480,9 +510,11 @@ async function handleWelcomeImage(selectInteraction, rootInteraction, cfg, guild
 
     if (!submitted) return;
 
-    const imageUrl = submitted.fields.getTextInputValue('image_input').trim();
+    // File upload takes priority over URL
+    const uploadedFiles = submitted.fields.getUploadedFiles('image_upload');
+    let imageUrl = uploadedFiles?.at(0)?.url ?? submitted.fields.getTextInputValue('image_input').trim();
 
-    // Validate image URL
+    // Validate URL if provided
     if (imageUrl) {
         try {
             new URL(imageUrl);
@@ -537,7 +569,11 @@ async function handleWelcomePing(selectInteraction, rootInteraction, cfg, guildI
 // ─── Goodbye Channel ─────────────────────────────────────────────────────────
 
 async function handleGoodbyeChannel(selectInteraction, rootInteraction, cfg, guildId, client) {
-    await selectInteraction.deferUpdate();
+    try {
+        await selectInteraction.deferUpdate();
+    } catch {
+        return;
+    }
 
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('greet_cfg_goodbye_channel')
@@ -625,7 +661,11 @@ async function handleGoodbyeMessage(selectInteraction, rootInteraction, cfg, gui
             ),
         );
 
-    await selectInteraction.showModal(modal);
+    try {
+        await selectInteraction.showModal(modal);
+    } catch {
+        return;
+    }
 
     const submitted = await selectInteraction
         .awaitModalSubmit({
@@ -653,24 +693,43 @@ async function handleGoodbyeMessage(selectInteraction, rootInteraction, cfg, gui
 async function handleGoodbyeImage(selectInteraction, rootInteraction, cfg, guildId, client) {
     const modal = new ModalBuilder()
         .setCustomId('greet_cfg_goodbye_image')
-        .setTitle('Set Goodbye Image')
-        .addComponents(
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('image_input')
-                    .setLabel('Image URL (leave blank to remove)')
-                    .setPlaceholder('https://example.com/goodbye.png')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue(
-                        typeof cfg.leaveEmbed?.image === 'string'
-                            ? cfg.leaveEmbed.image
-                            : cfg.leaveEmbed?.image?.url || ''
-                    )
-                    .setRequired(false),
-            ),
+        .setTitle('Set Goodbye Image');
+
+    const imageHint = new TextDisplayBuilder()
+        .setContent('Provide a direct image URL **or** upload a file below. If both are given, the uploaded file takes priority. Leave the URL blank and skip the upload to remove the image.');
+
+    const urlLabel = new LabelBuilder()
+        .setLabel('Image URL (optional)')
+        .setTextInputComponent(
+            new TextInputBuilder()
+                .setCustomId('image_input')
+                .setPlaceholder('https://example.com/goodbye.png')
+                .setStyle(TextInputStyle.Short)
+                .setValue(
+                    typeof cfg.leaveEmbed?.image === 'string'
+                        ? cfg.leaveEmbed.image
+                        : cfg.leaveEmbed?.image?.url || ''
+                )
+                .setRequired(false),
         );
 
-    await selectInteraction.showModal(modal);
+    const uploadLabel = new LabelBuilder()
+        .setLabel('Or upload an image file (optional)')
+        .setFileUploadComponent(
+            new FileUploadBuilder()
+                .setCustomId('image_upload')
+                .setRequired(false),
+        );
+
+    modal
+        .addTextDisplayComponents(imageHint)
+        .addLabelComponents(urlLabel, uploadLabel);
+
+    try {
+        await selectInteraction.showModal(modal);
+    } catch {
+        return;
+    }
 
     const submitted = await selectInteraction
         .awaitModalSubmit({
@@ -682,9 +741,11 @@ async function handleGoodbyeImage(selectInteraction, rootInteraction, cfg, guild
 
     if (!submitted) return;
 
-    const imageUrl = submitted.fields.getTextInputValue('image_input').trim();
+    // File upload takes priority over URL
+    const uploadedFiles = submitted.fields.getUploadedFiles('image_upload');
+    let imageUrl = uploadedFiles?.at(0)?.url ?? submitted.fields.getTextInputValue('image_input').trim();
 
-    // Validate image URL
+    // Validate URL if provided
     if (imageUrl) {
         try {
             new URL(imageUrl);
