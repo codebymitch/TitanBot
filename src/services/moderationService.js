@@ -93,7 +93,7 @@ export class ModerationService {
         logger.debug('Target not in guild, proceeding with ban');
       }
 
-      
+      // Hierarchy check
       if (targetMember) {
         const botCheck = this.validateBotHierarchy(guild.client, targetMember, 'ban');
         if (!botCheck.valid) {
@@ -104,7 +104,24 @@ export class ModerationService {
         if (!modCheck.valid) {
           throw new TitanBotError(modCheck.error, ErrorTypes.PERMISSION, modCheck.error);
         }
+      } else {
+        // If target is not in guild, we can't check their roles easily.
+        // As a safety measure, only allow users with ManageGuild or Administrator to ban non-members.
+        const isOwner = guild.ownerId === moderator.id;
+        const hasHighPerms = moderator.permissions.has([
+            PermissionFlagsBits.ManageGuild,
+            PermissionFlagsBits.Administrator
+        ]);
+
+        if (!isOwner && !hasHighPerms) {
+            throw new TitanBotError(
+                'You do not have sufficient permissions to ban users who are not in the server.',
+                ErrorTypes.PERMISSION,
+                'You need "Manage Server" or "Administrator" permissions to ban users not currently in the guild.'
+            );
+        }
       }
+
 
       
       await guild.members.ban(user.id, { reason });
