@@ -94,6 +94,36 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
 [**TitanBot Setup Tutorial**](https://www.youtube.com/@TouchDisc)
 
+## 🐳 Docker Deployment (Recommended)
+
+TitanBot is fully containerized for easy deployment.
+
+### Using Docker Compose
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/ramsquishna/TitanBot.git
+   cd TitanBot
+   ```
+
+2. **Configure environment variables:**
+   Create a `.env` file from `.env.example` and fill in your bot details and PostgreSQL credentials.
+
+3. **Start the containers:**
+   ```bash
+   docker-compose up -d
+   ```
+
+This will start both the bot and a persistent PostgreSQL database.
+
+### Using GitHub Container Registry
+
+The bot is automatically published to GitHub Container Registry on every push to main.
+
+```bash
+docker pull ghcr.io/ramsquishna/titanbot:main
+```
+
 <a name="manual-installation-steps"></a>
 ## ⚙️ Manual Installation Steps
 
