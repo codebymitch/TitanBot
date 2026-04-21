@@ -272,6 +272,9 @@ export function selectWinners(participants, winnerCount) {
         return [];
     }
 
+    // Ensure participants are unique
+    const uniqueParticipants = [...new Set(participants)];
+
     if (!Number.isInteger(winnerCount) || winnerCount < 1) {
         throw new TitanBotError(
             'Invalid winner count for selection',
@@ -281,11 +284,11 @@ export function selectWinners(participants, winnerCount) {
         );
     }
 
-    const requested = Math.min(winnerCount, participants.length);
+    const requested = Math.min(winnerCount, uniqueParticipants.length);
     
     try {
-        
-        const shuffled = [...participants];
+        // Shuffle the unique participants using Fisher-Yates
+        const shuffled = [...uniqueParticipants];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
