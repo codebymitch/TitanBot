@@ -7,6 +7,7 @@ import {
     saveGiveaway, 
     isGiveawayEnded 
 } from '../utils/giveaways.js';
+import { Mutex } from '../utils/mutex.js';
 import { 
     selectWinners,
     isUserRateLimited,
@@ -38,77 +39,79 @@ export const giveawayJoinHandler = {
 
             recordUserInteraction(interaction.user.id, interaction.message.id);
 
-            const guildGiveaways = await getGuildGiveaways(client, interaction.guildId);
-            const giveaway = guildGiveaways.find(g => g.messageId === interaction.message.id);
+            const lockKey = `giveaway:${interaction.message.id}`;
+            await Mutex.runExclusive(lockKey, async () => {
+                const guildGiveaways = await getGuildGiveaways(client, interaction.guildId);
+                const giveaway = guildGiveaways.find(g => g.messageId === interaction.message.id);
 
-            if (!giveaway) {
-                throw new TitanBotError(
-                    'Giveaway not found in database',
-                    ErrorTypes.VALIDATION,
-                    'This giveaway is no longer active.',
-                    { messageId: interaction.message.id, guildId: interaction.guildId }
-                );
-            }
+                if (!giveaway) {
+                    throw new TitanBotError(
+                        'Giveaway not found in database',
+                        ErrorTypes.VALIDATION,
+                        'This giveaway is no longer active.',
+                        { messageId: interaction.message.id, guildId: interaction.guildId }
+                    );
+                }
 
-            
-            const endedByTime = isGiveawayEnded(giveaway);
-            const endedByFlag = giveaway.ended || giveaway.isEnded;
+                // Double check end status inside lock
+                const endedByTime = isGiveawayEnded(giveaway);
+                const endedByFlag = giveaway.ended || giveaway.isEnded;
 
-            if (endedByTime || endedByFlag) {
-                return interaction.reply({
+                if (endedByTime || endedByFlag) {
+                    return interaction.reply({
+                        embeds: [
+                            errorEmbed(
+                                'Giveaway Ended',
+                                'This giveaway has already ended.'
+                            )
+                        ],
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                const participants = giveaway.participants || [];
+                const userId = interaction.user.id;
+
+                // Check if user already joined
+                if (participants.includes(userId)) {
+                    return interaction.reply({
+                        embeds: [
+                            errorEmbed(
+                                'Already Entered',
+                                'You have already entered this giveaway! 🎉'
+                            )
+                        ],
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                // Atomically update participants
+                participants.push(userId);
+                giveaway.participants = participants;
+
+                await saveGiveaway(client, interaction.guildId, giveaway);
+
+                logger.debug(`User ${interaction.user.tag} joined giveaway ${interaction.message.id}`);
+
+                // Send response
+                const updatedEmbed = createGiveawayEmbed(giveaway, 'active');
+                const updatedRow = createGiveawayButtons(false);
+
+                await interaction.message.edit({
+                    embeds: [updatedEmbed],
+                    components: [updatedRow]
+                });
+
+                await interaction.reply({
                     embeds: [
-                        errorEmbed(
-                            'Giveaway Ended',
-                            'This giveaway has already ended.'
+                        successEmbed(
+                            'Success! You have entered the giveaway! 🎉',
+                            `Good luck! There are now ${participants.length} entry/entries.`
                         )
                     ],
                     flags: MessageFlags.Ephemeral
                 });
-            }
-
-            const participants = giveaway.participants || [];
-            const userId = interaction.user.id;
-
-            
-            if (participants.includes(userId)) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            'Already Entered',
-                            'You have already entered this giveaway! 🎉'
-                        )
-                    ],
-                    flags: MessageFlags.Ephemeral
-                });
-            }
-
-            
-            participants.push(userId);
-            giveaway.participants = participants;
-
-            await saveGiveaway(client, interaction.guildId, giveaway);
-
-            logger.debug(`User ${interaction.user.tag} joined giveaway ${interaction.message.id}`);
-
-            
-            const updatedEmbed = createGiveawayEmbed(giveaway, 'active');
-            const updatedRow = createGiveawayButtons(false);
-
-            await interaction.message.edit({
-                embeds: [updatedEmbed],
-                components: [updatedRow]
             });
-
-            await interaction.reply({
-                embeds: [
-                    successEmbed(
-                        'Success! You have entered the giveaway! 🎉',
-                        `Good luck! There are now ${participants.length} entry/entries.`
-                    )
-                ],
-                flags: MessageFlags.Ephemeral
-            });
-
         } catch (error) {
             logger.error('Error in giveaway join handler:', error);
             await handleInteractionError(interaction, error, {
