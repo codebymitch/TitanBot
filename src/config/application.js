@@ -84,7 +84,7 @@ const appConfig = {
 
   features: {
     
-    economy: true,                  
+    economy: false,                  
     leveling: true,                 
     moderation: true,               
     logging: true,                  
@@ -110,7 +110,7 @@ const appConfig = {
     fun: true,                      
 
     
-    music: false,                   
+    music: true,                   
   },
 
   env: process.env.NODE_ENV || "development",
