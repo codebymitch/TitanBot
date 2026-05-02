@@ -21,15 +21,15 @@ export default {
 
         try {
             await InteractionHelper.safeEditReply(interaction, {
-                content: "Pinging...",
+                content: "Разгоняем...",
             });
 
             const latency = Date.now() - interaction.createdTimestamp;
             const apiLatency = Math.round(interaction.client.ws.ping);
 
-            const embed = createEmbed({ title: "🏓 Pong!", description: null }).addFields(
-                { name: "Bot Latency", value: `${latency}ms`, inline: true },
-                { name: "API Latency", value: `${apiLatency}ms`, inline: true },
+            const embed = createEmbed({ title: "Результат:", description: null }).addFields(
+                { name: "Задержка бота", value: `${latency}ms`, inline: true },
+                { name: "Задержка API", value: `${apiLatency}ms`, inline: true },
             );
 
             await InteractionHelper.safeEditReply(interaction, {
@@ -37,14 +37,14 @@ export default {
                 embeds: [embed],
             });
         } catch (error) {
-            logger.error('Ping command error:', error);
+            logger.error('Ошибка команды проверки пинга:', error);
             try {
                 return await InteractionHelper.safeReply(interaction, {
-                    embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.', color: 'error' })],
+                    embeds: [createEmbed({ title: 'System Error', description: 'В данный момент не удалось определить задержку.', color: 'error' })],
                     flags: MessageFlags.Ephemeral,
                 });
             } catch (replyError) {
-                logger.error('Failed to send error reply:', replyError);
+                logger.error('Не удалось отправить ответ с ошибкой:', replyError);
             }
         }
     },
