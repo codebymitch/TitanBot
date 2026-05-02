@@ -74,7 +74,7 @@ export async function createInitialHelpMenu(client) {
     const botName = client?.user?.username || "Bot";
     const embed = createEmbed({ 
         title: `🤖 ${botName} меню`,
-        description: "Универсальный бот для Discord сервера ARBZ Famq, -# @kreze25",
+        description: "Универсальный бот для Discord сервера ARBZ Famq, @kreze25",
         color: 'primary'
     });
 
@@ -135,8 +135,8 @@ export async function createInitialHelpMenu(client) {
             inline: true
         },
         {
-            name: "🎭 **Reaction Roles**",
-            value: "Self-assignable roles using reaction-role systems",
+            name: "🎭 **Reaction-role**",
+            value: "Самостоятельное назначение ролей с помощью систем reaction-role",
             inline: true
         },
         {
@@ -160,11 +160,6 @@ export async function createInitialHelpMenu(client) {
         .setCustomId(BUG_REPORT_BUTTON_ID)
         .setLabel("Нашли баги?")
         .setStyle(ButtonStyle.Danger);
-
-    const touchpointButton = new ButtonBuilder()
-        .setLabel("Learn from Touchpoint")
-        .setURL(".")
-        .setStyle(ButtonStyle.Link);
     
     const supportButton = new ButtonBuilder()
         .setLabel("Поддержать сервер")
@@ -180,7 +175,6 @@ export async function createInitialHelpMenu(client) {
     const buttonRow = new ActionRowBuilder().addComponents([
         bugReportButton,
         supportButton,
-        touchpointButton,
     ]);
 
     return {
