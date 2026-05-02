@@ -152,7 +152,7 @@ export async function createInitialHelpMenu(client) {
     );
 
     embed.setFooter({ 
-        text: "𝐀𝐑𝐁𝐔𝐙 𝐅𝐀𝐌𝐐" 
+        text: "🍉ARBUZ FAMQ🍉" 
     });
     embed.setTimestamp();
 
