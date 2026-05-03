@@ -119,10 +119,11 @@ export default {
             if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
                 return InteractionHelper.safeReply(interaction, {
                     embeds: [errorEmbed('Permission Denied', 'You need **Manage Server** permissions to view the logging dashboard.')],
+                    ephemeral: true,
                 });
             }
 
-            await InteractionHelper.safeDefer(interaction);
+            await InteractionHelper.safeDefer(interaction, { ephemeral: true });
             const { embed, components } = await buildLoggingDashboardView(interaction, client);
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed], components });
         } catch (error) {

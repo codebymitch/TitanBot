@@ -1,5 +1,13 @@
 export const changelog = [
     {
+        version: '2.4.3',
+        date: '2026-05-03',
+        entries: [
+            { type: 'improved', text: 'All moderation commands (`/ban`, `/kick`, `/warn`, `/timeout`, `/lock`, `/unlock`, `/purge`, `/slowmode`, `/massban`, `/masskick`, `/unban`, `/untimeout`, `/temprole`, `/dm`, `/cases`, `/warnings`, `/usernotes`, `/autoresponder`) now reply privately — only you can see the response' },
+            { type: 'improved', text: 'Admin/config commands (`/logging`, `/goodbye`, `/counter`, `/reactroles` setup, `/verification remove`) are now also private — no longer shown to the whole channel' },
+        ],
+    },
+    {
         version: '2.4.2',
         date: '2026-05-02',
         entries: [

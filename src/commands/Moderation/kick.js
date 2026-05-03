@@ -109,6 +109,7 @@ export default {
             `**Reason:** ${reason}\n**Case ID:** #${caseId}`,
           ),
         ],
+        ephemeral: true,
       });
     } catch (error) {
       logger.error('Kick command error:', error);
@@ -116,7 +117,7 @@ export default {
         "An unexpected error occurred while trying to kick the user.",
         error.message || "Could not kick the user"
       );
-      await InteractionHelper.universalReply(interaction, { embeds: [errorEmbed_default] });
+      await InteractionHelper.universalReply(interaction, { embeds: [errorEmbed_default], ephemeral: true });
     }
   }
 };

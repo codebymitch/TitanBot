@@ -108,6 +108,7 @@ export default {
                         "You do not have permission to manage user notes."
                     ),
                 ],
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -123,6 +124,7 @@ export default {
                         "Please select a valid subcommand."
                     ),
                 ],
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -150,6 +152,7 @@ export default {
                                 "Please select a valid subcommand."
                             ),
                         ],
+                        flags: MessageFlags.Ephemeral,
                     });
             }
         } catch (error) {
@@ -179,6 +182,7 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
                     "Notes must be 1000 characters or less."
                 ),
             ],
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -190,6 +194,7 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
                     "Note cannot be empty."
                 ),
             ],
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -221,7 +226,8 @@ async function handleAddNote(interaction, targetUser, notes, guildId) {
                 `**Moderator:** ${interaction.user.tag}\n` +
                 `**Total Notes:** ${notes.length}`
             )
-        ]
+        ],
+        flags: MessageFlags.Ephemeral,
     });
 }
 
@@ -234,6 +240,7 @@ async function handleViewNotes(interaction, targetUser, notes) {
                     `There are no notes for **${targetUser.tag}**.`
                 ),
             ],
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -259,7 +266,8 @@ async function handleViewNotes(interaction, targetUser, notes) {
                 `📝 User Notes (${notes.length})`,
                 description
             )
-        ]
+        ],
+        flags: MessageFlags.Ephemeral,
     });
 }
 
@@ -274,6 +282,7 @@ const index = interaction.options.getInteger("index") - 1;
                     `Please provide a valid note index (1-${notes.length}).`
                 ),
             ],
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -293,7 +302,8 @@ const index = interaction.options.getInteger("index") - 1;
                 `> ${removedNote.content}\n\n` +
                 `**Remaining Notes:** ${notes.length}`
             )
-        ]
+        ],
+        flags: MessageFlags.Ephemeral,
     });
 }
 
@@ -308,6 +318,7 @@ async function handleClearNotes(interaction, targetUser, notes, guildId) {
                     `There are no notes for **${targetUser.tag}** to clear.`
                 ),
             ],
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -322,7 +333,8 @@ async function handleClearNotes(interaction, targetUser, notes, guildId) {
                 "🗑️ Notes Cleared",
                 `Cleared **${noteCount}** notes from **${targetUser.tag}**.`
             )
-        ]
+        ],
+        flags: MessageFlags.Ephemeral,
     });
 }
 

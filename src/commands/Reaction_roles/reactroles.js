@@ -173,9 +173,9 @@ export default {
 // ─── Setup Subcommand ─────────────────────────────────────────────────────────
 
 async function handleSetup(interaction) {
-    const deferSuccess = await InteractionHelper.safeDefer(interaction);
+    const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
     if (!deferSuccess) return;
-    
+
     logger.info(`Reaction role setup initiated by ${interaction.user.tag} in guild ${interaction.guild.name}`);
     
     const channel = interaction.options.getChannel('channel');

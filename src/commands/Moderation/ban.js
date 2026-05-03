@@ -48,6 +48,7 @@ export default {
                         `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
                     ),
                 ],
+                ephemeral: true,
             });
         } catch (error) {
             logger.error('Ban command error:', error);

@@ -94,7 +94,7 @@ export default {
                 return await dashboard.execute(interaction, config, client);
             }
 
-            await InteractionHelper.safeDefer(interaction);
+            await InteractionHelper.safeDefer(interaction, { ephemeral: true });
 
             if (subcommand === 'setchannel') {
                 return await setchannel.execute(interaction, config, client);

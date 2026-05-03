@@ -249,7 +249,8 @@ async function handleRemove(interaction, guild, client) {
         });
 
         return await InteractionHelper.safeReply(interaction, {
-            embeds: [successEmbed("Verification Removed", `Verification removed from ${targetUser.tag}.`)]
+            embeds: [successEmbed("Verification Removed", `Verification removed from ${targetUser.tag}.`)],
+            flags: MessageFlags.Ephemeral
         });
 
     } catch (error) {

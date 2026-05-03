@@ -20,7 +20,7 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
         if (!deferSuccess) {
             logger.warn(`Warnings interaction defer failed`, {
                 userId: interaction.user.id,

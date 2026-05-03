@@ -44,6 +44,7 @@ export default {
 
             await InteractionHelper.safeReply(interaction, {
                 embeds: [successEmbed('Slowmode Updated', description)],
+                ephemeral: true,
             });
 
             logger.info(`Slowmode set to ${seconds}s in channel ${channel.id} by ${interaction.user.id}`);

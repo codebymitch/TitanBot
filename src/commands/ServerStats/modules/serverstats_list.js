@@ -15,7 +15,7 @@ export async function handleList(interaction, client) {
     
     // Defer reply immediately to ensure interaction is acknowledged
     try {
-        await InteractionHelper.safeDefer(interaction);
+        await InteractionHelper.safeDefer(interaction, { ephemeral: true });
     } catch (error) {
         logger.error("Failed to defer reply:", error);
         return;

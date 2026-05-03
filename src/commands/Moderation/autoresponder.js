@@ -47,7 +47,7 @@ export default {
     category: 'moderation',
 
     async execute(interaction, config, client) {
-        await InteractionHelper.safeDefer(interaction);
+        await InteractionHelper.safeDefer(interaction, { ephemeral: true });
 
         const sub = interaction.options.getSubcommand();
         const guildId = interaction.guildId;

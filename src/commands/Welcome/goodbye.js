@@ -34,7 +34,7 @@ export default {
                         .setRequired(false))),
 
     async execute(interaction) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
         if (!deferSuccess) {
             logger.warn(`Goodbye interaction defer failed`, {
                 userId: interaction.user.id,
