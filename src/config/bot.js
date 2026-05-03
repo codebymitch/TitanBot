@@ -20,7 +20,7 @@ export const botConfig = {
   commands: {
     owners: process.env.OWNER_IDS?.split(",") || [],
     defaultCooldown: 3, 
-    deleteCommands: false,
+    deleteCommands: true,
     testGuildId: process.env.TEST_GUILD_ID,
   },
 
