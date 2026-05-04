@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '2.5.2',
+        date: '2026-05-04',
+        entries: [
+            { type: 'new', text: '`/servers` now includes a ➕ Add to Server button — generates an OAuth2 invite link to add the bot to any server' },
+        ],
+    },
+    {
         version: '2.5.1',
         date: '2026-05-04',
         entries: [

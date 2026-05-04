@@ -53,13 +53,21 @@ export default {
                 });
             }
 
+            const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`;
+
             const leaveButton = new ButtonBuilder()
                 .setCustomId('servers-leave')
                 .setLabel('Leave a Server')
                 .setStyle(ButtonStyle.Danger)
                 .setEmoji('🚪');
 
-            const buttonRow = new ActionRowBuilder().addComponents(leaveButton);
+            const addButton = new ButtonBuilder()
+                .setLabel('Add to Server')
+                .setURL(inviteUrl)
+                .setStyle(ButtonStyle.Link)
+                .setEmoji('➕');
+
+            const buttonRow = new ActionRowBuilder().addComponents(leaveButton, addButton);
 
             // Discord allows up to 10 embeds per message
             await InteractionHelper.safeEditReply(interaction, {
