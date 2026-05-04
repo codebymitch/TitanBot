@@ -48,6 +48,25 @@ class TitanBot extends Client {
     try {
       startupLog('Starting TitanBot...');
       await new Promise(resolve => setTimeout(resolve, 1000));
+
+// ===== SAFE MEMBER COUNT STATUS =====
+setTimeout(() => {
+  setInterval(() => {
+    try {
+      const guild = this.guilds.cache.first();
+      if (!guild) return;
+
+      const memberCount = guild.memberCount;
+
+      this.user.setActivity(`${memberCount} Total Members`, {
+        type: 3,
+      });
+
+    } catch (err) {
+      console.log("Status error:", err.message);
+    }
+  }, 15000);
+}, 10000);
       
       startupLog('Initializing database...');
       const dbInstance = await initializeDatabase();
