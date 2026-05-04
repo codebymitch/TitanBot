@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '2.5.3',
+        date: '2026-05-04',
+        entries: [
+            { type: 'new', text: 'Added `/edit` — get a random visual edit from a chosen category: Anime, Cars, Nature, Cities, Animals, Gaming, Sports, or Space' },
+        ],
+    },
+    {
         version: '2.5.2',
         date: '2026-05-04',
         entries: [
