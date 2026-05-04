@@ -1,5 +1,15 @@
 export const changelog = [
     {
+        version: '2.5.4',
+        date: '2026-05-04',
+        entries: [
+            { type: 'new', text: 'Added `/8ball` — ask the magic 8-ball any yes/no question' },
+            { type: 'new', text: 'Added `/rps` — play Rock Paper Scissors against the bot' },
+            { type: 'new', text: 'Added `/roast` — roast any user with a random savage line' },
+            { type: 'new', text: 'Added `/snipe` — reveal the last deleted message in the current channel' },
+        ],
+    },
+    {
         version: '2.5.3',
         date: '2026-05-04',
         entries: [

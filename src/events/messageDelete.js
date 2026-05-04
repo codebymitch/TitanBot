@@ -2,6 +2,7 @@ import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 import { getReactionRoleMessage, deleteReactionRoleMessage } from '../services/reactionRoleService.js';
+import { snipeCache } from '../utils/snipeCache.js';
 
 const MAX_LOGGED_MESSAGE_CONTENT_LENGTH = 1024;
 
@@ -55,6 +56,15 @@ export default {
       }
 
       if (message.author?.bot) return;
+
+      if (message.content || message.attachments.size > 0) {
+        snipeCache.set(message.channel.id, {
+          content: message.content,
+          author: message.author ? `${message.author.tag} (${message.author.id})` : 'Unknown',
+          attachmentUrl: message.attachments.first()?.url ?? null,
+          timestamp: message.createdTimestamp,
+        });
+      }
 
       const fields = [];
 
