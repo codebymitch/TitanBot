@@ -5,20 +5,20 @@ import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const CATEGORIES = {
-    anime:   { label: 'Anime',   subreddit: 'animeedits',    emoji: '🎌' },
-    cars:    { label: 'Cars',    subreddit: 'carporn',       emoji: '🚗' },
-    nature:  { label: 'Nature',  subreddit: 'EarthPorn',     emoji: '🌍' },
-    cities:  { label: 'Cities',  subreddit: 'CityPorn',      emoji: '🌆' },
-    animals: { label: 'Animals', subreddit: 'NatureIsFucked', emoji: '🐾' },
-    gaming:  { label: 'Gaming',  subreddit: 'gaming',        emoji: '🎮' },
-    sports:  { label: 'Sports',  subreddit: 'sports',        emoji: '⚽' },
-    space:   { label: 'Space',   subreddit: 'spaceporn',     emoji: '🚀' },
+    anime:      { label: 'Anime',      subreddit: 'animeedits',   emoji: '🎌' },
+    cars:       { label: 'Cars',       subreddit: 'CarVideos',    emoji: '🚗' },
+    nature:     { label: 'Nature',     subreddit: 'NatureGifs',   emoji: '🌍' },
+    gaming:     { label: 'Gaming',     subreddit: 'GamePhysics',  emoji: '🎮' },
+    sports:     { label: 'Sports',     subreddit: 'sports',       emoji: '⚽' },
+    space:      { label: 'Space',      subreddit: 'Spacegifs',    emoji: '🚀' },
+    satisfying: { label: 'Satisfying', subreddit: 'perfectloops', emoji: '✨' },
+    funny:      { label: 'Funny',      subreddit: 'funny',        emoji: '😂' },
 };
 
 export default {
     data: new SlashCommandBuilder()
         .setName('edit')
-        .setDescription('Get a random edit from a category')
+        .setDescription('Get a random video edit from a category')
         .addStringOption(option =>
             option
                 .setName('category')
@@ -39,7 +39,9 @@ export default {
             const key = interaction.options.getString('category');
             const { label, subreddit, emoji } = CATEGORIES[key];
 
-            const res = await fetch(`https://meme-api.com/gimme/${subreddit}`);
+            const res = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
+                headers: { 'User-Agent': 'ZenBot/1.0' },
+            });
 
             if (!res.ok) {
                 return InteractionHelper.safeEditReply(interaction, {
@@ -47,25 +49,33 @@ export default {
                 });
             }
 
-            const data = await res.json();
+            const json = await res.json();
+            const posts = json.data.children
+                .map(p => p.data)
+                .filter(p => p.is_video && !p.over_18);
 
-            if (data.nsfw) {
+            if (posts.length === 0) {
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('NSFW', 'The fetched post was NSFW. Try again!')],
+                    embeds: [errorEmbed('No Videos Found', `No video edits found in ${emoji} ${label} right now. Try again later.`)],
                 });
             }
 
+            const post = posts[Math.floor(Math.random() * posts.length)];
+
             const embed = createEmbed({
-                title: `${emoji} ${data.title}`,
+                title: `${emoji} ${post.title}`,
                 color: 'blurple',
-                footer: { text: `r/${data.subreddit} • 👍 ${data.ups}` },
+                footer: { text: `r/${post.subreddit} • 👍 ${post.ups.toLocaleString()}` },
                 timestamp: false,
             });
-            embed.setImage(data.url);
-            embed.setURL(data.postLink);
+            embed.setURL(`https://reddit.com${post.permalink}`);
 
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-            logger.info(`Edit: ${interaction.user.id} got ${label} edit from r/${data.subreddit}`);
+            await InteractionHelper.safeEditReply(interaction, {
+                content: `https://reddit.com${post.permalink}`,
+                embeds: [embed],
+            });
+
+            logger.info(`Edit: ${interaction.user.id} got ${label} video from r/${post.subreddit}`);
         } catch (error) {
             logger.error('Edit command error:', error);
             await handleInteractionError(interaction, error, { commandName: 'edit' });
