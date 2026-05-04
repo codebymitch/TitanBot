@@ -21,7 +21,7 @@ const HELP_MENU_TIMEOUT_MS = 5 * 60 * 1000;
 
 const CATEGORY_INFO = {
     Core:           { icon: "ℹ️",  desc: "Core bot commands and information" },
-    Moderation:     { icon: "🛡️",  desc: "Server moderation, user management, and enforcement tools" },
+    Moderation:     { icon: "🛡️",  desc: "Server moderation, user management, enforcement tools, and NSFW content detection" },
     Fun:            { icon: "🎮",  desc: "Games, entertainment, and interactive commands" },
     Leveling:       { icon: "📊",  desc: "User levels, XP system, and progression tracking" },
     Utility:        { icon: "🔧",  desc: "Useful tools and server utilities" },
