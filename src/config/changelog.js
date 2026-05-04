@@ -4,6 +4,7 @@ export const changelog = [
         date: '2026-05-04',
         entries: [
             { type: 'new', text: 'Added `/servers` (owner only) — lists every server the bot is in, with member counts and IDs, sorted by size' },
+            { type: 'new', text: '`/servers` now includes a 🚪 Leave Server button — paste any server ID to make the bot leave it instantly' },
         ],
     },
     {

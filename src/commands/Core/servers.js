@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { botConfig } from '../../config/botConfig.js';
@@ -53,8 +53,19 @@ export default {
                 });
             }
 
+            const leaveButton = new ButtonBuilder()
+                .setCustomId('servers-leave')
+                .setLabel('Leave a Server')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🚪');
+
+            const buttonRow = new ActionRowBuilder().addComponents(leaveButton);
+
             // Discord allows up to 10 embeds per message
-            await InteractionHelper.safeEditReply(interaction, { embeds: embeds.slice(0, 10) });
+            await InteractionHelper.safeEditReply(interaction, {
+                embeds: embeds.slice(0, 10),
+                components: [buttonRow],
+            });
 
             if (embeds.length > 10) {
                 for (let i = 10; i < embeds.length; i += 10) {
