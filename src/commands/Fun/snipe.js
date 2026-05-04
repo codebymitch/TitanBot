@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { snipeCache } from '../../utils/snipeCache.js';
-
 export default {
     data: new SlashCommandBuilder()
         .setName('snipe')
