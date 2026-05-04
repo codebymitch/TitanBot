@@ -9,6 +9,7 @@ import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { AutoresponderService } from '../services/autoresponderService.js';
+import { AntiNsfwService } from '../services/antiNsfwService.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -24,6 +25,9 @@ export default {
         await handlePrefixCommand(message, client);
         return;
       }
+
+      const flagged = await AntiNsfwService.checkMessage(client, message);
+      if (flagged) return;
 
       await AutoresponderService.check(client, message);
       await handleLeveling(message, client);

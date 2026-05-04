@@ -1,5 +1,14 @@
 export const changelog = [
     {
+        version: '2.5.0',
+        date: '2026-05-04',
+        entries: [
+            { type: 'new', text: 'Added `/antinsfw` — automatically detect and remove NSFW content from non-NSFW channels. Supports domain blocking, keyword filtering, and AI image scanning via Sightengine.' },
+            { type: 'new', text: 'Anti-NSFW actions: delete only, DM warn, timeout, kick, or ban. Configure a log channel to track all violations.' },
+            { type: 'new', text: 'Exempt specific channels or roles from NSFW scanning. Add custom keywords with `/antinsfw words add`.' },
+        ],
+    },
+    {
         version: '2.4.3',
         date: '2026-05-03',
         entries: [
