@@ -57,7 +57,7 @@ export default {
 
       if (message.author?.bot) return;
 
-      snipeCache.set(message.channel.id, {
+      snipeCache.set(message.channelId, {
         content: message.content || null,
         author: message.author ? `${message.author.tag} (${message.author.id})` : 'Unknown',
         attachmentUrl: message.attachments?.first()?.url ?? null,
