@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '2.5.1',
+        date: '2026-05-04',
+        entries: [
+            { type: 'new', text: 'Added `/servers` (owner only) — lists every server the bot is in, with member counts and IDs, sorted by size' },
+        ],
+    },
+    {
         version: '2.5.0',
         date: '2026-05-04',
         entries: [
