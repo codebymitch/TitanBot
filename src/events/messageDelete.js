@@ -57,14 +57,12 @@ export default {
 
       if (message.author?.bot) return;
 
-      if (message.content || message.attachments.size > 0) {
-        snipeCache.set(message.channel.id, {
-          content: message.content,
-          author: message.author ? `${message.author.tag} (${message.author.id})` : 'Unknown',
-          attachmentUrl: message.attachments.first()?.url ?? null,
-          timestamp: message.createdTimestamp,
-        });
-      }
+      snipeCache.set(message.channel.id, {
+        content: message.content || null,
+        author: message.author ? `${message.author.tag} (${message.author.id})` : 'Unknown',
+        attachmentUrl: message.attachments?.first()?.url ?? null,
+        timestamp: message.createdTimestamp,
+      });
 
       const fields = [];
 
