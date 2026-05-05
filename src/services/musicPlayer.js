@@ -4,9 +4,11 @@ import {
     createAudioResource,
     AudioPlayerStatus,
     VoiceConnectionStatus,
+    StreamType,
 } from '@discordjs/voice';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import play from 'play-dl';
+import { spawn } from 'child_process';
+import { logger } from '../utils/logger.js';
 
 const queues = new Map();
 
@@ -59,29 +61,52 @@ export function buildPlayerRow(isPaused = false) {
     );
 }
 
-export async function searchSong(query) {
-    const isUrl = play.yt_validate(query) === 'video';
-    if (isUrl) {
-        const info = await play.video_info(query);
-        const v = info.video_details;
-        return {
-            title: v.title,
-            url: v.url,
-            duration: v.durationInSec,
-            durationFormatted: formatDuration(v.durationInSec),
-            thumbnail: v.thumbnails?.[0]?.url,
-        };
-    }
-    const results = await play.search(query, { limit: 1, source: { youtube: 'video' } });
-    if (!results.length) return null;
-    const v = results[0];
-    return {
-        title: v.title,
-        url: v.url,
-        duration: v.durationInSec,
-        durationFormatted: formatDuration(v.durationInSec),
-        thumbnail: v.thumbnails?.[0]?.url,
-    };
+export function searchSong(query) {
+    const isUrl = /^https?:\/\//i.test(query);
+    const searchArg = isUrl ? query : `ytsearch1:${query}`;
+
+    return new Promise((resolve) => {
+        const proc = spawn('yt-dlp', [
+            '--no-playlist', '--quiet', '--no-warnings',
+            '-j', searchArg,
+        ]);
+
+        let out = '';
+        proc.stdout.on('data', chunk => { out += chunk; });
+        proc.stderr.on('data', chunk => logger.warn('yt-dlp search stderr:', chunk.toString().trim()));
+        proc.on('close', code => {
+            if (code !== 0 || !out.trim()) return resolve(null);
+            try {
+                const info = JSON.parse(out.trim());
+                resolve({
+                    title: info.title ?? 'Unknown',
+                    url: info.webpage_url ?? `https://www.youtube.com/watch?v=${info.id}`,
+                    duration: info.duration ?? 0,
+                    durationFormatted: formatDuration(info.duration ?? 0),
+                    thumbnail: info.thumbnail ?? null,
+                });
+            } catch {
+                resolve(null);
+            }
+        });
+        proc.on('error', err => {
+            logger.error('yt-dlp search error:', err);
+            resolve(null);
+        });
+    });
+}
+
+function createYtdlpStream(url) {
+    const proc = spawn('yt-dlp', [
+        '-f', 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio',
+        '--no-playlist', '--quiet', '--no-warnings',
+        '-o', '-', url,
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+    proc.stderr.on('data', chunk => logger.warn('yt-dlp stream stderr:', chunk.toString().trim()));
+    proc.on('error', err => logger.error('yt-dlp spawn error:', err));
+
+    return proc.stdout;
 }
 
 class GuildMusicPlayer {
@@ -104,7 +129,10 @@ class GuildMusicPlayer {
             }
         });
 
-        this.audioPlayer.on('error', () => this._playNext());
+        this.audioPlayer.on('error', (err) => {
+            logger.error(`AudioPlayer error in guild ${guildId}:`, err.message);
+            this._playNext();
+        });
     }
 
     connect(voiceChannel) {
@@ -115,22 +143,31 @@ class GuildMusicPlayer {
             selfDeaf: true,
         });
         this.connection.subscribe(this.audioPlayer);
-        this.connection.on(VoiceConnectionStatus.Disconnected, () => this.destroy());
+        this.connection.on(VoiceConnectionStatus.Ready, () =>
+            logger.info(`Voice ready in guild ${this.guildId}`)
+        );
+        this.connection.on(VoiceConnectionStatus.Disconnected, () => {
+            logger.warn(`Voice disconnected in guild ${this.guildId}`);
+            this.destroy();
+        });
         this.connection.on(VoiceConnectionStatus.Destroyed, () => queues.delete(this.guildId));
     }
 
-    async _playNext() {
+    _playNext() {
         if (!this.songs.length) {
             this.currentSong = null;
             return;
         }
         this.currentSong = this.songs.shift();
+        logger.info(`Streaming: "${this.currentSong.title}"`);
+
         try {
-            const stream = await play.stream(this.currentSong.url);
-            const resource = createAudioResource(stream.stream, { inputType: stream.type });
+            const stream = createYtdlpStream(this.currentSong.url);
+            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
             this.audioPlayer.play(resource);
             this._updateMessage();
-        } catch {
+        } catch (err) {
+            logger.error(`Stream error for "${this.currentSong.title}":`, err);
             this._playNext();
         }
     }
@@ -143,7 +180,7 @@ class GuildMusicPlayer {
         this.songs.push(song);
         const idle = this.audioPlayer.state.status === AudioPlayerStatus.Idle;
         if (idle) {
-            await this._playNext();
+            this._playNext();
             return true;
         }
         return false;

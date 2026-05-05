@@ -8,7 +8,8 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install only production dependencies
-RUN apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg python3 py3-pip && \
+    pip3 install yt-dlp --break-system-packages --quiet
 
 RUN npm ci --omit=dev
 
