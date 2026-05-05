@@ -1,34 +1,35 @@
 export async function getGuildConfig(db, guildId) {
-  const res = await db.query(
-    'SELECT * FROM guild_config WHERE guild_id = $1',
-    [guildId]
-  );
 
-  // 🧠 Si no existe → lo crea automáticamente
-  if (res.rows.length === 0) {
-    await db.query(
-      `INSERT INTO guild_config (guild_id, welcome_enabled)
-       VALUES ($1, false)`,
-      [guildId]
-    );
+  const key = `guild:${guildId}:config`;
 
-    return {
+  let config = await db.get(key, null);
+
+  if (!config) {
+    config = {
       guild_id: guildId,
-      welcome_enabled: false,
-      log_channel: null
+      welcome_enabled: false
     };
+
+    await db.set(key, config);
   }
 
-  return res.rows[0];
+  return config;
 }
 
 export async function updateWelcome(db, guildId, value) {
-  // 🔥 UPSERT (por si acaso)
-  await db.query(
-    `INSERT INTO guild_config (guild_id, welcome_enabled)
-     VALUES ($1, $2)
-     ON CONFLICT (guild_id)
-     DO UPDATE SET welcome_enabled = EXCLUDED.welcome_enabled`,
-    [guildId, value]
-  );
+
+  const key = `guild:${guildId}:config`;
+
+  let config = await db.get(key, null);
+
+  if (!config) {
+    config = {
+      guild_id: guildId,
+      welcome_enabled: false
+    };
+  }
+
+  config.welcome_enabled = value;
+
+  await db.set(key, config);
 }
