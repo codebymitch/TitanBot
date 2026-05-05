@@ -1,9 +1,9 @@
-import { SlashCommandBuilder, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, ChannelType, EmbedBuilder } from 'discord.js';
+import { errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
-import { getOrCreatePlayer, searchSong } from '../../services/musicPlayer.js';
+import { getOrCreatePlayer, searchSong, buildNowPlayingEmbed, buildPlayerRow } from '../../services/musicPlayer.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -46,7 +46,7 @@ export default {
                 });
             }
 
-            song.requestedBy = interaction.user.tag;
+            song.requestedBy = interaction.user.username;
 
             const player = getOrCreatePlayer(interaction.guildId);
 
@@ -56,18 +56,28 @@ export default {
 
             const started = await player.addSong(song);
 
-            const embed = createEmbed({
-                title: started ? '▶️ Now Playing' : '➕ Added to Queue',
-                description: `**[${song.title}](${song.url})**`,
-                color: 'success',
-            }).addFields(
-                { name: '⏱️ Duration', value: song.durationFormatted, inline: true },
-                { name: '🎙️ Channel', value: voiceChannel.name, inline: true },
-                { name: '👤 Requested by', value: interaction.user.tag, inline: true },
-            );
-            if (song.thumbnail) embed.setThumbnail(song.thumbnail);
+            if (started) {
+                // Show the full player embed with controls
+                const msg = await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [buildNowPlayingEmbed(song)],
+                    components: [buildPlayerRow(false)],
+                });
+                player.playerMessage = msg;
+            } else {
+                // Song was queued — show a smaller confirmation
+                const queued = new EmbedBuilder()
+                    .setColor(0x5865F2)
+                    .setTitle('➕ Added to Queue')
+                    .setDescription(`**[${song.title}](${song.url})**`)
+                    .addFields(
+                        { name: 'Duration', value: song.durationFormatted, inline: true },
+                        { name: 'Position', value: `#${player.songs.length}`, inline: true },
+                    )
+                    .setFooter({ text: `Requested by ${song.requestedBy}` });
+                if (song.thumbnail) queued.setThumbnail(song.thumbnail);
+                await InteractionHelper.safeEditReply(interaction, { embeds: [queued] });
+            }
 
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             logger.info(`Music: ${interaction.user.tag} queued "${song.title}" in ${interaction.guild.name}`);
         } catch (error) {
             logger.error('Play command error:', error);
