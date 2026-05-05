@@ -22,15 +22,19 @@ function cleanContent(text) {
 }
 
 export async function fetchGorillaStatus() {
-    const [statusRes, steamRes] = await Promise.all([
+    const [statusRes, steamRes, newsRes] = await Promise.all([
         fetch(GT_STATUS_URL).then(r => r.json()).catch(() => null),
         fetch(STEAM_URL).then(r => r.json()).catch(() => null),
+        fetch(`${STEAM_NEWS}&count=1`).then(r => r.json()).catch(() => null),
     ]);
+
+    const latestItem = newsRes?.appnews?.newsitems?.[0] ?? null;
 
     return {
         indicator:   statusRes?.status?.indicator   ?? 'none',
         description: statusRes?.status?.description ?? 'Unknown',
         steamCount:  steamRes?.response?.player_count ?? null,
+        latestPatch: latestItem ? { title: latestItem.title, url: latestItem.url, date: new Date(latestItem.date * 1000) } : null,
     };
 }
 
@@ -61,10 +65,10 @@ export function buildPatchEmbed(note) {
         .setTimestamp(note.date);
 }
 
-export function buildStatusEmbed({ indicator, description, steamCount }) {
+export function buildStatusEmbed({ indicator, description, steamCount, latestPatch }) {
     const cfg = STATUS_CONFIG[indicator] ?? STATUS_CONFIG.none;
 
-    return new EmbedBuilder()
+    const embed = new EmbedBuilder()
         .setColor(cfg.color)
         .setTitle('🦍 Gorilla Tag — Server Status')
         .addFields(
@@ -77,6 +81,16 @@ export function buildStatusEmbed({ indicator, description, steamCount }) {
         )
         .setFooter({ text: 'Updates every 5 minutes • status.gorilla.sc' })
         .setTimestamp();
+
+    if (latestPatch) {
+        embed.addFields({
+            name: '📋 Latest Update',
+            value: `[${latestPatch.title}](${latestPatch.url})\n<t:${Math.floor(latestPatch.date.getTime() / 1000)}:R>`,
+            inline: false,
+        });
+    }
+
+    return embed;
 }
 
 export async function checkAndUpdateGorillaStatus(client) {
