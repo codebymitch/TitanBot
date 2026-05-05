@@ -2,7 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType } f
 import { errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
-import { fetchGorillaStatus, buildStatusEmbed } from '../../services/gorillaService.js';
+import { fetchGorillaStatus, buildStatusEmbed, fetchPatchNotes, buildPatchEmbed } from '../../services/gorillaService.js';
 
 const COSMETICS = [
     { name: 'Top Hat',          category: 'Hat',      emoji: '🎩', description: 'A classy top hat for the distinguished gorilla.' },
@@ -60,6 +60,16 @@ export default {
             .setDescription('Check Gorilla Tag server status right now')
         )
         .addSubcommand(s => s
+            .setName('patchnotes')
+            .setDescription('Show the latest Gorilla Tag patch notes')
+            .addIntegerOption(o => o
+                .setName('count')
+                .setDescription('How many updates to show (1-5, default 1)')
+                .setMinValue(1)
+                .setMaxValue(5)
+            )
+        )
+        .addSubcommand(s => s
             .setName('cosmetics')
             .setDescription('Browse Gorilla Tag cosmetics')
             .addStringOption(o => o
@@ -79,6 +89,20 @@ export default {
                 await InteractionHelper.safeDefer(interaction);
                 const status = await fetchGorillaStatus();
                 return InteractionHelper.safeEditReply(interaction, { embeds: [buildStatusEmbed(status)] });
+            }
+
+            if (sub === 'patchnotes') {
+                await InteractionHelper.safeDefer(interaction);
+                const count = interaction.options.getInteger('count') ?? 1;
+                const notes = await fetchPatchNotes(count);
+                if (!notes.length) {
+                    return InteractionHelper.safeEditReply(interaction, {
+                        embeds: [errorEmbed('No Results', 'Could not fetch patch notes from Steam.')],
+                    });
+                }
+                return InteractionHelper.safeEditReply(interaction, {
+                    embeds: notes.map(buildPatchEmbed),
+                });
             }
 
             if (sub === 'cosmetics') {
