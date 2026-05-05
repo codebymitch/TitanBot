@@ -2,7 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType } f
 import { errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
-import { fetchGorillaStatus, fetchRoomCounts, buildStatusEmbed } from '../../services/gorillaService.js';
+import { fetchGorillaStatus, buildStatusEmbed } from '../../services/gorillaService.js';
 
 const COSMETICS = [
     { name: 'Top Hat',          category: 'Hat',      emoji: '🎩', description: 'A classy top hat for the distinguished gorilla.' },
@@ -67,24 +67,6 @@ export default {
                 .setDescription('Search by name or category (Hat, Badge, Costume)')
             )
         )
-        .addSubcommand(s => s
-            .setName('rooms')
-            .setDescription('Add or remove room codes to track player counts')
-            .addStringOption(o => o
-                .setName('action')
-                .setDescription('What to do')
-                .setRequired(true)
-                .addChoices(
-                    { name: 'add', value: 'add' },
-                    { name: 'remove', value: 'remove' },
-                    { name: 'list', value: 'list' },
-                )
-            )
-            .addStringOption(o => o
-                .setName('code')
-                .setDescription('Room code (e.g. IL34)')
-            )
-        )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
     category: 'Gorilla',
@@ -95,71 +77,8 @@ export default {
 
             if (sub === 'status') {
                 await InteractionHelper.safeDefer(interaction);
-                const data = await client.db.get(`gorilla:${interaction.guildId}`);
-                const [status, roomResults] = await Promise.all([
-                    fetchGorillaStatus(),
-                    fetchRoomCounts(client.user.id, data?.rooms ?? []),
-                ]);
-                return InteractionHelper.safeEditReply(interaction, { embeds: [buildStatusEmbed(status, roomResults)] });
-            }
-
-            if (sub === 'rooms') {
-                const action = interaction.options.getString('action');
-                const code   = interaction.options.getString('code')?.toUpperCase().trim();
-                const data   = await client.db.get(`gorilla:${interaction.guildId}`) ?? {};
-                const rooms  = data.rooms ?? [];
-
-                if (action === 'list') {
-                    const embed = new EmbedBuilder()
-                        .setColor(0x8B4513)
-                        .setTitle('🏠 Tracked Room Codes')
-                        .setDescription(rooms.length ? rooms.map(r => `\`${r}\``).join(' ') : 'No rooms tracked yet. Use `/gorilla rooms add <code>` to add one.')
-                        .setFooter({ text: `${rooms.length}/10 rooms` });
-                    return InteractionHelper.safeReply(interaction, { embeds: [embed], ephemeral: true });
-                }
-
-                if (!code) {
-                    return InteractionHelper.safeReply(interaction, {
-                        embeds: [errorEmbed('Missing Code', 'Provide a room code, e.g. `IL34`')],
-                        ephemeral: true,
-                    });
-                }
-
-                if (action === 'add') {
-                    if (rooms.includes(code)) {
-                        return InteractionHelper.safeReply(interaction, {
-                            embeds: [errorEmbed('Already Added', `\`${code}\` is already being tracked.`)],
-                            ephemeral: true,
-                        });
-                    }
-                    if (rooms.length >= 10) {
-                        return InteractionHelper.safeReply(interaction, {
-                            embeds: [errorEmbed('Limit Reached', 'You can track up to 10 room codes.')],
-                            ephemeral: true,
-                        });
-                    }
-                    rooms.push(code);
-                    await client.db.set(`gorilla:${interaction.guildId}`, { ...data, rooms });
-                    return InteractionHelper.safeReply(interaction, {
-                        embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`✅ Now tracking room \`${code}\`.`)],
-                        ephemeral: true,
-                    });
-                }
-
-                if (action === 'remove') {
-                    if (!rooms.includes(code)) {
-                        return InteractionHelper.safeReply(interaction, {
-                            embeds: [errorEmbed('Not Found', `\`${code}\` is not in the tracking list.`)],
-                            ephemeral: true,
-                        });
-                    }
-                    const updated = rooms.filter(r => r !== code);
-                    await client.db.set(`gorilla:${interaction.guildId}`, { ...data, rooms: updated });
-                    return InteractionHelper.safeReply(interaction, {
-                        embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`✅ Removed \`${code}\` from tracking.`)],
-                        ephemeral: true,
-                    });
-                }
+                const status = await fetchGorillaStatus();
+                return InteractionHelper.safeEditReply(interaction, { embeds: [buildStatusEmbed(status)] });
             }
 
             if (sub === 'cosmetics') {
