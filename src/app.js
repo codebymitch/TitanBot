@@ -80,7 +80,7 @@ class TitanBot extends Client {
   startWebServer() {
     const app = express();
 
-    // 🔥 DASHBOARD PRIMERO
+    // 🔥 DASHBOARD (PRIMERO SIEMPRE)
     setupDashboard(app, this);
 
     // 🔥 ROOT
@@ -88,8 +88,8 @@ class TitanBot extends Client {
       res.json({ message: 'TitanBot Online' });
     });
 
-    // 🔥 DEBUG (muy importante)
-    app.get('*', (req, res) => {
+    // 🔥 FIX EXPRESS 5 (ANTES ERA app.get('*'))
+    app.use((req, res) => {
       res.status(404).send(`Ruta no encontrada: ${req.url}`);
     });
 
