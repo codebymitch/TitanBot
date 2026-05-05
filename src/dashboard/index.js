@@ -1,9 +1,12 @@
 import session from 'express-session';
 import axios from 'axios';
+import express from 'express';
 
 export function setupDashboard(app, client) {
 
   console.log('🔥 Dashboard cargado');
+
+  app.use(express.urlencoded({ extended: true }));
 
   app.use(session({
     secret: process.env.SESSION_SECRET || 'wk-secret',
@@ -40,24 +43,14 @@ export function setupDashboard(app, client) {
 
       const accessToken = tokenRes.data.access_token;
 
-      // 👤 USER
       const userRes = await axios.get(
         'https://discord.com/api/users/@me',
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      // 🏠 GUILDS
       const guildsRes = await axios.get(
         'https://discord.com/api/users/@me/guilds',
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
       req.session.user = userRes.data;
@@ -81,7 +74,6 @@ export function setupDashboard(app, client) {
     const user = req.session.user;
     const guilds = req.session.guilds || [];
 
-    // 🔥 SOLO SERVERS DONDE ERES ADMIN
     const adminGuilds = guilds.filter(g => (g.permissions & 0x8) === 0x8);
 
     res.send(`
@@ -118,14 +110,18 @@ export function setupDashboard(app, client) {
     `);
   });
 
-  // 🧠 PANEL POR SERVIDOR
-  app.get('/server/:id', (req, res) => {
+  // 🧠 PANEL POR SERVIDOR (CON DB)
+  app.get('/server/:id', async (req, res) => {
 
     if (!req.session.user) {
       return res.redirect('/login');
     }
 
     const serverId = req.params.id;
+
+    const { getGuildConfig } = await import('../services/guildConfigService.js');
+
+    const config = await getGuildConfig(client.db, serverId);
 
     res.send(`
       <html>
@@ -135,13 +131,15 @@ export function setupDashboard(app, client) {
 
           <p>ID: ${serverId}</p>
 
-          <h3>Configuraciones futuras:</h3>
-          <ul>
-            <li>Moderación</li>
-            <li>Logs</li>
-            <li>Welcome</li>
-            <li>Roles</li>
-          </ul>
+          <h3>Welcome System</h3>
+
+          <p>Estado: ${config.welcome_enabled ? '🟢 Activado' : '🔴 Desactivado'}</p>
+
+          <form method="POST" action="/server/${serverId}/welcome">
+            <button type="submit">
+              ${config.welcome_enabled ? 'Desactivar' : 'Activar'}
+            </button>
+          </form>
 
           <br>
           <a href="/dashboard">⬅ Volver</a>
@@ -149,6 +147,20 @@ export function setupDashboard(app, client) {
         </body>
       </html>
     `);
+  });
+
+  // 🔥 GUARDAR EN DB
+  app.post('/server/:id/welcome', async (req, res) => {
+
+    const serverId = req.params.id;
+
+    const { getGuildConfig, updateWelcome } = await import('../services/guildConfigService.js');
+
+    const config = await getGuildConfig(client.db, serverId);
+
+    await updateWelcome(client.db, serverId, !config.welcome_enabled);
+
+    res.redirect(`/server/${serverId}`);
   });
 
   // 🔓 LOGOUT
