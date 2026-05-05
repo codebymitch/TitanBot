@@ -2,10 +2,10 @@
   "name": "titanbot-custom",
   "version": "2.0.0",
   "description": "Modular Ultimate Community Bot by Touchpoint Support",
-  "main": "src/app.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/app.js",
+    "start": "node index.js",
     "test": "node --test tests/**/*.test.js",
     "migrate": "node scripts/migrate.js apply",
     "migrate:check": "node scripts/migrate.js check",
