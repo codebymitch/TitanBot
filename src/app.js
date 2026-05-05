@@ -117,10 +117,21 @@ class TitanBot extends Client {
   setupCronJobs() {
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
-    cron.schedule('*/15 * * * *', () => this.updateAllCounters()); // 🔥 YA FUNCIONA
+
+    // 🔥 FIX TOTAL (NO MÁS ERROR)
+    cron.schedule('*/15 * * * *', async () => {
+      try {
+        if (typeof this.updateAllCounters === 'function') {
+          await this.updateAllCounters();
+        } else {
+          logger.warn('updateAllCounters no existe (skip)');
+        }
+      } catch (err) {
+        logger.error('Error en cron counters:', err);
+      }
+    });
   }
 
-  // 🔥 FIX COMPLETO
   async updateAllCounters() {
     try {
       for (const guild of this.guilds.cache.values()) {
@@ -156,4 +167,3 @@ class TitanBot extends Client {
 
 const bot = new TitanBot();
 bot.start();
-
