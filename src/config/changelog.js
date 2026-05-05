@@ -1,12 +1,11 @@
 export const changelog = [
     {
-        version: '2.5.4',
-        date: '2026-05-04',
+        version: '2.7.0',
+        date: '2026-05-05',
         entries: [
-            { type: 'new', text: 'Added `/8ball` — ask the magic 8-ball any yes/no question' },
-            { type: 'new', text: 'Added `/rps` — play Rock Paper Scissors against the bot' },
-            { type: 'new', text: 'Added `/roast` — roast any user with a random savage line' },
-            { type: 'new', text: 'Added `/snipe` — reveal the last deleted message in the current channel' },
+            { type: 'new', text: 'Added `/gorilla setup` — creates a `🦍・server-status` channel that auto-updates every 5 minutes with live Gorilla Tag server status and Steam player count' },
+            { type: 'new', text: 'Added `/gorilla status` — manually check Gorilla Tag server status on demand' },
+            { type: 'new', text: 'Added `/gorilla cosmetics` — searchable browser of 35+ Gorilla Tag cosmetics by name or category' },
         ],
     },
     {
@@ -15,6 +14,16 @@ export const changelog = [
         entries: [
             { type: 'new', text: 'Added `/music` — search YouTube for any song and get instant links with duration and channel info' },
             { type: 'update', text: 'Returns up to 5 results per search with clickable YouTube links' },
+        ],
+    },
+    {
+        version: '2.5.4',
+        date: '2026-05-04',
+        entries: [
+            { type: 'new', text: 'Added `/8ball` — ask the magic 8-ball any yes/no question' },
+            { type: 'new', text: 'Added `/rps` — play Rock Paper Scissors against the bot' },
+            { type: 'new', text: 'Added `/roast` — roast any user with a random savage line' },
+            { type: 'new', text: 'Added `/snipe` — reveal the last deleted message in the current channel' },
         ],
     },
     {
@@ -139,8 +148,11 @@ export const changelog = [
 
 // Emoji prefix per entry type
 export const typeEmoji = {
-    new:     '🆕',
-    changed: '✏️',
-    fixed:   '🐛',
-    removed: '🗑️',
+    new:      '🆕',
+    update:   '✏️',
+    updated:  '✏️',
+    changed:  '✏️',
+    improved: '✏️',
+    fixed:    '🐛',
+    removed:  '🗑️',
 };
