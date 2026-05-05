@@ -8,6 +8,8 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install only production dependencies
+RUN apk add --no-cache ffmpeg
+
 RUN npm ci --omit=dev
 
 # Bundle app source

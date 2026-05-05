@@ -16,17 +16,20 @@
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.1",
+    "@discordjs/voice": "^0.18.0",
     "axios": "^1.13.2",
     "discord.js": "^14.15.3",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "libsodium-wrappers": "^0.8.4",
     "node-cron": "^4.2.1",
+    "opusscript": "^0.0.8",
     "pg": "^8.11.3",
+    "play-dl": "^1.9.7",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^3.25.76"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
   }

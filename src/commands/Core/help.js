@@ -37,6 +37,7 @@ const CATEGORY_INFO = {
     Serverstats:    { icon: "📈",  desc: "Server statistics and display counters" },
     Logging:        { icon: "📋",  desc: "Server event logging and audit trails" },
     Voice:          { icon: "🔊",  desc: "Voice channel commands and activities" },
+    Music:          { icon: "🎵",  desc: "Music playback — play, pause, skip, and queue songs in voice channels" },
 };
 
 export async function createInitialHelpMenu(client, member) {
