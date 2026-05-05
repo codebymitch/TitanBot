@@ -1,5 +1,7 @@
 export function setupDashboard(app, client) {
 
+  console.log('🔥 Dashboard cargado'); // 👈 DEBUG
+
   app.get('/dashboard', (req, res) => {
     res.send(`
       <html>
