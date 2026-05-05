@@ -72,17 +72,20 @@ class GuildMusicPlayer {
             adapterCreator: voiceChannel.guild.voiceAdapterCreator,
         });
         this.connection.subscribe(this.audioPlayer);
-        await entersState(this.connection, VoiceConnectionStatus.Ready, 30_000);
+
+        try {
+            await entersState(this.connection, VoiceConnectionStatus.Ready, 30_000);
+        } catch (err) {
+            this.destroy();
+            throw err;
+        }
 
         this.connection.on(VoiceConnectionStatus.Disconnected, async () => {
-            try {
-                await Promise.race([
-                    entersState(this.connection, VoiceConnectionStatus.Signalling, 5_000),
-                    entersState(this.connection, VoiceConnectionStatus.Connecting, 5_000),
-                ]);
-            } catch {
-                this.destroy();
-            }
+            // Silence both rejections before racing — Promise.race leaves the loser unhandled
+            const p1 = entersState(this.connection, VoiceConnectionStatus.Signalling, 5_000).catch(() => null);
+            const p2 = entersState(this.connection, VoiceConnectionStatus.Connecting, 5_000).catch(() => null);
+            const result = await Promise.race([p1, p2]);
+            if (result === null) this.destroy();
         });
     }
 
