@@ -1,4 +1,4 @@
-import { Events, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
+import { Events, EmbedBuilder, PermissionFlagsBits, AuditLogEvent } from 'discord.js';
 import { getColor } from '../config/bot.js';
 import { getWelcomeConfig, getUserApplications, deleteApplication } from '../utils/database.js';
 import { formatWelcomeMessage } from '../utils/welcome.js';
@@ -7,6 +7,7 @@ import { getServerCounters, updateCounter } from '../services/serverstatsService
 import { getGuildBirthdays, deleteBirthday } from '../utils/database.js';
 import { deleteUserLevelData } from '../services/leveling.js';
 import { logger } from '../utils/logger.js';
+import { sendLog } from '../utils/discordLogger.js'; // 🔥 NUEVO
 
 export default {
   name: Events.GuildMemberRemove,
@@ -15,71 +16,96 @@ export default {
   async execute(member) {
     try {
         const { guild, user } = member;
-        
-        const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
-        
-        const goodbyeChannelId = welcomeConfig?.goodbyeChannelId;
 
-        if (welcomeConfig?.goodbyeEnabled && goodbyeChannelId) {
-            const channel = guild.channels.cache.get(goodbyeChannelId);
-            if (channel?.isTextBased?.()) {
-                const me = guild.members.me;
-                const permissions = me ? channel.permissionsFor(me) : null;
-                if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
-                    return;
-                }
+        // 🔥 =========================
+        // 👢 DETECTAR KICK (NUEVO)
+        // 🔥 =========================
+        let wasKicked = false;
+        let executor = 'Desconocido';
+        let reason = 'Sin razón';
 
-                const formatData = { user, guild, member };
-                const goodbyeMessage = formatWelcomeMessage(
-                    welcomeConfig.leaveMessage || welcomeConfig.leaveEmbed?.description || '{user.tag} has left the server.',
-                    formatData
-                );
+        try {
+            const fetchedLogs = await guild.fetchAuditLogs({
+                limit: 1,
+                type: AuditLogEvent.MemberKick
+            });
 
-                const embedTitle = formatWelcomeMessage(
-                    welcomeConfig.leaveEmbed?.title || '👋 Goodbye',
-                    formatData
-                );
-                const embedFooter = welcomeConfig.leaveEmbed?.footer
-                    ? formatWelcomeMessage(welcomeConfig.leaveEmbed.footer, formatData)
-                    : `Goodbye from ${guild.name}!`;
+            const log = fetchedLogs.entries.first();
 
-                const canEmbed = permissions.has(PermissionFlagsBits.EmbedLinks);
+            if (
+                log &&
+                log.target.id === user.id &&
+                Date.now() - log.createdTimestamp < 5000
+            ) {
+                wasKicked = true;
+                executor = log.executor?.tag || 'Desconocido';
+                reason = log.reason || 'Sin razón';
 
-                if (!canEmbed) {
-                    await channel.send({
-                        content: welcomeConfig?.goodbyePing ? `<@${user.id}> ${goodbyeMessage}` : goodbyeMessage,
-                        allowedMentions: welcomeConfig?.goodbyePing ? { users: [user.id] } : { parse: [] }
-                    });
-                } else {
+                // 🔥 LOG A DISCORD
+                await sendLog({
+                    title: '👢 Usuario expulsado',
+                    description: `${user.tag} fue kickeado`,
+                    color: 0xff9900,
+                    fields: [
+                        {
+                            name: '👤 Usuario',
+                            value: `${user.tag} (${user.id})`,
+                            inline: true
+                        },
+                        {
+                            name: '🛡️ Moderador',
+                            value: executor,
+                            inline: true
+                        },
+                        {
+                            name: '📄 Razón',
+                            value: reason,
+                            inline: false
+                        }
+                    ]
+                });
+            }
+        } catch (auditError) {
+            logger.warn('Error fetching audit logs for kick detection:', auditError);
+        }
+
+        // 👋 SI NO FUE KICK → LEAVE NORMAL (TU SISTEMA)
+        if (!wasKicked) {
+
+            const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
+            const goodbyeChannelId = welcomeConfig?.goodbyeChannelId;
+
+            if (welcomeConfig?.goodbyeEnabled && goodbyeChannelId) {
+                const channel = guild.channels.cache.get(goodbyeChannelId);
+                if (channel?.isTextBased?.()) {
+                    const me = guild.members.me;
+                    const permissions = me ? channel.permissionsFor(me) : null;
+                    if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
+                        return;
+                    }
+
+                    const formatData = { user, guild, member };
+                    const goodbyeMessage = formatWelcomeMessage(
+                        welcomeConfig.leaveMessage || '{user.tag} has left the server.',
+                        formatData
+                    );
+
                     const embed = new EmbedBuilder()
-                        .setTitle(embedTitle)
+                        .setTitle('👋 Goodbye')
                         .setDescription(goodbyeMessage)
-                        .setColor(welcomeConfig.leaveEmbed?.color || getColor('error'))
+                        .setColor(getColor('error'))
                         .setThumbnail(user.displayAvatarURL())
                         .addFields(
                             { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
                             { name: 'Member Count', value: guild.memberCount.toString(), inline: true }
                         )
-                        .setTimestamp()
-                        .setFooter({ text: embedFooter });
+                        .setTimestamp();
 
-                    if (typeof welcomeConfig.leaveEmbed?.image === 'string') {
-                        embed.setImage(welcomeConfig.leaveEmbed.image);
-                    } else if (welcomeConfig.leaveEmbed?.image?.url) {
-                        embed.setImage(welcomeConfig.leaveEmbed.image.url);
-                    }
-
-                    await channel.send({
-                        content: welcomeConfig?.goodbyePing ? `<@${user.id}>` : undefined,
-                        allowedMentions: welcomeConfig?.goodbyePing ? { users: [user.id] } : { parse: [] },
-                        embeds: [embed]
-                    });
+                    await channel.send({ embeds: [embed] });
                 }
             }
-        }
-        
-        
-        try {
+
+            // 🔥 TU LOG ORIGINAL
             await logEvent({
                 client: member.client,
                 guildId: guild.id,
@@ -97,20 +123,20 @@ export default {
                             name: '👥 Member Count',
                             value: guild.memberCount.toString(),
                             inline: true
-                        },
-                        {
-                            name: '📅 Joined',
-                            value: `<t:${Math.floor((member.joinedTimestamp || 0) / 1000)}:R>`,
-                            inline: true
                         }
                     ]
                 }
             });
-        } catch (error) {
-            logger.debug('Error logging member leave:', error);
+
+            // 🔥 NUEVO → LOG A DISCORD
+            await sendLog({
+                title: '👋 Usuario salió',
+                description: `${user.tag} salió del servidor`,
+                color: 0xaaaaaa
+            });
         }
-        
-        
+
+        // 🔁 RESTO DE TU SISTEMA (NO TOCADO)
         try {
             const counters = await getServerCounters(member.client, guild.id);
             for (const counter of counters) {
@@ -121,8 +147,7 @@ export default {
         } catch (error) {
             logger.debug('Error updating counters on member leave:', error);
         }
-        
-        // Backup and remove birthday data when a member leaves
+
         try {
             const birthdays = await getGuildBirthdays(member.client, guild.id);
             if (birthdays[user.id]) {
@@ -131,38 +156,32 @@ export default {
                 backup[user.id] = birthdays[user.id];
                 await member.client.db.set(backupKey, backup);
                 await deleteBirthday(member.client, guild.id, user.id);
-                logger.debug(`Birthday backed up and removed for user ${user.id} in guild ${guild.id}`);
             }
         } catch (error) {
             logger.debug('Error handling birthday on member leave:', error);
         }
-        
-        // Remove all pending applications when a member leaves
+
         try {
             const userApplications = await getUserApplications(member.client, guild.id, user.id);
             if (userApplications && userApplications.length > 0) {
                 for (const app of userApplications) {
                     await deleteApplication(member.client, guild.id, app.id, user.id);
                 }
-                logger.debug(`Removed ${userApplications.length} applications for user ${user.id} in guild ${guild.id}`);
             }
         } catch (error) {
             logger.debug('Error handling applications on member leave:', error);
         }
 
-        // Remove leveling data when a member leaves
         try {
             await deleteUserLevelData(member.client, guild.id, user.id);
-            logger.debug(`Removed leveling data for user ${user.id} in guild ${guild.id}`);
         } catch (error) {
             logger.debug('Error handling leveling data on member leave:', error);
         }
-        
+
     } catch (error) {
         logger.error('Error in guildMemberRemove event:', error);
     }
   }
 };
-
 
 

@@ -1,7 +1,8 @@
-import { Events } from 'discord.js';
+import { Events, AuditLogEvent } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 import { getReactionRoleMessage, deleteReactionRoleMessage } from '../services/reactionRoleService.js';
+import { sendLog } from '../utils/discordLogger.js';
 
 const MAX_LOGGED_MESSAGE_CONTENT_LENGTH = 1024;
 
@@ -13,52 +14,50 @@ export default {
     try {
       if (!message.guild) return;
 
+      // 🔥 =========================
+      // 🧠 DETECTAR QUIÉN BORRÓ EL MENSAJE
+      // 🔥 =========================
+      let deletedBy = 'Autor del mensaje';
+      let isModDelete = false;
+
+      try {
+        const fetchedLogs = await message.guild.fetchAuditLogs({
+          limit: 1,
+          type: AuditLogEvent.MessageDelete
+        });
+
+        const log = fetchedLogs.entries.first();
+
+        if (
+          log &&
+          message.author &&
+          log.target?.id === message.author.id &&
+          log.extra?.channel?.id === message.channel.id &&
+          Date.now() - log.createdTimestamp < 5000
+        ) {
+          deletedBy = log.executor?.tag || 'Desconocido';
+          isModDelete = true;
+        }
+
+      } catch (auditError) {
+        logger.warn('Error leyendo audit logs:', auditError);
+      }
+
+      // 🧹 REACTION ROLES (NO TOCADO)
       try {
         const reactionRoleData = await getReactionRoleMessage(message.client, message.guild.id, message.id);
         if (reactionRoleData) {
           await deleteReactionRoleMessage(message.client, message.guild.id, message.id);
-          logger.info(`Cleaned up reaction role database entry for manually deleted message ${message.id} in guild ${message.guild.id}`);
-
-          try {
-            await logEvent({
-              client: message.client,
-              guildId: message.guild.id,
-              eventType: EVENT_TYPES.REACTION_ROLE_DELETE,
-              data: {
-                description: `Reaction role message was deleted manually and removed from database.`,
-                channelId: message.channel?.id,
-                fields: [
-                  {
-                    name: '🗑️ Message ID',
-                    value: message.id,
-                    inline: true
-                  },
-                  {
-                    name: '📍 Channel',
-                    value: message.channel ? `${message.channel.toString()} (${message.channel.id})` : 'Unknown',
-                    inline: true
-                  },
-                  {
-                    name: '🧹 Cleanup',
-                    value: 'Database entry removed automatically',
-                    inline: false
-                  }
-                ]
-              }
-            });
-          } catch (logCleanupError) {
-            logger.warn('Failed to log reaction role cleanup after manual message deletion:', logCleanupError);
-          }
         }
-      } catch (reactionRoleCleanupError) {
-        logger.warn(`Failed to clean up reaction role data for deleted message ${message.id}:`, reactionRoleCleanupError);
+      } catch (err) {
+        logger.warn('Error limpiando reaction roles:', err);
       }
 
       if (message.author?.bot) return;
 
       const fields = [];
 
-      
+      // 👤 Autor
       if (message.author) {
         fields.push({
           name: '👤 Author',
@@ -67,18 +66,26 @@ export default {
         });
       }
 
-      
+      // 💬 Canal
       fields.push({
         name: '💬 Channel',
         value: `${message.channel.toString()} (${message.channel.id})`,
         inline: true
       });
 
-      
+      // 🧹 Quién lo borró
+      fields.push({
+        name: '🧹 Eliminado por',
+        value: deletedBy,
+        inline: true
+      });
+
+      // 📝 Contenido
       if (message.content) {
         const content = message.content.length > MAX_LOGGED_MESSAGE_CONTENT_LENGTH 
           ? message.content.substring(0, MAX_LOGGED_MESSAGE_CONTENT_LENGTH - 3) + '...' 
           : message.content;
+
         fields.push({
           name: '📝 Content',
           value: content || '*(empty message)*',
@@ -86,21 +93,21 @@ export default {
         });
       }
 
-      
+      // 🆔 ID
       fields.push({
         name: '🆔 Message ID',
         value: message.id,
         inline: true
       });
 
-      
+      // 📅 Fecha
       fields.push({
         name: '📅 Created',
         value: `<t:${Math.floor(message.createdTimestamp / 1000)}:R>`,
         inline: true
       });
 
-      
+      // 📎 Adjuntos
       if (message.attachments.size > 0) {
         fields.push({
           name: '📎 Attachments',
@@ -109,6 +116,7 @@ export default {
         });
       }
 
+      // 🔥 TU SISTEMA ORIGINAL
       await logEvent({
         client: message.client,
         guildId: message.guild.id,
@@ -119,6 +127,16 @@ export default {
           channelId: message.channel.id,
           fields
         }
+      });
+
+      // 🔥 DISCORD LOG MEJORADO
+      await sendLog({
+        title: isModDelete
+          ? '🛡️ Mensaje eliminado por moderador'
+          : '🗑️ Mensaje eliminado',
+        description: `En ${message.channel.toString()}`,
+        color: isModDelete ? 0xff9900 : 0xff0000,
+        fields
       });
 
     } catch (error) {

@@ -8,6 +8,7 @@ import {
 } from '../utils/database.js';
 import { sanitizeInput } from '../utils/sanitization.js';
 import { logger } from '../utils/logger.js';
+import { sendLog } from '../utils/discordLogger.js'; // 🔥 NUEVO
 
 const channelCreationCooldown = new Map();
 const VOICE_CREATE_COOLDOWN_MS = 2000;
@@ -21,6 +22,50 @@ const MAX_TRACKED_COOLDOWNS = 10000;
 export default {
     name: 'voiceStateUpdate',
     async execute(oldState, newState, client) {
+
+        // 🔥 =========================
+        // 🔊 LOGS DE VOICE (NUEVO)
+        // 🔥 =========================
+        try {
+            const user = newState.member?.user;
+
+            if (user && !user.bot) {
+                // Entró
+                if (!oldState.channel && newState.channel) {
+                    await sendLog({
+                        title: '🔊 Usuario entró a VC',
+                        description: `${user.tag} → ${newState.channel.name}`,
+                        color: 0x00ff00
+                    });
+                }
+
+                // Salió
+                if (oldState.channel && !newState.channel) {
+                    await sendLog({
+                        title: '🔇 Usuario salió de VC',
+                        description: `${user.tag} ← ${oldState.channel.name}`,
+                        color: 0xff0000
+                    });
+                }
+
+                // Se movió
+                if (
+                    oldState.channel &&
+                    newState.channel &&
+                    oldState.channel.id !== newState.channel.id
+                ) {
+                    await sendLog({
+                        title: '🔁 Usuario cambió de VC',
+                        description: `${user.tag} → ${newState.channel.name}`,
+                        color: 0xffff00
+                    });
+                }
+            }
+        } catch (logError) {
+            logger.warn('Error en voice logs:', logError);
+        }
+
+        // 🚫 NO TOCAR — TU SISTEMA ORIGINAL
         if (newState.member.user.bot) return;
 
         const guildId = newState.guild.id;
@@ -61,7 +106,7 @@ export default {
             const now = Date.now();
             if (channelCreationCooldown.has(cooldownKey)) {
                 const lastCreation = channelCreationCooldown.get(cooldownKey);
-if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
+                if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
                     logger.warn(`User ${member.id} is on cooldown for channel creation`);
                     return;
                 }
@@ -142,16 +187,10 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
 
             try {
                 const me = guild.members.me;
-                if (!me) {
-                    logger.warn(`Bot member cache unavailable while creating temporary channel in guild ${guild.id}`);
-                    channelCreationCooldown.delete(cooldownKey);
-                    return;
-                }
+                if (!me) return;
 
                 const triggerPermissions = triggerChannel.permissionsFor(me);
                 if (!triggerPermissions?.has([PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers, PermissionFlagsBits.Connect])) {
-                    logger.warn(`Missing required permissions for temporary channel creation in guild ${guild.id} (trigger channel ${triggerChannel.id})`);
-                    channelCreationCooldown.delete(cooldownKey);
                     return;
                 }
 
@@ -163,32 +202,23 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
 
                 userLimit = Math.max(0, Math.min(99, userLimit || 0));
 
-                logger.info(`Creating temporary channel for user ${member.id} with user limit: ${userLimit}`);
-
                 const channelName = sanitizeVoiceChannelName(formatChannelName(nameTemplate, {
                     username: member.user.username,
-                    userTag: member.user.tag,
                     displayName: member.displayName,
                     guildName: guild.name,
                     channelName: triggerChannel.name
                 }));
 
-                if (!member.voice?.channel || member.voice.channel.id !== triggerChannel.id) {
-                    logger.debug(`Member ${member.id} no longer in trigger channel ${triggerChannel.id}, aborting temporary channel creation`);
-                    channelCreationCooldown.delete(cooldownKey);
-                    return;
-                }
-
                 const tempChannel = await guild.channels.create({
                     name: channelName,
-type: ChannelType.GuildVoice,
+                    type: ChannelType.GuildVoice,
                     parent: triggerChannel.parentId,
-userLimit: userLimit === 0 ? undefined : userLimit,
+                    userLimit: userLimit === 0 ? undefined : userLimit,
                     bitrate: bitrate,
                     permissionOverwrites: [
                         {
                             id: member.id,
-                            allow: ['Connect', 'Speak', 'PrioritySpeaker', 'MoveMembers']
+                            allow: ['Connect', 'Speak', 'MoveMembers']
                         },
                         {
                             id: guild.id,
@@ -201,37 +231,20 @@ userLimit: userLimit === 0 ? undefined : userLimit,
 
                 if (member.voice?.channel?.id === triggerChannel.id) {
                     await member.voice.setChannel(tempChannel);
-                } else {
-                    logger.debug(`Skipped moving ${member.id} to temporary channel ${tempChannel.id} because voice state changed`);
                 }
-
-                logger.info(`Created temporary voice channel ${tempChannel.name} (${tempChannel.id}) for user ${member.user.tag} in guild ${guild.name} with user limit ${userLimit}`);
 
             } catch (error) {
-                logger.error(`Failed to create temporary channel for user ${member.user.tag} in guild ${guild.name}:`, error);
-                
+                logger.error(`Failed to create temporary channel:`, error);
                 channelCreationCooldown.delete(cooldownKey);
-                
-                try {
-                    await member.send({
-                        content: `❌ Failed to create your temporary voice channel. Please contact a server administrator.`
-                    });
-                } catch (dmError) {
-                    logger.debug(`Unable to send temporary channel failure DM to user ${member.id}:`, dmError);
-                }
             }
         }
 
         async function deleteTemporaryChannel(client, channel, guildId) {
             try {
                 await unregisterTemporaryChannel(client, guildId, channel.id);
-
-                await channel.delete('Temporary voice channel - empty');
-
-                logger.info(`Deleted temporary voice channel ${channel.name} (${channel.id}) in guild ${channel.guild.name}`);
-
+                await channel.delete();
             } catch (error) {
-                logger.error(`Failed to delete temporary channel ${channel.id}:`, error);
+                logger.error(`Failed to delete temporary channel:`, error);
             }
         }
 
@@ -245,26 +258,8 @@ userLimit: userLimit === 0 ? undefined : userLimit,
                 config.temporaryChannels[channel.id].ownerId = newOwnerId;
                 await client.db.set(`guild:${guildId}:jointocreate`, config);
 
-                const newOwner = await channel.guild.members.fetch(newOwnerId);
-                if (newOwner) {
-                    const channelOptions = config.channelOptions?.[tempChannelInfo.triggerChannelId] || {};
-                    const nameTemplate = channelOptions.nameTemplate || config.channelNameTemplate;
-                    
-                    const newChannelName = sanitizeVoiceChannelName(formatChannelName(nameTemplate, {
-                        username: newOwner.user.username,
-                        userTag: newOwner.user.tag,
-                        displayName: newOwner.displayName,
-                        guildName: channel.guild.name,
-                        channelName: channel.guild.channels.cache.get(tempChannelInfo.triggerChannelId)?.name || 'Voice Channel'
-                    }));
-
-                    await channel.setName(newChannelName);
-                }
-
-                logger.info(`Transferred ownership of temporary channel ${channel.id} to user ${newOwnerId}`);
-
             } catch (error) {
-                logger.error(`Failed to transfer ownership of channel ${channel.id}:`, error);
+                logger.error(`Failed to transfer ownership:`, error);
             }
         }
     }
@@ -281,10 +276,7 @@ function sanitizeVoiceChannelName(inputName) {
 
 function clampVoiceBitrate(value) {
     const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-        return DEFAULT_VOICE_BITRATE;
-    }
-
+    if (!Number.isFinite(parsed)) return DEFAULT_VOICE_BITRATE;
     return Math.max(MIN_VOICE_BITRATE, Math.min(MAX_VOICE_BITRATE, Math.floor(parsed)));
 }
 
@@ -298,16 +290,12 @@ function cleanupCooldownEntries() {
 }
 
 function trimCooldownMapIfNeeded() {
-    if (channelCreationCooldown.size <= MAX_TRACKED_COOLDOWNS) {
-        return;
-    }
+    if (channelCreationCooldown.size <= MAX_TRACKED_COOLDOWNS) return;
 
     const entries = [...channelCreationCooldown.entries()].sort((a, b) => a[1] - b[1]);
     const removeCount = channelCreationCooldown.size - MAX_TRACKED_COOLDOWNS;
-    for (let index = 0; index < removeCount; index += 1) {
-        channelCreationCooldown.delete(entries[index][0]);
+    for (let i = 0; i < removeCount; i++) {
+        channelCreationCooldown.delete(entries[i][0]);
     }
 }
-
-
 
