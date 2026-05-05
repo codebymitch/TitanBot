@@ -51,7 +51,13 @@ export default {
             const player = getOrCreatePlayer(interaction.guildId);
 
             if (!player.connection) {
-                player.connect(voiceChannel);
+                try {
+                    await player.connect(voiceChannel);
+                } catch {
+                    return InteractionHelper.safeEditReply(interaction, {
+                        embeds: [errorEmbed('Connection Failed', `Could not connect to **${voiceChannel.name}**. Check my permissions and try again.`)],
+                    });
+                }
             }
 
             const started = await player.addSong(song);

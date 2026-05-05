@@ -68,6 +68,7 @@ export function searchSong(query) {
     return new Promise((resolve) => {
         const proc = spawn('yt-dlp', [
             '--no-playlist', '--quiet', '--no-warnings',
+            '--js-runtimes', 'node',
             '-j', searchArg,
         ]);
 
@@ -100,6 +101,7 @@ function createYtdlpStream(url) {
     const proc = spawn('yt-dlp', [
         '-f', 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio',
         '--no-playlist', '--quiet', '--no-warnings',
+        '--js-runtimes', 'node',
         '-o', '-', url,
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
@@ -143,14 +145,29 @@ class GuildMusicPlayer {
             selfDeaf: true,
         });
         this.connection.subscribe(this.audioPlayer);
-        this.connection.on(VoiceConnectionStatus.Ready, () =>
-            logger.info(`Voice ready in guild ${this.guildId}`)
-        );
         this.connection.on(VoiceConnectionStatus.Disconnected, () => {
             logger.warn(`Voice disconnected in guild ${this.guildId}`);
             this.destroy();
         });
         this.connection.on(VoiceConnectionStatus.Destroyed, () => queues.delete(this.guildId));
+
+        // Wait for the UDP connection to be ready before resolving
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Voice connection timed out'));
+            }, 20_000);
+
+            this.connection.once(VoiceConnectionStatus.Ready, () => {
+                clearTimeout(timeout);
+                logger.info(`Voice ready in guild ${this.guildId}`);
+                resolve();
+            });
+
+            this.connection.once(VoiceConnectionStatus.Destroyed, () => {
+                clearTimeout(timeout);
+                reject(new Error('Voice connection destroyed'));
+            });
+        });
     }
 
     _playNext() {
