@@ -11,9 +11,9 @@ export function setupDashboard(app, client) {
     saveUninitialized: false
   }));
 
-  // 🔐 LOGIN DISCORD
+  // 🔐 LOGIN DISCORD (AHORA CON GUILDS)
   app.get('/login', (req, res) => {
-    const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.REDIRECT_URI)}&response_type=code&scope=identify`;
+    const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.REDIRECT_URI)}&response_type=code&scope=identify%20guilds`;
     res.redirect(url);
   });
 
@@ -38,16 +38,30 @@ export function setupDashboard(app, client) {
         }
       );
 
+      const accessToken = tokenRes.data.access_token;
+
+      // 🔥 USER
       const userRes = await axios.get(
         'https://discord.com/api/users/@me',
         {
           headers: {
-            Authorization: `Bearer ${tokenRes.data.access_token}`
+            Authorization: `Bearer ${accessToken}`
+          }
+        }
+      );
+
+      // 🔥 GUILDS (NUEVO)
+      const guildsRes = await axios.get(
+        'https://discord.com/api/users/@me/guilds',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
           }
         }
       );
 
       req.session.user = userRes.data;
+      req.session.guilds = guildsRes.data;
 
       res.redirect('/dashboard');
 
@@ -65,6 +79,7 @@ export function setupDashboard(app, client) {
     }
 
     const user = req.session.user;
+    const guilds = req.session.guilds || [];
 
     res.send(`
       <html>
@@ -78,8 +93,15 @@ export function setupDashboard(app, client) {
 
           <p>Usuario: ${user.username}</p>
           <p>Bot activo ✅</p>
-          <p>Servidores: ${client.guilds.cache.size}</p>
+          <p>Servidores (bot): ${client.guilds.cache.size}</p>
 
+          <h2>Servidores tuyos</h2>
+
+          <ul>
+            ${guilds.map(g => `<li>${g.name}</li>`).join('')}
+          </ul>
+
+          <br>
           <a href="/logout" style="color:red;">Cerrar sesión</a>
 
         </body>
