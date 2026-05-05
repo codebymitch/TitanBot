@@ -38,7 +38,7 @@ const CATEGORY_INFO = {
     Logging:        { icon: "📋",  desc: "Server event logging and audit trails" },
     Voice:          { icon: "🔊",  desc: "Voice channel commands and activities" },
     Music:          { icon: "🎵",  desc: "Search for songs and get YouTube links" },
-    Gorilla:        { icon: "🦍",  desc: "Gorilla Tag server status, cosmetics browser, and auto-update channel" },
+    Gorilla:        { icon: "🦍",  desc: "Gorilla Tag server status and cosmetics browser" },
 };
 
 export async function createInitialHelpMenu(client, member) {

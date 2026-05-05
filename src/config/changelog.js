@@ -3,8 +3,7 @@ export const changelog = [
         version: '2.7.1',
         date: '2026-05-05',
         entries: [
-            { type: 'new', text: 'Added `/gorilla patchnotes` — fetch the latest 1–5 Gorilla Tag patch notes from Steam on demand' },
-            { type: 'new', text: 'Patch notes auto-post to the `🦍・server-status` channel whenever a new GT update drops (checks every 30 minutes)' },
+            { type: 'removed', text: 'Removed `/gorilla patchnotes` command and auto-post patch notes feature' },
         ],
     },
     {
