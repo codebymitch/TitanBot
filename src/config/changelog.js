@@ -13,9 +13,8 @@ export const changelog = [
         version: '2.6.0',
         date: '2026-05-05',
         entries: [
-            { type: 'new', text: 'Added music system — `/play`, `/stop`, `/skip`, `/queue`, `/pause`, `/resume`' },
-            { type: 'new', text: '`/play` lets you pick any voice channel to join, or defaults to your current VC. Supports song names and YouTube URLs.' },
-            { type: 'new', text: 'Queue system — songs stack up and play in order. Bot auto-disconnects after 2 minutes of inactivity.' },
+            { type: 'new', text: 'Added `/music` — search YouTube for any song and get instant links with duration and channel info' },
+            { type: 'update', text: 'Returns up to 5 results per search with clickable YouTube links' },
         ],
     },
     {

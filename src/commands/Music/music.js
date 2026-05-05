@@ -1,105 +1,86 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { spawn } from 'child_process';
+import { errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { getPlayer } from '../../services/musicPlayer.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+
+function searchYouTube(query) {
+    const isUrl = /^https?:\/\//i.test(query);
+    const searchArg = isUrl ? query : `ytsearch5:${query}`;
+
+    return new Promise((resolve) => {
+        const proc = spawn('yt-dlp', [
+            '--no-playlist', '--quiet', '--no-warnings',
+            '--flat-playlist',
+            '-j', searchArg,
+        ]);
+
+        let out = '';
+        proc.stdout.on('data', chunk => { out += chunk; });
+        proc.on('close', code => {
+            if (code !== 0 || !out.trim()) return resolve([]);
+            try {
+                const results = out.trim().split('\n').map(line => {
+                    const info = JSON.parse(line);
+                    const id = info.id ?? info.webpage_url?.split('v=')[1];
+                    const duration = info.duration
+                        ? `${Math.floor(info.duration / 60)}:${String(Math.floor(info.duration % 60)).padStart(2, '0')}`
+                        : '??:??';
+                    return {
+                        title: info.title ?? 'Unknown',
+                        url: info.webpage_url ?? `https://www.youtube.com/watch?v=${id}`,
+                        duration,
+                        channel: info.channel ?? info.uploader ?? 'Unknown',
+                    };
+                }).filter(r => r.url);
+                resolve(results);
+            } catch {
+                resolve([]);
+            }
+        });
+        proc.on('error', () => resolve([]));
+    });
+}
 
 export default {
     data: new SlashCommandBuilder()
         .setName('music')
-        .setDescription('Control music playback')
-        .addSubcommand(s => s.setName('stop').setDescription('Stop playback and leave the voice channel'))
-        .addSubcommand(s => s.setName('skip').setDescription('Skip the current song'))
-        .addSubcommand(s => s.setName('queue').setDescription('Show the current music queue'))
-        .addSubcommand(s => s.setName('pause').setDescription('Pause the current song'))
-        .addSubcommand(s => s.setName('resume').setDescription('Resume the paused song')),
+        .setDescription('Find music on YouTube')
+        .addStringOption(o =>
+            o.setName('song')
+                .setDescription('Song name or YouTube URL to search for')
+                .setRequired(true)
+        ),
 
     category: 'Music',
 
     async execute(interaction) {
-        const sub = interaction.options.getSubcommand();
-        const player = getPlayer(interaction.guildId);
+        try {
+            await InteractionHelper.safeDefer(interaction);
 
-        if (sub === 'queue') {
-            if (!player?.currentSong && !player?.songs.length) {
-                return InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed('Empty Queue', 'Nothing is playing or queued right now.')],
-                    ephemeral: true,
+            const query = interaction.options.getString('song');
+            const results = await searchYouTube(query);
+
+            if (!results.length) {
+                return InteractionHelper.safeEditReply(interaction, {
+                    embeds: [errorEmbed('Not Found', `No results found for: \`${query}\``)],
                 });
             }
-            const lines = [];
-            if (player.currentSong) {
-                lines.push(`**▶️ Now Playing:** [${player.currentSong.title}](${player.currentSong.url}) \`${player.currentSong.durationFormatted}\``);
-            }
-            if (player.songs.length > 0) {
-                lines.push('\n**Up Next:**');
-                player.songs.slice(0, 10).forEach((s, i) => {
-                    lines.push(`${i + 1}. [${s.title}](${s.url}) \`${s.durationFormatted}\``);
-                });
-                if (player.songs.length > 10) lines.push(`... and ${player.songs.length - 10} more`);
-            }
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [createEmbed({
-                    title: '🎵 Music Queue',
-                    description: lines.join('\n'),
-                    color: 'primary',
-                    footer: { text: `${player.songs.length} song(s) in queue` },
-                })],
-            });
-        }
 
-        if (!player) {
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Not Playing', 'The bot is not in a voice channel.')],
-                ephemeral: true,
-            });
-        }
+            const lines = results.map((r, i) =>
+                `**${i + 1}.** [${r.title}](${r.url})\n┗ 🕒 \`${r.duration}\` • 📺 ${r.channel}`
+            );
 
-        if (sub === 'stop') {
-            player.songs = [];
-            player.destroy();
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [createEmbed({ title: '⏹️ Stopped', description: 'Stopped playback and left the voice channel.', color: 'warning' })],
-            });
-        }
+            const embed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle('🎵 Music Search Results')
+                .setDescription(lines.join('\n\n'))
+                .setFooter({ text: `Results for: ${query}` })
+                .setTimestamp();
 
-        if (sub === 'skip') {
-            if (!player.currentSong) {
-                return InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed('Not Playing', 'Nothing is playing right now.')],
-                    ephemeral: true,
-                });
-            }
-            const title = player.currentSong.title;
-            player.skip();
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [createEmbed({ title: '⏭️ Skipped', description: `Skipped **${title}**`, color: 'primary' })],
-            });
-        }
-
-        if (sub === 'pause') {
-            if (!player.isPlaying) {
-                return InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed('Not Playing', 'Nothing is playing right now.')],
-                    ephemeral: true,
-                });
-            }
-            player.pause();
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [createEmbed({ title: '⏸️ Paused', description: `Paused **${player.currentSong?.title}**`, color: 'warning' })],
-            });
-        }
-
-        if (sub === 'resume') {
-            if (!player.isPaused) {
-                return InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed('Not Paused', 'Nothing is paused right now.')],
-                    ephemeral: true,
-                });
-            }
-            player.resume();
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [createEmbed({ title: '▶️ Resumed', description: `Resumed **${player.currentSong?.title}**`, color: 'success' })],
-            });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+        } catch (error) {
+            await handleInteractionError(interaction, error, { commandName: 'music' });
         }
     },
 };
