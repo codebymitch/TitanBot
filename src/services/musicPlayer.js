@@ -4,7 +4,6 @@ import {
     createAudioResource,
     AudioPlayerStatus,
     VoiceConnectionStatus,
-    entersState,
 } from '@discordjs/voice';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import play from 'play-dl';
@@ -108,7 +107,7 @@ class GuildMusicPlayer {
         this.audioPlayer.on('error', () => this._playNext());
     }
 
-    async connect(voiceChannel) {
+    connect(voiceChannel) {
         this.connection = joinVoiceChannel({
             channelId: voiceChannel.id,
             guildId: voiceChannel.guild.id,
@@ -116,20 +115,8 @@ class GuildMusicPlayer {
             selfDeaf: true,
         });
         this.connection.subscribe(this.audioPlayer);
-
-        try {
-            await entersState(this.connection, VoiceConnectionStatus.Ready, 30_000);
-        } catch (err) {
-            this.destroy();
-            throw err;
-        }
-
-        this.connection.on(VoiceConnectionStatus.Disconnected, async () => {
-            const p1 = entersState(this.connection, VoiceConnectionStatus.Signalling, 5_000).catch(() => null);
-            const p2 = entersState(this.connection, VoiceConnectionStatus.Connecting, 5_000).catch(() => null);
-            const result = await Promise.race([p1, p2]);
-            if (result === null) this.destroy();
-        });
+        this.connection.on(VoiceConnectionStatus.Disconnected, () => this.destroy());
+        this.connection.on(VoiceConnectionStatus.Destroyed, () => queues.delete(this.guildId));
     }
 
     async _playNext() {

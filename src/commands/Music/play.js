@@ -51,7 +51,7 @@ export default {
             const player = getOrCreatePlayer(interaction.guildId);
 
             if (!player.connection) {
-                await player.connect(voiceChannel);
+                player.connect(voiceChannel);
             }
 
             const started = await player.addSong(song);
