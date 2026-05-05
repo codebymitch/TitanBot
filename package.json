@@ -17,10 +17,11 @@
   "dependencies": {
     "@discordjs/rest": "^2.6.1",
     "@discordjs/voice": "^0.18.0",
-    "axios": "^1.13.2",
+    "axios": "^1.16.0",
     "discord.js": "^14.15.3",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-session": "^1.19.0",
     "node-cron": "^4.2.1",
     "pg": "^8.11.3",
     "winston": "^3.19.0",

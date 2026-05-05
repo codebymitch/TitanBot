@@ -1,86 +1,97 @@
+import session from 'express-session';
+import axios from 'axios';
+
 export function setupDashboard(app, client) {
 
   console.log('🔥 Dashboard cargado');
 
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'wk-secret',
+    resave: false,
+    saveUninitialized: false
+  }));
+
+  // 🔐 LOGIN DISCORD
+  app.get('/login', (req, res) => {
+    const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.REDIRECT_URI)}&response_type=code&scope=identify`;
+    res.redirect(url);
+  });
+
+  // 🔐 CALLBACK
+  app.get('/callback', async (req, res) => {
+    const code = req.query.code;
+
+    try {
+      const tokenRes = await axios.post(
+        'https://discord.com/api/oauth2/token',
+        new URLSearchParams({
+          client_id: process.env.CLIENT_ID,
+          client_secret: process.env.CLIENT_SECRET,
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: process.env.REDIRECT_URI
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      );
+
+      const userRes = await axios.get(
+        'https://discord.com/api/users/@me',
+        {
+          headers: {
+            Authorization: `Bearer ${tokenRes.data.access_token}`
+          }
+        }
+      );
+
+      req.session.user = userRes.data;
+
+      res.redirect('/dashboard');
+
+    } catch (err) {
+      console.error(err);
+      res.send('❌ Error en login');
+    }
+  });
+
+  // 🧠 DASHBOARD
   app.get('/dashboard', (req, res) => {
+
+    if (!req.session.user) {
+      return res.redirect('/login');
+    }
+
+    const user = req.session.user;
+
     res.send(`
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <title>WK' Bot</title>
+      <html>
+        <body style="background:#111;color:white;font-family:Arial;padding:20px;">
 
-        <style>
-          body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f172a, #020617);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-          }
+          <h1>WK' Bot Dashboard</h1>
 
-          .card {
-            background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(10px);
-            padding: 30px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 0 40px rgba(0,0,0,0.6);
-            width: 350px;
-          }
+          <img src="https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png"
+               width="80"
+               style="border-radius:50%">
 
-          .logo {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            margin-bottom: 15px;
-            border: 3px solid #22c55e;
-          }
+          <p>Usuario: ${user.username}</p>
+          <p>Bot activo ✅</p>
+          <p>Servidores: ${client.guilds.cache.size}</p>
 
-          h1 {
-            margin: 10px 0;
-          }
+          <a href="/logout" style="color:red;">Cerrar sesión</a>
 
-          .status {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 10px;
-            background: #16a34a;
-            font-weight: bold;
-          }
-
-          .info {
-            margin-top: 10px;
-            color: #cbd5f5;
-          }
-        </style>
-      </head>
-
-      <body>
-
-        <div class="card">
-
-          <!-- 🔥 CAMBIA ESTA IMAGEN -->
-          <img class="logo" src="https://i.imgur.com/4M34hi2.png">
-
-          <h1>WK' Bot</h1>
-
-          <div class="status">
-            ✅ Bot Online
-          </div>
-
-          <div class="info">
-            Servidores: ${client.guilds.cache.size}
-          </div>
-
-        </div>
-
-      </body>
+        </body>
       </html>
     `);
+  });
+
+  // 🔓 LOGOUT
+  app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+      res.redirect('/');
+    });
   });
 
 }
