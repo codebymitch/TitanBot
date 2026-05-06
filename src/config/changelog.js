@@ -1,5 +1,14 @@
 export const changelog = [
     {
+        version: '2.8.0',
+        date: '2026-05-06',
+        entries: [
+            { type: 'new', text: 'Added `/play` — play any song or YouTube URL in your voice channel with a full Now Playing embed' },
+            { type: 'new', text: 'Music queue system: songs play in order, auto-advances to next track when one ends' },
+            { type: 'new', text: 'Playback controls: ⏸ Pause/Resume, ⏭ Skip, ⏹ Stop, 📋 Queue — all via buttons on the Now Playing embed' },
+        ],
+    },
+    {
         version: '2.7.1',
         date: '2026-05-05',
         entries: [

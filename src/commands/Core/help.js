@@ -37,7 +37,7 @@ const CATEGORY_INFO = {
     Serverstats:    { icon: "📈",  desc: "Server statistics and display counters" },
     Logging:        { icon: "📋",  desc: "Server event logging and audit trails" },
     Voice:          { icon: "🔊",  desc: "Voice channel commands and activities" },
-    Music:          { icon: "🎵",  desc: "Search for songs and get YouTube links" },
+    Music:          { icon: "🎵",  desc: "Play music in voice channels, queue songs, and control playback" },
     Gorilla:        { icon: "🦍",  desc: "Gorilla Tag server status, cosmetics browser, and auto-update channel" },
 };
 
