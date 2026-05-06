@@ -1,4 +1,4 @@
-import { readdir, stat } from 'fs/promises';
+import { readdir } from 'fs/promises';
 import { join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname } from 'path';
@@ -9,35 +9,21 @@ const __dirname = dirname(__filename);
 
 export default async function loadEvents(client) {
 
-  const eventsPath = join(__dirname, '../events');
+  const basePath = join(__dirname, '../events');
 
   console.log('🔥 LOADER NUEVO FUNCIONANDO');
 
-  async function load(dir) {
-
-    console.log('📂 Leyendo carpeta:', dir);
-
+  async function loadFiles(dir) {
     const files = await readdir(dir);
 
     for (const file of files) {
 
-      const filePath = join(dir, file);
-      const fileStat = await stat(filePath);
-
-      // 🔥 SI ES CARPETA → ENTRA (IMPORTANTE PARA /logs)
-      if (fileStat.isDirectory()) {
-        await load(filePath);
-        continue;
-      }
-
-      // 🔥 SOLO ARCHIVOS JS
       if (!file.endsWith('.js')) continue;
 
+      const filePath = join(dir, file);
+
       try {
-
-        // 🔥 IMPORT COMPATIBLE CON RAILWAY
         const fileUrl = pathToFileURL(filePath).href;
-
         const { default: event } = await import(fileUrl);
 
         if (!event?.name || typeof event.execute !== 'function') {
@@ -45,12 +31,11 @@ export default async function loadEvents(client) {
           continue;
         }
 
-        // 🔥 FIX IMPORTANTE (PASAR CLIENT)
         const safeExecute = async (...args) => {
           try {
             await event.execute(...args, client);
-          } catch (error) {
-            logger.error(`❌ Error en ${event.name}:`, error);
+          } catch (err) {
+            logger.error(`❌ Error en ${event.name}:`, err);
           }
         };
 
@@ -65,11 +50,15 @@ export default async function loadEvents(client) {
       } catch (err) {
         logger.error(`❌ Error cargando ${file}:`, err);
       }
-
     }
-
   }
 
-  await load(eventsPath);
+  // 🔥 eventos principales
+  console.log('📂 Cargando eventos principales...');
+  await loadFiles(basePath);
 
+  // 🔥 logs (forzado)
+  const logsPath = join(basePath, 'logs');
+  console.log('📂 Cargando eventos de logs...');
+  await loadFiles(logsPath);
 }
