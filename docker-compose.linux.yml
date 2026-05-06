@@ -1,0 +1,52 @@
+# Linux VPS deployment — uses network_mode: host so Discord voice UDP works.
+# Usage: docker compose -f docker-compose.linux.yml up -d --build
+
+services:
+  bot:
+    build: .
+    container_name: titanbot
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - OWNER_IDS=${OWNER_IDS}
+      - LOG_LEVEL=${LOG_LEVEL:-warn}
+      - PORT=${PORT:-3000}
+      - WEB_HOST=0.0.0.0
+      - AUTO_MIGRATE=true
+      - POSTGRES_HOST=localhost
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-titanbot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-titanbotpassword}
+      - POSTGRES_DB=${POSTGRES_DB:-titanbot}
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:-titanbotpassword}@localhost:5432/${POSTGRES_DB:-titanbot}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:-titanbotpassword}@localhost:5432/${POSTGRES_DB:-titanbot}
+      - SIGHTENGINE_API_USER=${SIGHTENGINE_API_USER}
+      - SIGHTENGINE_API_SECRET=${SIGHTENGINE_API_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    container_name: titanbot-db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-titanbot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-titanbotpassword}
+      - POSTGRES_DB=${POSTGRES_DB:-titanbot}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
