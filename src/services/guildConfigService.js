@@ -9,8 +9,7 @@ const DEFAULT_CONFIG = {
   welcome: {
     enabled: false,
     channel: null,
-    message:
-      '🎉 Bienvenido {user} a {server}'
+    message: '🎉 Bienvenido {user} a {server}'
   },
 
   // 📊 ADVANCED LOGS
@@ -25,34 +24,28 @@ const DEFAULT_CONFIG = {
     categories: {
 
       message: null,
-
       member: null,
-
       moderation: null,
-
       voice: null,
-
       role: null,
-
       channel: null
 
     }
+
   }
+
 };
 
-// 🔥 OBTENER CONFIG
-export async function getGuildConfig(
-  db,
-  guildId
-) {
+// ========================================
+// 🔥 GET CONFIG
+// ========================================
 
-  const key =
-    `guild:${guildId}:config`;
+export async function getGuildConfig(db, guildId) {
 
-  let config =
-    await db.get(key, null);
+  const key = `guild:${guildId}:config`;
 
-  // 🔥 CREAR CONFIG NUEVA
+  let config = await db.get(key, null);
+
   if (!config) {
 
     config = {
@@ -64,18 +57,12 @@ export async function getGuildConfig(
 
   }
 
-  // ========================================
-  // 🔥 MIGRACIÓN AUTOMÁTICA
-  // ========================================
-
   let updated = false;
 
   // 🌎 LANGUAGE
   if (!config.language) {
-
     config.language = 'es';
     updated = true;
-
   }
 
   // 🔥 WELCOME
@@ -83,15 +70,9 @@ export async function getGuildConfig(
 
     config.welcome = {
 
-      enabled:
-        config.welcome_enabled || false,
-
-      channel:
-        config.welcome_channel || null,
-
-      message:
-        config.welcome_message ||
-        '🎉 Bienvenido {user} a {server}'
+      enabled: config.welcome_enabled || false,
+      channel: config.welcome_channel || null,
+      message: config.welcome_message || '🎉 Bienvenido {user} a {server}'
 
     };
 
@@ -107,58 +88,41 @@ export async function getGuildConfig(
 
     config.logs = {
 
-      enabled:
-        config.logging_enabled || false,
-
+      enabled: config.logging_enabled || false,
       mode: 'single',
-
-      channel:
-        config.log_channel || null,
+      channel: config.log_channel || null,
 
       categories: {
 
         message: null,
-
         member: null,
-
         moderation: null,
-
         voice: null,
-
         role: null,
-
         channel: null
 
       }
+
     };
 
     updated = true;
 
   }
 
-  // 🔥 MIGRAR MODE
   if (!config.logs.mode) {
-
     config.logs.mode = 'single';
     updated = true;
-
   }
 
-  // 🔥 MIGRAR CATEGORIES
   if (!config.logs.categories) {
 
     config.logs.categories = {
 
       message: null,
-
       member: null,
-
       moderation: null,
-
       voice: null,
-
       role: null,
-
       channel: null
 
     };
@@ -167,14 +131,8 @@ export async function getGuildConfig(
 
   }
 
-  // 🔥 GUARDAR MIGRACIÓN
   if (updated) {
-
-    await db.set(
-      key,
-      config
-    );
-
+    await db.set(key, config);
   }
 
   return config;
@@ -184,71 +142,35 @@ export async function getGuildConfig(
 // 🔥 WELCOME
 // ========================================
 
-export async function updateWelcome(
-  db,
-  guildId,
-  value
-) {
+export async function updateWelcome(db, guildId, value) {
 
-  const config =
-    await getGuildConfig(
-      db,
-      guildId
-    );
+  const config = await getGuildConfig(db, guildId);
 
-  config.welcome.enabled =
-    value;
+  config.welcome.enabled = value;
 
-  await db.set(
-    `guild:${guildId}:config`,
-    config
-  );
+  await db.set(`guild:${guildId}:config`, config);
 
   return config;
 }
 
-export async function updateWelcomeChannel(
-  db,
-  guildId,
-  channelId
-) {
+export async function updateWelcomeChannel(db, guildId, channelId) {
 
-  const config =
-    await getGuildConfig(
-      db,
-      guildId
-    );
+  const config = await getGuildConfig(db, guildId);
 
-  config.welcome.channel =
-    channelId;
+  config.welcome.channel = channelId;
 
-  await db.set(
-    `guild:${guildId}:config`,
-    config
-  );
+  await db.set(`guild:${guildId}:config`, config);
 
   return config;
 }
 
-export async function updateWelcomeMessage(
-  db,
-  guildId,
-  message
-) {
+export async function updateWelcomeMessage(db, guildId, message) {
 
-  const config =
-    await getGuildConfig(
-      db,
-      guildId
-    );
+  const config = await getGuildConfig(db, guildId);
 
-  config.welcome.message =
-    message;
+  config.welcome.message = message;
 
-  await db.set(
-    `guild:${guildId}:config`,
-    config
-  );
+  await db.set(`guild:${guildId}:config`, config);
 
   return config;
 }
@@ -257,104 +179,68 @@ export async function updateWelcomeMessage(
 // 📊 LOGS
 // ========================================
 
-export async function updateLogging(
-  db,
-  guildId,
-  value
-) {
+export async function updateLogging(db, guildId, value) {
 
-  const config =
-    await getGuildConfig(
-      db,
-      guildId
-    );
+  const config = await getGuildConfig(db, guildId);
 
-  config.logs.enabled =
-    value;
+  config.logs.enabled = value;
 
-  await db.set(
-    `guild:${guildId}:config`,
-    config
-  );
+  await db.set(`guild:${guildId}:config`, config);
 
   return config;
 }
 
 // 🔥 SINGLE CHANNEL
-export async function updateLogChannel(
-  db,
-  guildId,
-  channelId
-) {
 
-  const config =
-    await getGuildConfig(
-      db,
-      guildId
-    );
+export async function updateLogChannel(db, guildId, channelId) {
 
-  config.logs.channel =
-    channelId;
+  const config = await getGuildConfig(db, guildId);
 
-  await db.set(
-    `guild:${guildId}:config`,
-    config
-  );
+  config.logs.channel = channelId;
+
+  await db.set(`guild:${guildId}:config`, config);
 
   return config;
 }
 
-// 🔥 LOG MODE
-export async function updateLogMode(
-  db,
-  guildId,
-  mode
-) {
+// 🔥 FIXED MODE (AQUÍ ESTABA EL BUG)
 
-  const config =
-    await getGuildConfig(
-      db,
-      guildId
-    );
+export async function updateLogMode(db, guildId, mode) {
 
-  config.logs.mode =
-    mode;
+  const config = await getGuildConfig(db, guildId);
 
-  await db.set(
-    `guild:${guildId}:config`,
-    config
-  );
+  // 🔥 NORMALIZAR (ESTO ARREGLA TODO)
+  if (
+    mode === 'advanced' ||
+    mode === 'Advanced Categories'
+  ) {
 
-  return config;
-}
+    config.logs.mode = 'advanced';
 
-// 🔥 CATEGORY LOGS
-export async function updateLogCategory(
-  db,
-  guildId,
-  category,
-  channelId
-) {
+  } else {
 
-  const config =
-    await getGuildConfig(
-      db,
-      guildId
-    );
-
-  if (!config.logs.categories) {
-
-    config.logs.categories = {};
+    config.logs.mode = 'single';
 
   }
 
-  config.logs.categories[category] =
-    channelId;
+  await db.set(`guild:${guildId}:config`, config);
 
-  await db.set(
-    `guild:${guildId}:config`,
-    config
-  );
+  return config;
+}
+
+// 🔥 CATEGORY
+
+export async function updateLogCategory(db, guildId, category, channelId) {
+
+  const config = await getGuildConfig(db, guildId);
+
+  if (!config.logs.categories) {
+    config.logs.categories = {};
+  }
+
+  config.logs.categories[category] = channelId;
+
+  await db.set(`guild:${guildId}:config`, config);
 
   return config;
 }
@@ -363,25 +249,13 @@ export async function updateLogCategory(
 // 🌎 LANGUAGE
 // ========================================
 
-export async function updateLanguage(
-  db,
-  guildId,
-  language
-) {
+export async function updateLanguage(db, guildId, language) {
 
-  const config =
-    await getGuildConfig(
-      db,
-      guildId
-    );
+  const config = await getGuildConfig(db, guildId);
 
-  config.language =
-    language;
+  config.language = language;
 
-  await db.set(
-    `guild:${guildId}:config`,
-    config
-  );
+  await db.set(`guild:${guildId}:config`, config);
 
   return config;
 }
