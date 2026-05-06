@@ -7,11 +7,6 @@ import {
 } from '../services/guildConfigService.js';
 
 import {
-  logEvent,
-  EVENT_TYPES
-} from '../services/loggingService.js';
-
-import {
   getServerCounters,
   updateCounter
 } from '../services/serverstatsService.js';
@@ -31,129 +26,71 @@ import {
 export default {
 
   name: Events.GuildMemberAdd,
-
   once: false,
 
   async execute(member) {
 
     try {
 
-      const {
-        guild,
-        user
-      } = member;
+      const { guild, user } = member;
 
       // =====================================
       // 🔥 CONFIG
       // =====================================
 
-      const config =
-        await getGuildConfig(
-          member.client.db,
-          guild.id
-        );
+      const config = await getGuildConfig(
+        member.client.db,
+        guild.id
+      );
 
       // =====================================
       // 👋 WELCOME SYSTEM
       // =====================================
 
-      if (
-        config.welcome?.enabled
-      ) {
+      if (config.welcome?.enabled) {
 
         let channel = null;
 
-        // 👉 Canal configurado
-        if (
-          config.welcome?.channel
-        ) {
-
-          channel =
-            guild.channels.cache.get(
-              config.welcome.channel
-            );
-
+        if (config.welcome?.channel) {
+          channel = guild.channels.cache.get(
+            config.welcome.channel
+          );
         }
 
-        // 👉 fallback
         if (!channel) {
-
           channel =
             guild.systemChannel ||
-
             guild.channels.cache
-              .filter(
-                c =>
-                  c.isTextBased()
-              )
+              .filter(c => c.isTextBased())
               .first();
-
         }
-
-        // =====================================
-        // 📩 ENVIAR MENSAJE
-        // =====================================
 
         if (channel) {
 
           try {
 
             let message =
-
               config.welcome?.message ||
-
               '🎉 Bienvenido {user} a {server}';
 
             message = message
-
-              .replace(
-                '{user}',
-                `${user}`
-              )
-
-              .replace(
-                '{server}',
-                guild.name
-              );
+              .replace('{user}', `${user}`)
+              .replace('{server}', guild.name);
 
             const embed = {
-
-              color:
-                0x00ffcc,
-
-              title:
-
-                `${t(
-                  config.language,
-                  'welcome.title'
-                )} ${guild.name}`,
-
-              description:
-                message,
-
+              color: 0x00ffcc,
+              title: `${t(config.language, 'welcome.title')} ${guild.name}`,
+              description: message,
               thumbnail: {
-
-                url:
-                  user.displayAvatarURL({
-                    dynamic: true
-                  })
-
+                url: user.displayAvatarURL({ dynamic: true })
               },
-
               footer: {
-
                 text:
-
                   config.language === 'en'
-
                     ? `We are now ${guild.memberCount} members`
-
                     : `Ahora somos ${guild.memberCount} miembros`
-
               },
-
-              timestamp:
-                new Date()
+              timestamp: new Date()
             };
 
             await channel.send({
@@ -161,99 +98,89 @@ export default {
             });
 
           } catch (err) {
-
-            console.log(
-              'Error enviando welcome:',
-              err
-            );
-
+            console.log('Error enviando welcome:', err);
           }
+
         }
       }
 
       // =====================================
-      // 📊 LOG MEMBER JOIN
+      // 📊 LOG MEMBER JOIN (ADVANCED)
       // =====================================
 
       try {
 
-        await logEvent({
+        if (!config.logs?.enabled) return;
 
-          client:
-            member.client,
+        let logChannel = null;
 
-          guildId:
-            guild.id,
+        // 🔥 MODO AVANZADO
+        if (config.logs.mode === 'advanced') {
 
-          eventType:
-            EVENT_TYPES.MEMBER_JOIN,
+          const categoryChannel =
+            config.logs.categories?.member;
 
-          data: {
-
-            description:
-
-              t(
-                config.language,
-                'logs.member_join'
-              ),
-
-            userId:
-              user.id,
-
-            fields: [
-
-              {
-
-                name:
-
-                  config.language === 'en'
-
-                    ? '👤 Member'
-
-                    : '👤 Miembro',
-
-                value:
-                  `${user.tag} (${user.id})`,
-
-                inline: true
-              },
-
-              {
-
-                name:
-
-                  config.language === 'en'
-
-                    ? '👥 Member Count'
-
-                    : '👥 Miembros',
-
-                value:
-                  guild.memberCount.toString(),
-
-                inline: true
-              },
-
-              {
-
-                name:
-
-                  config.language === 'en'
-
-                    ? '📅 Account Created'
-
-                    : '📅 Cuenta creada',
-
-                value:
-                  `<t:${Math.floor(
-                    user.createdTimestamp / 1000
-                  )}:R>`,
-
-                inline: true
-              }
-
-            ]
+          if (categoryChannel) {
+            logChannel =
+              guild.channels.cache.get(
+                categoryChannel
+              );
           }
+
+        }
+
+        // 🔥 MODO NORMAL (fallback)
+        if (!logChannel && config.logs.channel) {
+
+          logChannel =
+            guild.channels.cache.get(
+              config.logs.channel
+            );
+
+        }
+
+        if (!logChannel) return;
+
+        const embed = {
+
+          color: 0x00ffcc,
+
+          title: '👤 Member Joined',
+
+          description: `${user} joined the server`,
+
+          fields: [
+
+            {
+              name: 'User',
+              value: `${user.tag} (${user.id})`,
+              inline: true
+            },
+
+            {
+              name: 'Members',
+              value: guild.memberCount.toString(),
+              inline: true
+            },
+
+            {
+              name: 'Created',
+              value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
+              inline: true
+            }
+
+          ],
+
+          thumbnail: {
+            url: user.displayAvatarURL({ dynamic: true })
+          },
+
+          timestamp: new Date()
+
+        };
+
+        await logChannel.send({
+          embeds: [embed]
         });
 
       } catch (error) {
@@ -277,9 +204,7 @@ export default {
             guild.id
           );
 
-        for (
-          const counter of counters
-        ) {
+        for (const counter of counters) {
 
           if (
             counter &&
@@ -295,12 +220,13 @@ export default {
             );
 
           }
+
         }
 
       } catch (error) {
 
         logger.debug(
-          'Error updating counters on member join:',
+          'Error updating counters:',
           error
         );
 
@@ -316,20 +242,11 @@ export default {
           `guild:${guild.id}:birthdays:left`;
 
         const backup =
-          (
-            await member.client.db.get(
-              backupKey
-            )
-          ) || {};
+          (await member.client.db.get(backupKey)) || {};
 
-        if (
-          backup[user.id]
-        ) {
+        if (backup[user.id]) {
 
-          const {
-            month,
-            day
-          } =
+          const { month, day } =
             backup[user.id];
 
           await dbSetBirthday(
@@ -347,16 +264,12 @@ export default {
             backup
           );
 
-          logger.debug(
-            `Birthday restored for user ${user.id} in guild ${guild.id}`
-          );
-
         }
 
       } catch (error) {
 
         logger.debug(
-          'Error restoring birthday on member join:',
+          'Error restoring birthday:',
           error
         );
 
@@ -365,10 +278,12 @@ export default {
     } catch (error) {
 
       logger.error(
-        'Error in guildMemberAdd event:',
+        'Error in guildMemberAdd:',
         error
       );
 
     }
+
   }
+
 };
