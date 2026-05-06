@@ -24,6 +24,10 @@ import {
   logger
 } from '../utils/logger.js';
 
+import {
+  t
+} from '../languages/index.js';
+
 export default {
 
   name: Events.GuildMemberAdd,
@@ -39,7 +43,10 @@ export default {
         user
       } = member;
 
+      // =====================================
       // 🔥 CONFIG
+      // =====================================
+
       const config =
         await getGuildConfig(
           member.client.db,
@@ -83,21 +90,27 @@ export default {
 
         }
 
-        // 👉 enviar embed
+        // =====================================
+        // 📩 ENVIAR MENSAJE
+        // =====================================
+
         if (channel) {
 
           try {
 
             let message =
+
               config.welcome?.message ||
 
               '🎉 Bienvenido {user} a {server}';
 
             message = message
+
               .replace(
                 '{user}',
                 `${user}`
               )
+
               .replace(
                 '{server}',
                 guild.name
@@ -109,21 +122,34 @@ export default {
                 0x00ffcc,
 
               title:
-                `👋 Bienvenido a ${guild.name}`,
+
+                `${t(
+                  config.language,
+                  'welcome.title'
+                )} ${guild.name}`,
 
               description:
                 message,
 
               thumbnail: {
+
                 url:
                   user.displayAvatarURL({
                     dynamic: true
                   })
+
               },
 
               footer: {
+
                 text:
-                  `Ahora somos ${guild.memberCount} miembros`
+
+                  config.language === 'en'
+
+                    ? `We are now ${guild.memberCount} members`
+
+                    : `Ahora somos ${guild.memberCount} miembros`
+
               },
 
               timestamp:
@@ -165,7 +191,11 @@ export default {
           data: {
 
             description:
-              `${user.tag} joined the server`,
+
+              t(
+                config.language,
+                'logs.member_join'
+              ),
 
             userId:
               user.id,
@@ -173,8 +203,14 @@ export default {
             fields: [
 
               {
+
                 name:
-                  '👤 Member',
+
+                  config.language === 'en'
+
+                    ? '👤 Member'
+
+                    : '👤 Miembro',
 
                 value:
                   `${user.tag} (${user.id})`,
@@ -183,8 +219,14 @@ export default {
               },
 
               {
+
                 name:
-                  '👥 Member Count',
+
+                  config.language === 'en'
+
+                    ? '👥 Member Count'
+
+                    : '👥 Miembros',
 
                 value:
                   guild.memberCount.toString(),
@@ -193,8 +235,14 @@ export default {
               },
 
               {
+
                 name:
-                  '📅 Account Created',
+
+                  config.language === 'en'
+
+                    ? '📅 Account Created'
+
+                    : '📅 Cuenta creada',
 
                 value:
                   `<t:${Math.floor(
