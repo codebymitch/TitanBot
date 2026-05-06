@@ -26,14 +26,14 @@ export default {
           channel = guild.channels.cache.get(config.welcome_channel);
         }
 
-        // 👉 fallback
+        // 👉 fallback si no hay canal
         if (!channel) {
           channel = guild.systemChannel || guild.channels.cache
             .filter(c => c.isTextBased())
             .first();
         }
 
-        // 👉 MENSAJE CUSTOM
+        // 👉 MENSAJE + EMBED
         if (channel) {
           try {
 
@@ -43,7 +43,20 @@ export default {
               .replace('{user}', `${user}`)
               .replace('{server}', guild.name);
 
-            await channel.send(message);
+            const embed = {
+              color: 0x00ffcc,
+              title: `👋 Bienvenido a ${guild.name}`,
+              description: message,
+              thumbnail: {
+                url: user.displayAvatarURL({ dynamic: true })
+              },
+              footer: {
+                text: `Ahora somos ${guild.memberCount} miembros`
+              },
+              timestamp: new Date()
+            };
+
+            await channel.send({ embeds: [embed] });
 
           } catch (err) {
             console.log("Error enviando welcome:", err);
