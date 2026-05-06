@@ -15,6 +15,9 @@ import { loadCommands, registerCommands as registerSlashCommands } from './handl
 // 🔥 DASHBOARD
 import { setupDashboard } from './dashboard/index.js';
 
+// 🔥 👇 IMPORTAMOS EL LOADER BUENO
+import loadEvents from './handlers/events.js';
+
 class TitanBot extends Client {
   constructor() {
     super({
@@ -58,8 +61,12 @@ class TitanBot extends Client {
       startupLog('Loading commands...');
       await loadCommands(this);
 
-      startupLog('Loading handlers...');
-      await this.loadHandlers();
+      // ❌ QUITAMOS ESTO (loader viejo)
+      // await this.loadHandlers();
+
+      // 🔥 USAMOS EL NUEVO (IMPORTANTE)
+      console.log('🔥 Cargando eventos (nuevo loader)...');
+      await loadEvents(this);
 
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
@@ -80,15 +87,12 @@ class TitanBot extends Client {
   startWebServer() {
     const app = express();
 
-    // 🔥 DASHBOARD (PRIMERO SIEMPRE)
     setupDashboard(app, this);
 
-    // 🔥 ROOT
     app.get('/', (req, res) => {
       res.json({ message: 'TitanBot Online' });
     });
 
-    // 🔥 FIX EXPRESS 5 (ANTES ERA app.get('*'))
     app.use((req, res) => {
       res.status(404).send(`Ruta no encontrada: ${req.url}`);
     });
@@ -124,18 +128,6 @@ class TitanBot extends Client {
       }
     } catch (error) {
       logger.error('Error updating counters:', error);
-    }
-  }
-
-  async loadHandlers() {
-    const handlers = [
-      { path: 'events' },
-      { path: 'interactions' }
-    ];
-
-    for (const handler of handlers) {
-      const module = await import(`./handlers/${handler.path}.js`);
-      await module.default(this);
     }
   }
 
