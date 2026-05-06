@@ -1,6 +1,6 @@
 import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname } from 'path';
 import { logger } from '../utils/logger.js';
 
@@ -11,7 +11,11 @@ export default async function loadEvents(client) {
 
   const eventsPath = join(__dirname, '../events');
 
+  console.log('🔥 LOADER NUEVO FUNCIONANDO');
+
   async function load(dir) {
+
+    console.log('📂 Leyendo carpeta:', dir);
 
     const files = await readdir(dir);
 
@@ -20,43 +24,45 @@ export default async function loadEvents(client) {
       const filePath = join(dir, file);
       const fileStat = await stat(filePath);
 
+      // 🔥 SI ES CARPETA → ENTRA (IMPORTANTE PARA /logs)
       if (fileStat.isDirectory()) {
-
-        // 🔥 entra en /logs
         await load(filePath);
+        continue;
+      }
 
-      } else if (file.endsWith('.js')) {
+      // 🔥 SOLO ARCHIVOS JS
+      if (!file.endsWith('.js')) continue;
 
-        try {
+      try {
 
-          const { default: event } =
-            await import(`file://${filePath}`);
+        // 🔥 FIX IMPORT (RAILWAY SAFE)
+        const fileUrl = pathToFileURL(filePath).href;
 
-          if (!event?.name || typeof event.execute !== 'function') {
-            logger.warn(`Event ${file} inválido`);
-            continue;
-          }
+        const { default: event } = await import(fileUrl);
 
-          const safeExecute = async (...args) => {
-            try {
-              await event.execute(...args);
-            } catch (error) {
-              logger.error(`Error en ${event.name}:`, error);
-            }
-          };
-
-          if (event.once) {
-            client.once(event.name, safeExecute);
-          } else {
-            client.on(event.name, safeExecute);
-          }
-
-          console.log(`✅ Loaded event: ${event.name}`);
-
-        } catch (err) {
-          logger.error(`Error cargando ${file}:`, err);
+        if (!event?.name || typeof event.execute !== 'function') {
+          logger.warn(`⚠️ Evento inválido: ${file}`);
+          continue;
         }
 
+        const safeExecute = async (...args) => {
+          try {
+            await event.execute(...args);
+          } catch (error) {
+            logger.error(`❌ Error en ${event.name}:`, error);
+          }
+        };
+
+        if (event.once) {
+          client.once(event.name, safeExecute);
+        } else {
+          client.on(event.name, safeExecute);
+        }
+
+        console.log(`✅ Loaded event: ${event.name} (${file})`);
+
+      } catch (err) {
+        logger.error(`❌ Error cargando ${file}:`, err);
       }
 
     }
