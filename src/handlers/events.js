@@ -35,7 +35,7 @@ export default async function loadEvents(client) {
 
       try {
 
-        // 🔥 FIX IMPORT (RAILWAY SAFE)
+        // 🔥 IMPORT COMPATIBLE CON RAILWAY
         const fileUrl = pathToFileURL(filePath).href;
 
         const { default: event } = await import(fileUrl);
@@ -45,9 +45,10 @@ export default async function loadEvents(client) {
           continue;
         }
 
+        // 🔥 FIX IMPORTANTE (PASAR CLIENT)
         const safeExecute = async (...args) => {
           try {
-            await event.execute(...args);
+            await event.execute(...args, client);
           } catch (error) {
             logger.error(`❌ Error en ${event.name}:`, error);
           }
