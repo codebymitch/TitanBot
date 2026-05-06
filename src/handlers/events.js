@@ -1,4 +1,5 @@
 import { readdir } from 'fs/promises';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname } from 'path';
@@ -14,6 +15,12 @@ export default async function loadEvents(client) {
   console.log('🔥 LOADER NUEVO FUNCIONANDO');
 
   async function loadFiles(dir) {
+
+    if (!existsSync(dir)) {
+      console.log(`⚠️ Carpeta no existe: ${dir}`);
+      return;
+    }
+
     const files = await readdir(dir);
 
     for (const file of files) {
@@ -57,7 +64,7 @@ export default async function loadEvents(client) {
   console.log('📂 Cargando eventos principales...');
   await loadFiles(basePath);
 
-  // 🔥 logs (forzado)
+  // 🔥 logs
   const logsPath = join(basePath, 'logs');
   console.log('📂 Cargando eventos de logs...');
   await loadFiles(logsPath);
