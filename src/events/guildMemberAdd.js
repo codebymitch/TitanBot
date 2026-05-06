@@ -21,17 +21,13 @@ export default {
     try {
       const { guild, user } = member;
 
-      // =====================================
-      // 🔥 CONFIG
-      // =====================================
-
       const config = await getGuildConfig(
         member.client.db,
         guild.id
       );
 
       // =====================================
-      // 👋 WELCOME SYSTEM
+      // 👋 WELCOME
       // =====================================
 
       if (config.welcome?.enabled) {
@@ -80,36 +76,51 @@ export default {
             await channel.send({
               embeds: [embed]
             });
+
           } catch (err) {
-            console.log('Error enviando welcome:', err);
+            console.log('Error welcome:', err);
           }
         }
       }
 
       // =====================================
-      // 📊 LOG MEMBER JOIN (FIX FINAL)
+      // 📊 LOGS (DEBUG + FIX)
       // =====================================
 
       try {
+
+        console.log("🔥 LOG CONFIG:", config.logs);
+
         if (!config.logs?.enabled) return;
 
         let logChannel = null;
 
-        // 🔥 SIEMPRE INTENTA CATEGORÍA PRIMERO
-        if (config.logs.categories?.member) {
+        // 🔥 CATEGORY
+        if (config.logs?.categories?.member) {
+
+          console.log("📂 CATEGORY CHANNEL:", config.logs.categories.member);
+
           logChannel = guild.channels.cache.get(
             config.logs.categories.member
           );
+
         }
 
-        // 🔥 SI NO HAY → USA GLOBAL
-        if (!logChannel && config.logs.channel) {
+        // 🔥 FALLBACK
+        if (!logChannel && config.logs?.channel) {
+
+          console.log("📂 FALLBACK CHANNEL:", config.logs.channel);
+
           logChannel = guild.channels.cache.get(
             config.logs.channel
           );
+
         }
 
-        if (!logChannel) return;
+        if (!logChannel) {
+          console.log("❌ NO LOG CHANNEL FOUND");
+          return;
+        }
 
         const embed = {
           color: 0x00ffcc,
@@ -143,7 +154,7 @@ export default {
         });
 
       } catch (error) {
-        logger.debug('Error logging member join:', error);
+        logger.debug('Error logging:', error);
       }
 
       // =====================================
@@ -172,11 +183,11 @@ export default {
         }
 
       } catch (error) {
-        logger.debug('Error updating counters:', error);
+        logger.debug('Error counters:', error);
       }
 
       // =====================================
-      // 🎂 RESTAURAR CUMPLEAÑOS
+      // 🎂 BIRTHDAY
       // =====================================
 
       try {
@@ -187,6 +198,7 @@ export default {
           (await member.client.db.get(backupKey)) || {};
 
         if (backup[user.id]) {
+
           const { month, day } =
             backup[user.id];
 
@@ -204,17 +216,15 @@ export default {
             backupKey,
             backup
           );
+
         }
 
       } catch (error) {
-        logger.debug('Error restoring birthday:', error);
+        logger.debug('Error birthday:', error);
       }
 
     } catch (error) {
-      logger.error(
-        'Error in guildMemberAdd:',
-        error
-      );
+      logger.error('Error guildMemberAdd:', error);
     }
   }
 };
