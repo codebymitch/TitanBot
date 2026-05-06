@@ -1,3 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+
+  font-family: 'Inter', sans-serif;
+
+  background:
+    linear-gradient(
+      135deg,
+      #06070c,
+      #0b1020,
+      #050505
+    );
+
+  color: white;
+
+  min-height: 100vh;
+
+  overflow-x: hidden;
+}
+
+/* ===================================== */
+/* 🌌 BACKGROUND GLOW */
+/* ===================================== */
+
+body::before {
+
+  content: '';
+
+  position: fixed;
+
+  width: 600px;
+  height: 600px;
+
+  background:
+    rgba(0,255,204,0.08);
+
+  filter:
+    blur(120px);
+
+  top: -200px;
+  right: -200px;
+
+  z-index: -1;
+}
+
+body::after {
+
+  content: '';
+
+  position: fixed;
+
+  width: 500px;
+  height: 500px;
+
+  background:
+    rgba(88,101,242,0.09);
+
+  filter:
+    blur(120px);
+
+  bottom: -200px;
+  left: -200px;
+
+  z-index: -1;
+}
+
+/* ===================================== */
+/* 🚀 SIDEBAR */
+/* ===================================== */
+
+.sidebar {
+
+  position: fixed;
+
+  top: 0;
+  left: 0;
+
+  width: 250px;
+  height: 100vh;
+
+  padding: 30px 20px;
+
+  backdrop-filter:
+    blur(20px);
+
+  background:
+    rgba(15,15,15,0.45);
+
+  border-right:
+    1px solid rgba(255,255,255,0.06);
+
+  box-shadow:
+    0 0 35px rgba(0,0,0,0.35);
+}
+
+.sidebar h1 {
+
+  color: #00ffcc;
+
+  font-size: 34px;
+
+  margin-bottom: 40px;
+
+  font-weight: 700;
+}
+
+.sidebar a {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  color: rgba(255,255,255,0.78);
+
+  text-decoration: none;
+
+  padding: 14px 18px;
+
+  border-radius: 14px;
+
+  margin-bottom: 10px;
+
+  transition: 0.25s;
+}
+
+.sidebar a:hover {
+
+  background:
+    rgba(255,255,255,0.06);
+
+  color: #00ffcc;
+
+  transform:
+    translateX(4px);
+}
+
+/* ===================================== */
+/* 🚀 MAIN */
+/* ===================================== */
+
+.main {
+
+  margin-left: 270px;
+
+  padding: 35px;
+
+  animation:
+    fadeIn 0.5s ease;
+}
+
+/* ===================================== */
+/* 📊 STATS */
+/* ===================================== */
+
 .stats-grid {
 
   display: grid;
@@ -12,78 +176,265 @@
 
 .stat-card {
 
-  background: #151515;
+  position: relative;
+
+  overflow: hidden;
+
+  backdrop-filter:
+    blur(18px);
+
+  background:
+    rgba(255,255,255,0.05);
 
   border:
-    1px solid #2b2b2b;
+    1px solid rgba(255,255,255,0.06);
 
-  border-radius: 18px;
+  border-radius: 24px;
 
-  padding: 25px;
+  padding: 28px;
 
-  transition: 0.2s;
+  transition: 0.25s;
+
+  box-shadow:
+    0 8px 35px rgba(0,0,0,0.35);
+}
+
+.stat-card::before {
+
+  content: '';
+
+  position: absolute;
+
+  width: 120px;
+  height: 120px;
+
+  background:
+    rgba(0,255,204,0.12);
+
+  border-radius: 50%;
+
+  top: -40px;
+  right: -40px;
+
+  filter:
+    blur(25px);
 }
 
 .stat-card:hover {
 
   transform:
-    translateY(-3px);
+    translateY(-6px);
 
   border-color:
-    #00ffcc;
+    rgba(0,255,204,0.45);
+
+  box-shadow:
+    0 12px 40px rgba(0,255,204,0.12);
 }
 
 .stat-card h3 {
 
-  margin: 0;
+  font-size: 16px;
 
-  font-size: 18px;
+  color:
+    rgba(255,255,255,0.7);
 
-  color: #bdbdbd;
+  margin-bottom: 18px;
+
+  font-weight: 500;
 }
 
 .stat-card p {
 
-  margin-top: 15px;
+  font-size: 42px;
 
-  font-size: 34px;
-
-  font-weight: bold;
+  font-weight: 700;
 
   color: #00ffcc;
 }
 
+/* ===================================== */
+/* 💎 CARDS */
+/* ===================================== */
+
 .card {
 
+  backdrop-filter:
+    blur(20px);
+
+  background:
+    rgba(255,255,255,0.04);
+
+  border:
+    1px solid rgba(255,255,255,0.06);
+
+  border-radius: 26px;
+
+  padding: 30px;
+
+  margin-bottom: 25px;
+
   box-shadow:
-    0 0 25px rgba(0,0,0,0.35);
+    0 10px 40px rgba(0,0,0,0.35);
+
+  transition: 0.25s;
 }
 
-.sidebar {
+.card:hover {
+
+  border-color:
+    rgba(0,255,204,0.22);
+}
+
+.card h1,
+.card h2 {
+
+  margin-bottom: 20px;
+}
+
+/* ===================================== */
+/* 👤 PROFILE */
+/* ===================================== */
+
+.card img {
+
+  border-radius: 50%;
+
+  border:
+    3px solid rgba(255,255,255,0.08);
 
   box-shadow:
-    0 0 30px rgba(0,0,0,0.45);
+    0 0 30px rgba(0,255,204,0.15);
+
+  margin-bottom: 18px;
 }
 
-.main {
+/* ===================================== */
+/* 🧠 INPUTS */
+/* ===================================== */
 
-  animation:
-    fadeIn 0.4s ease;
+input,
+select {
+
+  background:
+    rgba(255,255,255,0.04);
+
+  color: white;
+
+  border:
+    1px solid rgba(255,255,255,0.08);
+
+  padding: 13px 16px;
+
+  border-radius: 14px;
+
+  outline: none;
+
+  transition: 0.2s;
 }
+
+input:focus,
+select:focus {
+
+  border-color:
+    #00ffcc;
+
+  box-shadow:
+    0 0 15px rgba(0,255,204,0.18);
+}
+
+/* ===================================== */
+/* 🚀 BUTTONS */
+/* ===================================== */
+
+button {
+
+  background:
+    linear-gradient(
+      135deg,
+      #00ffcc,
+      #00d5ff
+    );
+
+  color: black;
+
+  border: none;
+
+  padding: 13px 22px;
+
+  border-radius: 14px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.25s;
+
+  margin-left: 8px;
+}
+
+button:hover {
+
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 10px 25px rgba(0,255,204,0.28);
+}
+
+/* ===================================== */
+/* ✨ LINKS */
+/* ===================================== */
+
+a {
+
+  color: #00ffcc;
+}
+
+/* ===================================== */
+/* 🚀 ANIMATIONS */
+/* ===================================== */
 
 @keyframes fadeIn {
 
   from {
 
     opacity: 0;
-    transform: translateY(10px);
-
+    transform: translateY(12px);
   }
 
   to {
 
     opacity: 1;
     transform: translateY(0);
+  }
+}
 
+/* ===================================== */
+/* 📱 MOBILE */
+/* ===================================== */
+
+@media(max-width: 900px) {
+
+  .sidebar {
+
+    width: 100%;
+
+    height: auto;
+
+    position: relative;
+  }
+
+  .main {
+
+    margin-left: 0;
+
+    padding: 20px;
+  }
+
+  .stats-grid {
+
+    grid-template-columns:
+      1fr;
   }
 }
