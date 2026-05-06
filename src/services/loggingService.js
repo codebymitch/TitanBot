@@ -139,6 +139,7 @@ export async function logEvent({
   data,
   attachments = []
 }) {
+
   try {
 
     const guild = client.guilds.cache.get(guildId);
@@ -147,7 +148,7 @@ export async function logEvent({
 
     const config = await getGuildConfig(client.db, guildId);
 
-    // 🔥 LOGS DESACTIVADOS
+    // 🔥 LOGS APAGADOS
     if (!config.logging_enabled) return;
 
     // 🔥 CANAL LOGS
@@ -161,7 +162,11 @@ export async function logEvent({
       return;
     }
 
-    const embed = createLogEmbed(guild, eventType, data);
+    const embed = createLogEmbed(
+      guild,
+      eventType,
+      data
+    );
 
     const messageOptions = {
       embeds: [embed]
@@ -174,7 +179,9 @@ export async function logEvent({
     await channel.send(messageOptions);
 
   } catch (error) {
-    logger.error(`Error in logEvent:`, error);
+
+    logger.error('Error in logEvent:', error);
+
   }
 }
 
@@ -182,20 +189,27 @@ function createLogEmbed(guild, eventType, data) {
 
   const embed = new EmbedBuilder();
 
-  const color = EVENT_COLORS[eventType] || 0x0099ff;
-  const icon = EVENT_ICONS[eventType] || '📌';
+  const color =
+    EVENT_COLORS[eventType] || 0x0099ff;
+
+  const icon =
+    EVENT_ICONS[eventType] || '📌';
 
   embed.setColor(color);
 
   embed.setTitle(
-    data.title || `${icon} ${formatEventType(eventType)}`
+    data.title ||
+    `${icon} ${formatEventType(eventType)}`
   );
 
   if (data.description) {
     embed.setDescription(data.description);
   }
 
-  if (data.fields && Array.isArray(data.fields)) {
+  if (
+    data.fields &&
+    Array.isArray(data.fields)
+  ) {
     embed.addFields(data.fields);
   }
 
@@ -219,6 +233,26 @@ function formatEventType(eventType) {
         part.slice(1)
     )
     .join(' ');
+}
+
+// 🔥 COMPATIBILIDAD
+export async function getLoggingStatus(client, guildId) {
+
+  const config = await getGuildConfig(
+    client.db,
+    guildId
+  );
+
+  return {
+    enabled:
+      config.logging_enabled || false,
+
+    channelId:
+      config.log_channel || null,
+
+    allEventTypes:
+      EVENT_TYPES
+  };
 }
 
 export {
