@@ -212,6 +212,32 @@ async function handleModCommand(message, client) {
         }
       }
 
+      case 'roleadd': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>roleadd`.')] });
+        if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        const role = message.mentions.roles.first();
+        if (!target || !role) return message.reply('Usage: `>roleadd @user @role`');
+        if (role.managed) return message.reply({ embeds: [modEmbed(0xED4245, `❌ **${role.name}** is a managed role and cannot be assigned manually.`)] });
+        if (role.position >= guild.members.me.roles.highest.position) return message.reply({ embeds: [modEmbed(0xED4245, `❌ **${role.name}** is at or above my highest role.`)] });
+        if (target.roles.cache.has(role.id)) return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${target.user.tag}** already has **${role.name}**.`)] });
+        await target.roles.add(role, `>roleadd by ${message.author.tag}`);
+        return message.reply({ embeds: [modEmbed(0x57F287, `➕ Added **${role.name}** to **${target.user.tag}**.`)] });
+      }
+
+      case 'roleremove': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>roleremove`.')] });
+        if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        const role = message.mentions.roles.first();
+        if (!target || !role) return message.reply('Usage: `>roleremove @user @role`');
+        if (role.managed) return message.reply({ embeds: [modEmbed(0xED4245, `❌ **${role.name}** is a managed role and cannot be removed manually.`)] });
+        if (role.position >= guild.members.me.roles.highest.position) return message.reply({ embeds: [modEmbed(0xED4245, `❌ **${role.name}** is at or above my highest role.`)] });
+        if (!target.roles.cache.has(role.id)) return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${target.user.tag}** does not have **${role.name}**.`)] });
+        await target.roles.remove(role, `>roleremove by ${message.author.tag}`);
+        return message.reply({ embeds: [modEmbed(0xFEE75C, `➖ Removed **${role.name}** from **${target.user.tag}**.`)] });
+      }
+
       case 'help': {
         const embed = new EmbedBuilder()
           .setColor(0x9B59B6)
@@ -221,8 +247,9 @@ async function handleModCommand(message, client) {
             { name: 'Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
             { name: 'Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
             { name: 'Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
+            { name: '🔑 Owner Only', value: '`>roleadd @user @role`\n`>roleremove @user @role`', inline: true },
           )
-          .setFooter({ text: 'Requires appropriate Discord permissions' });
+          .setFooter({ text: 'Requires appropriate Discord permissions • 🔑 = Bot owner only' });
         return message.reply({ embeds: [embed] });
       }
 

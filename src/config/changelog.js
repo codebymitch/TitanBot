@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '2.8.2',
+        date: '2026-05-07',
+        entries: [
+            { type: 'new', text: 'Added `/managerole add` and `/managerole remove` — assign or strip any role from any member (bot owner only)' },
+        ],
+    },
+    {
         version: '2.8.1',
         date: '2026-05-07',
         entries: [
