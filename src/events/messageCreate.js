@@ -14,12 +14,18 @@ import { AntiNsfwService } from '../services/antiNsfwService.js';
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
 const PREFIX = '?';
+const MOD_PREFIX = '>';
 
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
       if (message.author.bot || !message.guild) return;
+
+      if (message.content.startsWith(MOD_PREFIX)) {
+        await handleModCommand(message, client);
+        return;
+      }
 
       if (message.content.startsWith(PREFIX)) {
         await handlePrefixCommand(message, client);
@@ -43,6 +49,187 @@ export default {
 
 
 
+
+function parseDuration(str) {
+  const match = str?.match(/^(\d+)(s|m|h|d)$/i);
+  if (!match) return null;
+  const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
+  const ms = parseInt(match[1]) * multipliers[match[2].toLowerCase()];
+  return ms > 28 * 86400000 ? null : ms;
+}
+
+function modEmbed(color, description) {
+  return new EmbedBuilder().setColor(color).setDescription(description).setTimestamp();
+}
+
+async function handleModCommand(message, client) {
+  const args = message.content.slice(MOD_PREFIX.length).trim().split(/\s+/);
+  const command = args.shift().toLowerCase();
+  if (!command) return;
+
+  const member = message.member;
+  const guild = message.guild;
+  const perms = member.permissions;
+
+  const NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ You do not have permission to use this command.')] });
+  const BOT_NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ I am missing the required permissions.')] });
+
+  try {
+    switch (command) {
+
+      case 'ban': {
+        if (!perms.has('BanMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>ban @user [reason]`');
+        if (!target.bannable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot ban that user.')] });
+        const reason = args.join(' ') || 'No reason provided';
+        await target.ban({ reason: `${message.author.tag}: ${reason}` });
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.user.tag}** has been banned.\n📝 Reason: ${reason}`)] });
+      }
+
+      case 'kick': {
+        if (!perms.has('KickMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('KickMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>kick @user [reason]`');
+        if (!target.kickable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot kick that user.')] });
+        const reason = args.join(' ') || 'No reason provided';
+        await target.kick(`${message.author.tag}: ${reason}`);
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.user.tag}** has been kicked.\n📝 Reason: ${reason}`)] });
+      }
+
+      case 'warn': {
+        if (!perms.has('ModerateMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>warn @user [reason]`');
+        const reason = args.join(' ') || 'No reason provided';
+        try {
+          await target.send({ embeds: [modEmbed(0xFEE75C, `⚠️ You have been warned in **${guild.name}**.\n📝 Reason: ${reason}`)] });
+        } catch {}
+        return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${target.user.tag}** has been warned.\n📝 Reason: ${reason}`)] });
+      }
+
+      case 'timeout':
+      case 'mute': {
+        if (!perms.has('ModerateMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ModerateMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>timeout @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `1d`');
+        const durationStr = args.shift();
+        const ms = parseDuration(durationStr);
+        if (!ms) return message.reply('Invalid duration. Use: `10s`, `5m`, `2h`, `1d` (max 28 days)');
+        const reason = args.join(' ') || 'No reason provided';
+        await target.timeout(ms, `${message.author.tag}: ${reason}`);
+        return message.reply({ embeds: [modEmbed(0xFEE75C, `🔇 **${target.user.tag}** timed out for **${durationStr}**.\n📝 Reason: ${reason}`)] });
+      }
+
+      case 'untimeout':
+      case 'unmute': {
+        if (!perms.has('ModerateMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ModerateMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>untimeout @user`');
+        await target.timeout(null);
+        return message.reply({ embeds: [modEmbed(0x57F287, `🔊 **${target.user.tag}**'s timeout has been removed.`)] });
+      }
+
+      case 'unban': {
+        if (!perms.has('BanMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
+        const userId = args[0];
+        if (!userId) return message.reply('Usage: `>unban <userID> [reason]`');
+        const reason = args.slice(1).join(' ') || 'No reason provided';
+        await guild.members.unban(userId, `${message.author.tag}: ${reason}`).catch(() => null);
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ User \`${userId}\` has been unbanned.`)] });
+      }
+
+      case 'purge':
+      case 'clear': {
+        if (!perms.has('ManageMessages')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageMessages')) return BOT_NO_PERM();
+        const amount = parseInt(args[0]);
+        if (isNaN(amount) || amount < 1 || amount > 100) return message.reply('Usage: `>purge <1–100>`');
+        await message.delete().catch(() => {});
+        const deleted = await message.channel.bulkDelete(amount, true).catch(() => null);
+        const count = deleted?.size ?? 0;
+        const confirm = await message.channel.send({ embeds: [modEmbed(0x57F287, `🗑️ Deleted **${count}** message(s).`)] });
+        setTimeout(() => confirm.delete().catch(() => {}), 4000);
+        return;
+      }
+
+      case 'slowmode': {
+        if (!perms.has('ManageChannels')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageChannels')) return BOT_NO_PERM();
+        const seconds = parseInt(args[0]);
+        if (isNaN(seconds) || seconds < 0 || seconds > 21600) return message.reply('Usage: `>slowmode <0–21600>` (seconds, 0 = off)');
+        await message.channel.setRateLimitPerUser(seconds);
+        const label = seconds === 0 ? 'disabled' : `set to **${seconds}s**`;
+        return message.reply({ embeds: [modEmbed(0x57F287, `🐌 Slowmode ${label}.`)] });
+      }
+
+      case 'lock': {
+        if (!perms.has('ManageChannels')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageChannels')) return BOT_NO_PERM();
+        const reason = args.join(' ') || 'No reason provided';
+        await message.channel.permissionOverwrites.edit(guild.roles.everyone, { SendMessages: false });
+        return message.reply({ embeds: [modEmbed(0xED4245, `🔒 Channel locked.\n📝 Reason: ${reason}`)] });
+      }
+
+      case 'unlock': {
+        if (!perms.has('ManageChannels')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageChannels')) return BOT_NO_PERM();
+        await message.channel.permissionOverwrites.edit(guild.roles.everyone, { SendMessages: null });
+        return message.reply({ embeds: [modEmbed(0x57F287, '🔓 Channel unlocked.')] });
+      }
+
+      case 'nick': {
+        if (!perms.has('ManageNicknames')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageNicknames')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>nick @user <new nickname>` or `>nick @user` to reset');
+        const nick = args.join(' ') || null;
+        await target.setNickname(nick);
+        return message.reply({ embeds: [modEmbed(0x57F287, nick ? `✅ Nickname set to **${nick}**.` : `✅ Nickname reset for **${target.user.tag}**.`)] });
+      }
+
+      case 'role': {
+        if (!perms.has('ManageRoles')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        const role = message.mentions.roles.first();
+        if (!target || !role) return message.reply('Usage: `>role @user @role`');
+        if (target.roles.cache.has(role.id)) {
+          await target.roles.remove(role);
+          return message.reply({ embeds: [modEmbed(0xFEE75C, `➖ Removed **${role.name}** from **${target.user.tag}**.`)] });
+        } else {
+          await target.roles.add(role);
+          return message.reply({ embeds: [modEmbed(0x57F287, `➕ Added **${role.name}** to **${target.user.tag}**.`)] });
+        }
+      }
+
+      case 'help': {
+        const embed = new EmbedBuilder()
+          .setColor(0x9B59B6)
+          .setTitle('🛡️ Mod Prefix Commands (`>`)')
+          .addFields(
+            { name: 'Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>warn @user [reason]`\n`>unban <userID> [reason]`', inline: true },
+            { name: 'Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
+            { name: 'Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
+            { name: 'Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
+          )
+          .setFooter({ text: 'Requires appropriate Discord permissions' });
+        return message.reply({ embeds: [embed] });
+      }
+
+      default:
+        break;
+    }
+  } catch (err) {
+    logger.error(`Mod prefix command error (${command}):`, err);
+    message.reply({ embeds: [modEmbed(0xED4245, `❌ Something went wrong: ${err.message}`)] }).catch(() => {});
+  }
+}
 
 async function handlePrefixCommand(message, client) {
   const args = message.content.slice(PREFIX.length).trim().split(/\s+/);

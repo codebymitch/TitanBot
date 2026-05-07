@@ -1,5 +1,17 @@
 export const changelog = [
     {
+        version: '2.8.1',
+        date: '2026-05-07',
+        entries: [
+            { type: 'new', text: 'Added `>` mod prefix commands — use moderation without slash commands' },
+            { type: 'new', text: '`>ban`, `>kick`, `>warn`, `>unban` — member management' },
+            { type: 'new', text: '`>timeout <dur>`, `>untimeout` — mute/unmute (e.g. `>timeout @user 10m spam`)' },
+            { type: 'new', text: '`>purge <1-100>`, `>slowmode`, `>lock`, `>unlock` — channel control' },
+            { type: 'new', text: '`>nick`, `>role` — nickname and role management' },
+            { type: 'new', text: '`>help` — shows all available mod prefix commands' },
+        ],
+    },
+    {
         version: '2.8.0',
         date: '2026-05-06',
         entries: [
