@@ -192,7 +192,8 @@ async function handleModCommand(message, client) {
         if (!guild.members.me.permissions.has('ManageNicknames')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>nick @user <new nickname>` or `>nick @user` to reset');
-        const nick = args.join(' ') || null;
+        args.shift(); // remove the @mention token from args
+        const nick = args.join(' ').trim() || null;
         await target.setNickname(nick);
         return message.reply({ embeds: [modEmbed(0x57F287, nick ? `✅ Nickname set to **${nick}**.` : `✅ Nickname reset for **${target.user.tag}**.`)] });
       }
