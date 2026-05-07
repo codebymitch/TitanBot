@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WK Dashboard</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h1>WK'</h1>
+  <a href="/dashboard">🏠 Dashboard</a>
+  <a href="/logout">🚪 Logout</a>
+</div>
+
+<div class="main">
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <h3>🌎 Servers</h3>
+      <p>{{servers}}</p>
+    </div>
+
+    <div class="stat-card">
+      <h3>👥 Users</h3>
+      <p>{{users}}</p>
+    </div>
+
+    <div class="stat-card">
+      <h3>⚡ Ping</h3>
+      <p>{{ping}}ms</p>
+    </div>
+
+    <div class="stat-card">
+      <h3>🤖 Commands</h3>
+      <p>{{commands}}</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <img src="{{avatar}}" width="90" style="border-radius:50%;">
+    <h2>{{username}}</h2>
+  </div>
+
+  <div class="card">
+    <h2>🌎 Servidores</h2>
+    {{guilds}}
+  </div>
+
+</div>
+
+</body>
+</html>

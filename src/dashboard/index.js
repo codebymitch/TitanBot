@@ -338,420 +338,264 @@ export function setupDashboard(app, client) {
   });
 
   // =====================================
-  // 🧠 SERVER PANEL
-  // =====================================
+// 🧠 SERVER PANEL (PRO VERSION)
+// =====================================
 
-  app.get('/server/:id', async (req, res) => {
+app.get('/server/:id', async (req, res) => {
 
-    if (!req.session.user) {
-      return res.redirect('/login');
-    }
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
 
-    const serverId =
-      req.params.id;
+  const serverId = req.params.id;
 
-    const {
-      getGuildConfig
-    } =
-      await import(
-        '../services/guildConfigService.js'
-      );
+  const { getGuildConfig } =
+    await import('../services/guildConfigService.js');
 
-    const config =
-      await getGuildConfig(
-        client.db,
-        serverId
-      );
+  const config = await getGuildConfig(
+    client.db,
+    serverId
+  );
 
-    const guild =
-      client.guilds.cache.get(
-        serverId
-      );
+  const guild = client.guilds.cache.get(serverId);
 
-    const channels = guild.channels.cache
-  .filter(c => c.type === 0)
-  .map(c => `
+  if (!guild) {
+    return res.send('Servidor no encontrado');
+  }
 
-    <option
-      value="${c.id}"
+  const channels = guild.channels.cache
+    .filter(c => c.type === 0)
+    .map(c => `
+      <option value="${c.id}"
+        ${config.logs?.channel === c.id ? 'selected' : ''}>
+        #${c.name}
+      </option>
+    `)
+    .join('');
+
+  res.send(`
+
+<html>
+<head>
+
+<link rel="stylesheet" href="/assets/style.css">
+
+<style>
+
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0f1117;
+  color:white;
+  display:flex;
+}
+
+.sidebar {
+  width:230px;
+  background:#151821;
+  height:100vh;
+  padding:20px;
+}
+
+.sidebar h1 {
+  color:#00ffcc;
+}
+
+.sidebar a {
+  display:block;
+  margin-top:15px;
+  color:#aaa;
+  text-decoration:none;
+}
+
+.sidebar a:hover {
+  color:#00ffcc;
+}
+
+.main {
+  flex:1;
+  padding:30px;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+  gap:20px;
+  margin-top:20px;
+}
+
+.card {
+  background:#1a1d29;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 10px #000;
+  transition:0.2s;
+}
+
+.card:hover {
+  transform:translateY(-3px);
+}
+
+button {
+  background:#00ffcc;
+  border:none;
+  padding:8px 15px;
+  border-radius:5px;
+  cursor:pointer;
+  margin-top:5px;
+}
+
+select, input {
+  width:100%;
+  padding:6px;
+  margin-top:5px;
+  background:#0f1117;
+  color:white;
+  border:1px solid #333;
+  border-radius:5px;
+}
+
+.badge {
+  padding:3px 8px;
+  border-radius:5px;
+  font-size:12px;
+}
+
+.on { background:#22c55e; }
+.off { background:#ef4444; }
+
+</style>
+
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h1>WK'</h1>
+
+  <a href="/dashboard">🏠 Dashboard</a>
+  <a href="/logout">🚪 Logout</a>
+</div>
+
+<div class="main">
+
+  <h1>${guild.name}</h1>
+
+  <div class="grid">
+
+    <!-- LANGUAGE -->
+    <div class="card">
+      <h2>🌎 Language</h2>
+
+      <span class="badge">${config.language}</span>
+
+      <form method="POST" action="/server/${serverId}/language">
+        <select name="language">
+          <option value="es" ${config.language === 'es' ? 'selected' : ''}>Español</option>
+          <option value="en" ${config.language === 'en' ? 'selected' : ''}>English</option>
+        </select>
+        <button>Guardar</button>
+      </form>
+    </div>
+
+    <!-- WELCOME -->
+    <div class="card">
+      <h2>👋 Welcome</h2>
+
+      <span class="badge ${config.welcome?.enabled ? 'on' : 'off'}">
+        ${config.welcome?.enabled ? 'ON' : 'OFF'}
+      </span>
+
+      <form method="POST" action="/server/${serverId}/welcome">
+        <button>${config.welcome?.enabled ? 'Desactivar' : 'Activar'}</button>
+      </form>
+
+      <br>
+
+      <form method="POST" action="/server/${serverId}/channel">
+        <select name="channel">
+          ${channels}
+        </select>
+        <button>Guardar canal</button>
+      </form>
+
+      <br>
+
+      <form method="POST" action="/server/${serverId}/message">
+        <input type="text" name="message" value="${config.welcome?.message || ''}">
+        <button>Guardar mensaje</button>
+      </form>
+    </div>
+
+    <!-- LOGS -->
+    <div class="card">
+      <h2>📊 Logs</h2>
+
+      <span class="badge ${config.logs?.enabled ? 'on' : 'off'}">
+        ${config.logs?.enabled ? 'ON' : 'OFF'}
+      </span>
+
+      <form method="POST" action="/server/${serverId}/logs/toggle">
+        <button>${config.logs?.enabled ? 'Desactivar' : 'Activar'}</button>
+      </form>
+
+      <br>
+
+      <form method="POST" action="/server/${serverId}/logs/mode">
+        <select name="mode">
+          <option value="single" ${config.logs?.mode === 'single' ? 'selected' : ''}>Single</option>
+          <option value="advanced" ${config.logs?.mode === 'advanced' ? 'selected' : ''}>Advanced</option>
+        </select>
+        <button>Guardar modo</button>
+      </form>
+
+      <br>
+
       ${
-        config.logs?.channel === c.id
-          ? 'selected'
-          : ''
+        config.logs?.mode !== 'advanced'
+        ? `
+        <form method="POST" action="/server/${serverId}/logs/channel">
+          <select name="channel">
+            ${channels}
+          </select>
+          <button>Guardar canal</button>
+        </form>
+        `
+        : `
+        <div>
+          ${['message','member','moderation','voice','role','channel'].map(type => `
+            <form method="POST" action="/server/${serverId}/logs/category">
+              <input type="hidden" name="category" value="${type}">
+              <p>📂 ${type}</p>
+              <select name="channel">
+                ${guild.channels.cache
+                  .filter(c => c.type === 0)
+                  .map(c => `
+                    <option value="${c.id}"
+                      ${config.logs?.categories?.[type] === c.id ? 'selected' : ''}>
+                      #${c.name}
+                    </option>
+                  `).join('')}
+              </select>
+              <button>Guardar</button>
+            </form>
+          `).join('')}
+        </div>
+        `
       }
-    >
 
-      #${c.name}
+    </div>
 
-    </option>
+  </div>
 
-  `)
-  .join('');
+</div>
 
-    res.send(`
+</body>
+</html>
 
-      <html>
+  `);
 
-        <head>
-
-          <link
-            rel="stylesheet"
-            href="/assets/style.css"
-          >
-
-        </head>
-
-        <body>
-
-          <div class="sidebar">
-
-            <h1>
-              WK'
-            </h1>
-
-            <a href="/dashboard">
-              🏠 Dashboard
-            </a>
-
-            <a href="/logout">
-              🚪 Logout
-            </a>
-
-          </div>
-
-          <div class="main">
-
-            <!-- SERVER STATS -->
-
-            <div class="stats-grid">
-
-              <div class="stat-card">
-
-                <h3>
-                  👥 Members
-                </h3>
-
-                <p>
-                  ${guild.memberCount}
-                </p>
-
-              </div>
-
-              <div class="stat-card">
-
-                <h3>
-                  💬 Channels
-                </h3>
-
-                <p>
-                  ${guild.channels.cache.size}
-                </p>
-
-              </div>
-
-              <div class="stat-card">
-
-                <h3>
-                  🎭 Roles
-                </h3>
-
-                <p>
-                  ${guild.roles.cache.size}
-                </p>
-
-              </div>
-
-              <div class="stat-card">
-
-                <h3>
-                  🚀 Boosts
-                </h3>
-
-                <p>
-                  ${guild.premiumSubscriptionCount || 0}
-                </p>
-
-              </div>
-
-            </div>
-
-            <!-- SERVER CARD -->
-
-            <div class="card">
-
-              <h1>
-                ${guild.name}
-              </h1>
-
-              <p style="
-                color:#00ffcc;
-                margin-top:10px;
-                font-size:16px;
-              ">
-                ⚙️ Configuración avanzada del servidor
-              </p>
-
-            </div>
-
-            <!-- LANGUAGE -->
-
-            <div class="card">
-
-              <h2>
-                🌎 Language
-              </h2>
-
-              <p>
-                Current:
-                <b>
-                  ${config.language}
-                </b>
-              </p>
-
-              <form
-                method="POST"
-                action="/server/${serverId}/language"
-              >
-
-                <select name="language">
-
-                  <option
-                    value="es"
-
-                    ${
-                      config.language === 'es'
-                        ? 'selected'
-                        : ''
-                    }
-                  >
-
-                    Español
-
-                  </option>
-
-                  <option
-                    value="en"
-
-                    ${
-                      config.language === 'en'
-                        ? 'selected'
-                        : ''
-                    }
-                  >
-
-                    English
-
-                  </option>
-
-                </select>
-
-                <button>
-                  Save
-                </button>
-
-              </form>
-
-            </div>
-
-            <!-- WELCOME -->
-
-            <div class="card">
-
-              <h2>
-                👋 Welcome
-              </h2>
-
-              <p>
-
-                ${
-                  config.welcome?.enabled
-                    ? '🟢 Enabled'
-                    : '🔴 Disabled'
-                }
-
-              </p>
-
-              <form
-                method="POST"
-                action="/server/${serverId}/welcome"
-              >
-
-                <button>
-
-                  ${
-                    config.welcome?.enabled
-                      ? 'Disable'
-                      : 'Enable'
-                  }
-
-                </button>
-
-              </form>
-
-              <br>
-
-              <form
-                method="POST"
-                action="/server/${serverId}/channel"
-              >
-
-                <select name="channel">
-
-                  ${channels}
-
-                </select>
-
-                <button>
-                  Save Channel
-                </button>
-
-              </form>
-
-              <br>
-
-              <form
-                method="POST"
-                action="/server/${serverId}/message"
-              >
-
-                <input
-                  type="text"
-                  name="message"
-
-                  value="${
-                    config.welcome?.message || ''
-                  }"
-
-                  style="
-                    width:300px;
-                  "
-                >
-
-                <button>
-                  Save Message
-                </button>
-
-              </form>
-
-            </div>
-
-            <!-- ADVANCED LOGS -->
-
-            <div class="card">
-
-              <h2>📊 Advanced Logs</h2>
-
-              <p>
-                ${
-                  config.logs?.enabled
-                    ? '🟢 Enabled'
-                    : '🔴 Disabled'
-                }
-              </p>
-
-              <!-- TOGGLE -->
-
-              <form method="POST" action="/server/${serverId}/logs/toggle">
-                <button>
-                  ${config.logs?.enabled ? 'Disable Logs' : 'Enable Logs'}
-                </button>
-              </form>
-
-              <br>
-
-              <!-- MODE -->
-
-              <form method="POST" action="/server/${serverId}/logs/mode">
-
-                <select name="mode">
-
-                  <option value="single" ${config.logs?.mode === 'single' ? 'selected' : ''}>
-                    Single Channel
-                  </option>
-
-                  <option value="advanced" ${config.logs?.mode === 'advanced' ? 'selected' : ''}>
-                    Advanced Categories
-                  </option>
-
-                </select>
-
-                <button>Save Mode</button>
-
-              </form>
-
-              <br>
-
-              ${
-                config.logs?.mode !== 'advanced'
-                  ? `
-                  <form method="POST" action="/server/${serverId}/logs/channel">
-
-                    <select name="channel">
-                      ${channels}
-                    </select>
-
-                    <button>Save Channel</button>
-
-                  </form>
-                  `
-                  : ''
-              }
-
-              ${
-                config.logs?.mode === 'advanced'
-                  ? `
-                  <div>
-
-                    ${[
-                      'message',
-                      'member',
-                      'moderation',
-                      'voice',
-                      'role',
-                      'channel'
-                    ].map(type => `
-
-                      <form method="POST" action="/server/${serverId}/logs/category">
-
-                        <input type="hidden" name="category" value="${type}">
-
-                        <p style="margin-top:10px;">📂 ${type}</p>
-
-                        <select name="channel">
-
-                          ${guild.channels.cache
-                            .filter(c => c.type === 0)
-                            .map(c => `
-                              <option value="${c.id}"
-                                ${config.logs?.categories?.[type] === c.id ? 'selected' : ''}>
-                                #${c.name}
-                              </option>
-                            `).join('')}
-
-                        </select>
-
-                        <button>Save</button>
-
-                      </form>
-
-                    `).join('')}
-
-                  </div>
-                  `
-                  : ''
-              }
-
-            </div>
-
-          </div>
-
-        </body>
-
-      </html>
-
-    `);
-
-  });
+});
 
   // =====================================
   // 🌎 LANGUAGE
