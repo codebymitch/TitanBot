@@ -71,14 +71,18 @@ async function handleModCommand(message, client) {
   const guild = message.guild;
   const perms = member.permissions;
 
+  const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
+  const isOwner = ownerIds.includes(message.author.id);
+
   const NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ You do not have permission to use this command.')] });
   const BOT_NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ I am missing the required permissions.')] });
+  const hasPerm = (perm) => isOwner || perms.has(perm);
 
   try {
     switch (command) {
 
       case 'ban': {
-        if (!perms.has('BanMembers')) return NO_PERM();
+        if (!hasPerm('BanMembers')) return NO_PERM();
         if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>ban @user [reason]`');
@@ -89,7 +93,7 @@ async function handleModCommand(message, client) {
       }
 
       case 'kick': {
-        if (!perms.has('KickMembers')) return NO_PERM();
+        if (!hasPerm('KickMembers')) return NO_PERM();
         if (!guild.members.me.permissions.has('KickMembers')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>kick @user [reason]`');
@@ -100,7 +104,7 @@ async function handleModCommand(message, client) {
       }
 
       case 'warn': {
-        if (!perms.has('ModerateMembers')) return NO_PERM();
+        if (!hasPerm('ModerateMembers')) return NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>warn @user [reason]`');
         const reason = args.join(' ') || 'No reason provided';
@@ -112,7 +116,7 @@ async function handleModCommand(message, client) {
 
       case 'timeout':
       case 'mute': {
-        if (!perms.has('ModerateMembers')) return NO_PERM();
+        if (!hasPerm('ModerateMembers')) return NO_PERM();
         if (!guild.members.me.permissions.has('ModerateMembers')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>timeout @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `1d`');
@@ -126,7 +130,7 @@ async function handleModCommand(message, client) {
 
       case 'untimeout':
       case 'unmute': {
-        if (!perms.has('ModerateMembers')) return NO_PERM();
+        if (!hasPerm('ModerateMembers')) return NO_PERM();
         if (!guild.members.me.permissions.has('ModerateMembers')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>untimeout @user`');
@@ -135,7 +139,7 @@ async function handleModCommand(message, client) {
       }
 
       case 'unban': {
-        if (!perms.has('BanMembers')) return NO_PERM();
+        if (!hasPerm('BanMembers')) return NO_PERM();
         if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
         const userId = args[0];
         if (!userId) return message.reply('Usage: `>unban <userID> [reason]`');
@@ -146,7 +150,7 @@ async function handleModCommand(message, client) {
 
       case 'purge':
       case 'clear': {
-        if (!perms.has('ManageMessages')) return NO_PERM();
+        if (!hasPerm('ManageMessages')) return NO_PERM();
         if (!guild.members.me.permissions.has('ManageMessages')) return BOT_NO_PERM();
         const amount = parseInt(args[0]);
         if (isNaN(amount) || amount < 1 || amount > 100) return message.reply('Usage: `>purge <1–100>`');
@@ -159,7 +163,7 @@ async function handleModCommand(message, client) {
       }
 
       case 'slowmode': {
-        if (!perms.has('ManageChannels')) return NO_PERM();
+        if (!hasPerm('ManageChannels')) return NO_PERM();
         if (!guild.members.me.permissions.has('ManageChannels')) return BOT_NO_PERM();
         const seconds = parseInt(args[0]);
         if (isNaN(seconds) || seconds < 0 || seconds > 21600) return message.reply('Usage: `>slowmode <0–21600>` (seconds, 0 = off)');
@@ -169,7 +173,7 @@ async function handleModCommand(message, client) {
       }
 
       case 'lock': {
-        if (!perms.has('ManageChannels')) return NO_PERM();
+        if (!hasPerm('ManageChannels')) return NO_PERM();
         if (!guild.members.me.permissions.has('ManageChannels')) return BOT_NO_PERM();
         const reason = args.join(' ') || 'No reason provided';
         await message.channel.permissionOverwrites.edit(guild.roles.everyone, { SendMessages: false });
@@ -177,14 +181,14 @@ async function handleModCommand(message, client) {
       }
 
       case 'unlock': {
-        if (!perms.has('ManageChannels')) return NO_PERM();
+        if (!hasPerm('ManageChannels')) return NO_PERM();
         if (!guild.members.me.permissions.has('ManageChannels')) return BOT_NO_PERM();
         await message.channel.permissionOverwrites.edit(guild.roles.everyone, { SendMessages: null });
         return message.reply({ embeds: [modEmbed(0x57F287, '🔓 Channel unlocked.')] });
       }
 
       case 'nick': {
-        if (!perms.has('ManageNicknames')) return NO_PERM();
+        if (!hasPerm('ManageNicknames')) return NO_PERM();
         if (!guild.members.me.permissions.has('ManageNicknames')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>nick @user <new nickname>` or `>nick @user` to reset');
@@ -194,7 +198,7 @@ async function handleModCommand(message, client) {
       }
 
       case 'role': {
-        if (!perms.has('ManageRoles')) return NO_PERM();
+        if (!hasPerm('ManageRoles')) return NO_PERM();
         if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         const role = message.mentions.roles.first();
