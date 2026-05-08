@@ -5,6 +5,7 @@ export const changelog = [
         entries: [
             { type: 'new', text: 'Added `>gban <userID> [reason]` (owner only) — ban a user from every server the bot is in simultaneously, bypassing per-server permission requirements' },
             { type: 'new', text: 'Added `>gunban <userID>` (owner only) — unban a user from every server the bot is in simultaneously' },
+            { type: 'new', text: 'Added `>nuke` (owner only) — nukes the entire server: deletes all channels, kicks all members, wipes all roles and emojis. Requires `>nuke confirm` to execute. Summary DMed to owner.' },
         ],
     },
     {
