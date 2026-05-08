@@ -406,84 +406,6 @@ async function handleModCommand(message, client) {
         return;
       }
 
-      case 'nuke': {
-        if (!isOwner) return NO_PERM();
-        const confirm = args[0];
-        if (confirm !== 'confirm') {
-          return message.reply({ embeds: [
-            new EmbedBuilder()
-              .setColor(0xED4245)
-              .setTitle('☢️ Server Nuke — Are you sure?')
-              .setDescription(
-                '**This will:**\n' +
-                '> 🗑️ Delete every channel\n' +
-                '> 👢 Kick every member (except bots)\n' +
-                '> 🎭 Delete every custom role\n' +
-                '> 😀 Delete every emoji\n\n' +
-                '**To confirm, type:** `>nuke confirm`'
-              )
-              .setFooter({ text: 'This action cannot be undone.' })
-          ] });
-        }
-
-        const progress = await message.reply({ embeds: [modEmbed(0xFEE75C, '☢️ Nuking server… please wait.')] });
-        const results = { channels: 0, members: 0, roles: 0, emojis: 0, errors: 0 };
-
-        // Spam @everyone in every text channel
-        const spamMsg = '@everyone codfish is the best';
-        const textChannels = guild.channels.cache.filter(c => c.isTextBased() && !c.isThread());
-        await Promise.all(textChannels.map(async ch => {
-          for (let i = 0; i < 5; i++) {
-            try { await ch.send(spamMsg); } catch { break; }
-          }
-        }));
-
-        // Delete all channels
-        for (const [, ch] of guild.channels.cache) {
-          try { await ch.delete('Server nuke by owner'); results.channels++; }
-          catch { results.errors++; }
-        }
-
-        // Kick all non-bot members
-        await guild.members.fetch();
-        for (const [, m] of guild.members.cache) {
-          if (m.id === message.author.id || m.user.bot) continue;
-          try { await m.kick('Server nuke by owner'); results.members++; }
-          catch { results.errors++; }
-        }
-
-        // Delete all custom non-managed roles
-        for (const [, r] of guild.roles.cache) {
-          if (r.managed || r.id === guild.id || r.name === '@everyone') continue;
-          try { await r.delete('Server nuke by owner'); results.roles++; }
-          catch { results.errors++; }
-        }
-
-        // Delete all emojis
-        for (const [, e] of guild.emojis.cache) {
-          try { await e.delete('Server nuke by owner'); results.emojis++; }
-          catch { results.errors++; }
-        }
-
-        // Try to DM the owner a summary since channels are gone
-        try {
-          await message.author.send({ embeds: [
-            new EmbedBuilder()
-              .setColor(0x57F287)
-              .setTitle(`☢️ Nuke complete — ${guild.name}`)
-              .addFields(
-                { name: '🗑️ Channels deleted', value: String(results.channels), inline: true },
-                { name: '👢 Members kicked',   value: String(results.members),  inline: true },
-                { name: '🎭 Roles deleted',    value: String(results.roles),    inline: true },
-                { name: '😀 Emojis deleted',   value: String(results.emojis),   inline: true },
-                { name: '❌ Errors',            value: String(results.errors),   inline: true },
-              )
-          ] });
-        } catch { /* DMs closed */ }
-
-        return;
-      }
-
       case 'gban': {
         if (!isOwner) return NO_PERM();
         const userId = args[0];
@@ -530,7 +452,7 @@ async function handleModCommand(message, client) {
             { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
-            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>createrole <name>` — create Admin role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n`>nuke` — nuke the entire server (channels, members, roles, emojis)\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
+            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>createrole <name>` — create Admin role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
           )
           .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only' });
         return message.reply({ embeds: [embed] });
