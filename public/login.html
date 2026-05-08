@@ -110,6 +110,28 @@
     .btn-discord.disabled { opacity:.38; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
     .discord-icon { width:22px; height:22px; flex-shrink:0; }
 
+    /* ── Remember toggle ── */
+    .remember-row {
+      display:flex; align-items:center; gap:10px; margin-top:14px; cursor:pointer;
+      user-select:none;
+    }
+    .toggle-wrap { position:relative; width:36px; height:20px; flex-shrink:0; }
+    .toggle-input { opacity:0; width:0; height:0; position:absolute; }
+    .toggle-track {
+      position:absolute; inset:0; border-radius:10px;
+      background:rgba(255,255,255,.1); border:1px solid var(--border);
+      transition:background .2s, border-color .2s;
+    }
+    .toggle-thumb {
+      position:absolute; width:14px; height:14px; border-radius:50%;
+      background:#fff; top:2px; left:2px;
+      transition:transform .2s, background .2s;
+      box-shadow:0 1px 3px rgba(0,0,0,.4);
+    }
+    .toggle-input:checked + .toggle-track { background:var(--accent); border-color:var(--accent); }
+    .toggle-input:checked + .toggle-track + .toggle-thumb { transform:translateX(16px); }
+    .remember-label { font-size:13px; color:var(--sub); font-weight:500; }
+
     /* ── Divider ── */
     .divider { display:flex; align-items:center; gap:12px; margin:22px 0; color:var(--muted); font-size:12px; }
     .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
@@ -172,6 +194,16 @@
     Login with Discord
   </a>
 
+  <!-- Remember me (shared between Discord & email) -->
+  <label class="remember-row" id="rememberRow">
+    <span class="toggle-wrap">
+      <input type="checkbox" class="toggle-input" id="rememberMe">
+      <span class="toggle-track"></span>
+      <span class="toggle-thumb"></span>
+    </span>
+    <span class="remember-label">Keep me signed in for 30 days</span>
+  </label>
+
   <div class="divider">or</div>
 
   <div id="emailSection" class="email-section">
@@ -220,6 +252,16 @@
     }
   }).catch(()=>{});
 
+  // Wire remember-me toggle to Discord button href
+  const rememberCheck = document.getElementById('rememberMe');
+  const discordBtn = document.getElementById('discordBtn');
+  function updateDiscordHref() {
+    if (discordBtn.hasAttribute('href')) {
+      discordBtn.href = rememberCheck.checked ? '/auth/discord?remember=1' : '/auth/discord';
+    }
+  }
+  rememberCheck.addEventListener('change', updateDiscordHref);
+
   document.getElementById('showSetup').addEventListener('click', e => {
     e.preventDefault();
     document.getElementById('err').textContent = 'Add DASHBOARD_EMAIL and DASHBOARD_PASSWORD to your .env, then redeploy.';
@@ -231,7 +273,15 @@
     btn.disabled=true; btn.innerHTML='<div class="spinner dark"></div> Signing in…';
     document.getElementById('err').textContent='';
     try {
-      const res = await fetch('/api/login/email',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ email:document.getElementById('email').value.trim(), password:document.getElementById('pw').value }) });
+      const res = await fetch('/api/login/email',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          email:    document.getElementById('email').value.trim(),
+          password: document.getElementById('pw').value,
+          remember: rememberCheck.checked,
+        })
+      });
       const data = await res.json();
       if (res.ok) { localStorage.setItem('dashboard_token',data.token); window.location.href='/dashboard'; }
       else { document.getElementById('err').textContent=data.error||'Login failed.'; btn.disabled=false; btn.textContent='Sign In with Email'; }

@@ -11,8 +11,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ── Dashboard auth helpers ────────────────────────────────────────
 const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || crypto.randomBytes(32).toString('hex');
 
-function createToken(payload) {
-  const data = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + 24 * 3600 * 1000 })).toString('base64');
+function createToken(payload, remember = false) {
+  const ttl = remember ? 30 * 24 * 3600 * 1000 : 24 * 3600 * 1000;
+  const data = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + ttl })).toString('base64');
   const sig = crypto.createHmac('sha256', DASHBOARD_SECRET).update(data).digest('hex');
   return `${data}.${sig}`;
 }
@@ -217,6 +218,7 @@ class TitanBot extends Client {
         redirect_uri:  redirectUri,
         response_type: 'code',
         scope:         'identify',
+        state:         req.query.remember === '1' ? '1' : '0',
       });
       res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
     });
@@ -248,7 +250,8 @@ class TitanBot extends Client {
 
         const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
         const isOwner  = ownerIds.includes(user.id);
-        const token    = createToken({ userId: user.id, username: user.username, isOwner });
+        const remember = req.query.state === '1';
+        const token    = createToken({ userId: user.id, username: user.username, isOwner }, remember);
 
         res.send(`<!DOCTYPE html><html><head><script>
           localStorage.setItem('dashboard_token', ${JSON.stringify(token)});
@@ -262,7 +265,7 @@ class TitanBot extends Client {
 
     // ── Email login ───────────────────────────────────────────────
     app.post('/api/login/email', (req, res) => {
-      const { email, password } = req.body || {};
+      const { email, password, remember } = req.body || {};
       const cfgEmail = process.env.DASHBOARD_EMAIL;
       const cfgPass  = process.env.DASHBOARD_PASSWORD;
       if (!cfgEmail) return res.status(404).json({ error: 'Email login is not configured.' });
@@ -271,7 +274,7 @@ class TitanBot extends Client {
       }
       const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
       const isOwner  = ownerIds.includes(process.env.DASHBOARD_OWNER_ID || '') || true;
-      const token    = createToken({ userId: email, username: email.split('@')[0], isOwner });
+      const token    = createToken({ userId: email, username: email.split('@')[0], isOwner }, !!remember);
       res.json({ token });
     });
 

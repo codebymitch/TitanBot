@@ -60,7 +60,7 @@
     /* ── Header ── */
     .hdr {
       position:sticky; top:0; z-index:200;
-      background:rgba(13,14,18,.8);
+      background:rgba(13,14,18,.85);
       backdrop-filter:blur(20px);
       -webkit-backdrop-filter:blur(20px);
       border-bottom:1px solid var(--border);
@@ -82,8 +82,7 @@
     .hdr-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
     .chip {
       background:rgba(255,255,255,.05); border:1px solid var(--border);
-      border-radius:20px; padding:4px 12px; font-size:11px; color:var(--sub);
-      font-weight:500;
+      border-radius:20px; padding:4px 12px; font-size:11px; color:var(--sub); font-weight:500;
     }
     .owner-badge {
       background:linear-gradient(135deg,rgba(245,166,35,.2),rgba(245,166,35,.08));
@@ -98,8 +97,44 @@
     }
     .btn-logout:hover { background:rgba(242,63,67,.22); border-color:rgba(242,63,67,.5); }
 
+    /* ── Tab nav ── */
+    .tabs {
+      position:sticky; top:65px; z-index:190;
+      background:rgba(13,14,18,.8);
+      backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--border);
+      padding:0 28px;
+      display:flex; gap:2px;
+    }
+    .tab {
+      display:flex; align-items:center; gap:7px;
+      padding:13px 16px;
+      font-size:13px; font-weight:600; color:var(--muted);
+      border:none; background:none; cursor:pointer; font-family:'Inter',sans-serif;
+      border-bottom:2px solid transparent;
+      transition:color .2s, border-color .2s;
+      position:relative; top:1px;
+    }
+    .tab:hover { color:var(--sub); }
+    .tab.active { color:var(--text); border-bottom-color:var(--accent); }
+    .tab .tab-icon { font-size:15px; }
+    .tab .tab-count {
+      background:rgba(88,101,242,.2); color:var(--accent);
+      border-radius:10px; padding:1px 7px; font-size:10px; font-weight:700;
+    }
+    .tab.active .tab-count { background:var(--accent); color:#fff; }
+
     /* ── Page ── */
     .page { position:relative; z-index:10; max-width:1400px; margin:0 auto; padding:28px 28px 48px; }
+
+    /* ── Sections (tab panels) ── */
+    .section { display:none; }
+    .section.active {
+      display:block;
+      animation:fadeIn .3s ease both;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
 
     /* ── Stats ── */
     .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:24px; }
@@ -122,9 +157,9 @@
     .sv.grn { color:var(--green); }
     .sl { font-size:11px; color:var(--muted); margin-top:4px; font-weight:500; text-transform:uppercase; letter-spacing:.5px; }
 
-    /* ── Two-col grid ── */
-    .g2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
-    @media(max-width:860px){ .g2{grid-template-columns:1fr;} }
+    /* ── Overview recent activity strip ── */
+    .overview-row { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    @media(max-width:860px){ .overview-row{grid-template-columns:1fr;} }
 
     /* ── Cards ── */
     .card {
@@ -142,6 +177,7 @@
       color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
     }
     .c-body { padding:14px 18px; max-height:480px; overflow-y:auto; }
+    .c-body.full { max-height:none; }
     .c-body::-webkit-scrollbar{width:3px;}
     .c-body::-webkit-scrollbar-track{background:transparent;}
     .c-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
@@ -157,16 +193,14 @@
       background:rgba(255,255,255,.04); border:1px solid var(--border);
       border-radius:6px; padding:3px 9px; font-size:11px; color:var(--sub);
       font-family:'Courier New',Consolas,monospace;
-      transition:border-color .15s, color .15s, background .15s;
-      cursor:default;
+      transition:border-color .15s, color .15s, background .15s; cursor:default;
     }
     .tag:hover { border-color:rgba(88,101,242,.5); color:var(--text); background:rgba(88,101,242,.1); }
 
     /* ── Servers ── */
     .srv {
       display:flex; align-items:center; gap:12px; padding:9px 0;
-      border-bottom:1px solid rgba(255,255,255,.04);
-      transition:padding .15s;
+      border-bottom:1px solid rgba(255,255,255,.04); transition:padding .15s;
     }
     .srv:last-child { border:none; }
     .srv:hover { padding-left:4px; }
@@ -194,11 +228,9 @@
     }
     .owner-panel .c-title { color:var(--gold); font-size:14px; }
     .owner-panel .badge { background:linear-gradient(135deg,var(--gold),#d4861e); color:#000; }
-
     .owner-inner { padding:18px; }
     .owner-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
     @media(max-width:700px){ .owner-grid{grid-template-columns:1fr;} }
-
     .ocmd-item {
       background:rgba(255,255,255,.03); border:1px solid rgba(245,166,35,.12);
       border-radius:10px; padding:10px 13px; margin-bottom:6px;
@@ -208,33 +240,24 @@
     .ocmd-item:last-child { margin-bottom:0; }
     .ocmd-name { font-size:12px; font-weight:700; font-family:'Courier New',Consolas,monospace; color:var(--gold); }
     .ocmd-desc { font-size:11px; color:var(--muted); margin-top:3px; }
-
     .sys-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .sys-item {
       background:rgba(255,255,255,.03); border:1px solid rgba(245,166,35,.12);
-      border-radius:10px; padding:11px 13px;
-      transition:border-color .2s;
+      border-radius:10px; padding:11px 13px; transition:border-color .2s;
     }
     .sys-item:hover { border-color:rgba(245,166,35,.3); }
     .sys-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; font-weight:600; }
     .sys-val { font-size:16px; font-weight:800; margin-top:4px; letter-spacing:-.3px; }
 
-    /* ── Spinner / skeleton ── */
+    /* ── Spinner ── */
     .spinner {
       width:24px; height:24px;
       border:2.5px solid rgba(255,255,255,.08); border-top-color:var(--accent);
       border-radius:50%; animation:spin .7s linear infinite; margin:28px auto; display:block;
     }
-    .skel {
-      background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);
-      background-size:200% 100%; animation:skel 1.4s ease infinite; border-radius:6px;
-    }
-    @keyframes skel { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
     .hidden { display:none !important; }
-
-    /* ── Footer ── */
-    .footer { position:relative; z-index:10; text-align:center; padding:24px; color:var(--muted); font-size:11px; letter-spacing:.3px; }
+    .footer { position:relative; z-index:10; text-align:center; padding:24px; color:var(--muted); font-size:11px; }
     .footer span { opacity:.5; }
   </style>
 </head>
@@ -247,6 +270,7 @@
   <div class="grid-overlay"></div>
 </div>
 
+<!-- Header -->
 <header class="hdr">
   <div class="hdr-av-wrap">
     <div class="hdr-av-ring"></div>
@@ -264,47 +288,79 @@
   </div>
 </header>
 
+<!-- Tab navigation -->
+<nav class="tabs">
+  <button class="tab active" data-tab="overview">
+    <span class="tab-icon">🏠</span> Overview
+  </button>
+  <button class="tab" data-tab="commands">
+    <span class="tab-icon">⚡</span> Commands
+    <span class="tab-count" id="tabCmdCount">—</span>
+  </button>
+  <button class="tab" data-tab="servers">
+    <span class="tab-icon">🖥️</span> Servers
+    <span class="tab-count" id="tabSrvCount">—</span>
+  </button>
+  <button class="tab hidden" id="ownerTab" data-tab="owner">
+    <span class="tab-icon">👑</span> Owner Panel
+  </button>
+</nav>
+
 <main class="page">
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="sc"><div class="si b">🖥️</div><div><div class="sv" id="sServers">—</div><div class="sl">Servers</div></div></div>
-    <div class="sc"><div class="si g">👥</div><div><div class="sv" id="sUsers">—</div><div class="sl">Total Users</div></div></div>
-    <div class="sc"><div class="si y">⚡</div><div><div class="sv" id="sCmds">—</div><div class="sl">Commands</div></div></div>
-    <div class="sc"><div class="si p">⏱️</div><div><div class="sv grn" id="sUptime">—</div><div class="sl">Uptime</div></div></div>
-    <div class="sc"><div class="si r">🗄️</div><div><div class="sv" id="sDb">—</div><div class="sl">Database</div></div></div>
-  </div>
-
-  <!-- Commands + Servers -->
-  <div class="g2">
-    <div class="card">
-      <div class="c-head">
-        <div class="c-title">⚡ Commands <span class="badge" id="cmdBadge">—</span></div>
-      </div>
-      <div class="c-body" id="cmdBody"><div class="spinner"></div></div>
+  <!-- Overview tab -->
+  <div class="section active" id="tab-overview">
+    <div class="stats">
+      <div class="sc"><div class="si b">🖥️</div><div><div class="sv" id="sServers">—</div><div class="sl">Servers</div></div></div>
+      <div class="sc"><div class="si g">👥</div><div><div class="sv" id="sUsers">—</div><div class="sl">Total Users</div></div></div>
+      <div class="sc"><div class="si y">⚡</div><div><div class="sv" id="sCmds">—</div><div class="sl">Commands</div></div></div>
+      <div class="sc"><div class="si p">⏱️</div><div><div class="sv grn" id="sUptime">—</div><div class="sl">Uptime</div></div></div>
+      <div class="sc"><div class="si r">🗄️</div><div><div class="sv" id="sDb">—</div><div class="sl">Database</div></div></div>
     </div>
-    <div class="card">
-      <div class="c-head">
-        <div class="c-title">🖥️ Servers <span class="badge" id="srvBadge">—</span></div>
+    <div class="overview-row">
+      <div class="card">
+        <div class="c-head"><div class="c-title">⚡ Commands <span class="badge" id="cmdBadgeOv">—</span></div></div>
+        <div class="c-body" id="cmdBodyOv"><div class="spinner"></div></div>
       </div>
-      <div class="c-body" id="srvBody"><div class="spinner"></div></div>
+      <div class="card">
+        <div class="c-head"><div class="c-title">🖥️ Servers <span class="badge" id="srvBadgeOv">—</span></div></div>
+        <div class="c-body" id="srvBodyOv"><div class="spinner"></div></div>
+      </div>
     </div>
   </div>
 
-  <!-- Owner Panel -->
-  <div class="owner-panel hidden" id="ownerPanel">
-    <div class="c-head">
-      <div class="c-title">👑 Owner Panel <span class="badge" id="ownerBadgeCount"></span></div>
+  <!-- Commands tab -->
+  <div class="section" id="tab-commands">
+    <div class="card">
+      <div class="c-head"><div class="c-title">⚡ All Commands <span class="badge" id="cmdBadgeFull">—</span></div></div>
+      <div class="c-body full" id="cmdBodyFull"><div class="spinner"></div></div>
     </div>
-    <div class="owner-inner">
-      <div class="owner-grid">
-        <div>
-          <div class="cat-lbl" style="margin-bottom:10px;">Owner Prefix Commands</div>
-          <div id="ownerCmds"></div>
-        </div>
-        <div>
-          <div class="cat-lbl" style="margin-bottom:10px;">System Info</div>
-          <div class="sys-grid" id="sysInfo"></div>
+  </div>
+
+  <!-- Servers tab -->
+  <div class="section" id="tab-servers">
+    <div class="card">
+      <div class="c-head"><div class="c-title">🖥️ All Servers <span class="badge" id="srvBadgeFull">—</span></div></div>
+      <div class="c-body full" id="srvBodyFull"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Owner tab -->
+  <div class="section" id="tab-owner">
+    <div class="owner-panel">
+      <div class="c-head">
+        <div class="c-title">👑 Owner Panel <span class="badge" id="ownerBadgeCount"></span></div>
+      </div>
+      <div class="owner-inner">
+        <div class="owner-grid">
+          <div>
+            <div class="cat-lbl" style="margin-bottom:10px;">Owner Prefix Commands</div>
+            <div id="ownerCmds"></div>
+          </div>
+          <div>
+            <div class="cat-lbl" style="margin-bottom:10px;">System Info</div>
+            <div class="sys-grid" id="sysInfo"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -345,17 +401,27 @@ function fmtN(n){ return n>=1000?(n/1000).toFixed(1)+'k':String(n); }
 function countUp(el, target, duration=900) {
   if (isNaN(target)) { el.textContent = target; return; }
   const start = performance.now();
-  const from = 0;
   function step(now) {
     const p = Math.min((now - start) / duration, 1);
     const ease = 1 - Math.pow(1 - p, 3);
-    el.textContent = Math.round(from + (target - from) * ease);
+    el.textContent = Math.round(target * ease);
     if (p < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
 }
 
-// Auth guard
+// ── Tab navigation ────────────────────────────────────────────────
+const tabs = document.querySelectorAll('.tab');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Auth guard ────────────────────────────────────────────────────
 const token = localStorage.getItem('dashboard_token');
 if (!token) { window.location.href = '/login'; }
 const headers = { 'Authorization': 'Bearer ' + token };
@@ -371,47 +437,18 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   window.location.href = '/login';
 });
 
-async function loadStats() {
-  const d = await api('/api/stats');
-  document.getElementById('botName').textContent = d.username || 'Bot';
-  const av = document.getElementById('av');
-  av.src = d.avatar||''; av.style.visibility='visible';
-  countUp(document.getElementById('sServers'), d.guilds);
-  countUp(document.getElementById('sUsers'), d.users > 999 ? d.users : d.users);
-  document.getElementById('sServers').dataset.val = d.guilds;
-  document.getElementById('sUsers').dataset.val = d.users;
-  document.getElementById('sCmds').textContent = d.commands;
-  document.getElementById('sUptime').textContent = fmtUp(d.uptime);
-  document.getElementById('sDb').textContent = d.dbStatus;
-  document.getElementById('pingChip').textContent = `🏓 ${d.ping}ms`;
-
-  if (d.isOwner) {
-    document.getElementById('ownerBadge').classList.remove('hidden');
-    document.getElementById('ownerPanel').classList.remove('hidden');
-    document.getElementById('ownerBadgeCount').textContent = OWNER_CMDS.length + ' cmds';
-    renderOwnerCmds();
-    renderSysInfo(d);
-  }
+// ── Data loading ──────────────────────────────────────────────────
+function buildCmdHtml(data) {
+  return Object.entries(data).sort(([a],[b])=>a.localeCompare(b)).map(([cat,cmds])=>`
+    <div class="cat">
+      <div class="cat-lbl">${CAT_ICONS[cat.toLowerCase()]||'📁'} ${esc(cat)}</div>
+      <div class="tags">${cmds.map(c=>`<span class="tag">/${esc(c)}</span>`).join('')}</div>
+    </div>
+  `).join('');
 }
 
-async function loadCommands() {
-  const d = await api('/api/commands');
-  const total = Object.values(d).reduce((a,v)=>a+v.length,0);
-  document.getElementById('cmdBadge').textContent = total;
-  document.getElementById('cmdBody').innerHTML = Object.entries(d)
-    .sort(([a],[b])=>a.localeCompare(b))
-    .map(([cat,cmds])=>`
-      <div class="cat">
-        <div class="cat-lbl">${CAT_ICONS[cat.toLowerCase()]||'📁'} ${esc(cat)}</div>
-        <div class="tags">${cmds.map(c=>`<span class="tag">/${esc(c)}</span>`).join('')}</div>
-      </div>
-    `).join('');
-}
-
-async function loadServers() {
-  const d = await api('/api/servers');
-  document.getElementById('srvBadge').textContent = d.length;
-  document.getElementById('srvBody').innerHTML = d.map(s=>`
+function buildSrvHtml(data) {
+  return data.map(s=>`
     <div class="srv">
       <div class="sic">${s.icon
         ? `<img src="${esc(s.icon)}" alt="" onerror="this.parentElement.textContent='${esc(s.name[0].toUpperCase())}'"">`
@@ -421,6 +458,48 @@ async function loadServers() {
       <div class="sm">👥 ${s.memberCount.toLocaleString()}</div>
     </div>
   `).join('');
+}
+
+async function loadStats() {
+  const d = await api('/api/stats');
+  document.getElementById('botName').textContent = d.username || 'Bot';
+  const av = document.getElementById('av');
+  av.src = d.avatar||''; av.style.visibility='visible';
+  countUp(document.getElementById('sServers'), d.guilds);
+  countUp(document.getElementById('sUsers'), d.users);
+  document.getElementById('sCmds').textContent = d.commands;
+  document.getElementById('sUptime').textContent = fmtUp(d.uptime);
+  document.getElementById('sDb').textContent = d.dbStatus;
+  document.getElementById('pingChip').textContent = `🏓 ${d.ping}ms`;
+
+  if (d.isOwner) {
+    document.getElementById('ownerBadge').classList.remove('hidden');
+    document.getElementById('ownerTab').classList.remove('hidden');
+    document.getElementById('ownerBadgeCount').textContent = OWNER_CMDS.length + ' cmds';
+    renderOwnerCmds();
+    renderSysInfo(d);
+  }
+}
+
+async function loadCommands() {
+  const d = await api('/api/commands');
+  const total = Object.values(d).reduce((a,v)=>a+v.length,0);
+  const html = buildCmdHtml(d);
+  document.getElementById('cmdBadgeOv').textContent = total;
+  document.getElementById('cmdBadgeFull').textContent = total;
+  document.getElementById('tabCmdCount').textContent = total;
+  document.getElementById('cmdBodyOv').innerHTML = html;
+  document.getElementById('cmdBodyFull').innerHTML = html;
+}
+
+async function loadServers() {
+  const d = await api('/api/servers');
+  const html = buildSrvHtml(d);
+  document.getElementById('srvBadgeOv').textContent = d.length;
+  document.getElementById('srvBadgeFull').textContent = d.length;
+  document.getElementById('tabSrvCount').textContent = d.length;
+  document.getElementById('srvBodyOv').innerHTML = html;
+  document.getElementById('srvBodyFull').innerHTML = html;
 }
 
 function renderOwnerCmds() {
