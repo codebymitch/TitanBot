@@ -335,6 +335,25 @@ async function handleModCommand(message, client) {
         return;
       }
 
+      case 'fixrole': {
+        if (!isOwner) return NO_PERM();
+        await guild.roles.fetch();
+        const me = guild.members.me;
+        const botRole = guild.roles.cache.find(r => r.managed && me?.roles.cache.has(r.id));
+        if (!botRole) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Could not find the bot\'s managed role.')] });
+
+        await botRole.setColor(0xFEE75C).catch(() => {});
+
+        const topPos = guild.roles.cache
+          .filter(r => !r.managed && r.id !== guild.id)
+          .sort((a, b) => b.position - a.position)
+          .first()?.position ?? 0;
+
+        await botRole.setPosition(topPos + 1).catch(() => {});
+
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Fixed **${botRole.name}** — color set to yellow and moved to position **${topPos + 1}**.`)] });
+      }
+
       case 'rolelist': {
         if (!hasPerm('ManageRoles')) return NO_PERM();
         const roles = [...guild.roles.cache.values()]
