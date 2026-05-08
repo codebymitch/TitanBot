@@ -3,6 +3,8 @@ services:
     build: .
     container_name: titanbot
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DISCORD_TOKEN}
