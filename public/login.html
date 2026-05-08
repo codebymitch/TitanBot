@@ -3,264 +3,389 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — Sign In</title>
+  <title>Sign In — Bot Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     :root {
-      --bg:#0d0e12;
-      --card:rgba(255,255,255,0.05);
-      --border:rgba(255,255,255,0.08);
+      --bg:#08090c;
+      --surface:#0f1117;
+      --card:#13151c;
+      --border:rgba(255,255,255,0.07);
+      --border-lit:rgba(255,255,255,0.13);
       --accent:#5865f2;
-      --accent2:#eb459e;
-      --text:#f0f0f5;
-      --sub:#9094a8;
-      --muted:#555b6e;
+      --accent-glow:rgba(88,101,242,0.35);
+      --text:#eeeef0;
+      --sub:#8b8fa8;
+      --muted:#4a4e63;
       --err:#f23f43;
-      --input:rgba(255,255,255,0.04);
     }
-    body {
+
+    html, body {
+      height:100%;
       font-family:'Inter',sans-serif;
       background:var(--bg);
       color:var(--text);
+    }
+
+    body {
+      display:flex;
+      flex-direction:column;
       min-height:100vh;
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content:'';
+      position:fixed; inset:0; z-index:0; pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity:.5;
+    }
+
+    /* ── Glow spots ── */
+    .glow-a {
+      position:fixed; z-index:0; pointer-events:none;
+      width:700px; height:700px; border-radius:50%;
+      background:radial-gradient(circle, rgba(88,101,242,.13) 0%, transparent 70%);
+      top:-200px; left:-200px;
+    }
+    .glow-b {
+      position:fixed; z-index:0; pointer-events:none;
+      width:500px; height:500px; border-radius:50%;
+      background:radial-gradient(circle, rgba(235,69,158,.07) 0%, transparent 70%);
+      bottom:-100px; right:-100px;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      position:relative; z-index:10;
+      padding:18px 28px;
+      display:flex; align-items:center; gap:10px;
+      border-bottom:1px solid var(--border);
+    }
+    .topbar-logo {
+      width:28px; height:28px; border-radius:8px;
+      background:linear-gradient(135deg,#5865f2,#4752c4);
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; flex-shrink:0;
+    }
+    .topbar-name { font-size:13px; font-weight:700; color:var(--text); letter-spacing:-.2px; }
+    .topbar-right { margin-left:auto; }
+    .status-dot-wrap { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--sub); }
+    .sdot { width:7px; height:7px; border-radius:50%; background:#23a55a; box-shadow:0 0 6px rgba(35,165,90,.6); flex-shrink:0; }
+
+    /* ── Main layout ── */
+    .main {
+      flex:1;
       display:flex;
       align-items:center;
       justify-content:center;
-      overflow:hidden;
-    }
-
-    /* ── Animated background ── */
-    .bg {
-      position:fixed; inset:0; z-index:0;
-      background: radial-gradient(ellipse at 20% 50%, rgba(88,101,242,.18) 0%, transparent 60%),
-                  radial-gradient(ellipse at 80% 20%, rgba(235,69,158,.12) 0%, transparent 55%),
-                  radial-gradient(ellipse at 60% 80%, rgba(88,101,242,.1) 0%, transparent 50%),
-                  #0d0e12;
-    }
-    .blob {
-      position:absolute; border-radius:50%; filter:blur(80px); opacity:.35; animation:drift 12s ease-in-out infinite;
-    }
-    .blob1 { width:400px; height:400px; background:#5865f2; top:-10%; left:-10%; animation-delay:0s; }
-    .blob2 { width:300px; height:300px; background:#eb459e; bottom:-5%; right:-5%; animation-delay:-4s; }
-    .blob3 { width:250px; height:250px; background:#23a55a; top:50%; left:60%; animation-delay:-8s; }
-    @keyframes drift {
-      0%,100% { transform:translate(0,0) scale(1); }
-      33%      { transform:translate(30px,-20px) scale(1.05); }
-      66%      { transform:translate(-15px,25px) scale(.95); }
-    }
-    .grid-overlay {
-      position:absolute; inset:0;
-      background-image: linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
-      background-size: 60px 60px;
+      padding:40px 16px;
+      position:relative; z-index:10;
     }
 
     /* ── Card ── */
     .card {
-      position:relative; z-index:10;
+      width:100%; max-width:400px;
       background:var(--card);
-      border:1px solid var(--border);
-      border-radius:24px;
-      padding:44px 40px;
-      width:100%; max-width:420px;
-      backdrop-filter:blur(24px);
-      -webkit-backdrop-filter:blur(24px);
-      box-shadow: 0 32px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
-      animation:slideUp .5s cubic-bezier(.16,1,.3,1) both;
+      border:1px solid var(--border-lit);
+      border-radius:20px;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,.4),
+        0 20px 60px rgba(0,0,0,.5),
+        0 0 80px rgba(88,101,242,.06);
+      overflow:hidden;
+      animation:rise .45s cubic-bezier(.16,1,.3,1) both;
     }
-    @keyframes slideUp { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:none; } }
+    @keyframes rise { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:none} }
 
-    .top { text-align:center; margin-bottom:32px; }
-    .avatar-wrap { position:relative; width:76px; height:76px; margin:0 auto 16px; }
-    .avatar { width:76px; height:76px; border-radius:50%; object-fit:cover; display:block; }
-    .avatar-ring {
-      position:absolute; inset:-3px; border-radius:50%;
-      background: linear-gradient(135deg, #5865f2, #eb459e);
-      z-index:-1; animation:spin 4s linear infinite;
+    /* ── Card top strip ── */
+    .card-strip {
+      height:3px;
+      background:linear-gradient(90deg, #5865f2, #eb459e, #5865f2);
+      background-size:200% 100%;
+      animation:shimmer 3s linear infinite;
     }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    h1 {
-      font-size:22px; font-weight:800; letter-spacing:-.5px;
-      background:linear-gradient(135deg, #fff 40%, #9094a8);
-      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── Card body ── */
+    .card-body { padding:36px 32px 32px; }
+
+    /* ── Avatar ── */
+    .brand { display:flex; flex-direction:column; align-items:center; margin-bottom:28px; }
+    .av-wrap {
+      position:relative; width:72px; height:72px; margin-bottom:14px;
     }
-    .sub { color:var(--sub); font-size:13px; margin-top:5px; }
+    .av {
+      width:72px; height:72px; border-radius:18px;
+      object-fit:cover; display:block;
+      border:1px solid var(--border-lit);
+      background:var(--surface);
+    }
+    .av-status {
+      position:absolute; bottom:-3px; right:-3px;
+      width:18px; height:18px; border-radius:50%;
+      background:#23a55a; border:3px solid var(--card);
+    }
+    .brand-name {
+      font-size:20px; font-weight:800; letter-spacing:-.5px; color:var(--text);
+      text-align:center;
+    }
+    .brand-sub { font-size:13px; color:var(--sub); margin-top:4px; text-align:center; }
 
     /* ── Discord button ── */
     .btn-discord {
-      width:100%; border:none; border-radius:12px; padding:14px 16px;
-      font-size:15px; font-weight:700; font-family:'Inter',sans-serif;
-      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
-      text-decoration:none; color:#fff;
-      background:linear-gradient(135deg, #5865f2, #4752c4);
-      box-shadow:0 0 0 0 rgba(88,101,242,.5);
-      transition:transform .15s, box-shadow .2s;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      width:100%; padding:13px 18px; border-radius:12px; border:none;
+      background:#5865f2;
+      color:#fff; font-size:14px; font-weight:700; font-family:'Inter',sans-serif;
+      text-decoration:none; cursor:pointer;
+      box-shadow:0 2px 12px rgba(88,101,242,.3), inset 0 1px 0 rgba(255,255,255,.15);
+      transition:filter .15s, transform .12s, box-shadow .15s;
       position:relative; overflow:hidden;
     }
-    .btn-discord::after {
-      content:''; position:absolute; inset:0;
-      background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);
-      opacity:0; transition:opacity .2s;
+    .btn-discord::before {
+      content:'';
+      position:absolute; inset:0;
+      background:linear-gradient(180deg, rgba(255,255,255,.08) 0%, transparent 100%);
     }
-    .btn-discord:hover { transform:translateY(-1px); box-shadow:0 0 28px rgba(88,101,242,.55); }
-    .btn-discord:hover::after { opacity:1; }
-    .btn-discord:active { transform:scale(.98); }
-    .btn-discord.disabled { opacity:.38; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
-    .discord-icon { width:22px; height:22px; flex-shrink:0; }
+    .btn-discord:hover { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 20px rgba(88,101,242,.45), inset 0 1px 0 rgba(255,255,255,.15); }
+    .btn-discord:active { transform:scale(.98); filter:brightness(.97); }
+    .btn-discord.disabled { opacity:.4; cursor:not-allowed; pointer-events:none; }
+    .discord-icon { width:20px; height:20px; flex-shrink:0; }
 
-    /* ── Remember toggle ── */
+    /* ── Remember row ── */
     .remember-row {
-      display:flex; align-items:center; gap:10px; margin-top:14px; cursor:pointer;
-      user-select:none;
+      display:flex; align-items:center; gap:10px;
+      margin-top:14px; cursor:pointer; user-select:none;
     }
-    .toggle-wrap { position:relative; width:36px; height:20px; flex-shrink:0; }
-    .toggle-input { opacity:0; width:0; height:0; position:absolute; }
-    .toggle-track {
+    .tog { position:relative; width:34px; height:19px; flex-shrink:0; }
+    .tog input { opacity:0; width:0; height:0; position:absolute; }
+    .tog-track {
       position:absolute; inset:0; border-radius:10px;
-      background:rgba(255,255,255,.1); border:1px solid var(--border);
+      background:rgba(255,255,255,.08); border:1px solid var(--border-lit);
       transition:background .2s, border-color .2s;
     }
-    .toggle-thumb {
-      position:absolute; width:14px; height:14px; border-radius:50%;
-      background:#fff; top:2px; left:2px;
+    .tog-thumb {
+      position:absolute; width:13px; height:13px; border-radius:50%;
+      background:var(--sub); top:2px; left:2px;
       transition:transform .2s, background .2s;
-      box-shadow:0 1px 3px rgba(0,0,0,.4);
     }
-    .toggle-input:checked + .toggle-track { background:var(--accent); border-color:var(--accent); }
-    .toggle-input:checked + .toggle-track + .toggle-thumb { transform:translateX(16px); }
-    .remember-label { font-size:13px; color:var(--sub); font-weight:500; }
+    .tog input:checked + .tog-track { background:#5865f2; border-color:#5865f2; }
+    .tog input:checked + .tog-track + .tog-thumb { transform:translateX(15px); background:#fff; }
+    .remember-lbl { font-size:13px; color:var(--sub); font-weight:500; }
 
     /* ── Divider ── */
-    .divider { display:flex; align-items:center; gap:12px; margin:22px 0; color:var(--muted); font-size:12px; }
-    .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    .or {
+      display:flex; align-items:center; gap:12px;
+      margin:22px 0; color:var(--muted); font-size:11px; font-weight:600;
+      text-transform:uppercase; letter-spacing:.7px;
+    }
+    .or::before,.or::after { content:''; flex:1; height:1px; background:var(--border); }
 
     /* ── Email form ── */
-    .field { margin-bottom:14px; }
-    .field label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); display:block; margin-bottom:7px; }
-    .field input {
-      width:100%; background:var(--input); border:1.5px solid var(--border);
-      border-radius:10px; padding:12px 14px; color:var(--text); font-size:14px;
-      font-family:'Inter',sans-serif; outline:none; transition:border-color .2s, box-shadow .2s;
+    .field { margin-bottom:12px; }
+    .field label {
+      font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.8px;
+      color:var(--muted); display:block; margin-bottom:6px;
     }
-    .field input:focus { border-color:rgba(88,101,242,.6); box-shadow:0 0 0 3px rgba(88,101,242,.12); }
+    .field input {
+      width:100%; background:var(--surface); border:1px solid var(--border-lit);
+      border-radius:10px; padding:11px 13px; color:var(--text); font-size:14px;
+      font-family:'Inter',sans-serif; outline:none;
+      transition:border-color .2s, box-shadow .2s;
+    }
+    .field input:focus { border-color:rgba(88,101,242,.55); box-shadow:0 0 0 3px rgba(88,101,242,.1); }
     .field input::placeholder { color:var(--muted); }
 
     .btn-email {
       width:100%; background:rgba(255,255,255,.06); color:var(--text);
-      border:1.5px solid var(--border); border-radius:12px; padding:13px;
-      font-size:14px; font-weight:700; font-family:'Inter',sans-serif;
-      cursor:pointer; margin-top:4px; transition:all .2s;
+      border:1px solid var(--border-lit); border-radius:10px; padding:12px;
+      font-size:14px; font-weight:600; font-family:'Inter',sans-serif;
+      cursor:pointer; margin-top:4px;
       display:flex; align-items:center; justify-content:center; gap:8px;
+      transition:background .15s, border-color .15s;
     }
-    .btn-email:hover { border-color:rgba(88,101,242,.5); background:rgba(88,101,242,.1); }
+    .btn-email:hover { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.15); }
     .btn-email:disabled { opacity:.4; cursor:not-allowed; }
 
-    .error { color:var(--err); font-size:12.5px; margin-top:12px; text-align:center; min-height:18px; line-height:1.4; }
-    .hint { color:var(--muted); font-size:11px; margin-top:16px; text-align:center; line-height:1.6; }
-    .hint code { background:rgba(255,255,255,.07); padding:1px 6px; border-radius:4px; font-size:11px; }
+    /* ── No email placeholder ── */
+    .no-email-box {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:10px; padding:14px 16px;
+      display:flex; align-items:center; gap:12px;
+    }
+    .no-email-icon {
+      width:34px; height:34px; border-radius:8px;
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
+    }
+    .no-email-text { font-size:12px; color:var(--sub); line-height:1.5; }
+    .no-email-text a { color:var(--accent); text-decoration:none; }
+    .no-email-text a:hover { text-decoration:underline; }
 
-    .no-email { text-align:center; color:var(--sub); font-size:13px; }
-    .no-email a { color:var(--accent); text-decoration:none; font-size:12px; }
+    /* ── Error / hint ── */
+    .err { color:var(--err); font-size:12px; margin-top:12px; min-height:16px; text-align:center; }
+    .hint-box {
+      background:rgba(88,101,242,.06); border:1px solid rgba(88,101,242,.2);
+      border-radius:8px; padding:9px 12px; margin-top:12px;
+      font-size:12px; color:var(--sub); line-height:1.5; text-align:center;
+    }
+    .hint-box code { background:rgba(255,255,255,.07); padding:1px 5px; border-radius:4px; font-size:11px; }
 
-    .spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:rot .6s linear infinite; display:inline-block; }
-    .spinner.dark { border-color:rgba(88,101,242,.2); border-top-color:var(--accent); }
+    .spinner { width:15px; height:15px; border:2px solid rgba(255,255,255,.15); border-top-color:#fff; border-radius:50%; animation:rot .6s linear infinite; display:inline-block; }
     @keyframes rot { to { transform:rotate(360deg); } }
+
     .email-section { display:none; }
     .email-section.on { display:block; }
+
+    /* ── Footer ── */
+    .footer {
+      position:relative; z-index:10;
+      padding:20px 28px;
+      border-top:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center; gap:20px;
+    }
+    .footer-link { font-size:11px; color:var(--muted); text-decoration:none; transition:color .15s; }
+    .footer-link:hover { color:var(--sub); }
+    .footer-sep { width:3px; height:3px; border-radius:50%; background:var(--muted); }
   </style>
 </head>
 <body>
-<div class="bg">
-  <div class="blob blob1"></div>
-  <div class="blob blob2"></div>
-  <div class="blob blob3"></div>
-  <div class="grid-overlay"></div>
+
+<div class="glow-a"></div>
+<div class="glow-b"></div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-logo">🤖</div>
+  <span class="topbar-name" id="topbarName">Bot Dashboard</span>
+  <div class="topbar-right">
+    <div class="status-dot-wrap"><div class="sdot"></div><span id="statusLabel">Online</span></div>
+  </div>
 </div>
 
-<div class="card">
-  <div class="top">
-    <div class="avatar-wrap">
-      <div class="avatar-ring"></div>
-      <img class="avatar" id="av" src="" alt="" onerror="this.style.visibility='hidden'">
+<!-- Main -->
+<div class="main">
+  <div class="card">
+    <div class="card-strip"></div>
+    <div class="card-body">
+
+      <!-- Brand -->
+      <div class="brand">
+        <div class="av-wrap">
+          <img class="av" id="av" src="" alt="" onerror="this.style.opacity='0'">
+          <div class="av-status"></div>
+        </div>
+        <div class="brand-name" id="botName">Dashboard</div>
+        <div class="brand-sub">Sign in to manage your bot</div>
+      </div>
+
+      <!-- Discord login -->
+      <a class="btn-discord" id="discordBtn" href="/auth/discord">
+        <svg class="discord-icon" viewBox="0 0 24 24" fill="white"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+        Continue with Discord
+      </a>
+
+      <!-- Remember me -->
+      <label class="remember-row">
+        <span class="tog">
+          <input type="checkbox" id="rememberMe">
+          <span class="tog-track"></span>
+          <span class="tog-thumb"></span>
+        </span>
+        <span class="remember-lbl">Keep me signed in</span>
+      </label>
+
+      <!-- Divider -->
+      <div class="or">or</div>
+
+      <!-- Email section -->
+      <div id="emailSection" class="email-section">
+        <form id="emailForm">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="email" placeholder="you@example.com" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="pw" placeholder="••••••••" required>
+          </div>
+          <button class="btn-email" type="submit" id="emailBtn">Sign In</button>
+        </form>
+      </div>
+
+      <!-- No email configured -->
+      <div id="noEmail">
+        <div class="no-email-box">
+          <div class="no-email-icon">📧</div>
+          <div class="no-email-text">
+            Email login is not set up.<br>
+            <a href="#" id="showSetup">How to enable it →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="err" id="err"></div>
+      <div class="hint-box" id="hint">Discord login requires <code>CLIENT_SECRET</code> in your <code>.env</code> file.</div>
+
     </div>
-    <h1 id="botName">Dashboard</h1>
-    <p class="sub">Sign in to access the bot dashboard</p>
   </div>
-
-  <a class="btn-discord" id="discordBtn" href="/auth/discord">
-    <svg class="discord-icon" viewBox="0 0 24 24" fill="white"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-    Login with Discord
-  </a>
-
-  <!-- Remember me (shared between Discord & email) -->
-  <label class="remember-row" id="rememberRow">
-    <span class="toggle-wrap">
-      <input type="checkbox" class="toggle-input" id="rememberMe">
-      <span class="toggle-track"></span>
-      <span class="toggle-thumb"></span>
-    </span>
-    <span class="remember-label">Keep me signed in</span>
-  </label>
-
-  <div class="divider">or</div>
-
-  <div id="emailSection" class="email-section">
-    <form id="emailForm">
-      <div class="field"><label>Email</label><input type="email" id="email" placeholder="your@email.com" autocomplete="email" required></div>
-      <div class="field"><label>Password</label><input type="password" id="pw" placeholder="Dashboard password" required></div>
-      <button class="btn-email" type="submit" id="emailBtn">Sign In with Email</button>
-    </form>
-  </div>
-  <div id="noEmail" class="no-email">
-    <div style="font-size:22px;margin-bottom:6px">📧</div>
-    Email login not configured.<br>
-    <a href="#" id="showSetup">How to enable it</a>
-  </div>
-
-  <div class="error" id="err"></div>
-  <p class="hint" id="hint">Discord login requires <code>CLIENT_SECRET</code> in <code>.env</code></p>
 </div>
+
+<!-- Footer -->
+<footer class="footer">
+  <span class="footer-link">itay100k Bot</span>
+  <div class="footer-sep"></div>
+  <span class="footer-link" id="versionLabel">v1.0</span>
+  <div class="footer-sep"></div>
+  <span class="footer-link">Secure login</span>
+</footer>
 
 <script>
   if (localStorage.getItem('dashboard_token')) window.location.href = '/dashboard';
 
   const urlErr = new URLSearchParams(location.search).get('error');
   if (urlErr) {
-    const msgs = { no_code:'Discord login was cancelled.', token_failed:'Failed to get Discord token. Check CLIENT_SECRET.', user_failed:'Could not fetch your Discord profile.', oauth_disabled:'Discord login requires CLIENT_SECRET in .env' };
+    const msgs = {
+      no_code:       'Discord login was cancelled.',
+      token_failed:  'Failed to get Discord token. Check CLIENT_SECRET.',
+      user_failed:   'Could not fetch your Discord profile.',
+      oauth_disabled:'Discord login requires CLIENT_SECRET in .env',
+    };
     document.getElementById('err').textContent = msgs[urlErr] || 'Login failed: ' + urlErr;
   }
 
-  fetch('/api/loginconfig').then(r=>r.json()).then(cfg=>{
-    document.getElementById('botName').textContent = (cfg.username||'Bot') + ' Dashboard';
-    const av = document.getElementById('av');
-    if (cfg.avatar) { av.src = cfg.avatar; av.style.visibility='visible'; }
+  fetch('/api/loginconfig').then(r=>r.json()).then(cfg => {
+    const name = (cfg.username || 'Bot') + ' Dashboard';
+    document.getElementById('botName').textContent = name;
+    document.getElementById('topbarName').textContent = name;
+    if (cfg.avatar) { document.getElementById('av').src = cfg.avatar; }
 
     if (!cfg.discordEnabled) {
       const b = document.getElementById('discordBtn');
       b.classList.add('disabled');
       b.removeAttribute('href');
-      b.addEventListener('click', e => { e.preventDefault(); document.getElementById('err').textContent = 'Discord login requires CLIENT_SECRET in .env'; });
     } else {
-      document.getElementById('hint').style.display='none';
+      document.getElementById('hint').style.display = 'none';
     }
 
     if (cfg.emailEnabled) {
       document.getElementById('emailSection').classList.add('on');
-      document.getElementById('noEmail').style.display='none';
+      document.getElementById('noEmail').style.display = 'none';
     }
-  }).catch(()=>{});
+  }).catch(() => {});
 
-  // Wire remember-me toggle to Discord button href
+  // Wire remember toggle → Discord href
   const rememberCheck = document.getElementById('rememberMe');
   const discordBtn = document.getElementById('discordBtn');
-  function updateDiscordHref() {
+  function syncDiscordHref() {
     if (discordBtn.hasAttribute('href')) {
       discordBtn.href = rememberCheck.checked ? '/auth/discord?remember=1' : '/auth/discord';
     }
   }
-  rememberCheck.addEventListener('change', updateDiscordHref);
+  rememberCheck.addEventListener('change', syncDiscordHref);
 
   document.getElementById('showSetup').addEventListener('click', e => {
     e.preventDefault();
@@ -270,22 +395,33 @@
   document.getElementById('emailForm').addEventListener('submit', async e => {
     e.preventDefault();
     const btn = document.getElementById('emailBtn');
-    btn.disabled=true; btn.innerHTML='<div class="spinner dark"></div> Signing in…';
-    document.getElementById('err').textContent='';
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Signing in…';
+    document.getElementById('err').textContent = '';
     try {
-      const res = await fetch('/api/login/email',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
+      const res = await fetch('/api/login/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           email:    document.getElementById('email').value.trim(),
           password: document.getElementById('pw').value,
           remember: rememberCheck.checked,
-        })
+        }),
       });
       const data = await res.json();
-      if (res.ok) { localStorage.setItem('dashboard_token',data.token); window.location.href='/dashboard'; }
-      else { document.getElementById('err').textContent=data.error||'Login failed.'; btn.disabled=false; btn.textContent='Sign In with Email'; }
-    } catch { document.getElementById('err').textContent='Could not reach the server.'; btn.disabled=false; btn.textContent='Sign In with Email'; }
+      if (res.ok) {
+        localStorage.setItem('dashboard_token', data.token);
+        window.location.href = '/dashboard';
+      } else {
+        document.getElementById('err').textContent = data.error || 'Login failed.';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    } catch {
+      document.getElementById('err').textContent = 'Could not reach the server.';
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
   });
 </script>
 </body>
