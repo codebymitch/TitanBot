@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bot Dashboard</title>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:#1e1f22; --bg2:#2b2d31; --bg3:#313338;
+      --accent:#5865f2; --green:#23a55a; --yellow:#f0b132;
+      --red:#f23f43; --gold:#f5a623;
+      --text:#f2f3f5; --sub:#b5bac1; --muted:#80848e; --border:#3f4147;
+    }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    /* ── Header ── */
+    .hdr {
+      background:var(--bg2); border-bottom:1px solid var(--border);
+      padding:13px 28px; display:flex; align-items:center; gap:13px;
+      position:sticky; top:0; z-index:100;
+    }
+    .hdr-av { width:42px; height:42px; border-radius:50%; background:var(--accent); object-fit:cover; flex-shrink:0; }
+    .hdr-name { font-size:16px; font-weight:700; }
+    .hdr-status { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--sub); margin-top:1px; }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .hdr-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+    .chip { background:var(--bg3); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:12px; color:var(--sub); }
+    .owner-badge { background:rgba(245,166,35,.15); border:1px solid rgba(245,166,35,.4); color:var(--gold); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700; }
+    .btn-logout { background:rgba(242,63,67,.12); border:1px solid rgba(242,63,67,.3); color:var(--red); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; cursor:pointer; transition:background .15s; }
+    .btn-logout:hover { background:rgba(242,63,67,.25); }
+
+    /* ── Page ── */
+    .page { max-width:1380px; margin:0 auto; padding:26px 28px; }
+
+    /* ── Stats ── */
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:22px; }
+    .sc { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; align-items:center; gap:14px; transition:border-color .2s,transform .15s; }
+    .sc:hover { border-color:var(--accent); transform:translateY(-2px); }
+    .si { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+    .si.b{background:rgba(88,101,242,.18);} .si.g{background:rgba(35,165,90,.18);} .si.y{background:rgba(240,177,50,.18);} .si.p{background:rgba(163,148,255,.18);} .si.r{background:rgba(242,63,67,.18);}
+    .sv { font-size:28px; font-weight:800; line-height:1; }
+    .sv.grn { color:var(--green); }
+    .sl { font-size:12px; color:var(--muted); margin-top:3px; }
+
+    /* ── Grid ── */
+    .g2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+    @media(max-width:820px){ .g2{grid-template-columns:1fr;} }
+
+    /* ── Card ── */
+    .card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    .c-head { padding:13px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .c-title { font-size:14px; font-weight:700; display:flex; align-items:center; gap:7px; }
+    .badge { background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; }
+    .c-body { padding:14px 18px; max-height:470px; overflow-y:auto; }
+    .c-body::-webkit-scrollbar{width:4px;} .c-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+    /* ── Commands ── */
+    .cat { margin-bottom:12px; }
+    .cat-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); margin-bottom:5px; }
+    .tags { display:flex; flex-wrap:wrap; gap:5px; }
+    .tag { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:3px 8px; font-size:11px; color:var(--sub); font-family:Consolas,monospace; }
+
+    /* ── Servers ── */
+    .srv { display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid var(--border); }
+    .srv:last-child{border:none;}
+    .sic { width:36px; height:36px; border-radius:50%; background:var(--accent); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; overflow:hidden; }
+    .sic img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+    .sn { flex:1; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sm { font-size:12px; color:var(--muted); white-space:nowrap; }
+
+    /* ── Owner panel ── */
+    .owner-panel { border:1px solid rgba(245,166,35,.35); border-radius:14px; overflow:hidden; background:rgba(245,166,35,.04); }
+    .owner-panel .c-head { border-bottom-color:rgba(245,166,35,.25); }
+    .owner-panel .c-title { color:var(--gold); }
+    .owner-panel .badge { background:var(--gold); color:#000; }
+    .owner-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    @media(max-width:700px){ .owner-grid{grid-template-columns:1fr;} }
+
+    .ocmd { display:flex; flex-direction:column; gap:7px; }
+    .ocmd-item { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+    .ocmd-name { font-size:13px; font-weight:700; font-family:Consolas,monospace; color:var(--gold); }
+    .ocmd-desc { font-size:12px; color:var(--muted); margin-top:3px; }
+
+    .sys-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .sys-item { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+    .sys-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; }
+    .sys-val { font-size:15px; font-weight:700; margin-top:3px; }
+
+    /* ── Misc ── */
+    .spinner { width:22px; height:22px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; margin:20px auto; display:block; }
+    @keyframes spin { to{transform:rotate(360deg);} }
+    .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <img class="hdr-av" id="av" src="" alt="" onerror="this.style.visibility='hidden'">
+  <div>
+    <div class="hdr-name" id="botName">Loading…</div>
+    <div class="hdr-status"><div class="dot"></div><span>Online</span></div>
+  </div>
+  <div class="hdr-right">
+    <span class="owner-badge hidden" id="ownerBadge">👑 Owner</span>
+    <span class="chip" id="pingChip">🏓 —ms</span>
+    <span class="chip" id="cdChip">↻ 30s</span>
+    <button class="btn-logout" id="logoutBtn">Sign Out</button>
+  </div>
+</header>
+
+<main class="page">
+  <!-- Stats -->
+  <div class="stats">
+    <div class="sc"><div class="si b">🖥️</div><div><div class="sv" id="sServers">—</div><div class="sl">Servers</div></div></div>
+    <div class="sc"><div class="si g">👥</div><div><div class="sv" id="sUsers">—</div><div class="sl">Total Users</div></div></div>
+    <div class="sc"><div class="si y">⚡</div><div><div class="sv" id="sCmds">—</div><div class="sl">Commands</div></div></div>
+    <div class="sc"><div class="si p">⏱️</div><div><div class="sv grn" id="sUptime">—</div><div class="sl">Uptime</div></div></div>
+    <div class="sc"><div class="si r">🗄️</div><div><div class="sv" id="sDb">—</div><div class="sl">Database</div></div></div>
+  </div>
+
+  <!-- Commands + Servers -->
+  <div class="g2">
+    <div class="card">
+      <div class="c-head"><div class="c-title">⚡ Commands <span class="badge" id="cmdBadge">—</span></div></div>
+      <div class="c-body" id="cmdBody"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <div class="c-head"><div class="c-title">🖥️ Servers <span class="badge" id="srvBadge">—</span></div></div>
+      <div class="c-body" id="srvBody"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Owner Panel (hidden until confirmed owner) -->
+  <div class="owner-panel hidden" id="ownerPanel">
+    <div class="c-head">
+      <div class="c-title">👑 Owner Panel <span class="badge" id="ownerBadgeCount"></span></div>
+    </div>
+    <div style="padding:18px;">
+      <div class="owner-grid">
+        <!-- Owner commands reference -->
+        <div>
+          <div class="cat-lbl" style="margin-bottom:10px;">Owner Prefix Commands</div>
+          <div class="ocmd" id="ownerCmds"></div>
+        </div>
+        <!-- System info -->
+        <div>
+          <div class="cat-lbl" style="margin-bottom:10px;">System Info</div>
+          <div class="sys-grid" id="sysInfo"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">itay100k bot dashboard</div>
+
+<script>
+const OWNER_CMDS = [
+  { name:'>say <msg>',            desc:'Make the bot send a message in the channel' },
+  { name:'>embed <title> | <desc>', desc:'Post a custom embed' },
+  { name:'>announce <msg>',       desc:'Send a @everyone announcement embed' },
+  { name:'>dm <userID> <msg>',    desc:'DM any user as the bot' },
+  { name:'>fake @user <msg>',     desc:'Send a message as another user' },
+  { name:'>status <type> <text>', desc:'Change bot activity' },
+  { name:'>rename <name>',        desc:'Change bot username' },
+  { name:'>avatar <url>',         desc:'Change bot avatar' },
+  { name:'>createrole <name>',    desc:'Create an Admin role and assign it to you' },
+  { name:'>roleadd @user @role',  desc:'Add a role to any member' },
+  { name:'>roleremove @user @role', desc:'Remove a role from any member' },
+  { name:'/managerole add|remove', desc:'Slash: assign/strip any role (owner only)' },
+  { name:'/servers',              desc:'Slash: list all servers the bot is in' },
+];
+
+const CAT_ICONS = {
+  core:'ℹ️', moderation:'🛡️', fun:'🎮', leveling:'📊', utility:'🔧',
+  ticket:'🎫', welcome:'👋', giveaway:'🎉', tools:'🛠️', search:'🔍',
+  reaction_roles:'🎭', community:'👥', jointocreate:'🎙️', verification:'✅',
+  serverstats:'📈', logging:'📋', voice:'🔊', music:'🎵', gorilla:'🦍',
+};
+
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtUp(s){ const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60); if(d>0)return`${d}d ${h}h`; if(h>0)return`${h}h ${m}m`; return`${m}m ${sec}s`; }
+function fmtN(n){ return n>=1000?(n/1000).toFixed(1)+'k':String(n); }
+function fmtMem(b){ return(b/1024/1024).toFixed(1)+' MB'; }
+
+// Auth
+const token = localStorage.getItem('dashboard_token');
+if (!token) { window.location.href = '/login'; }
+
+const headers = { 'Authorization': 'Bearer ' + token };
+
+async function api(path) {
+  const res = await fetch(path, { headers });
+  if (res.status === 401) { localStorage.removeItem('dashboard_token'); window.location.href = '/login'; }
+  return res.json();
+}
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('dashboard_token');
+  window.location.href = '/login';
+});
+
+async function loadStats() {
+  const d = await api('/api/stats');
+  document.getElementById('botName').textContent = d.username || 'Bot';
+  const av = document.getElementById('av');
+  av.src = d.avatar||''; av.style.visibility='visible';
+  document.getElementById('sServers').textContent = fmtN(d.guilds);
+  document.getElementById('sUsers').textContent   = fmtN(d.users);
+  document.getElementById('sCmds').textContent    = d.commands;
+  document.getElementById('sUptime').textContent  = fmtUp(d.uptime);
+  document.getElementById('sDb').textContent      = d.dbStatus;
+  document.getElementById('pingChip').textContent = `🏓 ${d.ping}ms`;
+
+  if (d.isOwner) {
+    document.getElementById('ownerBadge').classList.remove('hidden');
+    document.getElementById('ownerPanel').classList.remove('hidden');
+    document.getElementById('ownerBadgeCount').textContent = OWNER_CMDS.length + ' cmds';
+    renderOwnerCmds();
+    renderSysInfo(d);
+  }
+}
+
+async function loadCommands() {
+  const d = await api('/api/commands');
+  const total = Object.values(d).reduce((a,v)=>a+v.length,0);
+  document.getElementById('cmdBadge').textContent = total;
+  document.getElementById('cmdBody').innerHTML = Object.entries(d)
+    .sort(([a],[b])=>a.localeCompare(b))
+    .map(([cat,cmds])=>`
+      <div class="cat">
+        <div class="cat-lbl">${CAT_ICONS[cat.toLowerCase()]||'📁'} ${esc(cat)}</div>
+        <div class="tags">${cmds.map(c=>`<span class="tag">/${esc(c)}</span>`).join('')}</div>
+      </div>
+    `).join('');
+}
+
+async function loadServers() {
+  const d = await api('/api/servers');
+  document.getElementById('srvBadge').textContent = d.length;
+  document.getElementById('srvBody').innerHTML = d.map(s=>`
+    <div class="srv">
+      <div class="sic">${s.icon?`<img src="${esc(s.icon)}" alt="${esc(s.name)}" onerror="this.parentElement.textContent='${esc(s.name[0].toUpperCase())}'">`:esc(s.name[0].toUpperCase())}</div>
+      <div class="sn">${esc(s.name)}</div>
+      <div class="sm">👥 ${s.memberCount.toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+function renderOwnerCmds() {
+  document.getElementById('ownerCmds').innerHTML = OWNER_CMDS.map(c=>`
+    <div class="ocmd-item">
+      <div class="ocmd-name">${esc(c.name)}</div>
+      <div class="ocmd-desc">${esc(c.desc)}</div>
+    </div>
+  `).join('');
+}
+
+function renderSysInfo(d) {
+  const mem = performance?.memory?.usedJSHeapSize;
+  document.getElementById('sysInfo').innerHTML = `
+    <div class="sys-item"><div class="sys-label">Servers</div><div class="sys-val">${d.guilds}</div></div>
+    <div class="sys-item"><div class="sys-label">Users</div><div class="sys-val">${fmtN(d.users)}</div></div>
+    <div class="sys-item"><div class="sys-label">Uptime</div><div class="sys-val grn" style="color:var(--green)">${fmtUp(d.uptime)}</div></div>
+    <div class="sys-item"><div class="sys-label">Ping</div><div class="sys-val">${d.ping}ms</div></div>
+    <div class="sys-item"><div class="sys-label">Commands</div><div class="sys-val">${d.commands}</div></div>
+    <div class="sys-item"><div class="sys-label">Database</div><div class="sys-val" style="font-size:12px">${esc(d.dbStatus)}</div></div>
+  `;
+}
+
+async function refresh() {
+  await Promise.all([loadStats(), loadCommands(), loadServers()]);
+}
+
+let cd = 30;
+setInterval(()=>{ cd--; document.getElementById('cdChip').textContent=`↻ ${cd}s`; if(cd<=0){cd=30;refresh();} }, 1000);
+
+refresh();
+</script>
+</body>
+</html>

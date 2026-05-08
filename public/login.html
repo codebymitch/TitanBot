@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Sign In</title>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:#1e1f22; --card:#2b2d31; --border:#3f4147;
+      --accent:#5865f2; --accent-h:#4752c4;
+      --text:#f2f3f5; --sub:#b5bac1; --muted:#80848e;
+      --err:#f23f43; --input:#1e1f22;
+    }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center; }
+
+    .card {
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      padding:44px 40px; width:100%; max-width:420px; text-align:center;
+      box-shadow:0 20px 60px rgba(0,0,0,.4);
+    }
+    .avatar { width:76px; height:76px; border-radius:50%; background:var(--accent); margin:0 auto 18px; display:block; object-fit:cover; }
+    h1 { font-size:22px; font-weight:800; margin-bottom:6px; }
+    .sub { color:var(--muted); font-size:14px; margin-bottom:30px; }
+
+    .field { margin-bottom:16px; text-align:left; }
+    .field label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); display:block; margin-bottom:7px; }
+    .field input {
+      width:100%; background:var(--input); border:1.5px solid var(--border);
+      border-radius:8px; padding:11px 14px; color:var(--text); font-size:14px; outline:none;
+      transition:border-color .15s;
+    }
+    .field input:focus { border-color:var(--accent); }
+    .field input::placeholder { color:var(--muted); }
+
+    .btn {
+      width:100%; background:var(--accent); color:#fff; border:none;
+      border-radius:8px; padding:13px; font-size:15px; font-weight:700;
+      cursor:pointer; margin-top:6px; transition:background .15s, transform .1s;
+      display:flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .btn:hover { background:var(--accent-h); }
+    .btn:active { transform:scale(.98); }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+
+    .error { color:var(--err); font-size:13px; margin-top:14px; min-height:18px; }
+
+    .hint { color:var(--muted); font-size:12px; margin-top:18px; }
+    .spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="card">
+  <img class="avatar" id="av" src="" alt="" onerror="this.style.visibility='hidden'">
+  <h1 id="botName">Dashboard</h1>
+  <p class="sub">Sign in to access the bot dashboard</p>
+
+  <form id="form">
+    <div class="field">
+      <label>Your Discord User ID</label>
+      <input type="text" id="uid" placeholder="e.g. 123456789012345678" autocomplete="off" required>
+    </div>
+    <div class="field">
+      <label>Dashboard Password</label>
+      <input type="password" id="pw" placeholder="Enter password" required>
+    </div>
+    <button class="btn" type="submit" id="btn">Sign In</button>
+  </form>
+  <div class="error" id="err"></div>
+  <p class="hint">Your Discord User ID can be found in Settings → Advanced → Developer Mode</p>
+</div>
+
+<script>
+  fetch('/api/botinfo').then(r=>r.json()).then(d=>{
+    document.getElementById('botName').textContent = (d.username||'Bot') + ' Dashboard';
+    const av = document.getElementById('av');
+    if (d.avatar) { av.src = d.avatar; av.style.visibility = 'visible'; }
+  }).catch(()=>{});
+
+  // Redirect if already logged in
+  const tok = localStorage.getItem('dashboard_token');
+  if (tok) window.location.href = '/dashboard';
+
+  document.getElementById('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Signing in…';
+    document.getElementById('err').textContent = '';
+
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: document.getElementById('uid').value.trim(),
+          password: document.getElementById('pw').value,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('dashboard_token', data.token);
+        window.location.href = '/dashboard';
+      } else {
+        document.getElementById('err').textContent = data.error || 'Login failed.';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    } catch {
+      document.getElementById('err').textContent = 'Could not reach the server.';
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  });
+</script>
+</body>
+</html>

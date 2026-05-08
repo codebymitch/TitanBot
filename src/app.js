@@ -4,8 +4,33 @@ import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ── Dashboard auth helpers ────────────────────────────────────────
+const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || crypto.randomBytes(32).toString('hex');
+
+function createToken(payload) {
+  const data = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + 24 * 3600 * 1000 })).toString('base64');
+  const sig = crypto.createHmac('sha256', DASHBOARD_SECRET).update(data).digest('hex');
+  return `${data}.${sig}`;
+}
+
+function verifyToken(token) {
+  if (!token) return null;
+  const dot = token.lastIndexOf('.');
+  if (dot < 0) return null;
+  const data = token.slice(0, dot);
+  const sig  = token.slice(dot + 1);
+  const expected = crypto.createHmac('sha256', DASHBOARD_SECRET).update(data).digest('hex');
+  if (sig !== expected) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(data, 'base64').toString());
+    if (Date.now() > payload.exp) return null;
+    return payload;
+  } catch { return null; }
+}
 
 import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
@@ -155,25 +180,64 @@ class TitanBot extends Client {
       next();
     });
 
-    // ── Static dashboard ──────────────────────────────────────────
+    // ── Static files ──────────────────────────────────────────────
     app.use(express.static(path.join(__dirname, '../public')));
+    app.use(express.json());
 
-    // ── Dashboard API ─────────────────────────────────────────────
-    app.get('/api/stats', (req, res) => {
-      const dbStatus = this.db?.getStatus?.() || {};
+    // ── Page routes ───────────────────────────────────────────────
+    app.get('/',          (req, res) => res.redirect('/dashboard'));
+    app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, '../public/dashboard.html')));
+    app.get('/login',     (req, res) => res.sendFile(path.join(__dirname, '../public/login.html')));
+
+    // ── Public API ────────────────────────────────────────────────
+    app.get('/api/botinfo', (req, res) => {
       res.json({
-        username:  this.user?.username || 'Bot',
-        avatar:    this.user?.displayAvatarURL({ size: 128 }) || '',
-        guilds:    this.guilds.cache.size,
-        users:     this.guilds.cache.reduce((a, g) => a + (g.memberCount || 0), 0),
-        commands:  this.commands.size,
-        uptime:    process.uptime(),
-        ping:      Math.round(this.ws.ping),
-        dbStatus:  dbStatus.isDegraded ? '⚠️ Degraded' : '✅ Online',
+        username: this.user?.username || 'Bot',
+        avatar:   this.user?.displayAvatarURL({ size: 128 }) || '',
       });
     });
 
-    app.get('/api/commands', (req, res) => {
+    app.post('/api/login', (req, res) => {
+      const { userId, password } = req.body || {};
+      const dashPass = process.env.DASHBOARD_PASSWORD || 'admin';
+      if (!userId || !password || password !== dashPass) {
+        return res.status(401).json({ error: 'Invalid credentials.' });
+      }
+      const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
+      const isOwner  = ownerIds.includes(String(userId));
+      const token    = createToken({ userId: String(userId), isOwner });
+      res.json({ token, userId: String(userId), isOwner });
+    });
+
+    // ── Auth middleware ───────────────────────────────────────────
+    const auth = (req, res, next) => {
+      const hdr = req.headers.authorization;
+      if (!hdr?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+      const payload = verifyToken(hdr.slice(7));
+      if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
+      req.user = payload;
+      next();
+    };
+
+    // ── Protected API ─────────────────────────────────────────────
+    app.get('/api/me', auth, (req, res) => res.json(req.user));
+
+    app.get('/api/stats', auth, (req, res) => {
+      const dbStatus = this.db?.getStatus?.() || {};
+      res.json({
+        username: this.user?.username || 'Bot',
+        avatar:   this.user?.displayAvatarURL({ size: 128 }) || '',
+        guilds:   this.guilds.cache.size,
+        users:    this.guilds.cache.reduce((a, g) => a + (g.memberCount || 0), 0),
+        commands: this.commands.size,
+        uptime:   process.uptime(),
+        ping:     Math.round(this.ws.ping),
+        dbStatus: dbStatus.isDegraded ? '⚠️ Degraded' : '✅ Online',
+        isOwner:  req.user.isOwner,
+      });
+    });
+
+    app.get('/api/commands', auth, (req, res) => {
       const categories = {};
       for (const [name, cmd] of this.commands) {
         const cat = cmd.category
@@ -185,7 +249,7 @@ class TitanBot extends Client {
       res.json(categories);
     });
 
-    app.get('/api/servers', (req, res) => {
+    app.get('/api/servers', auth, (req, res) => {
       const servers = this.guilds.cache.map(g => ({
         id:          g.id,
         name:        g.name,
@@ -227,9 +291,6 @@ class TitanBot extends Client {
       });
     });
 
-    app.get('/', (req, res) => {
-      res.sendFile(path.join(__dirname, '../public/index.html'));
-    });
 
     const startServer = (port, attempt = 0) => {
       let hasStartedListening = false;

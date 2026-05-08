@@ -14,6 +14,9 @@ services:
       - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - POSTGRES_HOST=db
       - PORT=3000
+      - OWNER_IDS=${OWNER_IDS}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-admin}
+      - DASHBOARD_SECRET=${DASHBOARD_SECRET}
     depends_on:
       db:
         condition: service_healthy
