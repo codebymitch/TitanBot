@@ -17,6 +17,9 @@ services:
       - OWNER_IDS=${OWNER_IDS}
       - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-admin}
       - DASHBOARD_SECRET=${DASHBOARD_SECRET}
+      - DASHBOARD_EMAIL=${DASHBOARD_EMAIL}
+      - CLIENT_SECRET=${CLIENT_SECRET}
+      - REDIRECT_URI=${REDIRECT_URI:-http://localhost:3000/auth/discord/callback}
     depends_on:
       db:
         condition: service_healthy

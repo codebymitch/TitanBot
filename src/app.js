@@ -197,16 +197,82 @@ class TitanBot extends Client {
       });
     });
 
-    app.post('/api/login', (req, res) => {
-      const { userId, password } = req.body || {};
-      const dashPass = process.env.DASHBOARD_PASSWORD || 'admin';
-      if (!userId || !password || password !== dashPass) {
-        return res.status(401).json({ error: 'Invalid credentials.' });
+    app.get('/api/loginconfig', (req, res) => {
+      res.json({
+        username:       this.user?.username || 'Bot',
+        avatar:         this.user?.displayAvatarURL({ size: 128 }) || '',
+        discordEnabled: !!process.env.CLIENT_SECRET,
+        emailEnabled:   !!process.env.DASHBOARD_EMAIL,
+      });
+    });
+
+    // ── Discord OAuth2 ────────────────────────────────────────────
+    app.get('/auth/discord', (req, res) => {
+      if (!process.env.CLIENT_SECRET) {
+        return res.redirect('/login?error=oauth_disabled');
+      }
+      const redirectUri = process.env.REDIRECT_URI || `http://localhost:${process.env.PORT || 3000}/auth/discord/callback`;
+      const params = new URLSearchParams({
+        client_id:     process.env.CLIENT_ID,
+        redirect_uri:  redirectUri,
+        response_type: 'code',
+        scope:         'identify',
+      });
+      res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+    });
+
+    app.get('/auth/discord/callback', async (req, res) => {
+      const { code } = req.query;
+      if (!code) return res.redirect('/login?error=no_code');
+      try {
+        const redirectUri = process.env.REDIRECT_URI || `http://localhost:${process.env.PORT || 3000}/auth/discord/callback`;
+        const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id:     process.env.CLIENT_ID,
+            client_secret: process.env.CLIENT_SECRET,
+            grant_type:    'authorization_code',
+            code,
+            redirect_uri:  redirectUri,
+          }),
+        });
+        if (!tokenRes.ok) return res.redirect('/login?error=token_failed');
+        const { access_token } = await tokenRes.json();
+
+        const userRes = await fetch('https://discord.com/api/users/@me', {
+          headers: { Authorization: `Bearer ${access_token}` },
+        });
+        if (!userRes.ok) return res.redirect('/login?error=user_failed');
+        const user = await userRes.json();
+
+        const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
+        const isOwner  = ownerIds.includes(user.id);
+        const token    = createToken({ userId: user.id, username: user.username, isOwner });
+
+        res.send(`<!DOCTYPE html><html><head><script>
+          localStorage.setItem('dashboard_token', ${JSON.stringify(token)});
+          window.location.href = '/dashboard';
+        </script></head></html>`);
+      } catch (err) {
+        logger.error('Discord OAuth2 callback error:', err);
+        res.redirect('/login?error=token_failed');
+      }
+    });
+
+    // ── Email login ───────────────────────────────────────────────
+    app.post('/api/login/email', (req, res) => {
+      const { email, password } = req.body || {};
+      const cfgEmail = process.env.DASHBOARD_EMAIL;
+      const cfgPass  = process.env.DASHBOARD_PASSWORD;
+      if (!cfgEmail) return res.status(404).json({ error: 'Email login is not configured.' });
+      if (!email || !password || email !== cfgEmail || password !== cfgPass) {
+        return res.status(401).json({ error: 'Invalid email or password.' });
       }
       const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
-      const isOwner  = ownerIds.includes(String(userId));
-      const token    = createToken({ userId: String(userId), isOwner });
-      res.json({ token, userId: String(userId), isOwner });
+      const isOwner  = ownerIds.includes(process.env.DASHBOARD_OWNER_ID || '') || true;
+      const token    = createToken({ userId: email, username: email.split('@')[0], isOwner });
+      res.json({ token });
     });
 
     // ── Auth middleware ───────────────────────────────────────────
