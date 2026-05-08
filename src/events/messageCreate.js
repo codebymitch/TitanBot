@@ -226,6 +226,63 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0x57F287, `➕ Added **${role.name}** to **${target.user.tag}**.`)] });
       }
 
+      case 'webhook': {
+        if (!hasPerm('ManageWebhooks')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageWebhooks')) return BOT_NO_PERM();
+        const sub = args[0]?.toLowerCase();
+
+        if (!sub || sub === 'list') {
+          const hooks = await message.channel.fetchWebhooks();
+          if (hooks.size === 0) {
+            return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ No webhooks found in <#${message.channel.id}>. Use \`>webhook create [name]\` to make one.`)] });
+          }
+          const lines = hooks.map(h => `**${h.name}** — \`${h.id}\`\nURL: ||${h.url}||`).join('\n\n');
+          const embed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setTitle(`🔗 Webhooks in #${message.channel.name}`)
+            .setDescription(lines)
+            .setFooter({ text: 'URLs are hidden — click to reveal' });
+          try {
+            await message.author.send({ embeds: [embed] });
+            return message.reply({ embeds: [modEmbed(0x57F287, `✅ Webhook list sent to your DMs.`)] });
+          } catch {
+            return message.reply({ embeds: [embed] });
+          }
+        }
+
+        if (sub === 'create') {
+          const name = args.slice(1).join(' ').trim() || `${message.channel.name}-webhook`;
+          if (name.length < 2 || name.length > 80) return message.reply('Webhook name must be between 2 and 80 characters.');
+          const hook = await message.channel.createWebhook({ name, reason: `>webhook create by ${message.author.tag}` });
+          const embed = new EmbedBuilder()
+            .setColor(0x57F287)
+            .setTitle('✅ Webhook Created')
+            .addFields(
+              { name: 'Name', value: hook.name, inline: true },
+              { name: 'ID', value: `\`${hook.id}\``, inline: true },
+              { name: 'URL', value: `||${hook.url}||` },
+            );
+          try {
+            await message.author.send({ embeds: [embed] });
+            return message.reply({ embeds: [modEmbed(0x57F287, `✅ Webhook **${hook.name}** created. URL sent to your DMs.`)] });
+          } catch {
+            return message.reply({ embeds: [embed] });
+          }
+        }
+
+        if (sub === 'delete') {
+          const hookId = args[1];
+          if (!hookId) return message.reply('Usage: `>webhook delete <webhookID>`');
+          const hooks = await message.channel.fetchWebhooks();
+          const hook = hooks.get(hookId);
+          if (!hook) return message.reply({ embeds: [modEmbed(0xED4245, `❌ No webhook with ID \`${hookId}\` found in this channel.`)] });
+          await hook.delete(`>webhook delete by ${message.author.tag}`);
+          return message.reply({ embeds: [modEmbed(0x57F287, `🗑️ Webhook **${hook.name}** deleted.`)] });
+        }
+
+        return message.reply('Usage: `>webhook` · `>webhook create [name]` · `>webhook delete <id>`');
+      }
+
       case 'roleremove': {
         if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>roleremove`.')] });
         if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
@@ -247,7 +304,7 @@ async function handleModCommand(message, client) {
             { name: 'Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>warn @user [reason]`\n`>unban <userID> [reason]`', inline: true },
             { name: 'Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
             { name: 'Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
-            { name: 'Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
+            { name: 'Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>webhook [create/delete]`\n`>help`', inline: true },
             { name: '🔑 Owner Only', value: '`>roleadd @user @role`\n`>roleremove @user @role`', inline: true },
           )
           .setFooter({ text: 'Requires appropriate Discord permissions • 🔑 = Bot owner only' });

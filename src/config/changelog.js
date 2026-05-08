@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '2.8.3',
+        date: '2026-05-08',
+        entries: [
+            { type: 'new', text: 'Added `>webhook` — list, create, or delete webhooks in the current channel (requires Manage Webhooks or bot owner). Webhook URLs are DMed to keep them private.' },
+        ],
+    },
+    {
         version: '2.8.2',
         date: '2026-05-07',
         entries: [
