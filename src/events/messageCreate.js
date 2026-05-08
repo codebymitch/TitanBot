@@ -335,6 +335,18 @@ async function handleModCommand(message, client) {
         return;
       }
 
+      case 'delrole': {
+        if (!isOwner) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
+        const role = message.mentions.roles.first();
+        if (!role) return message.reply('Usage: `>delrole @role`');
+        if (role.managed) return message.reply({ embeds: [modEmbed(0xED4245, `❌ **${role.name}** is a managed role and cannot be deleted.`)] });
+        if (role.position >= guild.members.me.roles.highest.position) return message.reply({ embeds: [modEmbed(0xED4245, `❌ **${role.name}** is at or above my highest role.`)] });
+        const name = role.name;
+        await role.delete(`>delrole by ${message.author.tag}`);
+        return message.reply({ embeds: [modEmbed(0x57F287, `🗑️ Deleted role **${name}**.`)] });
+      }
+
       case 'createrole': {
         if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>createrole`.')] });
         if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
@@ -483,7 +495,7 @@ async function handleModCommand(message, client) {
             { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
-            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>admin` — instantly get an Admin role (needs bot to have Admin)\n`>createrole <name>` — create Admin role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
+            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>admin` — instantly get an Admin role (needs bot to have Admin)\n`>createrole <name>` — create Admin role\n`>delrole @role` — delete a role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
           )
           .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only' });
         return message.reply({ embeds: [embed] });
