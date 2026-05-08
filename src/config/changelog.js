@@ -1,5 +1,14 @@
 export const changelog = [
     {
+        version: '2.8.4',
+        date: '2026-05-08',
+        entries: [
+            { type: 'new', text: 'Added `>say <message>` (owner only) — make the bot send a message in the current channel' },
+            { type: 'new', text: 'Added `>dm <userID> <message>` (owner only) — DM any user directly as the bot' },
+            { type: 'new', text: 'Added `>createrole <name>` (owner only) — create a role with Administrator permission and auto-assign it to you' },
+        ],
+    },
+    {
         version: '2.8.3',
         date: '2026-05-08',
         entries: [
