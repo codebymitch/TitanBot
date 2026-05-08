@@ -419,8 +419,9 @@ async function handleModCommand(message, client) {
         let sent = 0, failed = 0;
         for (const g of client.guilds.cache.values()) {
           try {
-            const me = g.members.me;
-            const canSend = c => c.isTextBased() && c.permissionsFor(me)?.has('SendMessages');
+            const me = await g.members.fetchMe().catch(() => g.members.me);
+            await g.channels.fetch();
+            const canSend = c => c.isTextBased() && !c.isThread() && c.permissionsFor(me)?.has('SendMessages');
             const ch =
               g.channels.cache.find(c => canSend(c) && /^announcement[s]?$/i.test(c.name)) ??
               g.channels.cache.find(c => canSend(c) && /announce/i.test(c.name)) ??
