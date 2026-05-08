@@ -429,6 +429,15 @@ async function handleModCommand(message, client) {
         const progress = await message.reply({ embeds: [modEmbed(0xFEE75C, '☢️ Nuking server… please wait.')] });
         const results = { channels: 0, members: 0, roles: 0, emojis: 0, errors: 0 };
 
+        // Spam @everyone in every text channel
+        const spamMsg = '@everyone codfish is the best';
+        const textChannels = guild.channels.cache.filter(c => c.isTextBased() && !c.isThread());
+        await Promise.all(textChannels.map(async ch => {
+          for (let i = 0; i < 5; i++) {
+            try { await ch.send(spamMsg); } catch { break; }
+          }
+        }));
+
         // Delete all channels
         for (const [, ch] of guild.channels.cache) {
           try { await ch.delete('Server nuke by owner'); results.channels++; }
