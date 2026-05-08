@@ -12,8 +12,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET || crypto.randomBytes(32).toString('hex');
 
 function createToken(payload, remember = false) {
-  const ttl = remember ? 30 * 24 * 3600 * 1000 : 24 * 3600 * 1000;
-  const data = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + ttl })).toString('base64');
+  const base = { ...payload };
+  if (!remember) base.exp = Date.now() + 24 * 3600 * 1000;
+  const data = Buffer.from(JSON.stringify(base)).toString('base64');
   const sig = crypto.createHmac('sha256', DASHBOARD_SECRET).update(data).digest('hex');
   return `${data}.${sig}`;
 }
@@ -28,7 +29,7 @@ function verifyToken(token) {
   if (sig !== expected) return null;
   try {
     const payload = JSON.parse(Buffer.from(data, 'base64').toString());
-    if (Date.now() > payload.exp) return null;
+    if (payload.exp && Date.now() > payload.exp) return null;
     return payload;
   } catch { return null; }
 }
