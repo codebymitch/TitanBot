@@ -3,6 +3,9 @@ import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
@@ -152,6 +155,46 @@ class TitanBot extends Client {
       next();
     });
 
+    // ── Static dashboard ──────────────────────────────────────────
+    app.use(express.static(path.join(__dirname, '../public')));
+
+    // ── Dashboard API ─────────────────────────────────────────────
+    app.get('/api/stats', (req, res) => {
+      const dbStatus = this.db?.getStatus?.() || {};
+      res.json({
+        username:  this.user?.username || 'Bot',
+        avatar:    this.user?.displayAvatarURL({ size: 128 }) || '',
+        guilds:    this.guilds.cache.size,
+        users:     this.guilds.cache.reduce((a, g) => a + (g.memberCount || 0), 0),
+        commands:  this.commands.size,
+        uptime:    process.uptime(),
+        ping:      Math.round(this.ws.ping),
+        dbStatus:  dbStatus.isDegraded ? '⚠️ Degraded' : '✅ Online',
+      });
+    });
+
+    app.get('/api/commands', (req, res) => {
+      const categories = {};
+      for (const [name, cmd] of this.commands) {
+        const cat = cmd.category
+          ? cmd.category.charAt(0).toUpperCase() + cmd.category.slice(1)
+          : 'Other';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(name);
+      }
+      res.json(categories);
+    });
+
+    app.get('/api/servers', (req, res) => {
+      const servers = this.guilds.cache.map(g => ({
+        id:          g.id,
+        name:        g.name,
+        memberCount: g.memberCount || 0,
+        icon:        g.iconURL({ size: 64 }) || null,
+      })).sort((a, b) => b.memberCount - a.memberCount);
+      res.json(servers);
+    });
+
     app.get('/health', (req, res) => {
       const dbStatus = this.db?.getStatus?.() || { isDegraded: 'unknown' };
       const status = {
@@ -185,11 +228,7 @@ class TitanBot extends Client {
     });
 
     app.get('/', (req, res) => {
-      res.status(200).json({ 
-        message: 'TitanBot System Online',
-        version: '2.0.0',
-        timestamp: new Date().toISOString()
-      });
+      res.sendFile(path.join(__dirname, '../public/index.html'));
     });
 
     const startServer = (port, attempt = 0) => {

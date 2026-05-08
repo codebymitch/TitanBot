@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bot Dashboard</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-primary:   #1e1f22;
+      --bg-secondary: #2b2d31;
+      --bg-tertiary:  #313338;
+      --accent:       #5865f2;
+      --green:        #23a55a;
+      --yellow:       #f0b132;
+      --red:          #f23f43;
+      --text-primary: #f2f3f5;
+      --text-secondary: #b5bac1;
+      --text-muted:   #80848e;
+      --border:       #3f4147;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+
+    /* ── Header ── */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .bot-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--accent); object-fit: cover; flex-shrink: 0;
+    }
+    .bot-name { font-size: 17px; font-weight: 700; }
+    .status-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .header-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+    .chip { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--text-secondary); }
+
+    /* ── Layout ── */
+    .page { max-width: 1380px; margin: 0 auto; padding: 28px 32px; }
+
+    /* ── Stat cards ── */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 16px;
+      transition: border-color .2s, transform .15s;
+    }
+    .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .stat-icon {
+      width: 50px; height: 50px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+    }
+    .icon-blue   { background: rgba(88,101,242,.18); }
+    .icon-green  { background: rgba(35,165,90,.18); }
+    .icon-yellow { background: rgba(240,177,50,.18); }
+    .icon-purple { background: rgba(163,148,255,.18); }
+    .icon-pink   { background: rgba(235,69,158,.18); }
+    .stat-val { font-size: 30px; font-weight: 800; line-height: 1; }
+    .stat-val.green { color: var(--green); }
+    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* ── Two-col grid ── */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media(max-width:860px){ .grid2 { grid-template-columns: 1fr; } }
+
+    /* ── Section card ── */
+    .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .card-head {
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .card-body { padding: 16px 20px; max-height: 480px; overflow-y: auto; }
+    .card-body::-webkit-scrollbar { width: 4px; }
+    .card-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Commands ── */
+    .cat-block { margin-bottom: 14px; }
+    .cat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); margin-bottom: 6px; }
+    .cmd-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .cmd-tag {
+      background: var(--bg-tertiary); border: 1px solid var(--border);
+      border-radius: 6px; padding: 3px 8px; font-size: 11px;
+      color: var(--text-secondary); font-family: Consolas, monospace;
+    }
+
+    /* ── Servers ── */
+    .srv { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .srv:last-child { border-bottom: none; }
+    .srv-icon {
+      width: 38px; height: 38px; border-radius: 50%; background: var(--accent);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; overflow: hidden;
+    }
+    .srv-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .srv-name { flex: 1; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .srv-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+    /* ── Spinner ── */
+    .spinner { width: 22px; height: 22px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: 20px auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ── */
+    .footer { text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <img class="bot-avatar" id="botAvatar" src="" alt="" onerror="this.style.visibility='hidden'">
+  <div>
+    <div class="bot-name" id="botName">Loading…</div>
+    <div class="status-row"><div class="dot"></div><span>Online</span></div>
+  </div>
+  <div class="header-right">
+    <span class="chip" id="pingChip">🏓 —ms</span>
+    <span class="chip" id="refreshChip">↻ 30s</span>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-icon icon-blue">🖥️</div>
+      <div><div class="stat-val" id="statServers">—</div><div class="stat-label">Servers</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-green">👥</div>
+      <div><div class="stat-val" id="statUsers">—</div><div class="stat-label">Total Users</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-yellow">⚡</div>
+      <div><div class="stat-val" id="statCmds">—</div><div class="stat-label">Commands</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-purple">⏱️</div>
+      <div><div class="stat-val green" id="statUptime">—</div><div class="stat-label">Uptime</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-pink">🗄️</div>
+      <div><div class="stat-val" id="statDb">—</div><div class="stat-label">Database</div></div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="grid2">
+
+    <!-- Commands -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">⚡ Commands <span class="badge" id="cmdBadge">—</span></div>
+      </div>
+      <div class="card-body" id="cmdBody"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Servers -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">🖥️ Servers <span class="badge" id="srvBadge">—</span></div>
+      </div>
+      <div class="card-body" id="srvBody"><div class="spinner"></div></div>
+    </div>
+
+  </div>
+</main>
+
+<div class="footer">itay100k bot dashboard</div>
+
+<script>
+const CAT_ICONS = {
+  core:'ℹ️', moderation:'🛡️', fun:'🎮', leveling:'📊', utility:'🔧',
+  ticket:'🎫', welcome:'👋', giveaway:'🎉', tools:'🛠️', search:'🔍',
+  reaction_roles:'🎭', community:'👥', jointocreate:'🎙️', verification:'✅',
+  serverstats:'📈', logging:'📋', voice:'🔊', music:'🎵', gorilla:'🦍',
+};
+
+function fmtUptime(s) {
+  const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600),
+        m = Math.floor((s%3600)/60), sec = Math.floor(s%60);
+  if (d>0) return `${d}d ${h}h`;
+  if (h>0) return `${h}h ${m}m`;
+  return `${m}m ${sec}s`;
+}
+function fmtNum(n) { return n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+function esc(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function loadStats() {
+  const d = await fetch('/api/stats').then(r=>r.json());
+  document.getElementById('botName').textContent = d.username || 'Bot';
+  const av = document.getElementById('botAvatar');
+  av.src = d.avatar || ''; av.style.visibility = 'visible';
+  document.getElementById('statServers').textContent = fmtNum(d.guilds);
+  document.getElementById('statUsers').textContent   = fmtNum(d.users);
+  document.getElementById('statCmds').textContent    = d.commands;
+  document.getElementById('statUptime').textContent  = fmtUptime(d.uptime);
+  document.getElementById('statDb').textContent      = d.dbStatus;
+  document.getElementById('pingChip').textContent    = `🏓 ${d.ping}ms`;
+}
+
+async function loadCommands() {
+  const d = await fetch('/api/commands').then(r=>r.json());
+  const total = Object.values(d).reduce((a,v)=>a+v.length,0);
+  document.getElementById('cmdBadge').textContent = total;
+  document.getElementById('cmdBody').innerHTML = Object.entries(d)
+    .sort(([a],[b])=>a.localeCompare(b))
+    .map(([cat,cmds])=>`
+      <div class="cat-block">
+        <div class="cat-label">${CAT_ICONS[cat.toLowerCase()]||'📁'} ${cat}</div>
+        <div class="cmd-tags">${cmds.map(c=>`<span class="cmd-tag">/${esc(c)}</span>`).join('')}</div>
+      </div>
+    `).join('');
+}
+
+async function loadServers() {
+  const d = await fetch('/api/servers').then(r=>r.json());
+  document.getElementById('srvBadge').textContent = d.length;
+  document.getElementById('srvBody').innerHTML = d.map(s=>`
+    <div class="srv">
+      <div class="srv-icon">
+        ${s.icon
+          ? `<img src="${esc(s.icon)}" alt="${esc(s.name)}" onerror="this.parentElement.textContent='${esc(s.name[0].toUpperCase())}'">`
+          : esc(s.name[0].toUpperCase())}
+      </div>
+      <div class="srv-name">${esc(s.name)}</div>
+      <div class="srv-count">👥 ${s.memberCount.toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+async function refresh() {
+  await Promise.all([loadStats(), loadCommands(), loadServers()]);
+}
+
+let cd = 30;
+setInterval(()=>{ cd--; document.getElementById('refreshChip').textContent=`↻ ${cd}s`; if(cd<=0){cd=30;refresh();} }, 1000);
+refresh();
+</script>
+</body>
+</html>
