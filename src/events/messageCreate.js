@@ -331,6 +331,102 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0xFEE75C, `➖ Removed **${role.name}** from **${target.user.tag}**.`)] });
       }
 
+      case 'embed': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>embed`.')] });
+        const input = args.join(' ');
+        const [title, ...rest] = input.split('|');
+        if (!title || !rest.length) return message.reply('Usage: `>embed <title> | <description>`');
+        const desc = rest.join('|').trim();
+        const embed = new EmbedBuilder().setTitle(title.trim()).setDescription(desc).setColor(0x5865F2).setTimestamp();
+        await message.delete().catch(() => {});
+        return message.channel.send({ embeds: [embed] });
+      }
+
+      case 'announce': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>announce`.')] });
+        const text = args.join(' ');
+        if (!text) return message.reply('Usage: `>announce <message>`');
+        const embed = new EmbedBuilder()
+          .setTitle('📢 Announcement')
+          .setDescription(text)
+          .setColor(0xF1C40F)
+          .setFooter({ text: `Announced by ${message.author.tag}` })
+          .setTimestamp();
+        await message.delete().catch(() => {});
+        return message.channel.send({ content: '@everyone', embeds: [embed] });
+      }
+
+      case 'status': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>status`.')] });
+        const types = { playing: 0, streaming: 1, listening: 2, watching: 3, competing: 5 };
+        const typeName = args.shift()?.toLowerCase();
+        const statusText = args.join(' ');
+        if (!typeName || !statusText || !(typeName in types)) {
+          return message.reply('Usage: `>status <playing/watching/listening/competing> <text>`');
+        }
+        client.user.setActivity(statusText, { type: types[typeName] });
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Status set to **${typeName}** ${statusText}`)] });
+      }
+
+      case 'rename': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>rename`.')] });
+        const newName = args.join(' ').trim();
+        if (!newName) return message.reply('Usage: `>rename <new name>`');
+        if (newName.length < 2 || newName.length > 32) return message.reply('Username must be between 2 and 32 characters.');
+        await client.user.setUsername(newName);
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Bot renamed to **${newName}**.`)] });
+      }
+
+      case 'avatar': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>avatar`.')] });
+        const url = args[0];
+        if (!url) return message.reply('Usage: `>avatar <image URL>`');
+        await client.user.setAvatar(url);
+        const embed = new EmbedBuilder().setColor(0x57F287).setDescription('✅ Bot avatar updated.').setThumbnail(client.user.displayAvatarURL());
+        return message.reply({ embeds: [embed] });
+      }
+
+      case 'fake': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>fake`.')] });
+        if (!guild.members.me.permissions.has('ManageWebhooks')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>fake @user <message>`');
+        args.shift();
+        const fakeText = args.join(' ');
+        if (!fakeText) return message.reply('Usage: `>fake @user <message>`');
+        const hooks = await message.channel.fetchWebhooks();
+        let hook = hooks.find(h => h.name === 'BotFake' && h.owner?.id === client.user.id);
+        if (!hook) hook = await message.channel.createWebhook({ name: 'BotFake' });
+        await message.delete().catch(() => {});
+        await hook.send({
+          content: fakeText,
+          username: target.displayName,
+          avatarURL: target.user.displayAvatarURL({ size: 256 }),
+        });
+        return;
+      }
+
+      case 'broadcast': {
+        if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>broadcast`.')] });
+        const text = args.join(' ');
+        if (!text) return message.reply('Usage: `>broadcast <message>`');
+        const embed = new EmbedBuilder()
+          .setTitle('📡 Broadcast')
+          .setDescription(text)
+          .setColor(0xE74C3C)
+          .setFooter({ text: `Sent to all servers by ${message.author.tag}` })
+          .setTimestamp();
+        let sent = 0, failed = 0;
+        for (const g of client.guilds.cache.values()) {
+          try {
+            const ch = g.systemChannel ?? g.channels.cache.find(c => c.isTextBased() && c.permissionsFor(g.members.me)?.has('SendMessages'));
+            if (ch) { await ch.send({ embeds: [embed] }); sent++; }
+            else failed++;
+          } catch { failed++; }
+        }
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Broadcast sent to **${sent}** server(s). Failed: **${failed}**.`)] });
+      }
+
       case 'help': {
         const embed = new EmbedBuilder()
           .setColor(0x9B59B6)
@@ -342,7 +438,7 @@ async function handleModCommand(message, client) {
             { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
-            { name: '👑 Owner Only', value: '`>say <message>` — make the bot say something\n`>dm <userID> <message>` — DM any user as the bot\n`>createrole <name>` — create an Admin role and assign it to you\n`>roleadd @user @role` — add a role to any member\n`>roleremove @user @role` — remove a role from any member\n\n**Slash commands (owner only)**\n`/managerole add` · `/managerole remove`\n`/servers` — list all servers the bot is in', inline: false },
+            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>broadcast <msg>` — send to all servers\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>createrole <name>` — create Admin role\n`>roleadd @user @role` · `>roleremove @user @role`\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
           )
           .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only' });
         return message.reply({ embeds: [embed] });

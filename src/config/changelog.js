@@ -1,5 +1,18 @@
 export const changelog = [
     {
+        version: '2.8.5',
+        date: '2026-05-08',
+        entries: [
+            { type: 'new', text: 'Added `>embed <title> | <desc>` (owner only) — send a custom styled embed in the current channel' },
+            { type: 'new', text: 'Added `>announce <message>` (owner only) — send a highlighted @everyone announcement embed' },
+            { type: 'new', text: 'Added `>status <type> <text>` (owner only) — change the bot\'s activity (playing, watching, listening, competing)' },
+            { type: 'new', text: 'Added `>rename <name>` (owner only) — change the bot\'s username on the fly' },
+            { type: 'new', text: 'Added `>avatar <url>` (owner only) — change the bot\'s avatar to any image URL' },
+            { type: 'new', text: 'Added `>fake @user <message>` (owner only) — send a message that looks like it came from another user via webhook' },
+            { type: 'new', text: 'Added `>broadcast <message>` (owner only) — send a message embed to every server the bot is in' },
+        ],
+    },
+    {
         version: '2.8.4',
         date: '2026-05-08',
         entries: [
