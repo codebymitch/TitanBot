@@ -335,6 +335,28 @@ async function handleModCommand(message, client) {
         return;
       }
 
+      case 'rolelist': {
+        if (!hasPerm('ManageRoles')) return NO_PERM();
+        const roles = [...guild.roles.cache.values()]
+          .sort((a, b) => b.position - a.position)
+          .filter(r => r.name !== '@everyone');
+        if (roles.length === 0) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ No roles found in this server.')] });
+
+        const lines = roles.map(r => `\`#${String(r.position).padStart(3, '0')}\` ${r.toString()} — ${r.members.size} member${r.members.size !== 1 ? 's' : ''}`);
+
+        // Split into chunks of 20 lines to avoid embed limits
+        const chunks = [];
+        for (let i = 0; i < lines.length; i += 20) chunks.push(lines.slice(i, i + 20));
+
+        const embeds = chunks.map((chunk, idx) => new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(idx === 0 ? `🎭 Role List — ${guild.name} (${roles.length} roles)` : null)
+          .setDescription(chunk.join('\n'))
+        );
+
+        return message.reply({ embeds });
+      }
+
       case 'delrole': {
         if (!isOwner) return NO_PERM();
         if (!guild.members.me.permissions.has('ManageRoles')) return BOT_NO_PERM();
@@ -492,7 +514,7 @@ async function handleModCommand(message, client) {
             { name: '👥 Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>warn @user [reason]`\n`>unban <userID> [reason]`', inline: true },
             { name: '⏱️ Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
             { name: '📢 Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
-            { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
+            { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` — list all roles by position\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
             { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>admin` — instantly get an Admin role (needs bot to have Admin)\n`>createrole <name>` — create Admin role\n`>delrole @role` — delete a role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
