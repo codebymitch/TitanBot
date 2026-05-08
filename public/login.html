@@ -117,9 +117,15 @@
     .av-wrap {
       position:relative; width:72px; height:72px; margin-bottom:14px;
     }
+    .av-fallback {
+      width:72px; height:72px; border-radius:18px;
+      background:linear-gradient(135deg, #5865f2, #4752c4);
+      display:flex; align-items:center; justify-content:center;
+      font-size:30px; border:1px solid rgba(88,101,242,.4);
+    }
     .av {
       width:72px; height:72px; border-radius:18px;
-      object-fit:cover; display:block;
+      object-fit:cover; display:none;
       border:1px solid var(--border-lit);
       background:var(--surface);
     }
@@ -127,6 +133,7 @@
       position:absolute; bottom:-3px; right:-3px;
       width:18px; height:18px; border-radius:50%;
       background:#23a55a; border:3px solid var(--card);
+      box-shadow:0 0 8px rgba(35,165,90,.5);
     }
     .brand-name {
       font-size:20px; font-weight:800; letter-spacing:-.5px; color:var(--text);
@@ -275,7 +282,8 @@
       <!-- Brand -->
       <div class="brand">
         <div class="av-wrap">
-          <img class="av" id="av" src="" alt="" onerror="this.style.opacity='0'">
+          <div class="av-fallback" id="avFallback">🤖</div>
+          <img class="av" id="av" src="" alt="" onerror="this.style.display='none'">
           <div class="av-status"></div>
         </div>
         <div class="brand-name" id="botName">Dashboard</div>
@@ -361,7 +369,11 @@
     const name = (cfg.username || 'Bot') + ' Dashboard';
     document.getElementById('botName').textContent = name;
     document.getElementById('topbarName').textContent = name;
-    if (cfg.avatar) { document.getElementById('av').src = cfg.avatar; }
+    if (cfg.avatar) {
+      const av = document.getElementById('av');
+      av.onload = () => { av.style.display = 'block'; document.getElementById('avFallback').style.display = 'none'; };
+      av.src = cfg.avatar;
+    }
 
     if (!cfg.discordEnabled) {
       const b = document.getElementById('discordBtn');
