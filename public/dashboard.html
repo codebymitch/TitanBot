@@ -273,6 +273,30 @@
       border-radius:50%; animation:spin .7s linear infinite; margin:28px auto; display:block;
     }
 
+    /* ── Prefix command rows ── */
+    .pcmd {
+      display:flex; align-items:flex-start; gap:12px;
+      padding:10px 0; border-bottom:1px solid rgba(255,255,255,.04);
+    }
+    .pcmd:last-child { border:none; }
+    .pcmd-name {
+      font-family:'Courier New',Consolas,monospace; font-size:12px; font-weight:700;
+      color:var(--text); white-space:nowrap; flex-shrink:0; min-width:180px;
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      border-radius:6px; padding:3px 8px;
+    }
+    .pcmd-desc { font-size:12px; color:var(--sub); line-height:1.5; padding-top:2px; }
+    .pcmd-perm {
+      margin-left:auto; font-size:10px; font-weight:700; padding:2px 7px;
+      border-radius:10px; white-space:nowrap; flex-shrink:0;
+    }
+    .perm-mod  { background:rgba(88,101,242,.15); color:#a5aaff; border:1px solid rgba(88,101,242,.25); }
+    .perm-owner{ background:rgba(245,166,35,.15);  color:var(--gold); border:1px solid rgba(245,166,35,.25); }
+    .perm-all  { background:rgba(35,165,90,.12);   color:#4ddb8a;     border:1px solid rgba(35,165,90,.2); }
+    .pcmd-section { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.9px; color:var(--muted); padding:14px 0 6px; }
+    .pcmd-section:first-child { padding-top:0; }
+    @media(max-width:860px){ #prefixGrid{grid-template-columns:1fr!important;} }
+
     .hidden { display:none !important; }
     .footer { position:relative; z-index:10; text-align:center; padding:24px; color:var(--muted); font-size:11px; }
     .footer span { opacity:.5; }
@@ -322,6 +346,9 @@
     <span class="tab-icon">🖥️</span> Servers
     <span class="tab-count" id="tabSrvCount">—</span>
   </button>
+  <button class="tab" data-tab="prefix">
+    <span class="tab-icon">⌨️</span> Prefix Commands
+  </button>
   <button class="tab hidden" id="ownerTab" data-tab="owner">
     <span class="tab-icon">👑</span> Owner Panel
   </button>
@@ -363,6 +390,29 @@
     <div class="card">
       <div class="c-head"><div class="c-title">🖥️ All Servers <span class="badge" id="srvBadgeFull">—</span></div></div>
       <div class="c-body full" id="srvBodyFull"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Prefix tab -->
+  <div class="section" id="tab-prefix">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;" id="prefixGrid">
+
+      <!-- > Mod commands -->
+      <div class="card">
+        <div class="c-head">
+          <div class="c-title">🛡️ Mod Commands <span class="badge" style="background:linear-gradient(135deg,#9b59b6,#6c3483)">prefix &gt;</span></div>
+        </div>
+        <div class="c-body full" id="modCmdBody"></div>
+      </div>
+
+      <!-- ? Fun commands -->
+      <div class="card">
+        <div class="c-head">
+          <div class="c-title">🎮 Fun Commands <span class="badge" style="background:linear-gradient(135deg,#23a55a,#1a7a42)">prefix ?</span></div>
+        </div>
+        <div class="c-body full" id="funCmdBody"></div>
+      </div>
+
     </div>
   </div>
 
@@ -429,6 +479,71 @@ function countUp(el, target, duration=900) {
     if (p < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
+}
+
+// ── Prefix command data ───────────────────────────────────────────
+const MOD_CMDS = [
+  { section: '👥 Members' },
+  { name:'>ban @user [reason]',           desc:'Permanently ban a member from the server',           perm:'mod' },
+  { name:'>kick @user [reason]',          desc:'Kick a member from the server',                      perm:'mod' },
+  { name:'>warn @user [reason]',          desc:'Issue a warning to a member',                        perm:'mod' },
+  { name:'>unban <userID> [reason]',      desc:'Unban a previously banned user by ID',               perm:'mod' },
+  { section: '⏱️ Timeout' },
+  { name:'>timeout @user <dur> [reason]', desc:'Mute a member for a duration (10s 5m 2h 1d)',        perm:'mod' },
+  { name:'>untimeout @user',              desc:'Remove a timeout from a member early',               perm:'mod' },
+  { section: '📢 Channel' },
+  { name:'>purge <1-100>',                desc:'Bulk delete messages from the current channel',      perm:'mod' },
+  { name:'>slowmode <seconds>',           desc:'Set slowmode delay on the channel (0 to disable)',   perm:'mod' },
+  { name:'>lock [reason]',                desc:'Lock the channel so members cannot send messages',   perm:'mod' },
+  { name:'>unlock',                       desc:'Unlock a previously locked channel',                 perm:'mod' },
+  { section: '🔧 Other' },
+  { name:'>nick @user [nickname]',        desc:'Change or clear a member\'s nickname',               perm:'mod' },
+  { name:'>role @user @role',             desc:'Toggle a role on a member (add if missing, remove if present)', perm:'mod' },
+  { section: '🔗 Webhooks' },
+  { name:'>webhook',                      desc:'List all webhooks in the current channel',           perm:'mod' },
+  { name:'>webhook create [name]',        desc:'Create a new webhook in the current channel',        perm:'mod' },
+  { name:'>webhook delete <id>',          desc:'Delete a webhook by its ID',                         perm:'mod' },
+  { section: '👑 Owner Only' },
+  { name:'>say <message>',                desc:'Make the bot send a message in the channel',         perm:'owner' },
+  { name:'>embed <title> | <desc>',       desc:'Post a custom embed with a title and description',   perm:'owner' },
+  { name:'>announce <message>',           desc:'Send a @everyone announcement embed',                perm:'owner' },
+  { name:'>dm <userID> <msg>',            desc:'Send a DM to any user as the bot',                  perm:'owner' },
+  { name:'>fake @user <msg>',             desc:'Send a webhook message disguised as another user',   perm:'owner' },
+  { name:'>status <type> <text>',         desc:'Change the bot\'s activity (playing/watching/listening)', perm:'owner' },
+  { name:'>rename <name>',                desc:'Change the bot\'s username',                         perm:'owner' },
+  { name:'>avatar <url>',                 desc:'Change the bot\'s avatar image',                     perm:'owner' },
+  { name:'>createrole <name>',            desc:'Create an Admin role and assign it to you',          perm:'owner' },
+  { name:'>roleadd @user @role',          desc:'Add a role to any member',                           perm:'owner' },
+  { name:'>roleremove @user @role',       desc:'Remove a role from any member',                      perm:'owner' },
+];
+
+const FUN_CMDS = [
+  { section: '😂 Fun' },
+  { name:'?joke [pun|programming|dark|misc]', desc:'Get a random joke, optionally filtered by category', perm:'all' },
+  { name:'?meme',                             desc:'Fetch a random meme from Reddit',                    perm:'all' },
+  { name:'?flip',                             desc:'Flip a coin — heads or tails',                       perm:'all' },
+  { name:'?roll [sides]',                     desc:'Roll a dice with a given number of sides (default 6)', perm:'all' },
+  { section: '💡 Info' },
+  { name:'?quote',                            desc:'Get a random inspirational quote',                   perm:'all' },
+  { name:'?fact',                             desc:'Get a completely random fun fact',                   perm:'all' },
+  { name:'?avatar [@user]',                   desc:'Display your avatar or another user\'s avatar',      perm:'all' },
+  { name:'?github <user>',                    desc:'Look up a GitHub user profile',                      perm:'all' },
+  { name:'?github <user/repo>',               desc:'Look up a GitHub repository',                        perm:'all' },
+  { section: '❓ Help' },
+  { name:'?help',                             desc:'Show all fun prefix commands',                       perm:'all' },
+  { name:'>help',                             desc:'Show all mod prefix commands',                       perm:'mod' },
+];
+
+function renderPrefixCmds(list, containerId) {
+  const PERM_LABELS = { mod:'Mod', owner:'Owner', all:'Everyone' };
+  document.getElementById(containerId).innerHTML = list.map(c => {
+    if (c.section) return `<div class="pcmd-section">${esc(c.section)}</div>`;
+    return `<div class="pcmd">
+      <span class="pcmd-name">${esc(c.name)}</span>
+      <span class="pcmd-desc">${esc(c.desc)}</span>
+      <span class="pcmd-perm perm-${c.perm}">${PERM_LABELS[c.perm]}</span>
+    </div>`;
+  }).join('');
 }
 
 // ── Tab navigation ────────────────────────────────────────────────
@@ -573,6 +688,9 @@ function renderSysInfo(d) {
 async function refresh() {
   await Promise.all([loadStats(), loadCommands(), loadServers()]);
 }
+
+renderPrefixCmds(MOD_CMDS, 'modCmdBody');
+renderPrefixCmds(FUN_CMDS, 'funCmdBody');
 
 let cd = 30;
 setInterval(()=>{
