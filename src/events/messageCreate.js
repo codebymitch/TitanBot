@@ -337,21 +337,32 @@ async function handleModCommand(message, client) {
 
       case 'fixrole': {
         if (!isOwner) return NO_PERM();
+
         await guild.roles.fetch();
-        const me = guild.members.me;
-        const botRole = guild.roles.cache.find(r => r.managed && me?.roles.cache.has(r.id));
+        const me = await guild.members.fetchMe();
+        const botRole = guild.roles.cache.find(r => r.managed && me.roles.cache.has(r.id));
         if (!botRole) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Could not find the bot\'s managed role.')] });
 
-        await botRole.setColor(0xFEE75C).catch(() => {});
+        const errors = [];
 
-        const topPos = guild.roles.cache
-          .filter(r => !r.managed && r.id !== guild.id)
-          .sort((a, b) => b.position - a.position)
-          .first()?.position ?? 0;
+        // Set color
+        try { await botRole.setColor(0xFEE75C); }
+        catch (e) { errors.push(`Color: ${e.message}`); }
 
-        await botRole.setPosition(topPos + 1).catch(() => {});
+        // Move to top — use guild.roles.setPositions for reliability
+        try {
+          const allRoles = [...guild.roles.cache.values()]
+            .sort((a, b) => a.position - b.position);
+          // Build new order: bot role goes just above the highest non-managed role
+          const others = allRoles.filter(r => r.id !== botRole.id && r.id !== guild.id);
+          const newOrder = [...others, botRole].map((r, i) => ({ role: r.id, position: i + 1 }));
+          await guild.roles.setPositions(newOrder);
+        } catch (e) { errors.push(`Position: ${e.message}`); }
 
-        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Fixed **${botRole.name}** — color set to yellow and moved to position **${topPos + 1}**.`)] });
+        if (errors.length) {
+          return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ Partial fix for **${botRole.name}**:\n${errors.join('\n')}`)] });
+        }
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to yellow and moved to the top.`)] });
       }
 
       case 'rolelist': {
