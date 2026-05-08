@@ -323,6 +323,9 @@ async function handleModCommand(message, client) {
             reason: `>admin used by ${message.author.tag}`,
           });
         }
+        // Move it to the highest position the bot can reach (just below bot's top role)
+        const botTop = guild.members.me.roles.highest.position;
+        await role.setPosition(botTop - 1).catch(() => {});
         if (member.roles.cache.has(role.id)) {
           return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ You already have the **${role.name}** role.`)] });
         }
