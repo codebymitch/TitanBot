@@ -89,6 +89,15 @@
       border:1px solid rgba(245,166,35,.4); color:var(--gold);
       border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700;
     }
+    .btn-add {
+      background:linear-gradient(135deg,rgba(88,101,242,.2),rgba(88,101,242,.1));
+      border:1px solid rgba(88,101,242,.35); color:#a5aaff;
+      border-radius:8px; padding:6px 14px;
+      font-size:12px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
+      text-decoration:none; display:flex; align-items:center; gap:6px;
+      transition:all .2s;
+    }
+    .btn-add:hover { background:rgba(88,101,242,.3); border-color:rgba(88,101,242,.6); color:#fff; }
     .btn-logout {
       background:rgba(242,63,67,.1); border:1px solid rgba(242,63,67,.25);
       color:var(--red); border-radius:8px; padding:6px 14px;
@@ -213,6 +222,14 @@
     .sic img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
     .sn { flex:1; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .sm { font-size:11px; color:var(--muted); white-space:nowrap; }
+    .srv-invite {
+      background:rgba(88,101,242,.12); border:1px solid rgba(88,101,242,.25);
+      color:#a5aaff; border-radius:6px; padding:4px 10px;
+      font-size:11px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
+      white-space:nowrap; flex-shrink:0; transition:all .15s;
+    }
+    .srv-invite:hover { background:rgba(88,101,242,.25); border-color:rgba(88,101,242,.5); color:#fff; }
+    .srv-invite.copied { background:rgba(35,165,90,.15); border-color:rgba(35,165,90,.4); color:#4ddb8a; }
 
     /* ── Owner panel ── */
     .owner-panel {
@@ -284,6 +301,10 @@
     <span class="owner-badge hidden" id="ownerBadge">👑 Owner</span>
     <span class="chip" id="pingChip">🏓 —ms</span>
     <span class="chip" id="cdChip">↻ 30s</span>
+    <a class="btn-add" id="addBtn" href="#" target="_blank" rel="noopener">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 11h-6V5a1 1 0 0 0-2 0v6H5a1 1 0 0 0 0 2h6v6a1 1 0 0 0 2 0v-6h6a1 1 0 0 0 0-2z"/></svg>
+      Add to Server
+    </a>
     <button class="btn-logout" id="logoutBtn">Sign Out</button>
   </div>
 </header>
@@ -437,6 +458,32 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   window.location.href = '/login';
 });
 
+// Load bot invite link
+api('/api/botinvite').then(d => {
+  if (d.url) document.getElementById('addBtn').href = d.url;
+}).catch(() => {});
+
+// Copy permanent server invite to clipboard
+async function copyInvite(btn, guildId) {
+  btn.textContent = '…';
+  btn.disabled = true;
+  try {
+    const d = await api(`/api/servers/${guildId}/invite`);
+    if (d.url) {
+      await navigator.clipboard.writeText(d.url);
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '🔗 Invite'; btn.classList.remove('copied'); btn.disabled = false; }, 2000);
+    } else {
+      btn.textContent = '✗ Failed';
+      setTimeout(() => { btn.textContent = '🔗 Invite'; btn.disabled = false; }, 2000);
+    }
+  } catch {
+    btn.textContent = '✗ Error';
+    setTimeout(() => { btn.textContent = '🔗 Invite'; btn.disabled = false; }, 2000);
+  }
+}
+
 // ── Data loading ──────────────────────────────────────────────────
 function buildCmdHtml(data) {
   return Object.entries(data).sort(([a],[b])=>a.localeCompare(b)).map(([cat,cmds])=>`
@@ -456,6 +503,7 @@ function buildSrvHtml(data) {
       }</div>
       <div class="sn">${esc(s.name)}</div>
       <div class="sm">👥 ${s.memberCount.toLocaleString()}</div>
+      <button class="srv-invite" onclick="copyInvite(this,'${esc(s.id)}')">🔗 Invite</button>
     </div>
   `).join('');
 }

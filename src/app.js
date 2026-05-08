@@ -329,6 +329,30 @@ class TitanBot extends Client {
       res.json(servers);
     });
 
+    app.get('/api/servers/:guildId/invite', auth, async (req, res) => {
+      const guild = this.guilds.cache.get(req.params.guildId);
+      if (!guild) return res.status(404).json({ error: 'Server not found' });
+      const channel = guild.channels.cache.find(c =>
+        c.isTextBased() && !c.isThread() &&
+        guild.members.me?.permissionsIn(c).has('CreateInstantInvite')
+      );
+      if (!channel) return res.status(403).json({ error: 'No channel available to create invite' });
+      try {
+        const invite = await channel.createInvite({ maxAge: 0, maxUses: 0, unique: false });
+        res.json({ url: invite.url });
+      } catch (err) {
+        logger.error('Failed to create invite:', err);
+        res.status(500).json({ error: 'Could not create invite' });
+      }
+    });
+
+    app.get('/api/botinvite', auth, (req, res) => {
+      const clientId = process.env.CLIENT_ID;
+      if (!clientId) return res.status(500).json({ error: 'CLIENT_ID not set' });
+      const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot+applications.commands`;
+      res.json({ url });
+    });
+
     app.get('/health', (req, res) => {
       const dbStatus = this.db?.getStatus?.() || { isDegraded: 'unknown' };
       const status = {
