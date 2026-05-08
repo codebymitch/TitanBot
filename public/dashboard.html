@@ -4,100 +4,254 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bot Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     :root {
-      --bg:#1e1f22; --bg2:#2b2d31; --bg3:#313338;
-      --accent:#5865f2; --green:#23a55a; --yellow:#f0b132;
-      --red:#f23f43; --gold:#f5a623;
-      --text:#f2f3f5; --sub:#b5bac1; --muted:#80848e; --border:#3f4147;
+      --bg:#0d0e12;
+      --card:rgba(255,255,255,0.05);
+      --card-hover:rgba(255,255,255,0.08);
+      --border:rgba(255,255,255,0.08);
+      --border-hover:rgba(88,101,242,0.5);
+      --accent:#5865f2;
+      --accent2:#eb459e;
+      --green:#23a55a;
+      --yellow:#f0b132;
+      --red:#f23f43;
+      --gold:#f5a623;
+      --text:#f0f0f5;
+      --sub:#9094a8;
+      --muted:#555b6e;
     }
-    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    body {
+      font-family:'Inter',sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+
+    /* ── Animated background ── */
+    .bg {
+      position:fixed; inset:0; z-index:0; pointer-events:none;
+      background: radial-gradient(ellipse at 15% 40%, rgba(88,101,242,.12) 0%, transparent 55%),
+                  radial-gradient(ellipse at 85% 15%, rgba(235,69,158,.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 55% 85%, rgba(88,101,242,.07) 0%, transparent 50%),
+                  #0d0e12;
+    }
+    .blob {
+      position:absolute; border-radius:50%; filter:blur(90px); opacity:.2; animation:drift 14s ease-in-out infinite;
+    }
+    .blob1 { width:500px; height:500px; background:#5865f2; top:-15%; left:-10%; animation-delay:0s; }
+    .blob2 { width:380px; height:380px; background:#eb459e; bottom:-10%; right:-8%; animation-delay:-5s; }
+    .blob3 { width:300px; height:300px; background:#23a55a; top:45%; left:55%; animation-delay:-9s; }
+    @keyframes drift {
+      0%,100% { transform:translate(0,0) scale(1); }
+      33%      { transform:translate(40px,-25px) scale(1.06); }
+      66%      { transform:translate(-20px,30px) scale(.94); }
+    }
+    .grid-overlay {
+      position:absolute; inset:0;
+      background-image: linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px);
+      background-size: 64px 64px;
+    }
 
     /* ── Header ── */
     .hdr {
-      background:var(--bg2); border-bottom:1px solid var(--border);
-      padding:13px 28px; display:flex; align-items:center; gap:13px;
-      position:sticky; top:0; z-index:100;
+      position:sticky; top:0; z-index:200;
+      background:rgba(13,14,18,.8);
+      backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+      padding:12px 28px;
+      display:flex; align-items:center; gap:14px;
     }
-    .hdr-av { width:42px; height:42px; border-radius:50%; background:var(--accent); object-fit:cover; flex-shrink:0; }
-    .hdr-name { font-size:16px; font-weight:700; }
-    .hdr-status { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--sub); margin-top:1px; }
-    .dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .hdr-av-wrap { position:relative; width:40px; height:40px; flex-shrink:0; }
+    .hdr-av { width:40px; height:40px; border-radius:50%; object-fit:cover; display:block; background:var(--accent); }
+    .hdr-av-ring {
+      position:absolute; inset:-2px; border-radius:50%;
+      background:linear-gradient(135deg,#5865f2,#eb459e);
+      z-index:-1; animation:spin 4s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .hdr-name { font-size:15px; font-weight:700; letter-spacing:-.3px; }
+    .hdr-status { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--sub); margin-top:2px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(35,165,90,.4)} 50%{opacity:.6;box-shadow:0 0 0 4px rgba(35,165,90,0)} }
     .hdr-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
-    .chip { background:var(--bg3); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:12px; color:var(--sub); }
-    .owner-badge { background:rgba(245,166,35,.15); border:1px solid rgba(245,166,35,.4); color:var(--gold); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700; }
-    .btn-logout { background:rgba(242,63,67,.12); border:1px solid rgba(242,63,67,.3); color:var(--red); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; cursor:pointer; transition:background .15s; }
-    .btn-logout:hover { background:rgba(242,63,67,.25); }
+    .chip {
+      background:rgba(255,255,255,.05); border:1px solid var(--border);
+      border-radius:20px; padding:4px 12px; font-size:11px; color:var(--sub);
+      font-weight:500;
+    }
+    .owner-badge {
+      background:linear-gradient(135deg,rgba(245,166,35,.2),rgba(245,166,35,.08));
+      border:1px solid rgba(245,166,35,.4); color:var(--gold);
+      border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700;
+    }
+    .btn-logout {
+      background:rgba(242,63,67,.1); border:1px solid rgba(242,63,67,.25);
+      color:var(--red); border-radius:8px; padding:6px 14px;
+      font-size:12px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
+      transition:all .2s;
+    }
+    .btn-logout:hover { background:rgba(242,63,67,.22); border-color:rgba(242,63,67,.5); }
 
     /* ── Page ── */
-    .page { max-width:1380px; margin:0 auto; padding:26px 28px; }
+    .page { position:relative; z-index:10; max-width:1400px; margin:0 auto; padding:28px 28px 48px; }
 
     /* ── Stats ── */
-    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:22px; }
-    .sc { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; align-items:center; gap:14px; transition:border-color .2s,transform .15s; }
-    .sc:hover { border-color:var(--accent); transform:translateY(-2px); }
-    .si { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:24px; }
+    .sc {
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      padding:18px 20px; display:flex; align-items:center; gap:14px;
+      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      transition:border-color .25s, transform .2s, background .25s, box-shadow .25s;
+      animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both;
+    }
+    .sc:hover { border-color:var(--border-hover); transform:translateY(-3px); background:var(--card-hover); box-shadow:0 8px 32px rgba(88,101,242,.12); }
+    .sc:nth-child(1){animation-delay:.05s} .sc:nth-child(2){animation-delay:.1s} .sc:nth-child(3){animation-delay:.15s} .sc:nth-child(4){animation-delay:.2s} .sc:nth-child(5){animation-delay:.25s}
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+    .si {
+      width:48px; height:48px; border-radius:12px;
+      display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;
+    }
     .si.b{background:rgba(88,101,242,.18);} .si.g{background:rgba(35,165,90,.18);} .si.y{background:rgba(240,177,50,.18);} .si.p{background:rgba(163,148,255,.18);} .si.r{background:rgba(242,63,67,.18);}
-    .sv { font-size:28px; font-weight:800; line-height:1; }
+    .sv { font-size:26px; font-weight:800; line-height:1; letter-spacing:-.5px; }
     .sv.grn { color:var(--green); }
-    .sl { font-size:12px; color:var(--muted); margin-top:3px; }
+    .sl { font-size:11px; color:var(--muted); margin-top:4px; font-weight:500; text-transform:uppercase; letter-spacing:.5px; }
 
-    /* ── Grid ── */
+    /* ── Two-col grid ── */
     .g2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
-    @media(max-width:820px){ .g2{grid-template-columns:1fr;} }
+    @media(max-width:860px){ .g2{grid-template-columns:1fr;} }
 
-    /* ── Card ── */
-    .card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
-    .c-head { padding:13px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-    .c-title { font-size:14px; font-weight:700; display:flex; align-items:center; gap:7px; }
-    .badge { background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; }
-    .c-body { padding:14px 18px; max-height:470px; overflow-y:auto; }
-    .c-body::-webkit-scrollbar{width:4px;} .c-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    /* ── Cards ── */
+    .card {
+      background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden;
+      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      animation:fadeUp .5s cubic-bezier(.16,1,.3,1) .3s both;
+    }
+    .c-head {
+      padding:14px 18px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .c-title { font-size:13px; font-weight:700; display:flex; align-items:center; gap:7px; letter-spacing:-.2px; }
+    .badge {
+      background:linear-gradient(135deg,var(--accent),#4752c4);
+      color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
+    }
+    .c-body { padding:14px 18px; max-height:480px; overflow-y:auto; }
+    .c-body::-webkit-scrollbar{width:3px;}
+    .c-body::-webkit-scrollbar-track{background:transparent;}
+    .c-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
 
     /* ── Commands ── */
-    .cat { margin-bottom:12px; }
-    .cat-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); margin-bottom:5px; }
+    .cat { margin-bottom:14px; }
+    .cat-lbl {
+      font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.9px;
+      color:var(--muted); margin-bottom:6px; display:flex; align-items:center; gap:5px;
+    }
     .tags { display:flex; flex-wrap:wrap; gap:5px; }
-    .tag { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:3px 8px; font-size:11px; color:var(--sub); font-family:Consolas,monospace; }
+    .tag {
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      border-radius:6px; padding:3px 9px; font-size:11px; color:var(--sub);
+      font-family:'Courier New',Consolas,monospace;
+      transition:border-color .15s, color .15s, background .15s;
+      cursor:default;
+    }
+    .tag:hover { border-color:rgba(88,101,242,.5); color:var(--text); background:rgba(88,101,242,.1); }
 
     /* ── Servers ── */
-    .srv { display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid var(--border); }
-    .srv:last-child{border:none;}
-    .sic { width:36px; height:36px; border-radius:50%; background:var(--accent); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; overflow:hidden; }
-    .sic img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+    .srv {
+      display:flex; align-items:center; gap:12px; padding:9px 0;
+      border-bottom:1px solid rgba(255,255,255,.04);
+      transition:padding .15s;
+    }
+    .srv:last-child { border:none; }
+    .srv:hover { padding-left:4px; }
+    .sic {
+      width:36px; height:36px; border-radius:50%;
+      background:linear-gradient(135deg,var(--accent),#4752c4); flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:12px; overflow:hidden;
+    }
+    .sic img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
     .sn { flex:1; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sm { font-size:12px; color:var(--muted); white-space:nowrap; }
+    .sm { font-size:11px; color:var(--muted); white-space:nowrap; }
 
     /* ── Owner panel ── */
-    .owner-panel { border:1px solid rgba(245,166,35,.35); border-radius:14px; overflow:hidden; background:rgba(245,166,35,.04); }
-    .owner-panel .c-head { border-bottom-color:rgba(245,166,35,.25); }
-    .owner-panel .c-title { color:var(--gold); }
-    .owner-panel .badge { background:var(--gold); color:#000; }
-    .owner-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .owner-panel {
+      border:1px solid rgba(245,166,35,.25); border-radius:16px; overflow:hidden;
+      background:rgba(245,166,35,.03);
+      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      animation:fadeUp .5s cubic-bezier(.16,1,.3,1) .35s both;
+      box-shadow:0 0 40px rgba(245,166,35,.06);
+    }
+    .owner-panel .c-head {
+      background:linear-gradient(135deg,rgba(245,166,35,.06),rgba(245,166,35,.02));
+      border-bottom-color:rgba(245,166,35,.2);
+    }
+    .owner-panel .c-title { color:var(--gold); font-size:14px; }
+    .owner-panel .badge { background:linear-gradient(135deg,var(--gold),#d4861e); color:#000; }
+
+    .owner-inner { padding:18px; }
+    .owner-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
     @media(max-width:700px){ .owner-grid{grid-template-columns:1fr;} }
 
-    .ocmd { display:flex; flex-direction:column; gap:7px; }
-    .ocmd-item { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
-    .ocmd-name { font-size:13px; font-weight:700; font-family:Consolas,monospace; color:var(--gold); }
-    .ocmd-desc { font-size:12px; color:var(--muted); margin-top:3px; }
+    .ocmd-item {
+      background:rgba(255,255,255,.03); border:1px solid rgba(245,166,35,.12);
+      border-radius:10px; padding:10px 13px; margin-bottom:6px;
+      transition:border-color .2s, background .2s;
+    }
+    .ocmd-item:hover { border-color:rgba(245,166,35,.3); background:rgba(245,166,35,.05); }
+    .ocmd-item:last-child { margin-bottom:0; }
+    .ocmd-name { font-size:12px; font-weight:700; font-family:'Courier New',Consolas,monospace; color:var(--gold); }
+    .ocmd-desc { font-size:11px; color:var(--muted); margin-top:3px; }
 
     .sys-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .sys-item { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
-    .sys-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; }
-    .sys-val { font-size:15px; font-weight:700; margin-top:3px; }
+    .sys-item {
+      background:rgba(255,255,255,.03); border:1px solid rgba(245,166,35,.12);
+      border-radius:10px; padding:11px 13px;
+      transition:border-color .2s;
+    }
+    .sys-item:hover { border-color:rgba(245,166,35,.3); }
+    .sys-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; font-weight:600; }
+    .sys-val { font-size:16px; font-weight:800; margin-top:4px; letter-spacing:-.3px; }
 
-    /* ── Misc ── */
-    .spinner { width:22px; height:22px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; margin:20px auto; display:block; }
-    @keyframes spin { to{transform:rotate(360deg);} }
+    /* ── Spinner / skeleton ── */
+    .spinner {
+      width:24px; height:24px;
+      border:2.5px solid rgba(255,255,255,.08); border-top-color:var(--accent);
+      border-radius:50%; animation:spin .7s linear infinite; margin:28px auto; display:block;
+    }
+    .skel {
+      background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);
+      background-size:200% 100%; animation:skel 1.4s ease infinite; border-radius:6px;
+    }
+    @keyframes skel { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
     .hidden { display:none !important; }
+
+    /* ── Footer ── */
+    .footer { position:relative; z-index:10; text-align:center; padding:24px; color:var(--muted); font-size:11px; letter-spacing:.3px; }
+    .footer span { opacity:.5; }
   </style>
 </head>
 <body>
 
+<div class="bg">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+  <div class="grid-overlay"></div>
+</div>
+
 <header class="hdr">
-  <img class="hdr-av" id="av" src="" alt="" onerror="this.style.visibility='hidden'">
+  <div class="hdr-av-wrap">
+    <div class="hdr-av-ring"></div>
+    <img class="hdr-av" id="av" src="" alt="" onerror="this.style.visibility='hidden'">
+  </div>
   <div>
     <div class="hdr-name" id="botName">Loading…</div>
     <div class="hdr-status"><div class="dot"></div><span>Online</span></div>
@@ -111,6 +265,7 @@
 </header>
 
 <main class="page">
+
   <!-- Stats -->
   <div class="stats">
     <div class="sc"><div class="si b">🖥️</div><div><div class="sv" id="sServers">—</div><div class="sl">Servers</div></div></div>
@@ -123,28 +278,30 @@
   <!-- Commands + Servers -->
   <div class="g2">
     <div class="card">
-      <div class="c-head"><div class="c-title">⚡ Commands <span class="badge" id="cmdBadge">—</span></div></div>
+      <div class="c-head">
+        <div class="c-title">⚡ Commands <span class="badge" id="cmdBadge">—</span></div>
+      </div>
       <div class="c-body" id="cmdBody"><div class="spinner"></div></div>
     </div>
     <div class="card">
-      <div class="c-head"><div class="c-title">🖥️ Servers <span class="badge" id="srvBadge">—</span></div></div>
+      <div class="c-head">
+        <div class="c-title">🖥️ Servers <span class="badge" id="srvBadge">—</span></div>
+      </div>
       <div class="c-body" id="srvBody"><div class="spinner"></div></div>
     </div>
   </div>
 
-  <!-- Owner Panel (hidden until confirmed owner) -->
+  <!-- Owner Panel -->
   <div class="owner-panel hidden" id="ownerPanel">
     <div class="c-head">
       <div class="c-title">👑 Owner Panel <span class="badge" id="ownerBadgeCount"></span></div>
     </div>
-    <div style="padding:18px;">
+    <div class="owner-inner">
       <div class="owner-grid">
-        <!-- Owner commands reference -->
         <div>
           <div class="cat-lbl" style="margin-bottom:10px;">Owner Prefix Commands</div>
-          <div class="ocmd" id="ownerCmds"></div>
+          <div id="ownerCmds"></div>
         </div>
-        <!-- System info -->
         <div>
           <div class="cat-lbl" style="margin-bottom:10px;">System Info</div>
           <div class="sys-grid" id="sysInfo"></div>
@@ -152,25 +309,26 @@
       </div>
     </div>
   </div>
+
 </main>
 
-<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">itay100k bot dashboard</div>
+<div class="footer"><span>itay100k bot dashboard</span></div>
 
 <script>
 const OWNER_CMDS = [
-  { name:'>say <msg>',            desc:'Make the bot send a message in the channel' },
+  { name:'>say <msg>',              desc:'Make the bot send a message in the channel' },
   { name:'>embed <title> | <desc>', desc:'Post a custom embed' },
-  { name:'>announce <msg>',       desc:'Send a @everyone announcement embed' },
-  { name:'>dm <userID> <msg>',    desc:'DM any user as the bot' },
-  { name:'>fake @user <msg>',     desc:'Send a message as another user' },
-  { name:'>status <type> <text>', desc:'Change bot activity' },
-  { name:'>rename <name>',        desc:'Change bot username' },
-  { name:'>avatar <url>',         desc:'Change bot avatar' },
-  { name:'>createrole <name>',    desc:'Create an Admin role and assign it to you' },
-  { name:'>roleadd @user @role',  desc:'Add a role to any member' },
+  { name:'>announce <msg>',         desc:'Send a @everyone announcement embed' },
+  { name:'>dm <userID> <msg>',      desc:'DM any user as the bot' },
+  { name:'>fake @user <msg>',       desc:'Send a message as another user' },
+  { name:'>status <type> <text>',   desc:'Change bot activity' },
+  { name:'>rename <name>',          desc:'Change bot username' },
+  { name:'>avatar <url>',           desc:'Change bot avatar' },
+  { name:'>createrole <name>',      desc:'Create an Admin role and assign it to you' },
+  { name:'>roleadd @user @role',    desc:'Add a role to any member' },
   { name:'>roleremove @user @role', desc:'Remove a role from any member' },
-  { name:'/managerole add|remove', desc:'Slash: assign/strip any role (owner only)' },
-  { name:'/servers',              desc:'Slash: list all servers the bot is in' },
+  { name:'/managerole add|remove',  desc:'Slash: assign/strip any role (owner only)' },
+  { name:'/servers',                desc:'Slash: list all servers the bot is in' },
 ];
 
 const CAT_ICONS = {
@@ -183,12 +341,23 @@ const CAT_ICONS = {
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtUp(s){ const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60); if(d>0)return`${d}d ${h}h`; if(h>0)return`${h}h ${m}m`; return`${m}m ${sec}s`; }
 function fmtN(n){ return n>=1000?(n/1000).toFixed(1)+'k':String(n); }
-function fmtMem(b){ return(b/1024/1024).toFixed(1)+' MB'; }
 
-// Auth
+function countUp(el, target, duration=900) {
+  if (isNaN(target)) { el.textContent = target; return; }
+  const start = performance.now();
+  const from = 0;
+  function step(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (target - from) * ease);
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// Auth guard
 const token = localStorage.getItem('dashboard_token');
 if (!token) { window.location.href = '/login'; }
-
 const headers = { 'Authorization': 'Bearer ' + token };
 
 async function api(path) {
@@ -207,11 +376,13 @@ async function loadStats() {
   document.getElementById('botName').textContent = d.username || 'Bot';
   const av = document.getElementById('av');
   av.src = d.avatar||''; av.style.visibility='visible';
-  document.getElementById('sServers').textContent = fmtN(d.guilds);
-  document.getElementById('sUsers').textContent   = fmtN(d.users);
-  document.getElementById('sCmds').textContent    = d.commands;
-  document.getElementById('sUptime').textContent  = fmtUp(d.uptime);
-  document.getElementById('sDb').textContent      = d.dbStatus;
+  countUp(document.getElementById('sServers'), d.guilds);
+  countUp(document.getElementById('sUsers'), d.users > 999 ? d.users : d.users);
+  document.getElementById('sServers').dataset.val = d.guilds;
+  document.getElementById('sUsers').dataset.val = d.users;
+  document.getElementById('sCmds').textContent = d.commands;
+  document.getElementById('sUptime').textContent = fmtUp(d.uptime);
+  document.getElementById('sDb').textContent = d.dbStatus;
   document.getElementById('pingChip').textContent = `🏓 ${d.ping}ms`;
 
   if (d.isOwner) {
@@ -242,7 +413,10 @@ async function loadServers() {
   document.getElementById('srvBadge').textContent = d.length;
   document.getElementById('srvBody').innerHTML = d.map(s=>`
     <div class="srv">
-      <div class="sic">${s.icon?`<img src="${esc(s.icon)}" alt="${esc(s.name)}" onerror="this.parentElement.textContent='${esc(s.name[0].toUpperCase())}'">`:esc(s.name[0].toUpperCase())}</div>
+      <div class="sic">${s.icon
+        ? `<img src="${esc(s.icon)}" alt="" onerror="this.parentElement.textContent='${esc(s.name[0].toUpperCase())}'"">`
+        : esc(s.name[0].toUpperCase())
+      }</div>
       <div class="sn">${esc(s.name)}</div>
       <div class="sm">👥 ${s.memberCount.toLocaleString()}</div>
     </div>
@@ -259,14 +433,13 @@ function renderOwnerCmds() {
 }
 
 function renderSysInfo(d) {
-  const mem = performance?.memory?.usedJSHeapSize;
   document.getElementById('sysInfo').innerHTML = `
     <div class="sys-item"><div class="sys-label">Servers</div><div class="sys-val">${d.guilds}</div></div>
     <div class="sys-item"><div class="sys-label">Users</div><div class="sys-val">${fmtN(d.users)}</div></div>
-    <div class="sys-item"><div class="sys-label">Uptime</div><div class="sys-val grn" style="color:var(--green)">${fmtUp(d.uptime)}</div></div>
+    <div class="sys-item"><div class="sys-label">Uptime</div><div class="sys-val" style="color:var(--green);font-size:13px">${fmtUp(d.uptime)}</div></div>
     <div class="sys-item"><div class="sys-label">Ping</div><div class="sys-val">${d.ping}ms</div></div>
     <div class="sys-item"><div class="sys-label">Commands</div><div class="sys-val">${d.commands}</div></div>
-    <div class="sys-item"><div class="sys-label">Database</div><div class="sys-val" style="font-size:12px">${esc(d.dbStatus)}</div></div>
+    <div class="sys-item"><div class="sys-label">Database</div><div class="sys-val" style="font-size:11px;font-weight:600">${esc(d.dbStatus)}</div></div>
   `;
 }
 
@@ -275,7 +448,11 @@ async function refresh() {
 }
 
 let cd = 30;
-setInterval(()=>{ cd--; document.getElementById('cdChip').textContent=`↻ ${cd}s`; if(cd<=0){cd=30;refresh();} }, 1000);
+setInterval(()=>{
+  cd--;
+  document.getElementById('cdChip').textContent = `↻ ${cd}s`;
+  if (cd <= 0) { cd = 30; refresh(); }
+}, 1000);
 
 refresh();
 </script>
