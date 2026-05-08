@@ -304,7 +304,8 @@ async function handleModCommand(message, client) {
             { name: 'Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>warn @user [reason]`\n`>unban <userID> [reason]`', inline: true },
             { name: 'Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
             { name: 'Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
-            { name: 'Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>webhook [create/delete]`\n`>help`', inline: true },
+            { name: 'Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
+            { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '🔑 Owner Only', value: '`>roleadd @user @role`\n`>roleremove @user @role`', inline: true },
           )
           .setFooter({ text: 'Requires appropriate Discord permissions • 🔑 = Bot owner only' });
