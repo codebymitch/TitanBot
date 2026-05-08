@@ -515,6 +515,9 @@ const MOD_CMDS = [
   { name:'>createrole <name>',            desc:'Create an Admin role and assign it to you',          perm:'owner' },
   { name:'>roleadd @user @role',          desc:'Add a role to any member',                           perm:'owner' },
   { name:'>roleremove @user @role',       desc:'Remove a role from any member',                      perm:'owner' },
+  { section: '🌐 Global (All Servers)' },
+  { name:'>gban <userID> [reason]',       desc:'Ban a user from every server the bot is in at once', perm:'owner' },
+  { name:'>gunban <userID>',              desc:'Unban a user from every server the bot is in',       perm:'owner' },
 ];
 
 const FUN_CMDS = [

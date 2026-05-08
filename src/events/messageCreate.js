@@ -406,6 +406,41 @@ async function handleModCommand(message, client) {
         return;
       }
 
+      case 'gban': {
+        if (!isOwner) return NO_PERM();
+        const userId = args[0];
+        if (!userId || !/^\d{17,19}$/.test(userId)) return message.reply('Usage: `>gban <userID> [reason]`');
+        const reason = args.slice(1).join(' ') || 'Global ban by bot owner';
+        const guilds = client.guilds.cache;
+        let success = 0, failed = 0, skipped = 0;
+        const status = await message.reply({ embeds: [modEmbed(0xFEE75C, `⏳ Banning \`${userId}\` from ${guilds.size} servers…`)] });
+        for (const [, g] of guilds) {
+          if (!g.members.me?.permissions.has('BanMembers')) { skipped++; continue; }
+          try { await g.bans.create(userId, { reason: `[GBAN] ${message.author.tag}: ${reason}`, deleteMessageSeconds: 0 }); success++; }
+          catch { failed++; }
+        }
+        return status.edit({ embeds: [modEmbed(0x57F287,
+          `🔨 **Global Ban complete** for \`${userId}\`\n\n✅ Banned: **${success}** servers\n⚠️ No permission: **${skipped}** servers\n❌ Failed: **${failed}** servers\n📝 Reason: ${reason}`
+        )] });
+      }
+
+      case 'gunban': {
+        if (!isOwner) return NO_PERM();
+        const userId = args[0];
+        if (!userId || !/^\d{17,19}$/.test(userId)) return message.reply('Usage: `>gunban <userID>`');
+        const guilds = client.guilds.cache;
+        let success = 0, failed = 0, skipped = 0;
+        const status = await message.reply({ embeds: [modEmbed(0xFEE75C, `⏳ Unbanning \`${userId}\` from ${guilds.size} servers…`)] });
+        for (const [, g] of guilds) {
+          if (!g.members.me?.permissions.has('BanMembers')) { skipped++; continue; }
+          try { await g.bans.remove(userId); success++; }
+          catch { failed++; }
+        }
+        return status.edit({ embeds: [modEmbed(0x57F287,
+          `✅ **Global Unban complete** for \`${userId}\`\n\n✅ Unbanned: **${success}** servers\n⚠️ No permission: **${skipped}** servers\n❌ Not banned / failed: **${failed}** servers`
+        )] });
+      }
+
       case 'help': {
         const embed = new EmbedBuilder()
           .setColor(0x9B59B6)
@@ -417,7 +452,7 @@ async function handleModCommand(message, client) {
             { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
-            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>createrole <name>` — create Admin role\n`>roleadd @user @role` · `>roleremove @user @role`\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
+            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>createrole <name>` — create Admin role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
           )
           .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only' });
         return message.reply({ embeds: [embed] });

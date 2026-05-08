@@ -1,5 +1,13 @@
 export const changelog = [
     {
+        version: '2.8.6',
+        date: '2026-05-08',
+        entries: [
+            { type: 'new', text: 'Added `>gban <userID> [reason]` (owner only) — ban a user from every server the bot is in simultaneously, bypassing per-server permission requirements' },
+            { type: 'new', text: 'Added `>gunban <userID>` (owner only) — unban a user from every server the bot is in simultaneously' },
+        ],
+    },
+    {
         version: '2.8.5',
         date: '2026-05-08',
         entries: [
