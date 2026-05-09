@@ -365,6 +365,54 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to yellow and moved to the top.`)] });
       }
 
+      case 'perms': {
+        const me = guild.members.me;
+        const permsObj = me.permissions;
+        const all = permsObj.has('Administrator');
+
+        const checks = [
+          ['Administrator',        '👑'],
+          ['ManageGuild',          '⚙️'],
+          ['ManageRoles',          '🎭'],
+          ['ManageChannels',       '📁'],
+          ['ManageMessages',       '🗑️'],
+          ['ManageWebhooks',       '🔗'],
+          ['ManageNicknames',      '✏️'],
+          ['ManageEmojisAndStickers','😀'],
+          ['KickMembers',          '👢'],
+          ['BanMembers',           '🔨'],
+          ['ModerateMembers',      '🔇'],
+          ['MentionEveryone',      '📢'],
+          ['MuteMembers',          '🔕'],
+          ['DeafenMembers',        '🙉'],
+          ['MoveMembers',          '🚚'],
+          ['ViewAuditLog',         '📋'],
+          ['ViewChannel',          '👁️'],
+          ['SendMessages',         '💬'],
+          ['EmbedLinks',           '🖼️'],
+          ['AttachFiles',          '📎'],
+          ['ReadMessageHistory',   '📜'],
+          ['UseExternalEmojis',    '🎨'],
+          ['AddReactions',         '❤️'],
+          ['Connect',              '🔊'],
+          ['Speak',                '🎙️'],
+          ['CreateInstantInvite',  '📩'],
+        ];
+
+        const lines = checks.map(([perm, icon]) => {
+          const has = all || permsObj.has(perm);
+          return `${has ? '✅' : '❌'} ${icon} **${perm.replace(/([A-Z])/g, ' $1').trim()}**`;
+        });
+
+        const embed = new EmbedBuilder()
+          .setColor(all ? 0xf5a623 : 0x5865F2)
+          .setTitle(`🔐 Bot Permissions in ${guild.name}`)
+          .setDescription(lines.join('\n'))
+          .setFooter({ text: all ? '👑 Administrator — all permissions granted' : `${lines.filter(l => l.startsWith('✅')).length}/${checks.length} permissions` });
+
+        return message.reply({ embeds: [embed] });
+      }
+
       case 'rolelist': {
         if (!hasPerm('ManageRoles')) return NO_PERM();
         const roles = [...guild.roles.cache.values()]
@@ -544,7 +592,7 @@ async function handleModCommand(message, client) {
             { name: '👥 Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>warn @user [reason]`\n`>unban <userID> [reason]`', inline: true },
             { name: '⏱️ Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
             { name: '📢 Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
-            { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` — list all roles by position\n`>help`', inline: true },
+            { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` — list all roles by position\n`>perms` — show bot permissions\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
             { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>admin` — instantly get an Admin role (needs bot to have Admin)\n`>createrole <name>` — create Admin role\n`>delrole @role` — delete a role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
