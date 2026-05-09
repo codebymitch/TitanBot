@@ -242,7 +242,7 @@ export const botConfig = {
     archiveCategory: null,
 
     // Channel ID where ticket logs are sent.
-    logChannel: 1474583036774584453,
+    logChannel: 1502684126702993458,
   },
 
   // =========================
@@ -264,7 +264,7 @@ export const botConfig = {
     maximumDuration: 2592000000, 
 
     // Role IDs allowed to host giveaways.
-    allowedRoles: [1474582829248544779],
+    allowedRoles: [1502772079953711275],
 
     // Role IDs that bypass giveaway restrictions.
     bypassRoles: [],
