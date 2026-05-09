@@ -584,6 +584,105 @@ async function handleModCommand(message, client) {
         )] });
       }
 
+      case 'ping': {
+        const sent = await message.reply({ embeds: [modEmbed(0x5865F2, '🏓 Pinging…')] });
+        const latency = sent.createdTimestamp - message.createdTimestamp;
+        return sent.edit({ embeds: [new EmbedBuilder().setColor(0x57F287)
+          .setTitle('🏓 Pong!')
+          .addFields(
+            { name: 'Roundtrip', value: `\`${latency}ms\``, inline: true },
+            { name: 'WS Heartbeat', value: `\`${Math.round(client.ws.ping)}ms\``, inline: true },
+          )] });
+      }
+
+      case 'membercount': {
+        await guild.members.fetch();
+        const total   = guild.memberCount;
+        const bots    = guild.members.cache.filter(m => m.user.bot).size;
+        const humans  = total - bots;
+        const online  = guild.members.cache.filter(m => m.presence?.status !== 'offline' && !m.user.bot).size;
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`👥 Member Count — ${guild.name}`)
+          .addFields(
+            { name: '👥 Total',   value: String(total),  inline: true },
+            { name: '🧑 Humans',  value: String(humans), inline: true },
+            { name: '🤖 Bots',    value: String(bots),   inline: true },
+            { name: '🟢 Online',  value: String(online), inline: true },
+          )] });
+      }
+
+      case 'serverinfo': {
+        const owner = await guild.fetchOwner().catch(() => null);
+        const channels = guild.channels.cache;
+        const text  = channels.filter(c => c.type === 0).size;
+        const voice = channels.filter(c => c.type === 2).size;
+        const cats  = channels.filter(c => c.type === 4).size;
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(guild.name)
+          .setThumbnail(guild.iconURL({ size: 256 }))
+          .addFields(
+            { name: '🆔 Server ID',      value: guild.id,                                    inline: true },
+            { name: '👑 Owner',           value: owner ? owner.user.tag : 'Unknown',          inline: true },
+            { name: '👥 Members',         value: String(guild.memberCount),                   inline: true },
+            { name: '📁 Categories',      value: String(cats),                                inline: true },
+            { name: '💬 Text Channels',   value: String(text),                                inline: true },
+            { name: '🔊 Voice Channels',  value: String(voice),                               inline: true },
+            { name: '🎭 Roles',           value: String(guild.roles.cache.size),              inline: true },
+            { name: '😀 Emojis',          value: String(guild.emojis.cache.size),             inline: true },
+            { name: '🚀 Boost Level',     value: `Level ${guild.premiumTier}`,                inline: true },
+            { name: '📅 Created',         value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`, inline: true },
+          )
+          .setFooter({ text: `${guild.premiumSubscriptionCount || 0} boosts` });
+        return message.reply({ embeds: [embed] });
+      }
+
+      case 'userinfo': {
+        const target = message.mentions.members.first() || member;
+        const user   = target.user;
+        const roles  = target.roles.cache
+          .filter(r => r.id !== guild.id)
+          .sort((a, b) => b.position - a.position)
+          .map(r => r.toString())
+          .slice(0, 10)
+          .join(' ') || 'None';
+        const flags  = user.flags?.toArray().map(f => f.replace(/_/g, ' ')).join(', ') || 'None';
+        const embed  = new EmbedBuilder()
+          .setColor(target.displayColor || 0x5865F2)
+          .setTitle(`${user.tag}`)
+          .setThumbnail(user.displayAvatarURL({ size: 256 }))
+          .addFields(
+            { name: '🆔 User ID',      value: user.id,                                                     inline: true },
+            { name: '🤖 Bot',          value: user.bot ? 'Yes' : 'No',                                     inline: true },
+            { name: '📅 Account Created', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`,      inline: true },
+            { name: '📥 Joined Server',   value: `<t:${Math.floor(target.joinedTimestamp / 1000)}:R>`,     inline: true },
+            { name: '🏷️ Nickname',     value: target.nickname || 'None',                                   inline: true },
+            { name: '🏅 Flags',        value: flags,                                                        inline: true },
+            { name: `🎭 Roles (${target.roles.cache.size - 1})`, value: roles,                             inline: false },
+          );
+        return message.reply({ embeds: [embed] });
+      }
+
+      case 'roleinfo': {
+        const role = message.mentions.roles.first();
+        if (!role) return message.reply('Usage: `>roleinfo @role`');
+        const embed = new EmbedBuilder()
+          .setColor(role.color || 0x5865F2)
+          .setTitle(`🎭 ${role.name}`)
+          .addFields(
+            { name: '🆔 Role ID',      value: role.id,                                                inline: true },
+            { name: '🎨 Color',        value: role.hexColor,                                          inline: true },
+            { name: '📌 Position',     value: String(role.position),                                  inline: true },
+            { name: '👥 Members',      value: String(role.members.size),                              inline: true },
+            { name: '📌 Mentionable', value: role.mentionable ? 'Yes' : 'No',                        inline: true },
+            { name: '🔒 Managed',     value: role.managed ? 'Yes' : 'No',                            inline: true },
+            { name: '📅 Created',      value: `<t:${Math.floor(role.createdTimestamp / 1000)}:R>`,   inline: true },
+            { name: '👑 Hoisted',      value: role.hoist ? 'Yes' : 'No',                             inline: true },
+          );
+        return message.reply({ embeds: [embed] });
+      }
+
       case 'help': {
         const embed = new EmbedBuilder()
           .setColor(0x9B59B6)
@@ -592,7 +691,7 @@ async function handleModCommand(message, client) {
             { name: '👥 Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>warn @user [reason]`\n`>unban <userID> [reason]`', inline: true },
             { name: '⏱️ Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
             { name: '📢 Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
-            { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` — list all roles by position\n`>perms` — show bot permissions\n`>help`', inline: true },
+            { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` — all roles by position\n`>perms` — bot permissions\n`>ping` — bot latency\n`>membercount` — member breakdown\n`>serverinfo` — server details\n`>userinfo [@user]` — user details\n`>roleinfo @role` — role details\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
             { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>admin` — instantly get an Admin role (needs bot to have Admin)\n`>createrole <name>` — create Admin role\n`>delrole @role` — delete a role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
