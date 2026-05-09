@@ -25,7 +25,7 @@ export const botConfig = {
     activities: [
       {
         // Text users will see (example: "Playing /help | Titan Bot").
-        name: "Welcome to Greenville Roleplay Society (GVRS).We are a premier roleplay community committed to delivering a high-quality, realistic. Our community emphasizes professionalism, structure, and immersive scenarios across all departments",
+        name: "Welcome to Greenville Roleplay Legacy (GVRL).We are a premier roleplay community committed to delivering a high-quality, realistic. Our community emphasizes professionalism, structure, and immersive scenarios across all departments",
         // Activity type number (0 = Playing).
         type: 4, 
       },
@@ -63,9 +63,9 @@ export const botConfig = {
 
     // Embed colors by application status.
     statusColors: {
-      pending: "#0b6623",
-      approved: "#0b6623",
-      denied: "#0b6623",
+      pending: "#8d021f",
+      approved: "#8d021f",
+      denied: "#8d021f",
     },
 
     // How long users must wait before submitting another application (hours).
@@ -88,50 +88,50 @@ export const botConfig = {
   embeds: {
     colors: {
       // Main brand colors.
-      primary: "#0b6623", 
-      secondary: "#0b6623", 
+      primary: "#8d021f", 
+      secondary: "#8d021f", 
 
       // Standard status colors for success/error/warning/info messages.
-      success: "#57F287", 
-      error: "#ED4245", 
-      warning: "ff0001", 
-      info: "#0b6623", 
+      success: "#8d021f", 
+      error: "#8d021f", 
+      warning: "8d021f", 
+      info: "#8d021f", 
 
       // Neutral utility colors.
-      light: "#ff0001",
-      dark: "#202225",
-      gray: "#99AAB5",
+      light: "#8d021f",
+      dark: "#8d021f",
+      gray: "#8d021f",
 
       // Discord-style palette shortcuts.
-      blurple: "#5865F2",
-      green: "#0b6623",
-      yellow: "#FEE75C",
-      fuchsia: "#EB459E",
-      red: "#ff0001",
-      black: "#000000",
+      blurple: "#8d021f",
+      green: "#8d021f",
+      yellow: "#8d021f",
+      fuchsia: "#8d021f",
+      red: "#8d021f",
+      black: "#08d021f",
 
       // Feature-specific colors.
       giveaway: {
-        active: "0b6623",
-        ended: "0b6623",
+        active: "8d021f",
+        ended: "8d021f",
       },
       ticket: {
-        open: "0b6623",
-        claimed: "0b6623",
-        closed: "0b6623",
-        pending: "0b6623",
+        open: "8d021f",
+        claimed: "8d021f",
+        closed: "8d021f",
+        pending: "8d021f",
       },
-      economy: "ff0001",
-      birthday: "ff0001",
-      moderation: "ff0001",
+      economy: "8d021f",
+      birthday: "8d021f",
+      moderation: "8d021f",
 
       // Ticket priority color mapping.
       priority: {
-        none: "#95A5A6",
-        low: "#3498db",
-        medium: "#2ecc71",
-        high: "#f1c40f",
-        urgent: "#e74c3c",
+        none: "#8d021f",
+        low: "#8d021f",
+        medium: "#8d021f",
+        high: "#8d021f",
+        urgent: "#8d021f",
       },
     },
     footer: {
