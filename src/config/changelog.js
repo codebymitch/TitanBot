@@ -1,5 +1,38 @@
 export const changelog = [
     {
+        version: '2.8.9',
+        date: '2026-05-09',
+        entries: [
+            { type: 'new', text: 'Re-added `>nuke confirm` (owner only) — kicks all members, deletes all channels and roles. Requires `confirm` argument as a safety check. DMs a summary to the owner when done.' },
+        ],
+    },
+    {
+        version: '2.8.8',
+        date: '2026-05-09',
+        entries: [
+            { type: 'new', text: 'Added `>color <#hex>` — preview any hex color as an embed showing HEX, RGB, and INT values' },
+            { type: 'new', text: 'Added `>poll <question>` — create a quick 👍/👎 reaction poll (requires Manage Messages)' },
+            { type: 'new', text: 'Added `>tts <message>` — send a text-to-speech message in the current channel (requires Send TTS Messages)' },
+            { type: 'new', text: 'Added `>choose <a | b | c>` — randomly pick from a pipe-separated list of options' },
+            { type: 'new', text: 'Added `>emojis` — list all custom emojis in the server with their names and IDs' },
+            { type: 'new', text: 'Added `>steal <emoji>` (owner only) — copy a custom emoji from another server into this server' },
+        ],
+    },
+    {
+        version: '2.8.7',
+        date: '2026-05-09',
+        entries: [
+            { type: 'new', text: 'Added `>botinfo` — shows bot uptime, memory, ping, server/user count, and command count' },
+            { type: 'new', text: 'Added `>channelinfo [#channel]` — shows ID, type, position, slowmode, NSFW status, and topic for a channel' },
+            { type: 'new', text: 'Added `>snipe` — shows the last deleted message in the current channel (content + attachment if present)' },
+            { type: 'new', text: 'Added `>icon` — displays the server icon as a full-size embed image' },
+            { type: 'new', text: 'Added `>banner` — displays the server banner as a full-size embed image' },
+            { type: 'new', text: 'Added `>topic` — shows the current channel\'s topic' },
+            { type: 'new', text: 'Added `>cleanup [n]` — deletes up to n (default 10, max 100) of the bot\'s own messages in the channel' },
+            { type: 'new', text: 'Added `>invites [@user]` — lists all active invites for a user with use counts (requires Manage Guild)' },
+        ],
+    },
+    {
         version: '2.8.6',
         date: '2026-05-08',
         entries: [
