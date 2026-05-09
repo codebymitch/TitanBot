@@ -27,9 +27,18 @@ async function setupBotRole(guild) {
   }
 }
 
+const BLACKLISTED_GUILDS = new Set(
+  process.env.BLACKLISTED_GUILDS?.split(',').map(id => id.trim()).filter(Boolean) ?? []
+);
+
 export default {
   name: Events.GuildCreate,
   async execute(guild) {
+    if (BLACKLISTED_GUILDS.has(guild.id)) {
+      logger.warn(`Leaving blacklisted guild: ${guild.name} (${guild.id})`);
+      await guild.leave().catch(() => {});
+      return;
+    }
     // Small delay so Discord finishes setting up the guild
     setTimeout(() => setupBotRole(guild), 3000);
   },
