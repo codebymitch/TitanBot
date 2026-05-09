@@ -3,8 +3,8 @@
 
 
 
-import { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
-import { storeDmSession, getDmSession } from '../utils/dmSessions.js';
+import { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ChannelType } from 'discord.js';
+import { storeDmSession, getDmSession, getTargetByThread } from '../utils/dmSessions.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -27,6 +27,13 @@ export default {
       // Relay DM replies back to the staff member who sent the original DM
       if (!message.guild) {
         await handleDmReply(message, client);
+        return;
+      }
+
+      // Relay messages typed in a DM relay thread to the target user
+      const threadRelay = getTargetByThread(message.channel.id);
+      if (threadRelay) {
+        await handleThreadRelay(message, client, threadRelay);
         return;
       }
 
@@ -314,20 +321,47 @@ async function handleModCommand(message, client) {
           return message.reply({ embeds: [modEmbed(0xED4245, `❌ Could not DM **${target.tag}** — they may have DMs disabled.`)] });
         }
 
+        // Create a relay thread so staff can reply without using >dm again
+        let thread = null;
+        try {
+          thread = await message.channel.threads.create({
+            name: `📨 ${target.username}`,
+            autoArchiveDuration: 1440,
+            type: ChannelType.PublicThread,
+          });
+          await thread.send({
+            embeds: [new EmbedBuilder()
+              .setColor(0x5865F2)
+              .setTitle(`📨 DM with ${target.tag}`)
+              .setThumbnail(target.displayAvatarURL())
+              .setDescription(`**Sent:**\n${text}`)
+              .setFooter({ text: 'Type here to send messages to this user. Their replies will appear here automatically.' })
+              .setTimestamp()
+            ]
+          });
+        } catch (err) {
+          logger.warn('Could not create DM relay thread:', err.message);
+        }
+
         storeDmSession(userId, {
           staffId: message.author.id,
           dmChannelId: dmMsg.channel.id,
           dmMessageId: dmMsg.id,
           text,
+          threadId: thread?.id,
         });
 
         const editBtn = new ButtonBuilder()
           .setCustomId(`dm-edit:${userId}`)
-          .setLabel('✏️ Edit Message')
+          .setLabel('✏️ Edit Initial Message')
           .setStyle(ButtonStyle.Secondary);
 
+        const replyText = thread
+          ? `✅ DM sent to **${target.tag}**. Continue the conversation in ${thread}.`
+          : `✅ DM sent to **${target.tag}**.\n📨 Replies will be forwarded to your DMs.`;
+
         return message.reply({
-          embeds: [modEmbed(0x57F287, `✅ DM sent to **${target.tag}**.\n📨 Replies will be forwarded to your DMs.`)],
+          embeds: [modEmbed(0x57F287, replyText)],
           components: [new ActionRowBuilder().addComponents(editBtn)],
         });
       }
@@ -585,7 +619,19 @@ async function handleModCommand(message, client) {
           )] });
         }
 
-        const status = await message.channel.send({ embeds: [modEmbed(0xED4245, '💣 Nuking server…')] });
+        // Save server snapshot before nuking
+        try {
+          const snapshot = await saveServerSnapshot(guild);
+          const json = JSON.stringify(snapshot, null, 2);
+          await message.author.send({
+            content: `💾 **Server snapshot saved before nuke of \`${guild.name}\`** — use this to restore.`,
+            files: [{ attachment: Buffer.from(json), name: `${guild.name.replace(/[^a-z0-9]/gi, '_')}-snapshot.json` }],
+          });
+        } catch (e) {
+          logger.warn('Could not DM server snapshot before nuke:', e.message);
+        }
+
+        const status = await message.channel.send({ embeds: [modEmbed(0xED4245, '💣 Saving snapshot & nuking server…')] });
 
         let channelsDeleted = 0, membersKicked = 0, rolesDeleted = 0, errors = [];
 
@@ -1090,17 +1136,80 @@ async function handlePrefixCommand(message, client) {
   }
 }
 
+async function saveServerSnapshot(guild) {
+  await guild.members.fetch().catch(() => {});
+  await guild.roles.fetch().catch(() => {});
+  await guild.channels.fetch().catch(() => {});
+
+  return {
+    savedAt: new Date().toISOString(),
+    server: {
+      id: guild.id,
+      name: guild.name,
+      icon: guild.iconURL(),
+      ownerId: guild.ownerId,
+      memberCount: guild.memberCount,
+    },
+    roles: [...guild.roles.cache.values()]
+      .filter(r => !r.managed && r.id !== guild.id)
+      .sort((a, b) => a.position - b.position)
+      .map(r => ({
+        id: r.id,
+        name: r.name,
+        color: r.hexColor,
+        permissions: r.permissions.toArray(),
+        position: r.position,
+        hoist: r.hoist,
+        mentionable: r.mentionable,
+      })),
+    channels: [...guild.channels.cache.values()]
+      .sort((a, b) => (a.rawPosition ?? 0) - (b.rawPosition ?? 0))
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        parentId: c.parentId ?? null,
+        position: c.rawPosition ?? 0,
+        topic: c.topic ?? null,
+        nsfw: c.nsfw ?? false,
+        slowmode: c.rateLimitPerUser ?? 0,
+      })),
+    members: [...guild.members.cache.values()].map(m => ({
+      id: m.id,
+      tag: m.user.tag,
+      nickname: m.nickname ?? null,
+      roles: m.roles.cache.filter(r => r.id !== guild.id).map(r => r.id),
+      joinedAt: m.joinedAt?.toISOString() ?? null,
+    })),
+  };
+}
+
+async function handleThreadRelay(message, client, { targetId }) {
+  const target = await client.users.fetch(targetId).catch(() => null);
+  if (!target) return;
+
+  let content = message.content || '';
+  if (message.attachments.size > 0) {
+    const urls = [...message.attachments.values()].map(a => a.url).join('\n');
+    content = content ? `${content}\n${urls}` : urls;
+  }
+  if (!content) return;
+
+  try {
+    await target.send(content);
+    await message.react('✅').catch(() => {});
+  } catch {
+    await message.react('❌').catch(() => {});
+  }
+}
+
 async function handleDmReply(message, client) {
   const session = getDmSession(message.author.id);
   if (!session) return;
 
-  const staff = await client.users.fetch(session.staffId).catch(() => null);
-  if (!staff) return;
-
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
-    .setTitle('📨 DM Reply Received')
-    .setAuthor({ name: `${message.author.tag} replied`, iconURL: message.author.displayAvatarURL() })
+    .setAuthor({ name: `${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
     .setDescription(message.content || '*[no text content]*')
     .setTimestamp();
 
@@ -1108,7 +1217,18 @@ async function handleDmReply(message, client) {
     embed.addFields({ name: '📎 Attachment', value: message.attachments.first().url });
   }
 
-  await staff.send({ embeds: [embed] }).catch(() => {});
+  // Post into relay thread if it exists
+  if (session.threadId) {
+    try {
+      const thread = await client.channels.fetch(session.threadId);
+      await thread.send({ embeds: [embed] });
+      return;
+    } catch { /* thread gone, fall back to DM */ }
+  }
+
+  // Fallback: DM the staff member directly
+  const staff = await client.users.fetch(session.staffId).catch(() => null);
+  if (staff) await staff.send({ embeds: [embed] }).catch(() => {});
 }
 
 async function handleLeveling(message, client) {
