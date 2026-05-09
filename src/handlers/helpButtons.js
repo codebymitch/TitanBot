@@ -1,5 +1,7 @@
+import { MessageFlags } from 'discord.js';
 import { createAllCommandsMenu } from './helpSelectMenus.js';
 import { createInitialHelpMenu } from '../commands/Core/help.js';
+import { createEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 
 const COMMAND_LIST_ID = "help-command-list";
@@ -36,11 +38,46 @@ export const helpBackButton = {
 };
 
 
-export const helpReportCommand = {
-    name: COMMAND_LIST_ID,
-    categoryName: null,
-    async execute(interaction, client) {
-        
+export const helpCmdButton = {
+    name: 'help-cmd',
+    async execute(interaction, client, args) {
+        const displayName = args[0];
+        if (!displayName) return;
+
+        const [baseName, ...subParts] = displayName.split(' ');
+        const command = client.commands.get(baseName);
+
+        let description = 'No description available.';
+
+        if (command) {
+            const rawData = command.data;
+            const jsonData = typeof rawData?.toJSON === 'function' ? rawData.toJSON() : rawData;
+            description = jsonData?.description || description;
+
+            let options = (jsonData?.options || []).map(o =>
+                typeof o?.toJSON === 'function' ? o.toJSON() : o
+            );
+            for (const part of subParts) {
+                const opt = options.find(o => o.name === part);
+                if (opt) {
+                    description = opt.description || description;
+                    options = (opt.options || []).map(o =>
+                        typeof o?.toJSON === 'function' ? o.toJSON() : o
+                    );
+                }
+            }
+        }
+
+        const embed = createEmbed({
+            title: `/${displayName}`,
+            description,
+            color: 'secondary',
+        });
+
+        await interaction.reply({
+            embeds: [embed],
+            flags: MessageFlags.Ephemeral,
+        });
     }
 };
 

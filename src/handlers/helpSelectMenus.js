@@ -3,7 +3,7 @@ import { createButton, getPaginationRow } from '../utils/components.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Collection, ActionRowBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { Collection, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -200,72 +200,40 @@ async function createCategoryCommandsMenu(category, client, member) {
         logger.error('Error fetching registered commands:', error);
     }
 
+    const MAX_CMD_BUTTONS = 20; // 4 rows × 5
+    const displayedEntries = categoryCommands.slice(0, MAX_CMD_BUTTONS);
+    const hiddenCount = categoryCommands.length - displayedEntries.length;
+
     const embed = createEmbed({
         title: `${icon} ${categoryName} Commands`,
         description: categoryCommands.length > 0
-            ? `Commands available to you:`
+            ? `**${categoryCommands.length}** command${categoryCommands.length !== 1 ? 's' : ''} available${hiddenCount > 0 ? ` · showing first ${MAX_CMD_BUTTONS}` : ''}. Click any command for details.`
             : `You don't have permission to use any commands in the **${categoryName}** category.`
     });
-
-    if (categoryCommands.length > 0) {
-        const commandMentions = categoryCommands
-            .map((cmd) => {
-                const registeredCmd = registeredCommands.get(cmd.baseName);
-                if (registeredCmd && registeredCmd.id) {
-                    return `</${cmd.displayName}:${registeredCmd.id}> · ${cmd.description}`;
-                }
-                return `\`/${cmd.displayName}\` · ${cmd.description}`;
-            })
-            .join("\n");
-
-        const maxLength = 1000;
-        if (commandMentions.length <= maxLength) {
-            embed.addFields({
-                name: "Commands",
-                value: commandMentions,
-                inline: false,
-            });
-        } else {
-            const chunks = [];
-            let currentChunk = "";
-            const lines = commandMentions.split("\n");
-
-            for (const line of lines) {
-                if ((currentChunk + "\n" + line).length > maxLength) {
-                    if (currentChunk) chunks.push(currentChunk);
-                    currentChunk = line;
-                } else {
-                    currentChunk += (currentChunk ? "\n" : "") + line;
-                }
-            }
-            if (currentChunk) chunks.push(currentChunk);
-
-            chunks.forEach((chunk, index) => {
-                embed.addFields({
-                    name: `Commands (Part ${index + 1})`,
-                    value: chunk,
-                    inline: false,
-                });
-            });
-        }
-    }
 
     embed.setFooter({ text: FOOTER_TEXT });
     embed.setTimestamp();
 
-    const backButton = createButton(
-        BACK_BUTTON_ID,
-        "Back",
-        "primary",
-        "⬅️",
-        false,
-    );
+    const cmdButtonRows = [];
+    for (let i = 0; i < displayedEntries.length; i += 5) {
+        const chunk = displayedEntries.slice(i, i + 5);
+        const row = new ActionRowBuilder().addComponents(
+            chunk.map(entry =>
+                new ButtonBuilder()
+                    .setCustomId(`help-cmd:${entry.displayName}`)
+                    .setLabel(`/${entry.displayName}`.substring(0, 80))
+                    .setStyle(ButtonStyle.Secondary)
+            )
+        );
+        cmdButtonRows.push(row);
+    }
 
-    const buttonRow = new ActionRowBuilder().addComponents(backButton);
+    const backButton = createButton(BACK_BUTTON_ID, "Back", "primary", "⬅️", false);
+    const navRow = new ActionRowBuilder().addComponents(backButton);
 
     return {
         embeds: [embed],
-        components: [buttonRow],
+        components: [...cmdButtonRows, navRow],
     };
 }
 

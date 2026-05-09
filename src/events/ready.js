@@ -30,17 +30,6 @@ export default {
         );
       }
 
-      // Leave any blacklisted guilds
-      const blacklistedGuilds = new Set(
-        process.env.BLACKLISTED_GUILDS?.split(',').map(id => id.trim()).filter(Boolean) ?? []
-      );
-      for (const [id, guild] of client.guilds.cache) {
-        if (blacklistedGuilds.has(id)) {
-          logger.warn(`Leaving blacklisted guild on startup: ${guild.name} (${id})`);
-          await guild.leave().catch(() => {});
-        }
-      }
-
       startupLog(`Ready! Logged in as ${client.user.tag}`);
 
       const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${client.user.id}&scope=bot+applications.commands&permissions=8`;

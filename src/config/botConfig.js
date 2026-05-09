@@ -24,10 +24,8 @@ export const botConfig = {
     // Rotates every 30 seconds. Add/remove entries here to customize.
     // type: 0=Playing, 2=Listening, 3=Watching, 5=Competing
     activities: [
-      { name: "clan zen on top", type: 0 },
-      { name: "/help", type: 3 },
-      { name: "zen vibes", type: 2 },
-      { name: "itay100k build this bot", type: 5 },
+      
+      { name: "/help", type: 0 },
 
     ],
   },
