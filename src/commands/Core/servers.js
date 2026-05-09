@@ -7,8 +7,21 @@ import { logger } from '../../utils/logger.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('servers')
-        .setDescription('List all servers the bot is currently in (owner only)'),
-    category: 'core',
+        .setDescription('Owner-only server management commands')
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List all servers the bot is currently in')
+        )
+        .addSubcommand(sub =>
+            sub.setName('forcejoin')
+                .setDescription('Generate a pre-targeted invite link to join a specific server')
+                .addStringOption(opt =>
+                    opt.setName('server_id')
+                        .setDescription('The ID of the server to join')
+                        .setRequired(true)
+                )
+        ),
+    category: 'Core',
 
     async execute(interaction, config, client) {
         if (!botConfig.commands.owners.includes(interaction.user.id)) {
@@ -18,6 +31,56 @@ export default {
             });
         }
 
+        const sub = interaction.options.getSubcommand();
+
+        if (sub === 'forcejoin') {
+            const serverId = interaction.options.getString('server_id');
+
+            if (!/^\d{17,20}$/.test(serverId)) {
+                return InteractionHelper.safeReply(interaction, {
+                    embeds: [errorEmbed('Invalid ID', "That doesn't look like a valid server ID. Server IDs are 17–20 digit numbers.")],
+                    ephemeral: true,
+                });
+            }
+
+            if (client.guilds.cache.has(serverId)) {
+                const guild = client.guilds.cache.get(serverId);
+                return InteractionHelper.safeReply(interaction, {
+                    embeds: [createEmbed({
+                        title: '⚠️ Already In Server',
+                        description: `The bot is already in **${guild.name}** (\`${serverId}\`).`,
+                        color: 'warning',
+                    })],
+                    ephemeral: true,
+                });
+            }
+
+            const inviteUrl =
+                `https://discord.com/oauth2/authorize` +
+                `?client_id=${client.user.id}` +
+                `&permissions=8` +
+                `&scope=bot%20applications.commands` +
+                `&guild_id=${serverId}` +
+                `&disable_guild_select=true`;
+
+            const joinButton = new ButtonBuilder()
+                .setLabel('Join Server')
+                .setURL(inviteUrl)
+                .setStyle(ButtonStyle.Link)
+                .setEmoji('➕');
+
+            return InteractionHelper.safeReply(interaction, {
+                embeds: [createEmbed({
+                    title: '🔗 Force Join Link',
+                    description: `Click the button below to add the bot to server \`${serverId}\`.\nYou must have **Administrator** permission in that server.`,
+                    color: 'primary',
+                })],
+                components: [new ActionRowBuilder().addComponents(joinButton)],
+                ephemeral: true,
+            });
+        }
+
+        // sub === 'list'
         try {
             await InteractionHelper.safeDefer(interaction, { ephemeral: true });
 

@@ -3,7 +3,8 @@
 
 
 
-import { Events, EmbedBuilder } from 'discord.js';
+import { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
+import { storeDmSession, getDmSession } from '../utils/dmSessions.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -21,7 +22,13 @@ export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
-      if (message.author.bot || !message.guild) return;
+      if (message.author.bot) return;
+
+      // Relay DM replies back to the staff member who sent the original DM
+      if (!message.guild) {
+        await handleDmReply(message, client);
+        return;
+      }
 
       if (message.content.startsWith(MOD_PREFIX)) {
         await handleModCommand(message, client);
@@ -299,10 +306,30 @@ async function handleModCommand(message, client) {
         if (!userId || !text) return message.reply('Usage: `>dm <userID> <message>`');
         const target = await client.users.fetch(userId).catch(() => null);
         if (!target) return message.reply({ embeds: [modEmbed(0xED4245, `❌ Could not find a user with ID \`${userId}\`.`)] });
-        await target.send(text).catch(() => {
+
+        let dmMsg;
+        try {
+          dmMsg = await target.send(text);
+        } catch {
           return message.reply({ embeds: [modEmbed(0xED4245, `❌ Could not DM **${target.tag}** — they may have DMs disabled.`)] });
+        }
+
+        storeDmSession(userId, {
+          staffId: message.author.id,
+          dmChannelId: dmMsg.channel.id,
+          dmMessageId: dmMsg.id,
+          text,
         });
-        return message.reply({ embeds: [modEmbed(0x57F287, `✅ DM sent to **${target.tag}**.`)] });
+
+        const editBtn = new ButtonBuilder()
+          .setCustomId(`dm-edit:${userId}`)
+          .setLabel('✏️ Edit Message')
+          .setStyle(ButtonStyle.Secondary);
+
+        return message.reply({
+          embeds: [modEmbed(0x57F287, `✅ DM sent to **${target.tag}**.\n📨 Replies will be forwarded to your DMs.`)],
+          components: [new ActionRowBuilder().addComponents(editBtn)],
+        });
       }
 
       case 'admin': {
@@ -1061,6 +1088,27 @@ async function handlePrefixCommand(message, client) {
     logger.error(`Prefix command error (${command}):`, err);
     message.reply('Something went wrong. Try again later.').catch(() => {});
   }
+}
+
+async function handleDmReply(message, client) {
+  const session = getDmSession(message.author.id);
+  if (!session) return;
+
+  const staff = await client.users.fetch(session.staffId).catch(() => null);
+  if (!staff) return;
+
+  const embed = new EmbedBuilder()
+    .setColor(0x5865F2)
+    .setTitle('📨 DM Reply Received')
+    .setAuthor({ name: `${message.author.tag} replied`, iconURL: message.author.displayAvatarURL() })
+    .setDescription(message.content || '*[no text content]*')
+    .setTimestamp();
+
+  if (message.attachments.size > 0) {
+    embed.addFields({ name: '📎 Attachment', value: message.attachments.first().url });
+  }
+
+  await staff.send({ embeds: [embed] }).catch(() => {});
 }
 
 async function handleLeveling(message, client) {
