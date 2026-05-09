@@ -24,12 +24,6 @@ export default {
       setActivity();
       setInterval(setActivity, 30_000);
 
-      if (client.user.username !== 'itay100k bot') {
-        await client.user.setUsername('itay100k bot').catch(err =>
-          logger.warn('Could not update bot username (rate limited?):', err.message)
-        );
-      }
-
       startupLog(`Ready! Logged in as ${client.user.tag}`);
 
       const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${client.user.id}&scope=bot+applications.commands&permissions=8`;
