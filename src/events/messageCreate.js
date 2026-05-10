@@ -687,7 +687,7 @@ async function handleModCommand(message, client) {
         const { ButtonBuilder: Btn, ButtonStyle: BS, ActionRowBuilder: Row } = await import('discord.js');
         const youtubeBtn = new Btn()
           .setLabel('Watch on YouTube')
-          .setURL('https://www.youtube.com/@Codfish')
+          .setURL('https://www.youtube.com/@CodfishVr1')
           .setStyle(BS.Link)
           .setEmoji('▶️');
         return message.channel.send({ embeds: [embed], components: [new Row().addComponents(youtubeBtn)] });
