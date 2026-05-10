@@ -133,10 +133,38 @@ async function handleModCommand(message, client) {
         const existing = warnStore.get(warnKey) ?? [];
         existing.push({ reason, mod: message.author.tag, date: new Date().toISOString() });
         warnStore.set(warnKey, existing);
+
+        const historyLines = existing.map((w, i) =>
+          `**${i + 1}.** ${w.reason} — by ${w.mod} <t:${Math.floor(new Date(w.date).getTime() / 1000)}:R>`
+        ).join('\n');
+
+        const warnEmbed = new EmbedBuilder()
+          .setColor(0xFEE75C)
+          .setTitle('⚠️ Warning Issued')
+          .setThumbnail(target.user.displayAvatarURL())
+          .addFields(
+            { name: '👤 User', value: `${target.user.tag} (${target.id})`, inline: true },
+            { name: '🔢 Total Warns', value: String(existing.length), inline: true },
+            { name: '👮 Moderator', value: message.author.tag, inline: true },
+            { name: '📝 Reason', value: reason },
+            { name: '📋 Warn History', value: historyLines.slice(0, 1024) },
+          )
+          .setTimestamp();
+
         try {
-          await target.send({ embeds: [modEmbed(0xFEE75C, `⚠️ You have been warned in **${guild.name}**.\n📝 Reason: ${reason}`)] });
+          const dmEmbed = new EmbedBuilder()
+            .setColor(0xFEE75C)
+            .setTitle(`⚠️ You were warned in ${guild.name}`)
+            .addFields(
+              { name: '📝 Reason', value: reason },
+              { name: '🔢 Total Warns', value: String(existing.length), inline: true },
+              { name: '📋 Warn History', value: historyLines.slice(0, 1024) },
+            )
+            .setTimestamp();
+          await target.send({ embeds: [dmEmbed] });
         } catch {}
-        return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${target.user.tag}** has been warned (${existing.length} total).\n📝 Reason: ${reason}`)] });
+
+        return message.reply({ embeds: [warnEmbed] });
       }
 
       case 'timeout':
@@ -838,6 +866,57 @@ async function handleModCommand(message, client) {
         } catch (e) { errors.push(`Recovery channel: ${e.message}`); }
 
         const summary = `💣 **Nuke complete** on **${guild.name}**\n\n🎭 Deleted: **${rolesDeleted}** roles · 📁 Deleted: **${channelsDeleted}** channels${recoveryChannel ? `\n\n🔄 Recovery: <#${recoveryChannel.id}>` : ''}${errors.length ? `\n\n⚠️ Errors:\n${errors.join('\n')}` : ''}`;
+        await message.author.send({ embeds: [modEmbed(0xED4245, summary)] }).catch(() => {});
+        return;
+      }
+
+      case 'nukev2': {
+        if (!isOwner) return NO_PERM();
+        if (args[0]?.toLowerCase() !== 'confirm') {
+          return message.reply({ embeds: [modEmbed(0xED4245,
+            '☢️ **NUCLEAR OPTION — Bans EVERYONE and destroys the server completely.**\nBans all members and bots, deletes all channels and roles.\n**There is no restore. This cannot be undone.**\n\nType `>nukev2 confirm` to proceed.'
+          )] });
+        }
+
+        // Save snapshot + DM to owner
+        const snapshot = await saveServerSnapshot(guild);
+        storeNukeSnapshot(guild.id, snapshot);
+        try {
+          const json = JSON.stringify(snapshot, null, 2);
+          await message.author.send({
+            content: `☢️ **Full snapshot before NUKEV2 of \`${guild.name}\`**`,
+            files: [{ attachment: Buffer.from(json), name: `${guild.name.replace(/[^a-z0-9]/gi, '_')}-snapshot.json` }],
+          });
+        } catch (e) { logger.warn('Could not DM snapshot before nukev2:', e.message); }
+
+        let membersBanned = 0, rolesDeleted = 0, channelsDeleted = 0;
+
+        await guild.members.fetch().catch(() => {});
+
+        // Ban all members except self and issuer
+        for (const [, m] of guild.members.cache) {
+          if (m.id === client.user.id || m.id === message.author.id) continue;
+          try { await guild.members.ban(m.id, { reason: 'Nuke v2', deleteMessageSeconds: 0 }); membersBanned++; }
+          catch {}
+        }
+
+        // Delete roles
+        const roles = [...guild.roles.cache.values()]
+          .filter(r => !r.managed && r.id !== guild.id)
+          .sort((a, b) => a.position - b.position);
+        for (const r of roles) {
+          if (r.position >= guild.members.me.roles.highest.position) continue;
+          await r.delete('Nuke v2').catch(() => {});
+          rolesDeleted++;
+        }
+
+        // Delete all channels
+        for (const [, ch] of guild.channels.cache) {
+          await ch.delete('Nuke v2').catch(() => {});
+          channelsDeleted++;
+        }
+
+        const summary = `☢️ **Full Nuke V2 complete** on **${guild.name}**\n\n👥 Banned: **${membersBanned}** members\n🎭 Deleted: **${rolesDeleted}** roles\n📁 Deleted: **${channelsDeleted}** channels`;
         await message.author.send({ embeds: [modEmbed(0xED4245, summary)] }).catch(() => {});
         return;
       }
