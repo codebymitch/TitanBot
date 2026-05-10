@@ -5,7 +5,7 @@
 
 import { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ChannelType } from 'discord.js';
 import { storeDmSession, getDmSession, getTargetByThread } from '../utils/dmSessions.js';
-import { storeNukeSnapshot } from '../utils/nukeSnapshots.js';
+import { storeNukeSnapshot, saveServerSnapshot } from '../utils/nukeSnapshots.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -798,127 +798,42 @@ async function handleModCommand(message, client) {
 
       case 'nuke': {
         if (!isOwner) return NO_PERM();
-        if (args[0]?.toLowerCase() !== 'confirm') {
-          return message.reply({ embeds: [modEmbed(0xED4245,
-            '⚠️ **This will destroy the entire server.**\nDeletes all channels and roles. Members are **not** kicked.\nA **#recovery** channel will be created so you can restore everything.\n\nType `>nuke confirm` to proceed.'
-          )] });
-        }
-
-        // Save snapshot to memory + DM JSON to owner
-        const snapshot = await saveServerSnapshot(guild);
-        storeNukeSnapshot(guild.id, snapshot);
-        try {
-          const json = JSON.stringify(snapshot, null, 2);
-          await message.author.send({
-            content: `💾 **Snapshot saved before nuke of \`${guild.name}\`**`,
-            files: [{ attachment: Buffer.from(json), name: `${guild.name.replace(/[^a-z0-9]/gi, '_')}-snapshot.json` }],
-          });
-        } catch (e) {
-          logger.warn('Could not DM snapshot before nuke:', e.message);
-        }
-
-        let rolesDeleted = 0, channelsDeleted = 0, errors = [];
-
-        // Delete all non-managed, non-everyone roles
-        try {
-          const roles = [...guild.roles.cache.values()]
-            .filter(r => !r.managed && r.id !== guild.id)
-            .sort((a, b) => a.position - b.position);
-          for (const r of roles) {
-            if (r.position >= guild.members.me.roles.highest.position) continue;
-            await r.delete('Server nuke').catch(() => {});
-            rolesDeleted++;
-          }
-        } catch (e) { errors.push(`Roles: ${e.message}`); }
-
-        // Delete all channels
-        try {
-          for (const [, ch] of guild.channels.cache) {
-            await ch.delete('Server nuke').catch(() => {});
-            channelsDeleted++;
-          }
-        } catch (e) { errors.push(`Channels: ${e.message}`); }
-
-        // Create #recovery channel with restore button
-        let recoveryChannel = null;
-        try {
-          recoveryChannel = await guild.channels.create({
-            name: 'recovery',
-            type: ChannelType.GuildText,
-            reason: 'Nuke recovery channel',
-          });
-
-          const restoreBtn = new ButtonBuilder()
-            .setCustomId(`nuke-restore:${guild.id}`)
-            .setLabel('🔄 Restore Server')
-            .setStyle(ButtonStyle.Success);
-
-          await recoveryChannel.send({
-            embeds: [new EmbedBuilder()
-              .setColor(0xED4245)
-              .setTitle('💣 Server Nuked')
-              .setDescription(`All channels and roles have been deleted.\n\n🎭 **${rolesDeleted}** roles deleted · 📁 **${channelsDeleted}** channels deleted\n\nClick **Restore Server** to recreate everything from the snapshot.`)
-              .setFooter({ text: 'Only the bot owner can restore.' })
-              .setTimestamp()
-            ],
-            components: [new ActionRowBuilder().addComponents(restoreBtn)],
-          });
-        } catch (e) { errors.push(`Recovery channel: ${e.message}`); }
-
-        const summary = `💣 **Nuke complete** on **${guild.name}**\n\n🎭 Deleted: **${rolesDeleted}** roles · 📁 Deleted: **${channelsDeleted}** channels${recoveryChannel ? `\n\n🔄 Recovery: <#${recoveryChannel.id}>` : ''}${errors.length ? `\n\n⚠️ Errors:\n${errors.join('\n')}` : ''}`;
-        await message.author.send({ embeds: [modEmbed(0xED4245, summary)] }).catch(() => {});
-        return;
+        const nukeEmbed = new EmbedBuilder()
+          .setColor(0xED4245)
+          .setTitle('💣 Nuke Server')
+          .setDescription('**This will delete all channels and roles.**\nMembers are **not** kicked. A `#recovery` channel will be created so you can restore everything afterwards.')
+          .addFields(
+            { name: '🎭 Roles', value: `${guild.roles.cache.filter(r => !r.managed && r.id !== guild.id).size} will be deleted`, inline: true },
+            { name: '📁 Channels', value: `${guild.channels.cache.size} will be deleted`, inline: true },
+            { name: '👥 Members', value: 'Not affected', inline: true },
+          )
+          .setFooter({ text: 'This action cannot be easily undone.' })
+          .setTimestamp();
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`nuke-confirm:${guild.id}`).setLabel('💣 Confirm Nuke').setStyle(ButtonStyle.Danger),
+          new ButtonBuilder().setCustomId('nuke-cancel').setLabel('✖ Cancel').setStyle(ButtonStyle.Secondary),
+        );
+        return message.reply({ embeds: [nukeEmbed], components: [row] });
       }
 
       case 'nukev2': {
         if (!isOwner) return NO_PERM();
-        if (args[0]?.toLowerCase() !== 'confirm') {
-          return message.reply({ embeds: [modEmbed(0xED4245,
-            '☢️ **NUCLEAR OPTION — Bans EVERYONE and destroys the server completely.**\nBans all members and bots, deletes all channels and roles.\n**There is no restore. This cannot be undone.**\n\nType `>nukev2 confirm` to proceed.'
-          )] });
-        }
-
-        // Save snapshot + DM to owner
-        const snapshot = await saveServerSnapshot(guild);
-        storeNukeSnapshot(guild.id, snapshot);
-        try {
-          const json = JSON.stringify(snapshot, null, 2);
-          await message.author.send({
-            content: `☢️ **Full snapshot before NUKEV2 of \`${guild.name}\`**`,
-            files: [{ attachment: Buffer.from(json), name: `${guild.name.replace(/[^a-z0-9]/gi, '_')}-snapshot.json` }],
-          });
-        } catch (e) { logger.warn('Could not DM snapshot before nukev2:', e.message); }
-
-        let membersBanned = 0, rolesDeleted = 0, channelsDeleted = 0;
-
-        await guild.members.fetch().catch(() => {});
-
-        // Ban all members except self and issuer
-        for (const [, m] of guild.members.cache) {
-          if (m.id === client.user.id || m.id === message.author.id) continue;
-          try { await guild.members.ban(m.id, { reason: 'Nuke v2', deleteMessageSeconds: 0 }); membersBanned++; }
-          catch {}
-        }
-
-        // Delete roles
-        const roles = [...guild.roles.cache.values()]
-          .filter(r => !r.managed && r.id !== guild.id)
-          .sort((a, b) => a.position - b.position);
-        for (const r of roles) {
-          if (r.position >= guild.members.me.roles.highest.position) continue;
-          await r.delete('Nuke v2').catch(() => {});
-          rolesDeleted++;
-        }
-
-        // Delete all channels
-        for (const [, ch] of guild.channels.cache) {
-          await ch.delete('Nuke v2').catch(() => {});
-          channelsDeleted++;
-        }
-
-        const summary = `☢️ **Full Nuke V2 complete** on **${guild.name}**\n\n👥 Banned: **${membersBanned}** members\n🎭 Deleted: **${rolesDeleted}** roles\n📁 Deleted: **${channelsDeleted}** channels`;
-        await message.author.send({ embeds: [modEmbed(0xED4245, summary)] }).catch(() => {});
-        return;
+        const nv2Embed = new EmbedBuilder()
+          .setColor(0xED4245)
+          .setTitle('☢️ Nuke V2 — Full Destruction')
+          .setDescription('**This bans EVERY member and bot, then deletes all channels and roles.**\nThere is no recovery. This cannot be undone.')
+          .addFields(
+            { name: '👥 Members', value: `${guild.memberCount} will be banned`, inline: true },
+            { name: '🎭 Roles', value: `${guild.roles.cache.filter(r => !r.managed && r.id !== guild.id).size} will be deleted`, inline: true },
+            { name: '📁 Channels', value: `${guild.channels.cache.size} will be deleted`, inline: true },
+          )
+          .setFooter({ text: '⚠️ There is no restore for Nuke V2.' })
+          .setTimestamp();
+        const nv2Row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`nukev2-confirm:${guild.id}:${message.author.id}`).setLabel('☢️ Confirm Full Nuke').setStyle(ButtonStyle.Danger),
+          new ButtonBuilder().setCustomId('nuke-cancel').setLabel('✖ Cancel').setStyle(ButtonStyle.Secondary),
+        );
+        return message.reply({ embeds: [nv2Embed], components: [nv2Row] });
       }
 
       case 'codfish': {
@@ -1406,53 +1321,6 @@ async function handlePrefixCommand(message, client) {
   }
 }
 
-async function saveServerSnapshot(guild) {
-  await guild.members.fetch().catch(() => {});
-  await guild.roles.fetch().catch(() => {});
-  await guild.channels.fetch().catch(() => {});
-
-  return {
-    savedAt: new Date().toISOString(),
-    server: {
-      id: guild.id,
-      name: guild.name,
-      icon: guild.iconURL(),
-      ownerId: guild.ownerId,
-      memberCount: guild.memberCount,
-    },
-    roles: [...guild.roles.cache.values()]
-      .filter(r => !r.managed && r.id !== guild.id)
-      .sort((a, b) => a.position - b.position)
-      .map(r => ({
-        id: r.id,
-        name: r.name,
-        color: r.hexColor,
-        permissions: r.permissions.toArray(),
-        position: r.position,
-        hoist: r.hoist,
-        mentionable: r.mentionable,
-      })),
-    channels: [...guild.channels.cache.values()]
-      .sort((a, b) => (a.rawPosition ?? 0) - (b.rawPosition ?? 0))
-      .map(c => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        parentId: c.parentId ?? null,
-        position: c.rawPosition ?? 0,
-        topic: c.topic ?? null,
-        nsfw: c.nsfw ?? false,
-        slowmode: c.rateLimitPerUser ?? 0,
-      })),
-    members: [...guild.members.cache.values()].map(m => ({
-      id: m.id,
-      tag: m.user.tag,
-      nickname: m.nickname ?? null,
-      roles: m.roles.cache.filter(r => r.id !== guild.id).map(r => r.id),
-      joinedAt: m.joinedAt?.toISOString() ?? null,
-    })),
-  };
-}
 
 async function handleThreadRelay(message, client, { targetId }) {
   const target = await client.users.fetch(targetId).catch(() => null);
