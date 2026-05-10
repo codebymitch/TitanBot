@@ -675,17 +675,24 @@ async function handleModCommand(message, client) {
       case 'codfish': {
         if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>codfish`.')] });
         const embed = new EmbedBuilder()
-          .setColor(0x1DB954)
+          .setColor(0xFF0000)
           .setTitle('🎤 Codfish')
-          .setDescription('The greatest beatboxer to ever live. Brazilian legend, 2× World Beatbox Champion, known for his insane bass and polyphony.')
+          .setDescription('The greatest beatboxer to ever live. Brazilian legend, 2× World Beatbox Champion and YouTuber known for his insane bass and polyphony.')
           .addFields(
             { name: '🏆 Titles', value: 'World Beatbox Champion 2018 & 2019\nGrand Beatbox Battle Champion', inline: true },
             { name: '🌍 Origin', value: 'Brazil 🇧🇷', inline: true },
             { name: '🎵 Known For', value: 'Bass, polyphony, throat bass, inward sounds', inline: true },
+            { name: '▶️ YouTube', value: 'youtube.com/@Codfish', inline: false },
           )
           .setFooter({ text: 'GOAT 🐐' })
           .setTimestamp();
-        return message.channel.send({ embeds: [embed] });
+        const { ButtonBuilder: Btn, ButtonStyle: BS, ActionRowBuilder: Row } = await import('discord.js');
+        const youtubeBtn = new Btn()
+          .setLabel('Watch on YouTube')
+          .setURL('https://www.youtube.com/@Codfish')
+          .setStyle(BS.Link)
+          .setEmoji('▶️');
+        return message.channel.send({ embeds: [embed], components: [new Row().addComponents(youtubeBtn)] });
       }
 
       case 'gban': {
