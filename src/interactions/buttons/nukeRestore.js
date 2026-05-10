@@ -7,7 +7,10 @@ const TYPE_MAP = {
     2: ChannelType.GuildVoice,
     5: ChannelType.GuildAnnouncement,
     13: ChannelType.GuildStageVoice,
+    15: ChannelType.GuildForum,
 };
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 export default {
     name: 'nuke-restore',
@@ -46,6 +49,7 @@ export default {
             } catch (e) {
                 errors.push(`Role "${r.name}": ${e.message}`);
             }
+            await sleep(300);
         }
 
         // Restore categories first
@@ -62,12 +66,16 @@ export default {
             } catch (e) {
                 errors.push(`Category "${ch.name}": ${e.message}`);
             }
+            await sleep(300);
         }
 
-        // Restore text/voice channels
+        // Restore text/voice/forum channels
         for (const ch of snapshot.channels.filter(c => c.type !== 4)) {
             const type = TYPE_MAP[ch.type];
-            if (!type) continue; // skip threads, forums, etc.
+            if (!type) {
+                errors.push(`Channel "${ch.name}" skipped — unknown type ${ch.type}`);
+                continue;
+            }
             try {
                 const parent = ch.parentId ? channelMap.get(ch.parentId) : null;
                 const options = {
@@ -87,6 +95,7 @@ export default {
             } catch (e) {
                 errors.push(`Channel "${ch.name}": ${e.message}`);
             }
+            await sleep(300);
         }
 
         const embed = new EmbedBuilder()
@@ -100,7 +109,9 @@ export default {
             .setTimestamp();
 
         if (errors.length) {
-            embed.addFields({ name: `⚠️ Errors (${errors.length})`, value: errors.slice(0, 5).join('\n') });
+            const errorText = errors.join('\n');
+            // Discord field value limit is 1024 chars
+            embed.addFields({ name: `⚠️ Errors (${errors.length})`, value: errorText.slice(0, 1020) + (errorText.length > 1020 ? '…' : '') });
         }
 
         await interaction.editReply({ embeds: [embed] });
