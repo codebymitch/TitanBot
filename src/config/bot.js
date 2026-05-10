@@ -242,7 +242,7 @@ export const botConfig = {
     archiveCategory: null,
 
     // Channel ID where ticket logs are sent.
-    logChannel: 1502684126702993458,
+    logChannel: 1502684126841409620,
   },
 
   // =========================
