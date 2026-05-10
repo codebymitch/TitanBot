@@ -72,7 +72,7 @@ export default {
         // Restore text/voice/forum channels
         for (const ch of snapshot.channels.filter(c => c.type !== 4)) {
             const type = TYPE_MAP[ch.type];
-            if (!type) {
+            if (type === undefined) {
                 errors.push(`Channel "${ch.name}" skipped — unknown type ${ch.type}`);
                 continue;
             }
