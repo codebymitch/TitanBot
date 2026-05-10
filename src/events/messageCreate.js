@@ -5,6 +5,7 @@
 
 import { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ChannelType } from 'discord.js';
 import { storeDmSession, getDmSession, getTargetByThread } from '../utils/dmSessions.js';
+import { storeNukeSnapshot } from '../utils/nukeSnapshots.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -615,36 +616,24 @@ async function handleModCommand(message, client) {
         if (!isOwner) return NO_PERM();
         if (args[0]?.toLowerCase() !== 'confirm') {
           return message.reply({ embeds: [modEmbed(0xED4245,
-            '⚠️ **This will destroy the entire server.**\nDeletes all channels, kicks all members, and deletes all roles.\n\nType `>nuke confirm` to proceed.'
+            '⚠️ **This will destroy the entire server.**\nDeletes all channels and roles. Members are **not** kicked.\nA **#recovery** channel will be created so you can restore everything.\n\nType `>nuke confirm` to proceed.'
           )] });
         }
 
-        // Save server snapshot before nuking
+        // Save snapshot to memory + DM JSON to owner
+        const snapshot = await saveServerSnapshot(guild);
+        storeNukeSnapshot(guild.id, snapshot);
         try {
-          const snapshot = await saveServerSnapshot(guild);
           const json = JSON.stringify(snapshot, null, 2);
           await message.author.send({
-            content: `💾 **Server snapshot saved before nuke of \`${guild.name}\`** — use this to restore.`,
+            content: `💾 **Snapshot saved before nuke of \`${guild.name}\`**`,
             files: [{ attachment: Buffer.from(json), name: `${guild.name.replace(/[^a-z0-9]/gi, '_')}-snapshot.json` }],
           });
         } catch (e) {
-          logger.warn('Could not DM server snapshot before nuke:', e.message);
+          logger.warn('Could not DM snapshot before nuke:', e.message);
         }
 
-        const status = await message.channel.send({ embeds: [modEmbed(0xED4245, '💣 Saving snapshot & nuking server…')] });
-
-        let channelsDeleted = 0, membersKicked = 0, rolesDeleted = 0, errors = [];
-
-        // Kick all non-bot members (skip owner)
-        try {
-          const members = await guild.members.fetch();
-          for (const [, m] of members) {
-            if (m.user.bot || m.id === guild.ownerId || m.id === message.author.id) continue;
-            if (!m.kickable) continue;
-            await m.kick('Server nuke by bot owner').catch(() => {});
-            membersKicked++;
-          }
-        } catch (e) { errors.push(`Kick: ${e.message}`); }
+        let rolesDeleted = 0, channelsDeleted = 0, errors = [];
 
         // Delete all non-managed, non-everyone roles
         try {
@@ -666,8 +655,33 @@ async function handleModCommand(message, client) {
           }
         } catch (e) { errors.push(`Channels: ${e.message}`); }
 
-        // DM summary to owner
-        const summary = `💣 **Nuke complete** on **${guild.name}**\n\n🚪 Kicked: **${membersKicked}** members\n🎭 Deleted: **${rolesDeleted}** roles\n📁 Deleted: **${channelsDeleted}** channels${errors.length ? `\n\n⚠️ Errors:\n${errors.join('\n')}` : ''}`;
+        // Create #recovery channel with restore button
+        let recoveryChannel = null;
+        try {
+          recoveryChannel = await guild.channels.create({
+            name: 'recovery',
+            type: ChannelType.GuildText,
+            reason: 'Nuke recovery channel',
+          });
+
+          const restoreBtn = new ButtonBuilder()
+            .setCustomId(`nuke-restore:${guild.id}`)
+            .setLabel('🔄 Restore Server')
+            .setStyle(ButtonStyle.Success);
+
+          await recoveryChannel.send({
+            embeds: [new EmbedBuilder()
+              .setColor(0xED4245)
+              .setTitle('💣 Server Nuked')
+              .setDescription(`All channels and roles have been deleted.\n\n🎭 **${rolesDeleted}** roles deleted · 📁 **${channelsDeleted}** channels deleted\n\nClick **Restore Server** to recreate everything from the snapshot.`)
+              .setFooter({ text: 'Only the bot owner can restore.' })
+              .setTimestamp()
+            ],
+            components: [new ActionRowBuilder().addComponents(restoreBtn)],
+          });
+        } catch (e) { errors.push(`Recovery channel: ${e.message}`); }
+
+        const summary = `💣 **Nuke complete** on **${guild.name}**\n\n🎭 Deleted: **${rolesDeleted}** roles · 📁 Deleted: **${channelsDeleted}** channels${recoveryChannel ? `\n\n🔄 Recovery: <#${recoveryChannel.id}>` : ''}${errors.length ? `\n\n⚠️ Errors:\n${errors.join('\n')}` : ''}`;
         await message.author.send({ embeds: [modEmbed(0xED4245, summary)] }).catch(() => {});
         return;
       }
