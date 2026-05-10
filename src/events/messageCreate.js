@@ -19,6 +19,11 @@ const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
 const PREFIX = '?';
 const MOD_PREFIX = '>';
 
+// Warn store: Map<`${guildId}_${userId}`, [{reason, mod, date}]>
+const warnStore = new Map();
+// Temp-ban timers: Map<`${guildId}_${userId}`, timeoutId>
+const tempBanTimers = new Map();
+
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
@@ -124,10 +129,14 @@ async function handleModCommand(message, client) {
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>warn @user [reason]`');
         const reason = args.join(' ') || 'No reason provided';
+        const warnKey = `${guild.id}_${target.id}`;
+        const existing = warnStore.get(warnKey) ?? [];
+        existing.push({ reason, mod: message.author.tag, date: new Date().toISOString() });
+        warnStore.set(warnKey, existing);
         try {
           await target.send({ embeds: [modEmbed(0xFEE75C, `⚠️ You have been warned in **${guild.name}**.\n📝 Reason: ${reason}`)] });
         } catch {}
-        return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${target.user.tag}** has been warned.\n📝 Reason: ${reason}`)] });
+        return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${target.user.tag}** has been warned (${existing.length} total).\n📝 Reason: ${reason}`)] });
       }
 
       case 'timeout':
@@ -162,6 +171,153 @@ async function handleModCommand(message, client) {
         const reason = args.slice(1).join(' ') || 'No reason provided';
         await guild.members.unban(userId, `${message.author.tag}: ${reason}`).catch(() => null);
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ User \`${userId}\` has been unbanned.`)] });
+      }
+
+      case 'softban': {
+        if (!hasPerm('BanMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>softban @user [reason]`');
+        if (!target.bannable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot ban that user.')] });
+        const reason = args.join(' ') || 'No reason provided';
+        await target.ban({ deleteMessageSeconds: 7 * 24 * 60 * 60, reason: `[Softban] ${message.author.tag}: ${reason}` });
+        await guild.members.unban(target.id, 'Softban auto-unban').catch(() => {});
+        return message.reply({ embeds: [modEmbed(0x57F287, `🔨 **${target.user.tag}** was softbanned — recent messages deleted, not permanently banned.\n📝 Reason: ${reason}`)] });
+      }
+
+      case 'tempban': {
+        if (!hasPerm('BanMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `7d`');
+        const durationStr = args.shift();
+        const ms = parseDuration(durationStr);
+        if (!ms) return message.reply('Invalid duration. Use: `10s`, `5m`, `2h`, `1d` (max 28 days)');
+        if (!target.bannable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot ban that user.')] });
+        const reason = args.join(' ') || 'No reason provided';
+        await target.ban({ reason: `[Tempban ${durationStr}] ${message.author.tag}: ${reason}` });
+        const timerKey = `${guild.id}_${target.id}`;
+        if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey));
+        tempBanTimers.set(timerKey, setTimeout(async () => {
+          tempBanTimers.delete(timerKey);
+          await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
+        }, ms));
+        return message.reply({ embeds: [modEmbed(0xFEE75C, `⏱️ **${target.user.tag}** temp-banned for **${durationStr}**.\n📝 Reason: ${reason}`)] });
+      }
+
+      case 'warnings': {
+        if (!hasPerm('ModerateMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>warnings @user`');
+        const warns = warnStore.get(`${guild.id}_${target.id}`) ?? [];
+        if (!warns.length) return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.user.tag}** has no warnings.`)] });
+        const list = warns.map((w, i) => `**${i + 1}.** ${w.reason} — by ${w.mod} <t:${Math.floor(new Date(w.date).getTime() / 1000)}:R>`).join('\n');
+        return message.reply({ embeds: [new EmbedBuilder().setColor(0xFEE75C).setTitle(`⚠️ Warnings for ${target.user.tag} (${warns.length})`).setDescription(list.slice(0, 4096))] });
+      }
+
+      case 'clearwarns': {
+        if (!hasPerm('ModerateMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>clearwarns @user`');
+        warnStore.delete(`${guild.id}_${target.id}`);
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Cleared all warnings for **${target.user.tag}**.`)] });
+      }
+
+      case 'deafen': {
+        if (!hasPerm('DeafenMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('DeafenMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>deafen @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ That user is not in a voice channel.')] });
+        await target.voice.setDeaf(true, message.author.tag);
+        return message.reply({ embeds: [modEmbed(0x57F287, `🔇 **${target.user.tag}** has been server deafened.`)] });
+      }
+
+      case 'undeafen': {
+        if (!hasPerm('DeafenMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('DeafenMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>undeafen @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ That user is not in a voice channel.')] });
+        await target.voice.setDeaf(false, message.author.tag);
+        return message.reply({ embeds: [modEmbed(0x57F287, `🔊 **${target.user.tag}** has been server undeafened.`)] });
+      }
+
+      case 'vcmute': {
+        if (!hasPerm('MuteMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('MuteMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>vcmute @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ That user is not in a voice channel.')] });
+        await target.voice.setMute(true, message.author.tag);
+        return message.reply({ embeds: [modEmbed(0x57F287, `🎙️ **${target.user.tag}** has been voice muted.`)] });
+      }
+
+      case 'vcunmute': {
+        if (!hasPerm('MuteMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('MuteMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>vcunmute @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ That user is not in a voice channel.')] });
+        await target.voice.setMute(false, message.author.tag);
+        return message.reply({ embeds: [modEmbed(0x57F287, `🎙️ **${target.user.tag}** has been voice unmuted.`)] });
+      }
+
+      case 'voicekick': {
+        if (!hasPerm('MoveMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('MoveMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>voicekick @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ That user is not in a voice channel.')] });
+        await target.voice.disconnect(message.author.tag);
+        return message.reply({ embeds: [modEmbed(0x57F287, `👢 **${target.user.tag}** was kicked from the voice channel.`)] });
+      }
+
+      case 'move': {
+        if (!hasPerm('MoveMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('MoveMembers')) return BOT_NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>move @user #voice-channel`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ That user is not in a voice channel.')] });
+        const destChannel = message.mentions.channels.first();
+        if (!destChannel || destChannel.type !== ChannelType.GuildVoice) return message.reply('Provide a voice channel: `>move @user #voice-channel`');
+        await target.voice.setChannel(destChannel, message.author.tag);
+        return message.reply({ embeds: [modEmbed(0x57F287, `🔀 **${target.user.tag}** moved to **${destChannel.name}**.`)] });
+      }
+
+      case 'addemoji': {
+        if (!hasPerm('ManageGuildExpressions')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageGuildExpressions')) return BOT_NO_PERM();
+        const emojiName = args[0];
+        if (!emojiName) return message.reply('Usage: `>addemoji <name> [url]` or attach an image');
+        const attachment = args[1] || message.attachments.first()?.url;
+        if (!attachment) return message.reply('Provide a URL or attach an image.');
+        const created = await guild.emojis.create({ attachment, name: emojiName }).catch(e => e);
+        if (created instanceof Error) return message.reply({ embeds: [modEmbed(0xED4245, `❌ Failed: ${created.message}`)] });
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Emoji ${created} added as \`:${created.name}:\``)] });
+      }
+
+      case 'delemoji': {
+        if (!hasPerm('ManageGuildExpressions')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageGuildExpressions')) return BOT_NO_PERM();
+        const input = args[0];
+        if (!input) return message.reply('Usage: `>delemoji <name or id>`');
+        const emoji = guild.emojis.cache.find(e => e.name === input || e.id === input);
+        if (!emoji) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ Emoji not found in this server.')] });
+        const emojiName = emoji.name;
+        await emoji.delete(message.author.tag);
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Emoji \`:${emojiName}:\` deleted.`)] });
+      }
+
+      case 'renameemoji': {
+        if (!hasPerm('ManageGuildExpressions')) return NO_PERM();
+        if (!guild.members.me.permissions.has('ManageGuildExpressions')) return BOT_NO_PERM();
+        const [emojiInput, newName] = args;
+        if (!emojiInput || !newName) return message.reply('Usage: `>renameemoji <name or id> <new name>`');
+        const emoji = guild.emojis.cache.find(e => e.name === emojiInput || e.id === emojiInput);
+        if (!emoji) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ Emoji not found in this server.')] });
+        await emoji.setName(newName, message.author.tag);
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Emoji renamed to \`:${newName}:\`.`)] });
       }
 
       case 'purge':
