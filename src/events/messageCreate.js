@@ -1175,16 +1175,20 @@ async function handleModCommand(message, client) {
           .setColor(0x9B59B6)
           .setTitle('🛡️ Mod Prefix Commands (`>`)')
           .addFields(
-            { name: '👥 Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>warn @user [reason]`\n`>unban <userID> [reason]`', inline: true },
+            { name: '👥 Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>unban <userID> [reason]`\n`>softban @user [reason]` — ban+unban (clears messages)\n`>tempban @user <dur> [reason]` — auto-unbans', inline: true },
+            { name: '⚠️ Warns', value: '`>warn @user [reason]`\n`>warnings @user` — full warn history\n`>clearwarns @user` — wipe all warns', inline: true },
             { name: '⏱️ Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
-            { name: '📢 Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`', inline: true },
-            { name: '🔧 Utility', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` — all roles by position\n`>perms` — bot permissions\n`>ping` — bot latency\n`>membercount` — member breakdown\n`>serverinfo` — server details\n`>userinfo [@user]` — user details\n`>roleinfo @role` — role details\n`>channelinfo [#ch]` — channel details\n`>botinfo` — bot stats\n`>icon` — server icon\n`>banner` — server banner\n`>topic` — channel topic\n`>invites [@user]` — invite stats', inline: true },
-            { name: '🛠️ Tools', value: '`>color <#hex>` — preview a color\n`>poll <question>` — reaction poll\n`>tts <message>` — text to speech\n`>choose <a|b|c>` — random picker\n`>emojis` — list server emojis\n`>snipe` — show last deleted message\n`>cleanup [n]` — delete bot messages\n`>help`', inline: true },
-            { name: '🔗 Webhooks', value: '`>webhook` — list channel webhooks\n`>webhook create [name]` — create webhook\n`>webhook delete <id>` — delete webhook', inline: true },
+            { name: '📢 Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`\n`>topic <text>`', inline: true },
+            { name: '🎙️ Voice', value: '`>vcmute @user` / `>vcunmute @user`\n`>deafen @user` / `>undeafen @user`\n`>voicekick @user` — disconnect from VC\n`>move @user #channel` — move to VC', inline: true },
+            { name: '😀 Emoji', value: '`>addemoji <name> [url]` — add emoji\n`>delemoji <name/id>` — delete emoji\n`>renameemoji <name/id> <new>` — rename\n`>emojis` — list all server emojis\n`>steal <emoji>` — copy from another server', inline: true },
+            { name: '🔧 Utility', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` · `>roleinfo @role`\n`>perms` · `>ping` · `>membercount`\n`>serverinfo` · `>userinfo [@user]`\n`>channelinfo [#ch]` · `>botinfo`\n`>icon` · `>banner` · `>invites [@user]`\n`>snipe` · `>cleanup [n]`', inline: true },
+            { name: '🔗 Webhooks', value: '`>webhook` — list webhooks\n`>webhook create [name]`\n`>webhook delete <id>`', inline: true },
+            { name: '🛠️ Tools', value: '`>color <#hex>` — color preview\n`>poll <question>` — reaction poll\n`>tts <message>` — text to speech\n`>choose <a|b|c>` — random picker\n`>help` — show this menu', inline: true },
+            { name: '👑 Owner Only', value: '`>say <msg>` · `>fake @user <msg>`\n`>embed <title> | <desc>`\n`>announce <msg>` — @everyone\n`>dm <userID> <msg>` — DM any user\n`>status <type> <text>` · `>rename <name>`\n`>avatar <url>` · `>admin`\n`>createrole <name>` · `>delrole @role`\n`>roleadd @user @role` · `>roleremove @user @role`\n`>codfish`\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: true },
+            { name: '☢️ Dangers', value: '`>nuke` — delete all channels & roles *(with confirmation)*\n`>nukev2` — ban everyone + full destroy *(with confirmation)*\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers', inline: true },
             { name: '​', value: '​', inline: true },
-            { name: '👑 Owner Only', value: '`>say <message>` — bot says something\n`>embed <title> | <desc>` — send custom embed\n`>announce <message>` — @everyone announcement\n`>dm <userID> <msg>` — DM any user\n`>fake @user <msg>` — send as another user\n`>status <type> <text>` — change bot activity\n`>rename <name>` — change bot username\n`>avatar <url>` — change bot avatar\n`>admin` — instantly get an Admin role (needs bot to have Admin)\n`>createrole <name>` — create Admin role\n`>delrole @role` — delete a role\n`>roleadd @user @role` · `>roleremove @user @role`\n`>steal <emoji>` — copy emoji from another server\n`>nuke confirm` — ⚠️ destroy entire server (kick all, delete channels/roles)\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: false },
           )
-          .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only' });
+          .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only • ☢️ = Extremely destructive' });
         return message.reply({ embeds: [embed] });
       }
 
