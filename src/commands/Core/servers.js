@@ -20,6 +20,17 @@ export default {
                         .setDescription('The ID of the server to join')
                         .setRequired(true)
                 )
+                .addStringOption(opt =>
+                    opt.setName('permissions')
+                        .setDescription('Permission level the bot requests (default: Admin)')
+                        .setRequired(false)
+                        .addChoices(
+                            { name: '👑 Admin — full access', value: 'admin' },
+                            { name: '🛡️ Moderator — kick, ban, manage messages & channels', value: 'mod' },
+                            { name: '✉️ Minimal — view, send messages, embed links', value: 'minimal' },
+                            { name: '0️⃣ None — no permissions (owner assigns manually)', value: 'none' },
+                        )
+                )
         ),
     category: 'Core',
 
@@ -35,6 +46,16 @@ export default {
 
         if (sub === 'forcejoin') {
             const serverId = interaction.options.getString('server_id');
+            const permPreset = interaction.options.getString('permissions') ?? 'admin';
+
+            const PRESETS = {
+                admin:   { bits: '8',             label: '👑 Admin',     note: 'Full Administrator access' },
+                mod:     { bits: '1101927672854',  label: '🛡️ Moderator', note: 'Kick, ban, manage messages & channels, moderate members' },
+                minimal: { bits: '2147568640',     label: '✉️ Minimal',   note: 'View channels, send messages, embed links' },
+                none:    { bits: '0',              label: '0️⃣ None',      note: 'No permissions — server owner assigns roles manually' },
+            };
+
+            const preset = PRESETS[permPreset] ?? PRESETS.admin;
 
             if (!/^\d{17,20}$/.test(serverId)) {
                 return InteractionHelper.safeReply(interaction, {
@@ -58,7 +79,7 @@ export default {
             const inviteUrl =
                 `https://discord.com/oauth2/authorize` +
                 `?client_id=${client.user.id}` +
-                `&permissions=8` +
+                `&permissions=${preset.bits}` +
                 `&scope=bot%20applications.commands` +
                 `&guild_id=${serverId}` +
                 `&disable_guild_select=true`;
@@ -72,7 +93,7 @@ export default {
             return InteractionHelper.safeReply(interaction, {
                 embeds: [createEmbed({
                     title: '🔗 Force Join Link',
-                    description: `Click the button below to add the bot to server \`${serverId}\`.\nYou must have **Administrator** permission in that server.`,
+                    description: `Click the button to add the bot to server \`${serverId}\`.\nYou must have **Manage Server** or **Administrator** in that server.\n\n**Permission level:** ${preset.label}\n*${preset.note}*`,
                     color: 'primary',
                 })],
                 components: [new ActionRowBuilder().addComponents(joinButton)],
