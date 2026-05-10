@@ -3,7 +3,7 @@
 
 
 
-import { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ChannelType } from 'discord.js';
+import { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ChannelType, StringSelectMenuBuilder } from 'discord.js';
 import { storeDmSession, getDmSession, getTargetByThread } from '../utils/dmSessions.js';
 import { storeNukeSnapshot, saveServerSnapshot } from '../utils/nukeSnapshots.js';
 import { logger } from '../utils/logger.js';
@@ -1171,25 +1171,48 @@ async function handleModCommand(message, client) {
       }
 
       case 'help': {
-        const embed = new EmbedBuilder()
-          .setColor(0x9B59B6)
-          .setTitle('🛡️ Mod Prefix Commands (`>`)')
-          .addFields(
-            { name: '👥 Members', value: '`>ban @user [reason]`\n`>kick @user [reason]`\n`>unban <userID> [reason]`\n`>softban @user [reason]` — ban+unban (clears messages)\n`>tempban @user <dur> [reason]` — auto-unbans', inline: true },
-            { name: '⚠️ Warns', value: '`>warn @user [reason]`\n`>warnings @user` — full warn history\n`>clearwarns @user` — wipe all warns', inline: true },
-            { name: '⏱️ Timeout', value: '`>timeout @user <dur> [reason]`\n`>untimeout @user`\nDurations: `10s` `5m` `2h` `1d`', inline: true },
-            { name: '📢 Channel', value: '`>purge <1-100>`\n`>slowmode <seconds>`\n`>lock [reason]`\n`>unlock`\n`>topic <text>`', inline: true },
-            { name: '🎙️ Voice', value: '`>vcmute @user` / `>vcunmute @user`\n`>deafen @user` / `>undeafen @user`\n`>voicekick @user` — disconnect from VC\n`>move @user #channel` — move to VC', inline: true },
-            { name: '😀 Emoji', value: '`>addemoji <name> [url]` — add emoji\n`>delemoji <name/id>` — delete emoji\n`>renameemoji <name/id> <new>` — rename\n`>emojis` — list all server emojis\n`>steal <emoji>` — copy from another server', inline: true },
-            { name: '🔧 Utility', value: '`>nick @user [nickname]`\n`>role @user @role`\n`>rolelist` · `>roleinfo @role`\n`>perms` · `>ping` · `>membercount`\n`>serverinfo` · `>userinfo [@user]`\n`>channelinfo [#ch]` · `>botinfo`\n`>icon` · `>banner` · `>invites [@user]`\n`>snipe` · `>cleanup [n]`', inline: true },
-            { name: '🔗 Webhooks', value: '`>webhook` — list webhooks\n`>webhook create [name]`\n`>webhook delete <id>`', inline: true },
-            { name: '🛠️ Tools', value: '`>color <#hex>` — color preview\n`>poll <question>` — reaction poll\n`>tts <message>` — text to speech\n`>choose <a|b|c>` — random picker\n`>help` — show this menu', inline: true },
-            { name: '👑 Owner Only', value: '`>say <msg>` · `>fake @user <msg>`\n`>embed <title> | <desc>`\n`>announce <msg>` — @everyone\n`>dm <userID> <msg>` — DM any user\n`>status <type> <text>` · `>rename <name>`\n`>avatar <url>` · `>admin`\n`>createrole <name>` · `>delrole @role`\n`>roleadd @user @role` · `>roleremove @user @role`\n`>codfish`\n\n**Slash (owner only):** `/managerole` · `/servers`', inline: true },
-            { name: '☢️ Dangers', value: '`>nuke` — delete all channels & roles *(with confirmation)*\n`>nukev2` — ban everyone + full destroy *(with confirmation)*\n`>gban <userID> [reason]` — ban from ALL servers\n`>gunban <userID>` — unban from ALL servers', inline: true },
-            { name: '​', value: '​', inline: true },
-          )
-          .setFooter({ text: 'Requires appropriate Discord permissions • 👑 = Bot owner only • ☢️ = Extremely destructive' });
-        return message.reply({ embeds: [embed] });
+        const overview = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('🤖 Command Center')
+          .setDescription('> Pick a category from the dropdown below to view all commands.\n​')
+          .setThumbnail(guild.iconURL({ size: 256 }) ?? client.user.displayAvatarURL())
+          .addFields({
+            name: '📂 Categories',
+            value: [
+              '> 👥 **Members** — ban, kick, softban, tempban',
+              '> ⚠️ **Warns** — warn, warnings, clearwarns',
+              '> ⏱️ **Timeout** — timeout, untimeout',
+              '> 📢 **Channel** — purge, slowmode, lock, unlock',
+              '> 🎙️ **Voice** — vcmute, deafen, voicekick, move',
+              '> 😀 **Emoji** — addemoji, delemoji, steal',
+              '> 🔧 **Utility** — serverinfo, userinfo, botinfo...',
+              '> 🔗 **Webhooks** — list, create, delete',
+              '> 🛠️ **Tools** — color, poll, tts, choose',
+              '> 👑 **Owner Only** — say, fake, embed, dm...',
+              '> ☢️ **Dangers** — nuke, nukev2, gban, gunban',
+            ].join('\n'),
+          })
+          .setFooter({ text: `${guild.name} • Prefix: > • 👑 owner only • ☢️ destructive` })
+          .setTimestamp();
+
+        const menu = new StringSelectMenuBuilder()
+          .setCustomId('help-menu')
+          .setPlaceholder('📂 Choose a category...')
+          .addOptions(
+            { label: '👥 Members', description: 'ban, kick, softban, tempban, unban', value: 'members' },
+            { label: '⚠️ Warns', description: 'warn, warnings, clearwarns', value: 'warns' },
+            { label: '⏱️ Timeout', description: 'timeout, untimeout', value: 'timeout' },
+            { label: '📢 Channel', description: 'purge, slowmode, lock, unlock, topic', value: 'channel' },
+            { label: '🎙️ Voice', description: 'vcmute, deafen, voicekick, move', value: 'voice' },
+            { label: '😀 Emoji', description: 'addemoji, delemoji, renameemoji, steal', value: 'emoji' },
+            { label: '🔧 Utility', description: 'serverinfo, userinfo, roleinfo, botinfo...', value: 'utility' },
+            { label: '🔗 Webhooks', description: 'webhook list, create, delete', value: 'webhooks' },
+            { label: '🛠️ Tools', description: 'color, poll, tts, choose, snipe', value: 'tools' },
+            { label: '👑 Owner Only', description: 'say, fake, embed, announce, dm...', value: 'owner' },
+            { label: '☢️ Dangers', description: 'nuke, nukev2, gban, gunban', value: 'dangers' },
+          );
+
+        return message.reply({ embeds: [overview], components: [new ActionRowBuilder().addComponents(menu)] });
       }
 
       default:
