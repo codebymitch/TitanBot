@@ -675,16 +675,14 @@ async function handleModCommand(message, client) {
       case 'codfish': {
         if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>codfish`.')] });
         const embed = new EmbedBuilder()
-          .setColor(0xFF0000)
-          .setTitle('🎤 Codfish')
-          .setDescription('The greatest beatboxer to ever live. Brazilian legend, 2× World Beatbox Champion and YouTuber known for his insane bass and polyphony.')
+          .setColor(0x43B581)
+          .setTitle('🦍 Codfish')
+          .setDescription('Gorilla Tag YouTuber and content creator. Known for making fun and entertaining Gorilla Tag videos.')
           .addFields(
-            { name: '🏆 Titles', value: 'World Beatbox Champion 2018 & 2019\nGrand Beatbox Battle Champion', inline: true },
-            { name: '🌍 Origin', value: 'Brazil 🇧🇷', inline: true },
-            { name: '🎵 Known For', value: 'Bass, polyphony, throat bass, inward sounds', inline: true },
-            { name: '▶️ YouTube', value: 'youtube.com/@Codfish', inline: false },
+            { name: '🎮 Game', value: 'Gorilla Tag', inline: true },
+            { name: '📺 Platform', value: 'YouTube', inline: true },
           )
-          .setFooter({ text: 'GOAT 🐐' })
+          .setFooter({ text: 'touch grass (in VR)' })
           .setTimestamp();
         const { ButtonBuilder: Btn, ButtonStyle: BS, ActionRowBuilder: Row } = await import('discord.js');
         const youtubeBtn = new Btn()
