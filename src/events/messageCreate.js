@@ -98,6 +98,8 @@ async function handleModCommand(message, client) {
   const NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ You do not have permission to use this command.')] });
   const BOT_NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ I am missing the required permissions.')] });
   const hasPerm = (perm) => isOwner || perms.has(perm);
+  // Remove the leading @mention string from args so duration/reason parsing works correctly
+  const shiftMention = () => { if (args[0]?.match(/^<@!?\d{17,20}>$/)) args.shift(); };
 
   try {
     switch (command) {
@@ -108,6 +110,7 @@ async function handleModCommand(message, client) {
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>ban @user [reason]`');
         if (!target.bannable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot ban that user.')] });
+        shiftMention();
         const reason = args.join(' ') || 'No reason provided';
         await target.ban({ reason: `${message.author.tag}: ${reason}` });
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.user.tag}** has been banned.\n📝 Reason: ${reason}`)] });
@@ -119,6 +122,7 @@ async function handleModCommand(message, client) {
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>kick @user [reason]`');
         if (!target.kickable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot kick that user.')] });
+        shiftMention();
         const reason = args.join(' ') || 'No reason provided';
         await target.kick(`${message.author.tag}: ${reason}`);
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.user.tag}** has been kicked.\n📝 Reason: ${reason}`)] });
@@ -128,6 +132,7 @@ async function handleModCommand(message, client) {
         if (!hasPerm('ModerateMembers')) return NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>warn @user [reason]`');
+        shiftMention();
         const reason = args.join(' ') || 'No reason provided';
         const warnKey = `${guild.id}_${target.id}`;
         const existing = warnStore.get(warnKey) ?? [];
@@ -173,9 +178,10 @@ async function handleModCommand(message, client) {
         if (!guild.members.me.permissions.has('ModerateMembers')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>timeout @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `1d`');
+        shiftMention();
         const durationStr = args.shift();
         const ms = parseDuration(durationStr);
-        if (!ms) return message.reply('Invalid duration. Use: `10s`, `5m`, `2h`, `1d` (max 28 days)');
+        if (!ms) return message.reply('Usage: `>timeout @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `1d` (max 28 days)');
         const reason = args.join(' ') || 'No reason provided';
         await target.timeout(ms, `${message.author.tag}: ${reason}`);
         return message.reply({ embeds: [modEmbed(0xFEE75C, `🔇 **${target.user.tag}** timed out for **${durationStr}**.\n📝 Reason: ${reason}`)] });
@@ -207,6 +213,7 @@ async function handleModCommand(message, client) {
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>softban @user [reason]`');
         if (!target.bannable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot ban that user.')] });
+        shiftMention();
         const reason = args.join(' ') || 'No reason provided';
         await target.ban({ deleteMessageSeconds: 7 * 24 * 60 * 60, reason: `[Softban] ${message.author.tag}: ${reason}` });
         await guild.members.unban(target.id, 'Softban auto-unban').catch(() => {});
@@ -217,20 +224,26 @@ async function handleModCommand(message, client) {
         if (!hasPerm('BanMembers')) return NO_PERM();
         if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
-        if (!target) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `7d`');
+        if (!target) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `7d`, `inf`');
+        shiftMention();
         const durationStr = args.shift();
-        const ms = parseDuration(durationStr);
-        if (!ms) return message.reply('Invalid duration. Use: `10s`, `5m`, `2h`, `1d` (max 28 days)');
+        if (!durationStr) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `7d`, `inf`');
         if (!target.bannable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot ban that user.')] });
+        const isInfinite = /^(inf|infinite|infinity|permanent|perm|forever)$/i.test(durationStr);
+        const ms = isInfinite ? null : parseDuration(durationStr);
+        if (!isInfinite && !ms) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `7d`, `inf`');
         const reason = args.join(' ') || 'No reason provided';
-        await target.ban({ reason: `[Tempban ${durationStr}] ${message.author.tag}: ${reason}` });
-        const timerKey = `${guild.id}_${target.id}`;
-        if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey));
-        tempBanTimers.set(timerKey, setTimeout(async () => {
-          tempBanTimers.delete(timerKey);
-          await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
-        }, ms));
-        return message.reply({ embeds: [modEmbed(0xFEE75C, `⏱️ **${target.user.tag}** temp-banned for **${durationStr}**.\n📝 Reason: ${reason}`)] });
+        const label = isInfinite ? 'permanent' : durationStr;
+        await target.ban({ reason: `[Tempban ${label}] ${message.author.tag}: ${reason}` });
+        if (!isInfinite) {
+          const timerKey = `${guild.id}_${target.id}`;
+          if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey));
+          tempBanTimers.set(timerKey, setTimeout(async () => {
+            tempBanTimers.delete(timerKey);
+            await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
+          }, ms));
+        }
+        return message.reply({ embeds: [modEmbed(0xFEE75C, `⏱️ **${target.user.tag}** banned for **${label}**.\n📝 Reason: ${reason}`)] });
       }
 
       case 'warnings': {
