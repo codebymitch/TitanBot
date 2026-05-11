@@ -250,15 +250,6 @@ async function handleModCommand(message, client) {
         if (!isInfinite && !ms) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `1s`, `5m`, `2h`, `7d`, `2w`, `inf`');
         const reason = args.join(' ') || 'No reason provided';
         const label = isInfinite ? 'permanent' : durationStr;
-        await target.ban({ reason: `[Tempban ${label}] ${message.author.tag}: ${reason}` });
-        if (!isInfinite) {
-          const timerKey = `${guild.id}_${target.id}`;
-          if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey));
-          tempBanTimers.set(timerKey, safeTimeout(async () => {
-            tempBanTimers.delete(timerKey);
-            await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
-          }, ms));
-        }
         try {
           await target.send({ embeds: [new EmbedBuilder()
             .setColor(0xED4245)
@@ -269,6 +260,15 @@ async function handleModCommand(message, client) {
             )
             .setTimestamp()] });
         } catch {}
+        await target.ban({ reason: `[Tempban ${label}] ${message.author.tag}: ${reason}` });
+        if (!isInfinite) {
+          const timerKey = `${guild.id}_${target.id}`;
+          if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey));
+          tempBanTimers.set(timerKey, safeTimeout(async () => {
+            tempBanTimers.delete(timerKey);
+            await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
+          }, ms));
+        }
         return message.reply({ embeds: [modEmbed(0xFEE75C, `⏱️ **${target.user.tag}** banned for **${label}**.\n📝 Reason: ${reason}`)] });
       }
 
