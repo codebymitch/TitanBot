@@ -213,6 +213,27 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0x57F287, `🔊 **${target.user.tag}**'s timeout has been removed.`)] });
       }
 
+      case 'bancheck': {
+        if (!hasPerm('BanMembers')) return NO_PERM();
+        if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
+        const userId = args[0]?.replace(/\D/g, '');
+        if (!userId) return message.reply('Usage: `>bancheck <userID>`');
+        const ban = await guild.bans.fetch(userId).catch(() => null);
+        if (!ban) {
+          return message.reply({ embeds: [modEmbed(0x57F287, `✅ <@${userId}> (\`${userId}\`) is **not banned** in this server.`)] });
+        }
+        const embed = new EmbedBuilder()
+          .setColor(0xED4245)
+          .setTitle('🔨 User is Banned')
+          .setThumbnail(ban.user.displayAvatarURL())
+          .addFields(
+            { name: '👤 User', value: `${ban.user.tag} (\`${ban.user.id}\`)`, inline: true },
+            { name: '📝 Reason', value: ban.reason || 'No reason on record', inline: false },
+          )
+          .setTimestamp();
+        return message.reply({ embeds: [embed] });
+      }
+
       case 'unban': {
         if (!hasPerm('BanMembers')) return NO_PERM();
         if (!guild.members.me.permissions.has('BanMembers')) return BOT_NO_PERM();
