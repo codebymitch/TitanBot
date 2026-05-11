@@ -95,6 +95,23 @@ function safeTimeout(fn, ms) {
   return setTimeout(() => safeTimeout(fn, ms - MAX_ST), MAX_ST);
 }
 
+function formatRemaining(ms) {
+  if (ms <= 0) return 'Expired';
+  const parts = [];
+  const units = [
+    { label: 'week',   ms: 604800000 },
+    { label: 'day',    ms: 86400000  },
+    { label: 'hour',   ms: 3600000   },
+    { label: 'minute', ms: 60000     },
+    { label: 'second', ms: 1000      },
+  ];
+  for (const u of units) {
+    const count = Math.floor(ms / u.ms);
+    if (count > 0) { parts.push(`${count} ${u.label}${count !== 1 ? 's' : ''}`); ms %= u.ms; }
+  }
+  return parts.join(', ');
+}
+
 function modEmbed(color, description) {
   return new EmbedBuilder().setColor(color).setDescription(description).setTimestamp();
 }
@@ -222,15 +239,24 @@ async function handleModCommand(message, client) {
         if (!ban) {
           return message.reply({ embeds: [modEmbed(0x57F287, `✅ <@${userId}> (\`${userId}\`) is **not banned** in this server.`)] });
         }
+        const timerEntry = tempBanTimers.get(`${guild.id}_${userId}`);
         const embed = new EmbedBuilder()
           .setColor(0xED4245)
-          .setTitle('🔨 User is Banned')
+          .setTitle(timerEntry ? '⏱️ User is Temp-Banned' : '🔨 User is Banned')
           .setThumbnail(ban.user.displayAvatarURL())
           .addFields(
             { name: '👤 User', value: `${ban.user.tag} (\`${ban.user.id}\`)`, inline: true },
-            { name: '📝 Reason', value: ban.reason || 'No reason on record', inline: false },
+            { name: '🔒 Type', value: timerEntry ? 'Temporary' : 'Permanent', inline: true },
+            { name: '📝 Reason', value: ban.reason || 'No reason on record' },
           )
           .setTimestamp();
+        if (timerEntry) {
+          const remaining = timerEntry.unbanAt - Date.now();
+          embed.addFields(
+            { name: '⏳ Unbans In', value: formatRemaining(remaining), inline: true },
+            { name: '📅 Unban At', value: `<t:${Math.floor(timerEntry.unbanAt / 1000)}:F>`, inline: true },
+          );
+        }
         return message.reply({ embeds: [embed] });
       }
 
@@ -284,11 +310,13 @@ async function handleModCommand(message, client) {
         await target.ban({ reason: `[Tempban ${label}] ${message.author.tag}: ${reason}` });
         if (!isInfinite) {
           const timerKey = `${guild.id}_${target.id}`;
-          if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey));
-          tempBanTimers.set(timerKey, safeTimeout(async () => {
+          if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey).timerId);
+          const unbanAt = Date.now() + ms;
+          const timerId = safeTimeout(async () => {
             tempBanTimers.delete(timerKey);
             await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
-          }, ms));
+          }, ms);
+          tempBanTimers.set(timerKey, { timerId, unbanAt });
         }
         return message.reply({ embeds: [modEmbed(0xFEE75C, `⏱️ **${target.user.tag}** banned for **${label}**.\n📝 Reason: ${reason}`)] });
       }
