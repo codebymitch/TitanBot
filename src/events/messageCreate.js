@@ -259,6 +259,16 @@ async function handleModCommand(message, client) {
             await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
           }, ms));
         }
+        try {
+          await target.send({ embeds: [new EmbedBuilder()
+            .setColor(0xED4245)
+            .setTitle(`🔨 You have been banned from ${guild.name}`)
+            .addFields(
+              { name: '⏱️ Duration', value: isInfinite ? 'Permanent' : durationStr, inline: true },
+              { name: '📝 Reason', value: reason, inline: true },
+            )
+            .setTimestamp()] });
+        } catch {}
         return message.reply({ embeds: [modEmbed(0xFEE75C, `⏱️ **${target.user.tag}** banned for **${label}**.\n📝 Reason: ${reason}`)] });
       }
 
