@@ -296,11 +296,6 @@ async function handleModCommand(message, client) {
         const reason = args.join(' ') || 'No reason provided';
         const label = isInfinite ? 'permanent' : durationStr;
         try {
-          const inviteChannel = guild.systemChannel
-            ?? guild.channels.cache.find(c => c.type === ChannelType.GuildText && c.permissionsFor(guild.members.me)?.has('CreateInstantInvite'));
-          const invite = inviteChannel
-            ? await guild.invites.create(inviteChannel, { maxAge: 0, maxUses: 0, reason: 'Tempban DM invite' }).catch(() => null)
-            : null;
           const dmEmbed = new EmbedBuilder()
             .setColor(0xED4245)
             .setTitle(`🔨 You have been banned from ${guild.name}`)
@@ -309,7 +304,8 @@ async function handleModCommand(message, client) {
               { name: '📝 Reason', value: reason, inline: true },
             )
             .setTimestamp();
-          if (invite && !isInfinite) dmEmbed.addFields({ name: '🔗 Rejoin Link', value: `https://discord.gg/${invite.code}\n*This invite never expires — use it once your ban is lifted.*` });
+          // No invite in the ban DM — Discord blocks banned users from using invites.
+          // The bot will DM the invite automatically when the ban expires.
           await target.send({ embeds: [dmEmbed] });
         } catch {}
         await target.ban({ reason: `[Tempban ${label}] ${message.author.tag}: ${reason}` });

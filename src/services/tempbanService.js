@@ -19,6 +19,25 @@ async function executeUnban(client, guildId, userId, reason) {
     if (!guild) return;
     await guild.members.unban(userId, reason).catch(() => {});
     logger.info(`Tempban expired for ${userId} in ${guildId}`);
+
+    // DM the user a rejooin invite now that the ban is lifted
+    try {
+        const user = await client.users.fetch(userId).catch(() => null);
+        if (!user) return;
+        const inviteChannel = guild.systemChannel
+            ?? guild.channels.cache.find(c => c.type === 0 && c.permissionsFor(guild.members.me)?.has('CreateInstantInvite'));
+        const invite = inviteChannel
+            ? await guild.invites.create(inviteChannel, { maxAge: 0, maxUses: 1, reason: 'Tempban expired rejoin invite' }).catch(() => null)
+            : null;
+        const { EmbedBuilder } = await import('discord.js');
+        const embed = new EmbedBuilder()
+            .setColor(0x57F287)
+            .setTitle(`✅ Your ban in ${guild.name} has expired`)
+            .setDescription('You are welcome to rejoin the server.')
+            .setTimestamp();
+        if (invite) embed.addFields({ name: '🔗 Rejoin', value: `https://discord.gg/${invite.code}` });
+        await user.send({ embeds: [embed] });
+    } catch {}
 }
 
 function setTimer(client, guildId, userId, ms, unbanAt) {
