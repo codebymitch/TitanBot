@@ -252,7 +252,7 @@ async function handleModCommand(message, client) {
             { name: '📅 Unban At', value: `<t:${Math.floor(timerEntry.unbanAt / 1000)}:F>`, inline: true },
           );
         } else if (reasonTempMatch) {
-          embed.addFields({ name: '⚠️ Note', value: `Bot restarted — auto-unban timer for **${reasonTempMatch[1]}** was lost. Use \`>unban\` to remove manually.` });
+          embed.addFields({ name: '⏱️ Duration', value: reasonTempMatch[1], inline: true });
         }
         return message.reply({ embeds: [embed] });
       }
