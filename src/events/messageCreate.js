@@ -76,7 +76,23 @@ function parseDuration(str) {
   if (!match) return null;
   const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
   const ms = parseInt(match[1]) * multipliers[match[2].toLowerCase()];
-  return ms > 28 * 86400000 ? null : ms;
+  return ms > 28 * 86400000 ? null : ms; // Discord timeout max = 28d
+}
+
+// No cap — supports s/m/h/d/w. Used for tempban.
+function parseBanDuration(str) {
+  const match = str?.match(/^(\d+)(s|m|h|d|w)$/i);
+  if (!match) return null;
+  const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000, w: 604800000 };
+  const ms = parseInt(match[1]) * multipliers[match[2].toLowerCase()];
+  return ms > 0 ? ms : null;
+}
+
+// setTimeout overflows above ~24.8 days — chain for larger values
+const MAX_ST = 2_147_483_647;
+function safeTimeout(fn, ms) {
+  if (ms <= MAX_ST) return setTimeout(fn, ms);
+  return setTimeout(() => safeTimeout(fn, ms - MAX_ST), MAX_ST);
 }
 
 function modEmbed(color, description) {
@@ -230,15 +246,15 @@ async function handleModCommand(message, client) {
         if (!durationStr) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `7d`, `inf`');
         if (!target.bannable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot ban that user.')] });
         const isInfinite = /^(inf|infinite|infinity|permanent|perm|forever)$/i.test(durationStr);
-        const ms = isInfinite ? null : parseDuration(durationStr);
-        if (!isInfinite && !ms) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `10s`, `5m`, `2h`, `7d`, `inf`');
+        const ms = isInfinite ? null : parseBanDuration(durationStr);
+        if (!isInfinite && !ms) return message.reply('Usage: `>tempban @user <duration> [reason]`\nDuration: `1s`, `5m`, `2h`, `7d`, `2w`, `inf`');
         const reason = args.join(' ') || 'No reason provided';
         const label = isInfinite ? 'permanent' : durationStr;
         await target.ban({ reason: `[Tempban ${label}] ${message.author.tag}: ${reason}` });
         if (!isInfinite) {
           const timerKey = `${guild.id}_${target.id}`;
           if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey));
-          tempBanTimers.set(timerKey, setTimeout(async () => {
+          tempBanTimers.set(timerKey, safeTimeout(async () => {
             tempBanTimers.delete(timerKey);
             await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
           }, ms));
