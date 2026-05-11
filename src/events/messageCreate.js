@@ -6,6 +6,7 @@
 import { Events, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ChannelType, StringSelectMenuBuilder } from 'discord.js';
 import { storeDmSession, getDmSession, getTargetByThread } from '../utils/dmSessions.js';
 import { storeNukeSnapshot, saveServerSnapshot } from '../utils/nukeSnapshots.js';
+import { scheduleTempBan, cancelTempBan, tempBanTimers } from '../services/tempbanService.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -21,8 +22,6 @@ const MOD_PREFIX = '>';
 
 // Warn store: Map<`${guildId}_${userId}`, [{reason, mod, date}]>
 const warnStore = new Map();
-// Temp-ban timers: Map<`${guildId}_${userId}`, timeoutId>
-const tempBanTimers = new Map();
 
 export default {
   name: Events.MessageCreate,
@@ -86,13 +85,6 @@ function parseBanDuration(str) {
   const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000, w: 604800000 };
   const ms = parseInt(match[1]) * multipliers[match[2].toLowerCase()];
   return ms > 0 ? ms : null;
-}
-
-// setTimeout overflows above ~24.8 days — chain for larger values
-const MAX_ST = 2_147_483_647;
-function safeTimeout(fn, ms) {
-  if (ms <= MAX_ST) return setTimeout(fn, ms);
-  return setTimeout(() => safeTimeout(fn, ms - MAX_ST), MAX_ST);
 }
 
 function formatRemaining(ms) {
@@ -272,6 +264,7 @@ async function handleModCommand(message, client) {
         if (!userId) return message.reply('Usage: `>unban <userID> [reason]`');
         const reason = args.slice(1).join(' ') || 'No reason provided';
         await guild.members.unban(userId, `${message.author.tag}: ${reason}`).catch(() => null);
+        await cancelTempBan(client, guild.id, userId);
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ User \`${userId}\` has been unbanned.`)] });
       }
 
@@ -314,14 +307,7 @@ async function handleModCommand(message, client) {
         } catch {}
         await target.ban({ reason: `[Tempban ${label}] ${message.author.tag}: ${reason}` });
         if (!isInfinite) {
-          const timerKey = `${guild.id}_${target.id}`;
-          if (tempBanTimers.has(timerKey)) clearTimeout(tempBanTimers.get(timerKey).timerId);
-          const unbanAt = Date.now() + ms;
-          const timerId = safeTimeout(async () => {
-            tempBanTimers.delete(timerKey);
-            await guild.members.unban(target.id, `Tempban expired (${durationStr})`).catch(() => {});
-          }, ms);
-          tempBanTimers.set(timerKey, { timerId, unbanAt });
+          await scheduleTempBan(client, guild.id, target.id, ms, reason);
         }
         return message.reply({ embeds: [modEmbed(0xFEE75C, `⏱️ **${target.user.tag}** banned for **${label}**.\n📝 Reason: ${reason}`)] });
       }

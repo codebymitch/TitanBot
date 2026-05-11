@@ -3,6 +3,7 @@ import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { loadAndScheduleTempRoles } from "../services/tempRoleService.js";
+import { loadAndScheduleTempBans } from "../services/tempbanService.js";
 
 export default {
   name: Events.ClientReady,
@@ -37,6 +38,7 @@ export default {
       );
 
       await loadAndScheduleTempRoles(client);
+      await loadAndScheduleTempBans(client);
     } catch (error) {
       logger.error("Error in ready event:", error);
     }
