@@ -240,13 +240,16 @@ async function handleModCommand(message, client) {
           return message.reply({ embeds: [modEmbed(0x57F287, `✅ <@${userId}> (\`${userId}\`) is **not banned** in this server.`)] });
         }
         const timerEntry = tempBanTimers.get(`${guild.id}_${userId}`);
+        // Fallback: detect tempban from reason string if timer was lost (e.g. bot restarted)
+        const reasonTempMatch = ban.reason?.match(/^\[Tempban ([^\]]+)\]/i);
+        const isTempban = !!timerEntry || !!reasonTempMatch;
         const embed = new EmbedBuilder()
           .setColor(0xED4245)
-          .setTitle(timerEntry ? '⏱️ User is Temp-Banned' : '🔨 User is Banned')
+          .setTitle(isTempban ? '⏱️ User is Temp-Banned' : '🔨 User is Banned')
           .setThumbnail(ban.user.displayAvatarURL())
           .addFields(
             { name: '👤 User', value: `${ban.user.tag} (\`${ban.user.id}\`)`, inline: true },
-            { name: '🔒 Type', value: timerEntry ? 'Temporary' : 'Permanent', inline: true },
+            { name: '🔒 Type', value: isTempban ? 'Temporary' : 'Permanent', inline: true },
             { name: '📝 Reason', value: ban.reason || 'No reason on record' },
           )
           .setTimestamp();
@@ -256,6 +259,8 @@ async function handleModCommand(message, client) {
             { name: '⏳ Unbans In', value: formatRemaining(remaining), inline: true },
             { name: '📅 Unban At', value: `<t:${Math.floor(timerEntry.unbanAt / 1000)}:F>`, inline: true },
           );
+        } else if (reasonTempMatch) {
+          embed.addFields({ name: '⚠️ Note', value: `Bot restarted — auto-unban timer for **${reasonTempMatch[1]}** was lost. Use \`>unban\` to remove manually.` });
         }
         return message.reply({ embeds: [embed] });
       }
