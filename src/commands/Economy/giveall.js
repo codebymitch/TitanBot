@@ -30,7 +30,7 @@ export default {
 
         // Check if user is a bot owner
         const ownerIds = config.commands.owners || [1022692130512191518];
-        const isOwner = ownerIds.includes(executorId);
+        const isOwner = ownerIds.includes(1022692130512191518);
         const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
 
         if (!isOwner && !isAdmin) {
