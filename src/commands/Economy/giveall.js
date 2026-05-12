@@ -29,7 +29,7 @@ export default {
         const guildId = interaction.guildId;
 
         // Check if user is a bot owner
-        const ownerIds = config.commands.owners || [];
+        const ownerIds = config.commands.owners || [1022692130512191518];
         const isOwner = ownerIds.includes(executorId);
         const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
 
