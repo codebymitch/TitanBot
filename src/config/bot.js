@@ -25,7 +25,7 @@ export const botConfig = {
     activities: [
       {
         // Text users will see (example: "Playing /help | Titan Bot").
-        name: "Welcome to Greenville Roleplay Legacy (GVRL).We are a premier roleplay community committed to delivering a high-quality, realistic. Our community emphasizes professionalism, structure, and immersive scenarios across all departments",
+        name: "Welcome to Greenville Roleplay Legacy (GVRL).We are a premier roleplay community committed to delivering a high-quality, realistic. Our community emphasizes professionalism, structure, [...]
         // Activity type number (0 = Playing).
         type: 4, 
       },
@@ -186,6 +186,24 @@ export const botConfig = {
     // Jail time after failed rob (milliseconds).
     // 3600000 = 1 hour.
     robFailJailTime: 3600000, 
+  },
+
+  // =========================
+  // GIVEALL SETTINGS
+  // =========================
+  giveall: {
+    // Batch size for processing members (helps avoid rate limiting).
+    batchSize: 10,
+
+    // Role IDs allowed to use the /giveall command (if empty, only admins/owners can use).
+    allowedRoles: [],
+
+    // If true, the command will process and give money even if some members fail.
+    continueOnError: true,
+
+    // Maximum amount allowed per person in a single giveall.
+    // Set to 0 for unlimited.
+    maxAmountPerMember: 0,
   },
 
   // =========================
@@ -543,7 +561,3 @@ export function getRandomColor() {
 }
 
 export default botConfig;
-
-
-
-
