@@ -63,9 +63,9 @@ export const botConfig = {
 
     // Embed colors by application status.
     statusColors: {
-      pending: "#8d021f",
-      approved: "#8d021f",
-      denied: "#8d021f",
+      pending: "#FFB700",
+      approved: "#57F287",
+      denied: "#ED4245",
     },
 
     // How long users must wait before submitting another application (hours).
@@ -88,50 +88,50 @@ export const botConfig = {
   embeds: {
     colors: {
       // Main brand colors.
-      primary: "#8d021f", 
-      secondary: "#8d021f", 
+      primary: "#8D021F", 
+      secondary: "#DC143C", 
 
       // Standard status colors for success/error/warning/info messages.
-      success: "#8d021f", 
-      error: "#8d021f", 
-      warning: "#8d021f", 
-      info: "#8d021f", 
+      success: "#57F287", 
+      error: "#ED4245", 
+      warning: "#FFB700", 
+      info: "#5865F2", 
 
       // Neutral utility colors.
-      light: "#8d021f",
-      dark: "#8d021f",
-      gray: "#8d021f",
+      light: "#FFFFFF",
+      dark: "#2C2F33",
+      gray: "#99AAB5",
 
       // Discord-style palette shortcuts.
-      blurple: "#8d021f",
-      green: "#8d021f",
-      yellow: "#8d021f",
-      fuchsia: "#8d021f",
-      red: "#8d021f",
-      black: "#8d021f",
+      blurple: "#5865F2",
+      green: "#57F287",
+      yellow: "#FEE75C",
+      fuchsia: "#EB459E",
+      red: "#ED4245",
+      black: "#000000",
 
       // Feature-specific colors.
       giveaway: {
-        active: "#8d021f",
-        ended: "#8d021f",
+        active: "#57F287",
+        ended: "#ED4245",
       },
       ticket: {
-        open: "#8d021f",
-        claimed: "#8d021f",
-        closed: "#8d021f",
-        pending: "#8d021f",
+        open: "#5865F2",
+        claimed: "#FFB700",
+        closed: "#ED4245",
+        pending: "#FEE75C",
       },
-      economy: "#8d021f",
-      birthday: "#8d021f",
-      moderation: "#8d021f",
+      economy: "#FFB700",
+      birthday: "#EB459E",
+      moderation: "#ED4245",
 
       // Ticket priority color mapping.
       priority: {
-        none: "#8d021f",
-        low: "#8d021f",
-        medium: "#8d021f",
-        high: "#8d021f",
-        urgent: "#8d021f",
+        none: "#99AAB5",
+        low: "#57F287",
+        medium: "#FFB700",
+        high: "#ED4245",
+        urgent: "#EB459E",
       },
     },
     footer: {
