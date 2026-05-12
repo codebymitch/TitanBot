@@ -74,7 +74,7 @@ export default {
             });
 
             // Fetch all members from the guild
-            const members = await guild.members.fetch({ limit: 100000 });
+            const members = await guild.members.fetch({ limit: 0 });
             const memberIds = members
                 .filter(m => !m.user.bot) // Exclude bots
                 .map(m => m.user.id);
