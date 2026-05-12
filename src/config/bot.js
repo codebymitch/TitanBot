@@ -25,7 +25,7 @@ export const botConfig = {
     activities: [
       {
         // Text users will see (example: "Playing /help | Titan Bot").
-        name: "Welcome to Greenville Roleplay Legacy (GVRL).We are a premier roleplay community committed to delivering a high-quality, realistic. Our community emphasizes professionalism, structure, [...]
+        name: "Welcome to Greenville Roleplay Legacy (GVRL). We are a premier roleplay community committed to delivering a high-quality, realistic experience. Our community emphasizes professionalism, structure, and immersion.",
         // Activity type number (0 = Playing).
         type: 4, 
       },
@@ -94,7 +94,7 @@ export const botConfig = {
       // Standard status colors for success/error/warning/info messages.
       success: "#57F287", 
       error: "#ED4245", 
-      warning: "FFB700", 
+      warning: "#FFB700", 
       info: "#5865F2", 
 
       // Neutral utility colors.
@@ -108,22 +108,22 @@ export const botConfig = {
       yellow: "#FEE75C",
       fuchsia: "#EB459E",
       red: "#ED4245",
-      black: "000000",
+      black: "#000000",
 
       // Feature-specific colors.
       giveaway: {
-        active: "57F287",
-        ended: "ED4245",
+        active: "#57F287",
+        ended: "#ED4245",
       },
       ticket: {
-        open: "5865F2",
-        claimed: "FFB700",
-        closed: "#D4245",
-        pending: "FEE75C",
+        open: "#5865F2",
+        claimed: "#FFB700",
+        closed: "#ED4245",
+        pending: "#FEE75C",
       },
-      economy: "FFB700",
-      birthday: "EB459E",
-      moderation: "ED4245",
+      economy: "#FFB700",
+      birthday: "#EB459E",
+      moderation: "#ED4245",
 
       // Ticket priority color mapping.
       priority: {
@@ -364,10 +364,10 @@ export const botConfig = {
     maxAuditMetadataBytes: 4096,
     // Maximum number of audit entries kept in memory.
     maxInMemoryAuditEntries: 1000,
-  // If true, log every verification action.
-  logAllVerifications: true,
-  // If true, preserve verification audit history.
-  keepAuditTrail: true,
+    // If true, log every verification action.
+    logAllVerifications: true,
+    // If true, preserve verification audit history.
+    keepAuditTrail: true,
   },
 
   // =========================
