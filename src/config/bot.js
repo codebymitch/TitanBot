@@ -196,7 +196,7 @@ export const botConfig = {
     batchSize: 10,
 
     // Role IDs allowed to use the /giveall command (if empty, only admins/owners can use).
-    allowedRoles: [],
+    allowedRoles: [1502786282793861180],
 
     // If true, the command will process and give money even if some members fail.
     continueOnError: true,
