@@ -16,7 +16,7 @@ export default {
                 .setName('amount')
                 .setDescription('Amount to give to each member')
                 .setRequired(true)
-                .setMinValue(1)
+                .setMinValue(0)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
