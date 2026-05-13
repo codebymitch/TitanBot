@@ -138,6 +138,18 @@ const CATEGORIES = {
             ['`/managerole` · `/servers`', 'Owner-only slash commands'],
         ],
     },
+    botadmin: {
+        title: '🔐 Bot Admin',
+        color: 0x5865F2,
+        description: 'Commands restricted to bot owners and admins (set via `OWNER_IDS` / `ADMIN_IDS` in `.env`).',
+        commands: [
+            ['`>admin stats`', 'Bot-wide stats — servers, members, ping, uptime, memory'],
+            ['`>admin dm <userID> <message>`', 'DM any user by ID'],
+            ['`>admin broadcast <serverID> <message>`', "Send a message to a server's system/first channel"],
+            ['`>admin guild info <serverID>`', 'View details about any guild the bot is in'],
+            ['`>admin guild leave <serverID>`', 'Make the bot leave a guild (prompts for `confirm`)'],
+        ],
+    },
     dangers: {
         title: '☢️ Dangers',
         color: 0xED4245,

@@ -108,6 +108,17 @@ function modEmbed(color, description) {
   return new EmbedBuilder().setColor(color).setDescription(description).setTimestamp();
 }
 
+function formatUptime(ms) {
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return [d && `${d}d`, h && `${h}h`, m && `${m}m`, `${sec}s`].filter(Boolean).join(' ');
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
 async function handleModCommand(message, client) {
   const args = message.content.slice(MOD_PREFIX.length).trim().split(/\s+/);
   const command = args.shift().toLowerCase();
@@ -118,7 +129,9 @@ async function handleModCommand(message, client) {
   const perms = member.permissions;
 
   const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
+  const adminIds = process.env.ADMIN_IDS?.split(',').map(id => id.trim()).filter(Boolean) ?? [];
   const isOwner = ownerIds.includes(message.author.id);
+  const isBotAdmin = isOwner || adminIds.includes(message.author.id);
 
   const NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ You do not have permission to use this command.')] });
   const BOT_NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ I am missing the required permissions.')] });
@@ -1291,10 +1304,111 @@ async function handleModCommand(message, client) {
             { label: '🔗 Webhooks', description: 'webhook list, create, delete', value: 'webhooks' },
             { label: '🛠️ Tools', description: 'color, poll, tts, choose, snipe', value: 'tools' },
             { label: '👑 Owner Only', description: 'say, fake, embed, announce, dm...', value: 'owner' },
+            { label: '🔐 Bot Admin', description: 'admin stats, dm, broadcast, guild info/leave', value: 'botadmin' },
             { label: '☢️ Dangers', description: 'nuke, nukev2, gban, gunban', value: 'dangers' },
           );
 
         return message.reply({ embeds: [overview], components: [new ActionRowBuilder().addComponents(menu)] });
+      }
+
+      case 'admin': {
+        if (!isBotAdmin) return NO_PERM();
+        const sub = args[0]?.toLowerCase();
+
+        if (!sub || sub === 'help') {
+          return message.reply({ embeds: [modEmbed(0x5865F2,
+            '**🔐 Bot Admin Commands**\n' +
+            '`>admin stats` — Bot-wide stats\n' +
+            '`>admin dm <userID> <message>` — DM any user\n' +
+            '`>admin broadcast <serverID> <message>` — Send a message to a server\n' +
+            '`>admin guild info <serverID>` — View guild details\n' +
+            '`>admin guild leave <serverID>` — Leave a guild'
+          )] });
+        }
+
+        if (sub === 'stats') {
+          const guilds = [...client.guilds.cache.values()];
+          const totalMembers = guilds.reduce((sum, g) => sum + g.memberCount, 0);
+          const mem = process.memoryUsage();
+          const embed = new EmbedBuilder()
+            .setTitle('📊 Bot Statistics').setColor(0x5865F2)
+            .addFields(
+              { name: '🌐 Servers', value: guilds.length.toLocaleString(), inline: true },
+              { name: '👥 Total Members', value: totalMembers.toLocaleString(), inline: true },
+              { name: '📡 Ping', value: `${client.ws.ping}ms`, inline: true },
+              { name: '⏱️ Uptime', value: formatUptime(client.uptime ?? 0), inline: true },
+              { name: '💾 Heap', value: formatBytes(mem.heapUsed), inline: true },
+              { name: '📦 Node.js', value: process.version, inline: true },
+            ).setTimestamp();
+          return message.reply({ embeds: [embed] });
+        }
+
+        if (sub === 'dm') {
+          const userId = args[1];
+          const dmMessage = args.slice(2).join(' ');
+          if (!userId || !dmMessage) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Usage: `>admin dm <userID> <message>`')] });
+          if (!/^\d{17,20}$/.test(userId)) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Invalid user ID.')] });
+          const dmUser = await client.users.fetch(userId).catch(() => null);
+          if (!dmUser) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Could not find that user.')] });
+          await dmUser.send(dmMessage).catch(err => { throw err; });
+          return message.reply({ embeds: [modEmbed(0x57F287, `✅ DM sent to **${dmUser.tag}** (\`${userId}\`).`)] });
+        }
+
+        if (sub === 'broadcast') {
+          const serverId = args[1];
+          const broadcastMsg = args.slice(2).join(' ');
+          if (!serverId || !broadcastMsg) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Usage: `>admin broadcast <serverID> <message>`')] });
+          if (!/^\d{17,20}$/.test(serverId)) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Invalid server ID.')] });
+          const targetGuild = client.guilds.cache.get(serverId);
+          if (!targetGuild) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Bot is not in a server with that ID.')] });
+          const bcastChannel = targetGuild.systemChannel
+            ?? targetGuild.channels.cache
+                .filter(c => c.isTextBased() && c.permissionsFor(targetGuild.members.me)?.has('SendMessages'))
+                .sort((a, b) => a.position - b.position).first();
+          if (!bcastChannel) return message.reply({ embeds: [modEmbed(0xED4245, `❌ No writable channel in **${targetGuild.name}**.`)] });
+          await bcastChannel.send(broadcastMsg);
+          return message.reply({ embeds: [modEmbed(0x57F287, `✅ Broadcast sent to **${targetGuild.name}** in <#${bcastChannel.id}>.`)] });
+        }
+
+        if (sub === 'guild') {
+          const action = args[1]?.toLowerCase();
+          const serverId = args[2];
+          if (!action || !serverId) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Usage: `>admin guild <info|leave> <serverID>`')] });
+          if (!/^\d{17,20}$/.test(serverId)) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Invalid server ID.')] });
+          const targetGuild = client.guilds.cache.get(serverId);
+          if (!targetGuild) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Bot is not in a server with that ID.')] });
+
+          if (action === 'info') {
+            const fullGuild = await targetGuild.fetch();
+            const gOwner = await client.users.fetch(fullGuild.ownerId).catch(() => null);
+            const botCount = fullGuild.members.cache.filter(m => m.user.bot).size;
+            const embed = new EmbedBuilder()
+              .setTitle(`🏠 ${fullGuild.name}`).setColor(0x5865F2)
+              .addFields(
+                { name: '🆔 Server ID', value: `\`${fullGuild.id}\``, inline: true },
+                { name: '👑 Owner', value: gOwner ? `${gOwner.tag} (\`${gOwner.id}\`)` : `\`${fullGuild.ownerId}\``, inline: true },
+                { name: '👥 Members', value: fullGuild.memberCount.toLocaleString(), inline: true },
+                { name: '🤖 Bots', value: botCount.toLocaleString(), inline: true },
+                { name: '🗂️ Channels', value: fullGuild.channels.cache.size.toLocaleString(), inline: true },
+                { name: '🎭 Roles', value: fullGuild.roles.cache.size.toLocaleString(), inline: true },
+                { name: '📅 Created', value: `<t:${Math.floor(fullGuild.createdTimestamp / 1000)}:F>`, inline: false },
+              ).setTimestamp();
+            return message.reply({ embeds: [embed] });
+          }
+
+          if (action === 'leave') {
+            if (args[3]?.toLowerCase() !== 'confirm') {
+              return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ This will make the bot leave **${targetGuild.name}**.\nRun \`>admin guild leave ${serverId} confirm\` to proceed.`)] });
+            }
+            const guildName = targetGuild.name;
+            await targetGuild.leave();
+            return message.reply({ embeds: [modEmbed(0x57F287, `✅ Left **${guildName}** (\`${serverId}\`).`)] });
+          }
+
+          return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown action. Use `info` or `leave`.')] });
+        }
+
+        return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown subcommand. Use `stats`, `dm`, `broadcast`, or `guild`.')] });
       }
 
       default:
