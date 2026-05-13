@@ -1340,10 +1340,8 @@ async function handleModCommand(message, client) {
         const existing = stickyStore.get(message.channel.id);
         if (existing) {
           const old = await message.channel.messages.fetch(existing.messageId).catch(() => null);
-          if (old) await old.delete().catch(() => {});
+          if (old?.author?.bot) await old.delete().catch(() => {});
         }
-
-        await message.delete().catch(() => {});
 
         const stickyEmbed = new EmbedBuilder()
           .setColor(0xFEE75C)
@@ -1475,7 +1473,7 @@ async function handleSticky(message) {
   sticky.counter = 0;
 
   const old = await message.channel.messages.fetch(sticky.messageId).catch(() => null);
-  if (old) await old.delete().catch(() => {});
+  if (old?.author?.bot) await old.delete().catch(() => {});
 
   const embed = new EmbedBuilder()
     .setColor(0xFEE75C)
