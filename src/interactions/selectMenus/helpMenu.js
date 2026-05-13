@@ -44,6 +44,8 @@ const CATEGORIES = {
             ['`>lock [reason]`', 'Prevent @everyone from sending messages'],
             ['`>unlock`', 'Re-allow @everyone to send messages'],
             ['`>topic <text>`', 'Set the current channel\'s topic'],
+            ['`>sticky <message>`', 'Pin a sticky message to the bottom of the channel — re-posts after every new message'],
+            ['`>sticky off`', 'Remove the sticky message from this channel'],
         ],
     },
     voice: {

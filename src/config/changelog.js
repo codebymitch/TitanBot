@@ -1,5 +1,13 @@
 export const changelog = [
     {
+        version: '2.9.1',
+        date: '2026-05-13',
+        entries: [
+            { type: 'new', text: 'Added `>sticky <message>` — pins a sticky message to the bottom of a channel; re-posts it after every new message (requires Manage Messages)' },
+            { type: 'new', text: 'Added `>sticky off` — removes the sticky message from the channel' },
+        ],
+    },
+    {
         version: '2.9.0',
         date: '2026-05-13',
         entries: [

@@ -23,6 +23,9 @@ const MOD_PREFIX = '>';
 // Warn store: Map<`${guildId}_${userId}`, [{reason, mod, date}]>
 const warnStore = new Map();
 
+// Sticky store: Map<channelId, { messageId, content }>
+const stickyStore = new Map();
+
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
@@ -57,6 +60,7 @@ export default {
 
       await AutoresponderService.check(client, message);
       await handleLeveling(message, client);
+      await handleSticky(message);
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
     }
@@ -1297,7 +1301,7 @@ async function handleModCommand(message, client) {
             { label: '👥 Members', description: 'ban, kick, softban, tempban, unban', value: 'members' },
             { label: '⚠️ Warns', description: 'warn, warnings, clearwarns', value: 'warns' },
             { label: '⏱️ Timeout', description: 'timeout, untimeout', value: 'timeout' },
-            { label: '📢 Channel', description: 'purge, slowmode, lock, unlock, topic', value: 'channel' },
+            { label: '📢 Channel', description: 'purge, slowmode, lock, unlock, sticky, topic', value: 'channel' },
             { label: '🎙️ Voice', description: 'vcmute, deafen, voicekick, move', value: 'voice' },
             { label: '😀 Emoji', description: 'addemoji, delemoji, renameemoji, steal', value: 'emoji' },
             { label: '🔧 Utility', description: 'serverinfo, userinfo, roleinfo, botinfo...', value: 'utility' },
@@ -1309,6 +1313,46 @@ async function handleModCommand(message, client) {
           );
 
         return message.reply({ embeds: [overview], components: [new ActionRowBuilder().addComponents(menu)] });
+      }
+
+      case 'sticky': {
+        if (!hasPerm('ManageMessages')) return NO_PERM();
+        const input = args.join(' ').trim();
+
+        if (!input) {
+          const current = stickyStore.get(message.channel.id);
+          const hint = current
+            ? `📌 Current sticky:\n> ${current.content}\n\nUse \`>sticky off\` to remove it, or \`>sticky <new message>\` to replace it.`
+            : '`>sticky <message>` — Set a sticky message\n`>sticky off` — Remove the sticky';
+          return message.reply({ embeds: [modEmbed(0xFEE75C, hint)] });
+        }
+
+        if (input.toLowerCase() === 'off') {
+          const existing = stickyStore.get(message.channel.id);
+          if (!existing) return message.reply({ embeds: [modEmbed(0xED4245, '❌ No sticky message is set in this channel.')] });
+          const old = await message.channel.messages.fetch(existing.messageId).catch(() => null);
+          if (old) await old.delete().catch(() => {});
+          stickyStore.delete(message.channel.id);
+          return message.reply({ embeds: [modEmbed(0x57F287, '✅ Sticky message removed.')] });
+        }
+
+        // Replace existing sticky if any
+        const existing = stickyStore.get(message.channel.id);
+        if (existing) {
+          const old = await message.channel.messages.fetch(existing.messageId).catch(() => null);
+          if (old) await old.delete().catch(() => {});
+        }
+
+        await message.delete().catch(() => {});
+
+        const stickyEmbed = new EmbedBuilder()
+          .setColor(0xFEE75C)
+          .setDescription(`📌 **Sticky Message**\n\n${input}`)
+          .setFooter({ text: '📌 Sticky — stays at the bottom of this channel' });
+
+        const stickyMsg = await message.channel.send({ embeds: [stickyEmbed] });
+        stickyStore.set(message.channel.id, { messageId: stickyMsg.id, content: input });
+        break;
       }
 
       case 'admin': {
@@ -1418,6 +1462,22 @@ async function handleModCommand(message, client) {
     logger.error(`Mod prefix command error (${command}):`, err);
     message.reply({ embeds: [modEmbed(0xED4245, `❌ Something went wrong: ${err.message}`)] }).catch(() => {});
   }
+}
+
+async function handleSticky(message) {
+  const sticky = stickyStore.get(message.channel.id);
+  if (!sticky) return;
+
+  const old = await message.channel.messages.fetch(sticky.messageId).catch(() => null);
+  if (old) await old.delete().catch(() => {});
+
+  const embed = new EmbedBuilder()
+    .setColor(0xFEE75C)
+    .setDescription(`📌 **Sticky Message**\n\n${sticky.content}`)
+    .setFooter({ text: '📌 Sticky — stays at the bottom of this channel' });
+
+  const newMsg = await message.channel.send({ embeds: [embed] }).catch(() => null);
+  if (newMsg) sticky.messageId = newMsg.id;
 }
 
 async function handlePrefixCommand(message, client) {
