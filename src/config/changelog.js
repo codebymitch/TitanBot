@@ -1,5 +1,17 @@
 export const changelog = [
     {
+        version: '2.9.0',
+        date: '2026-05-13',
+        entries: [
+            { type: 'new', text: 'Added new **Admin** command category (owner-only, restricted to `OWNER_IDS`)' },
+            { type: 'new', text: 'Added `/admin stats` — view global bot stats: servers, members, ping, uptime, memory usage' },
+            { type: 'new', text: 'Added `/admin dm <user_id> <message>` — DM any user by ID' },
+            { type: 'new', text: 'Added `/admin broadcast <server_id> <message>` — send a message to a server\'s system/first channel' },
+            { type: 'new', text: 'Added `/admin guild info <server_id>` — view details about any guild the bot is in' },
+            { type: 'new', text: 'Added `/admin guild leave <server_id>` — make the bot leave a guild (requires typing `confirm`)' },
+        ],
+    },
+    {
         version: '2.8.9',
         date: '2026-05-09',
         entries: [

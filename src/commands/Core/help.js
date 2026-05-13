@@ -20,6 +20,7 @@ const ALL_COMMANDS_ID = "help-all-commands";
 const HELP_MENU_TIMEOUT_MS = 5 * 60 * 1000;
 
 const CATEGORY_INFO = {
+    Admin:          { icon: "🔐",  desc: "Owner-only bot administration commands" },
     Core:           { icon: "ℹ️",  desc: "Core bot commands and information" },
     Moderation:     { icon: "🛡️",  desc: "Server moderation, user management, role assignment, enforcement tools, and NSFW content detection" },
     Fun:            { icon: "🎮",  desc: "8-ball, RPS, roast, snipe, memes, jokes, ship, fight, and more fun commands" },
