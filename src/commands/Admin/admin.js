@@ -86,9 +86,12 @@ export default {
     category: 'Admin',
 
     async execute(interaction, config, client) {
-        if (!botConfig.commands.owners.includes(interaction.user.id)) {
+        const isAuthorized = botConfig.commands.owners.includes(interaction.user.id)
+            || botConfig.commands.admins.includes(interaction.user.id);
+
+        if (!isAuthorized) {
             return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Access Denied', 'This command is restricted to bot owners.')],
+                embeds: [errorEmbed('Access Denied', 'This command is restricted to bot owners and admins.')],
                 ephemeral: true,
             });
         }
