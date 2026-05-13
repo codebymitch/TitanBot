@@ -23,7 +23,7 @@ const MOD_PREFIX = '>';
 // Warn store: Map<`${guildId}_${userId}`, [{reason, mod, date}]>
 const warnStore = new Map();
 
-// Sticky store: Map<channelId, { messageId, content }>
+// Sticky store: Map<channelId, { messageId, content, counter }>
 const stickyStore = new Map();
 
 export default {
@@ -1351,7 +1351,7 @@ async function handleModCommand(message, client) {
           .setFooter({ text: '📌 Sticky — stays at the bottom of this channel' });
 
         const stickyMsg = await message.channel.send({ embeds: [stickyEmbed] });
-        stickyStore.set(message.channel.id, { messageId: stickyMsg.id, content: input });
+        stickyStore.set(message.channel.id, { messageId: stickyMsg.id, content: input, counter: 0 });
         break;
       }
 
@@ -1464,9 +1464,15 @@ async function handleModCommand(message, client) {
   }
 }
 
+const STICKY_REPOST_EVERY = 10;
+
 async function handleSticky(message) {
   const sticky = stickyStore.get(message.channel.id);
   if (!sticky) return;
+
+  sticky.counter = (sticky.counter ?? 0) + 1;
+  if (sticky.counter < STICKY_REPOST_EVERY) return;
+  sticky.counter = 0;
 
   const old = await message.channel.messages.fetch(sticky.messageId).catch(() => null);
   if (old) await old.delete().catch(() => {});
