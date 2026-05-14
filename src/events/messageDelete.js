@@ -1,4 +1,4 @@
-import { Events } from 'discord.js';
+import { Events, EmbedBuilder } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 import { getReactionRoleMessage, deleteReactionRoleMessage } from '../services/reactionRoleService.js';
@@ -56,6 +56,31 @@ export default {
       }
 
       if (message.author?.bot) return;
+
+      // Anti-ghost-ping detection
+      const mentionedUsers = message.mentions?.users?.filter(u => u.id !== message.author.id);
+      const mentionedRoles = message.mentions?.roles;
+      const mentionedEveryone = message.mentions?.everyone;
+      const hasGhostPing = mentionedUsers?.size > 0 || mentionedRoles?.size > 0 || mentionedEveryone;
+
+      if (hasGhostPing) {
+        const mentionList = [];
+        if (mentionedUsers?.size > 0) mentionList.push(...mentionedUsers.map(u => `<@${u.id}>`));
+        if (mentionedRoles?.size > 0) mentionList.push(...mentionedRoles.map(r => `<@&${r.id}>`));
+        if (mentionedEveryone) mentionList.push('@everyone / @here');
+
+        const ghostEmbed = new EmbedBuilder()
+          .setColor(0xFEE75C)
+          .setTitle('👻 Ghost Ping')
+          .setDescription(`<@${message.author.id}> ghost pinged ${mentionList.join(', ')}`)
+          .setTimestamp();
+
+        if (message.content) {
+          ghostEmbed.addFields({ name: '🗑️ Deleted Message', value: message.content.slice(0, 1024) });
+        }
+
+        await message.channel.send({ embeds: [ghostEmbed] }).catch(() => {});
+      }
 
       snipeCache.set(message.channelId, {
         content: message.content || null,

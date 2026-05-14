@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '2.9.2',
+        date: '2026-05-14',
+        entries: [
+            { type: 'new', text: 'Added anti-ghost-ping — bot posts a notice when someone pings a user/role and deletes their message, showing who was pinged and the original message content' },
+        ],
+    },
+    {
         version: '2.9.1',
         date: '2026-05-13',
         entries: [
