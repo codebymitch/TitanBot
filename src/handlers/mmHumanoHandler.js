@@ -590,7 +590,7 @@ async function createTicketChannel(interaction, state) {
       sellerId: seller.id,
       method: paymentMethod.toUpperCase(),
       amount: state.amount,
-      status: 'PENDING'
+      status: 'NOTIFIED'
     });
     await channel.setTopic(topicData);
 
@@ -601,15 +601,15 @@ async function createTicketChannel(interaction, state) {
       sellerDisplay: seller.user.username,
       method: methodLabel,
       amountDisplay: state.amount || 'N/A',
-      statusDisplay: mmConfig.statusLabels.PENDING,
+      statusDisplay: mmConfig.statusLabels.NOTIFIED,
       middlemanDisplay: null,
-      statusColor: mmConfig.statusColors.PENDING
+      statusColor: mmConfig.statusColors.NOTIFIED
     };
 
     // Send the main table message and capture ID for fast updates
     const tableMsg = await channel.send({
       embeds: [createTicketTableEmbed(tableData)],
-      components: [createRequestMMButton()]
+      components: [createClaimMMButton()]
     });
 
     // Now update topic with messageId for future fast updates
@@ -630,7 +630,7 @@ async function createTicketChannel(interaction, state) {
         '• Comprador: ' + buyer.toString() + '\n' +
         '• Vendedor: ' + seller.toString() + '\n' +
         '• Método: ' + methodLabel + '\n\n' +
-        'Clique em **"🚨 Solicitar Middleman"** para chamar um intermediário.'
+        'Clique em **"✋ Assumir Intermediação"** para um middleman chamar.'
     });
 
     // Send rules message

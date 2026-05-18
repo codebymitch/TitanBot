@@ -244,9 +244,6 @@ export default {
                 case 'mm_start_intermediacao':
                   await handleStart(interaction);
                   return;
-                case 'mm_request_middleman':
-                  await handleRequestMM(interaction);
-                  return;
                 case 'mm_claim_middleman':
                   await handleClaimMM(interaction);
                   return;
