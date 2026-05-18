@@ -25,7 +25,7 @@ export const botConfig = {
     // type: 0=Playing, 2=Listening, 3=Watching, 5=Competing
     activities: [
       
-      { name: "/help", type: 0 },
+      { name: "💔quitting", state: "💔quitting", type: 4 },
 
     ],
   },
