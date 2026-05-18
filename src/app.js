@@ -12,9 +12,6 @@ import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
-import { initMmInteractions } from './handlers/mmInteractions.js';
-import { connectMongoDB } from './database/mongoose.js';
-import { validateMmConfig } from './config/mmConfig.js';
 
 class TitanBot extends Client {
   constructor() {
@@ -45,9 +42,6 @@ class TitanBot extends Client {
     this.cooldowns = new Collection();
     this.db = null;
     this.rest = new REST({ version: '10' }).setToken(config.bot.token);
-    
-    // Middleman system flag
-    this.isMmEnabled = false;
   }
 
   async start() {
@@ -56,20 +50,6 @@ class TitanBot extends Client {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Initialize MongoDB for Middleman system
-      startupLog('Initializing MongoDB for Middleman system...');
-      try {
-        await connectMongoDB();
-        if (validateMmConfig()) {
-          this.isMmEnabled = true;
-          startupLog('✅ MongoDB connected for MM system');
-        } else {
-          logger.warn('MM configuration incomplete. Middleman system will not be available.');
-        }
-      } catch (error) {
-        logger.warn('MongoDB connection failed. Middleman system will not be available.');
-        logger.warn('To enable MM system, configure MONGO_URI in your .env file.');
-      }
-      
       startupLog('Initializing database...');
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
@@ -101,13 +81,6 @@ class TitanBot extends Client {
       await this.loadHandlers();
       startupLog('Handlers loaded');
       
-      // Initialize MM interactions handler
-      if (this.isMmEnabled) {
-        startupLog('Initializing Middleman interactions handler...');
-        await initMmInteractions(this);
-        startupLog('✅ Middleman interactions handler initialized');
-      }
-      
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
       startupLog('Discord login successful');
@@ -120,9 +93,8 @@ class TitanBot extends Client {
         ? 'Optional in-memory mode (data resets after restart)'
         : 'Connected (persistent data enabled)';
       const handlerSummary = `${this.buttons.size} buttons, ${this.selectMenus.size} menus, ${this.modals.size} modals`;
-      const mmStatus = this.isMmEnabled ? '| MM System: ✅' : '| MM System: ❌';
       startupLog(
-        `ONLINE ✅ | ${this.commands.size} commands loaded | ${handlerSummary} | Database: ${databaseMode} ${mmStatus}`
+        `ONLINE ✅ | ${this.commands.size} commands loaded | ${handlerSummary} | Database: ${databaseMode}`
       );
       
       this.setupCronJobs();

@@ -9,7 +9,7 @@ import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createInteractionTraceContext, runWithTraceContext } from '../utils/traceContext.js';
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
-import { handleButtonInteraction as handleMmButton, handleModalInteraction as handleMmModal } from '../handlers/mmInteractions.js';
+// New MM System (database-free) handlers
 import {
   handleStart,
   handlePaymentSelect,
@@ -233,10 +233,10 @@ export default {
             }
           }
         } else if (interaction.isButton()) {
-          // Check for MM buttons first
+          // Check for NEW MM buttons (database-free system)
           if (interaction.customId.startsWith('mm_')) {
             try {
-              // Verificar se é botão do novo sistema de middleman humano
+              // New human middleman system handlers
               switch (interaction.customId) {
                 case 'mm_start_intermediacao':
                   await handleStart(interaction);
@@ -251,15 +251,14 @@ export default {
                   await handleCloseMM(interaction);
                   return;
                 default:
-                  // Botões do sistema antigo com banco de dados
-                  const handled = await handleMmButton(interaction, client);
-                  if (handled) return;
+                  // Unknown MM button - silently ignore
+                  return;
               }
             } catch (error) {
               await handleInteractionError(interaction, error, withTraceContext({
                 type: 'button',
                 customId: interaction.customId,
-                handler: 'mm'
+                handler: 'mm_humano'
               }, interactionTraceContext));
             }
             return;
@@ -318,39 +317,23 @@ export default {
             }, interactionTraceContext));
           }
         } else if (interaction.isStringSelectMenu()) {
-          // Verificar se é select menu do novo sistema de middleman humano
-          if (interaction.customId === 'mm_payment_select') {
+          // NEW MM System select menus (database-free)
+          if (interaction.customId.startsWith('mm_')) {
             try {
-              await handlePaymentSelect(interaction);
-              return;
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'select_menu',
-                customId: interaction.customId,
-                handler: 'mm_humano'
-              }, interactionTraceContext));
-              return;
-            }
-          }
-
-          if (interaction.customId === 'mm_role_select') {
-            try {
-              await handleRoleSelect(interaction);
-              return;
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'select_menu',
-                customId: interaction.customId,
-                handler: 'mm_humano'
-              }, interactionTraceContext));
-              return;
-            }
-          }
-
-          if (interaction.customId === 'mm_counterparty_select') {
-            try {
-              await handleCounterpartySelect(interaction);
-              return;
+              switch (interaction.customId) {
+                case 'mm_payment_select':
+                  await handlePaymentSelect(interaction);
+                  return;
+                case 'mm_role_select':
+                  await handleRoleSelect(interaction);
+                  return;
+                case 'mm_counterparty_select':
+                  await handleCounterpartySelect(interaction);
+                  return;
+                default:
+                  // Unknown MM select menu - silently ignore
+                  return;
+              }
             } catch (error) {
               await handleInteractionError(interaction, error, withTraceContext({
                 type: 'select_menu',
@@ -389,19 +372,9 @@ export default {
             }, interactionTraceContext));
           }
         } else if (interaction.isModalSubmit()) {
-          // Check for MM modals first
-          if (interaction.customId.startsWith('mm_')) {
-            try {
-              await handleMmModal(interaction, client);
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'modal',
-                customId: interaction.customId,
-                handler: 'mm'
-              }, interactionTraceContext));
-            }
-            return;
-          }
+          // NOTE: The new MM system does not use modals
+          // All interactions are handled via buttons and select menus
+          // Old MM modals are no longer supported
 
           if (interaction.customId.startsWith('app_modal_')) {
             try {

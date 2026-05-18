@@ -1,8 +1,9 @@
 /**
- * Middleman Humano Handler
+ * Middleman Humano Handler - Sistema Sem Banco de Dados
  * 
  * Handles the multi-step ephemeral configuration menu for the MM system.
- * Manages the wizard flow: Payment Selection → Role Selection → Counterparty Selection → Ticket Creation
+ * All state is stored in the channel topic (MM_DATA:buyer=id|seller=id|method=PIX|status=OPEN|mm=id).
+ * No database dependency - completely self-contained.
  */
 
 import {
@@ -16,12 +17,10 @@ import {
   ChannelType
 } from 'discord.js';
 import mmConfig from '../config/mmConfig.js';
-import Ticket from '../models/Ticket.js';
-import { connectMongoDB } from '../database/mongoose.js';
 import { logger } from '../utils/logger.js';
 
 // Custom IDs for the wizard
-const WIZARD_IDS = {
+export const WIZARD_IDS = {
   START: 'mm_start_intermediacao',
   PAYMENT_SELECT: 'mm_payment_select',
   ROLE_SELECT: 'mm_role_select',
@@ -31,7 +30,7 @@ const WIZARD_IDS = {
   CLOSE_MM: 'mm_close_intermediacao'
 };
 
-// Wizard state stored per interaction user
+// Wizard state stored in memory (per user, temporary)
 const wizardStates = new Map();
 
 /**
@@ -40,9 +39,15 @@ const wizardStates = new Map();
 function createPaymentSelectEmbed() {
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setTitle('💳 Selecionar Método de Pagamento')
-    .setDescription('Selecione o método de pagamento que será utilizado na intermediação.')
-    .setFooter({ text: 'Passo 1 de 3' })
+    .setTitle('💳 Passo 1/3 - Método de Pagamento')
+    .setDescription('```' +
+      '┌────────────────────────────────────────┐\n' +
+      '│  Selecione o método de pagamento que   │\n' +
+      '│  será utilizado na intermediação.      │\n' +
+      '└────────────────────────────────────────┘\n' +
+      '```'
+    )
+    .setFooter({ text: 'Configuração de Intermediação' })
     .setTimestamp();
 }
 
@@ -73,9 +78,15 @@ function createPaymentSelectMenu() {
 function createRoleSelectEmbed() {
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setTitle('👤 Selecionar seu Papel')
-    .setDescription('Você é o comprador ou o vendedor nesta transação?')
-    .setFooter({ text: 'Passo 2 de 3' })
+    .setTitle('👤 Passo 2/3 - Seu Papel')
+    .setDescription('```' +
+      '┌────────────────────────────────────────┐\n' +
+      '│  Você é o comprador ou o vendedor      │\n' +
+      '│  nesta transação?                      │\n' +
+      '└────────────────────────────────────────┘\n' +
+      '```'
+    )
+    .setFooter({ text: 'Configuração de Intermediação' })
     .setTimestamp();
 }
 
@@ -115,9 +126,18 @@ function createCounterpartySelectEmbed(userRole) {
   
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setTitle(`${roleEmoji} Selecionar ${roleLabel}`)
-    .setDescription(`Selecione o **${roleLabel.toLowerCase()}** com quem você está fazendo a trade.\n\n⚠️ **Atenção:** Você não pode selecionar a si mesmo.`)
-    .setFooter({ text: 'Passo 3 de 3' })
+    .setTitle(roleEmoji + ' Passo 3/3 - Selecionar ' + roleLabel)
+    .setDescription('```' +
+      '┌────────────────────────────────────────┐\n' +
+      '│  Selecione o ' + roleLabel.toLowerCase() + ' com quem você    │\n' +
+      '│  está fazendo a trade.                 │\n' +
+      '│                                        │\n' +
+      '│  ⚠️ Você não pode selecionar a si      │\n' +
+      '│  mesmo.                                │\n' +
+      '└────────────────────────────────────────┘\n' +
+      '```'
+    )
+    .setFooter({ text: 'Configuração de Intermediação' })
     .setTimestamp();
 }
 
@@ -135,40 +155,35 @@ function createCounterpartySelectMenu() {
 }
 
 /**
- * Create the main ticket table embed
+ * Create the main ticket table embed with HTML-like formatting
  */
 function createTicketTableEmbed(data) {
-  const { buyer, seller, method, status, middleman } = data;
-  
-  const statusEmojis = {
-    'PENDING': '⏳ AGUARDANDO MIDDLEMAN',
-    'NOTIFIED': '⏳ SUPORTE NOTIFICADO',
-    'IN_PROGRESS': '🟢 EM ANDAMENTO',
-    'COMPLETED': '✅ INTERMEDIAÇÃO CONCLUÍDA',
-    'CANCELLED': '❌ INTERMEDIAÇÃO CANCELADA'
-  };
+  const { buyerDisplay, sellerDisplay, method, statusDisplay, middlemanDisplay } = data;
 
-  const statusEmoji = statusEmojis[status] || status;
+  let table = '```';
+  table += '┌──────────────────────────────────────────┐\n';
+  table += '│        DADOS DA INTERMEDIAÇÃO            │\n';
+  table += '├──────────────────────────────────────────┤\n';
+  table += '│ 💵 Método:    ' + method.padEnd(24) + '│\n';
+  table += '│ 👤 Comprador: ' + buyerDisplay.padEnd(24) + '│\n';
+  table += '│ 🎒 Vendedor:  ' + sellerDisplay.padEnd(24) + '│\n';
+  table += '├──────────────────────────────────────────┤\n';
+  table += '│ Status: ' + statusDisplay.padEnd(30) + '│\n';
+  if (middlemanDisplay) {
+    table += '│ MM: ' + middlemanDisplay.padEnd(32) + '│\n';
+  } else {
+    table += '│                                        │\n';
+  }
+  table += '└──────────────────────────────────────────┘\n';
+  table += '```';
 
-  // Build the table as a code block
-  const table = '```' +
-    '┌──────────────────────────────────────────┐\n' +
-    '│        DADOS DA INTERMEDIAÇÃO            │\n' +
-    '├──────────────────────────────────────────┤\n' +
-    `│ 💵 Método: ${method.padEnd(27)}│\n` +
-    `│ 👤 Comprador: ${buyer.padEnd(24)}│\n` +
-    `│ 🎒 Vendedor: ${seller.padEnd(24)}│\n` +
-    '├──────────────────────────────────────────┤\n' +
-    `│ Status: ${statusEmoji.padEnd(28)}│\n` +
-    (middleman ? `│ MM: ${middleman.padEnd(31)}│\n` : '') +
-    '└──────────────────────────────────────────┘' +
-    '```';
+  const statusColor = data.statusColor || 0x3498DB;
 
   return new EmbedBuilder()
-    .setColor(status === 'IN_PROGRESS' ? 0x2ECC71 : status === 'COMPLETED' ? 0x27AE60 : status === 'CANCELLED' ? 0xE74C3C : 0x3498DB)
+    .setColor(statusColor)
     .setTitle('🛡️ Intermediação Ativa')
     .setDescription(table)
-    .setFooter({ text: `ID: ${Date.now().toString(36).toUpperCase()}` })
+    .setFooter({ text: 'ID: ' + Date.now().toString(36).toUpperCase() })
     .setTimestamp();
 }
 
@@ -212,9 +227,42 @@ function createCloseMMButton() {
 }
 
 /**
+ * Parse topic data from channel topic
+ * Format: MM_DATA:buyer=123|seller=456|method=PIX|status=PENDING|mmId=789
+ */
+export function parseTopicData(topic) {
+  if (!topic || !topic.startsWith('MM_DATA:')) {
+    return null;
+  }
+
+  const dataStr = topic.replace('MM_DATA:', '');
+  const data = {};
+
+  dataStr.split('|').forEach(part => {
+    const [key, value] = part.split('=');
+    if (key && value !== undefined) {
+      data[key] = value;
+    }
+  });
+
+  return data;
+}
+
+/**
+ * Serialize topic data for channel topic
+ */
+export function serializeTopicData(data) {
+  const parts = Object.entries(data)
+    .filter(([key, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => key + '=' + value);
+  return 'MM_DATA:' + parts.join('|');
+}
+
+/**
  * Handle the start button click
  */
-async function handleStart(interaction) {
+export async function handleStart(interaction) {
+  // CRITICAL: Defer immediately to prevent timeout
   await interaction.deferUpdate();
 
   // Initialize wizard state
@@ -234,7 +282,7 @@ async function handleStart(interaction) {
 /**
  * Handle payment method selection
  */
-async function handlePaymentSelect(interaction) {
+export async function handlePaymentSelect(interaction) {
   const state = wizardStates.get(interaction.user.id);
   if (!state) {
     return interaction.reply({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
@@ -253,7 +301,7 @@ async function handlePaymentSelect(interaction) {
 /**
  * Handle role selection
  */
-async function handleRoleSelect(interaction) {
+export async function handleRoleSelect(interaction) {
   const state = wizardStates.get(interaction.user.id);
   if (!state) {
     return interaction.reply({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
@@ -272,26 +320,29 @@ async function handleRoleSelect(interaction) {
 /**
  * Handle counterparty selection
  */
-async function handleCounterpartySelect(interaction) {
+export async function handleCounterpartySelect(interaction) {
+  // CRITICAL: Defer immediately
+  await interaction.deferUpdate();
+
   const state = wizardStates.get(interaction.user.id);
   if (!state) {
-    return interaction.reply({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
+    return interaction.followUp({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
   }
 
-  const selectedUser = interaction.values[0];
+  const selectedUsers = interaction.values;
+  if (!selectedUsers || selectedUsers.length === 0) {
+    return interaction.followUp({ content: '❌ Você precisa selecionar um usuário.', ephemeral: true });
+  }
+
+  const selectedUser = selectedUsers[0];
 
   // Validation: Cannot select self
   if (selectedUser.id === interaction.user.id) {
-    return interaction.reply({
+    return interaction.followUp({
       content: '❌ Você não pode selecionar a si mesmo como contraparte!',
       ephemeral: true
     });
   }
-
-  // Validation: Must select the opposite role
-  const expectedRole = state.userRole === 'buyer' ? 'seller' : 'buyer';
-  // Note: We can't verify the actual role of the selected user, 
-  // but we ensure they're not selecting themselves
 
   state.counterparty = selectedUser;
   state.step = 'complete';
@@ -308,8 +359,6 @@ async function handleCounterpartySelect(interaction) {
  */
 async function createTicketChannel(interaction, state) {
   try {
-    await connectMongoDB();
-
     const { userRole, counterparty, paymentMethod } = state;
     const initiator = interaction.user;
 
@@ -325,7 +374,7 @@ async function createTicketChannel(interaction, state) {
 
     if (!category || category.type !== ChannelType.GuildCategory) {
       category = await interaction.guild.channels.create({
-        name: '🛡️ Intermediações',
+        name: '🛡️・intermediações',
         type: ChannelType.GuildCategory,
         permissionOverwrites: [
           {
@@ -337,7 +386,7 @@ async function createTicketChannel(interaction, state) {
     }
 
     // Create channel name
-    const channelName = `mm-${seller.username}-${buyer.username}`.toLowerCase().slice(0, 100);
+    const channelName = 'mm-' + seller.user.username + '-' + buyer.user.username.toLowerCase().slice(0, 100);
 
     // Create the private channel
     const channel = await interaction.guild.channels.create({
@@ -395,57 +444,63 @@ async function createTicketChannel(interaction, state) {
       ]
     });
 
-    // Set channel topic with MM data
-    const topicData = `MM_DATA:buyer=${buyer.id}|seller=${seller.id}|method=${paymentMethod.toUpperCase()}|status=PENDING`;
-    await channel.setTopic(topicData);
-
-    // Create ticket in database
-    const ticket = new Ticket({
-      channelId: channel.id,
-      guildId: interaction.guild.id,
+    // Set channel topic with MM data (NO DATABASE - state in topic)
+    const topicData = serializeTopicData({
       buyerId: buyer.id,
       sellerId: seller.id,
-      product: 'Intermediação',
-      value: 'N/A',
-      status: 'waiting_payment',
-      creatorId: initiator.id
+      method: paymentMethod.toUpperCase(),
+      status: 'PENDING'
     });
-    await ticket.save();
+    await channel.setTopic(topicData);
 
     // Prepare data for the table
+    const methodLabel = paymentMethod === 'pix' ? 'PIX' : paymentMethod.toUpperCase();
     const tableData = {
-      buyer: `@${buyer.username}`.padEnd(15),
-      seller: `@${seller.username}`.padEnd(15),
-      method: paymentMethod.toUpperCase(),
-      status: 'PENDING',
-      middleman: null
+      buyerDisplay: buyer.user.username,
+      sellerDisplay: seller.user.username,
+      method: methodLabel,
+      statusDisplay: '⏳ AGUARDANDO MIDDLEMAN',
+      middlemanDisplay: null,
+      statusColor: 0x3498DB
     };
 
     // Send the main table message
     await channel.send({
-      content: `🛡️ **Intermediação Criada**\n` +
-               `Comprador: ${buyer.toString()} | Vendedor: ${seller.toString()}\n\n` +
-               `Clique em "Solicitar Middleman" para chamar um intermediário.`,
       embeds: [createTicketTableEmbed(tableData)],
       components: [createRequestMMButton()]
     });
 
     // Send info message
     await channel.send({
-      content: 'ℹ️ **Informações Importantes:**\n' +
-               '• Aguarde um middleman assumir a intermediação\n' +
-               '• Siga as instruções do middleman\n' +
-               '• Nunca compartilhe dados pessoais\n' +
-               '• Somente o middleman pode fechar esta intermediação'
+      content: 
+        '🛡️ **Intermediação Criada com Sucesso!**\n\n' +
+        '• Comprador: ' + buyer.toString() + '\n' +
+        '• Vendedor: ' + seller.toString() + '\n' +
+        '• Método: ' + methodLabel + '\n\n' +
+        'Clique em **"🚨 Solicitar Middleman"** para chamar um intermediário.'
+    });
+
+    // Send rules message
+    await channel.send({
+      content: '```' +
+        '┌────────────────────────────────────────┐\n' +
+        '│  ℹ️  INFORMAÇÕES IMPORTANTES            │\n' +
+        '├────────────────────────────────────────┤\n' +
+        '│ • Aguarde um middleman assumir         │\n' +
+        '│ • Siga as instruções do middleman      │\n' +
+        '│ • Nunca compartilhe dados pessoais      │\n' +
+        '│ • Somente o middleman pode fechar      │\n' +
+        '└────────────────────────────────────────┘\n' +
+        '```'
     });
 
     // Notify the initiator
     await interaction.followUp({
-      content: `✅ Intermediação criada com sucesso!\nCanal: ${channel.toString()}`,
+      content: '✅ Intermediação criada com sucesso!\nCanal: ' + channel.toString(),
       ephemeral: true
     });
 
-    logger.info(`MM ticket created: ${channel.name} | Buyer: ${buyer.id} | Seller: ${seller.id}`);
+    logger.info('MM ticket created: ' + channel.name + ' | Buyer: ' + buyer.id + ' | Seller: ' + seller.id);
 
   } catch (error) {
     logger.error('Error creating MM ticket channel:', error);
@@ -459,7 +514,8 @@ async function createTicketChannel(interaction, state) {
 /**
  * Handle request middleman button
  */
-async function handleRequestMM(interaction) {
+export async function handleRequestMM(interaction) {
+  // CRITICAL: Defer immediately
   await interaction.deferUpdate();
 
   const channel = interaction.channel;
@@ -478,13 +534,26 @@ async function handleRequestMM(interaction) {
   data.status = 'NOTIFIED';
   await channel.setTopic(serializeTopicData(data));
 
+  // Fetch usernames
+  let buyerName = 'Unknown';
+  let sellerName = 'Unknown';
+  try {
+    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
+    if (buyerMember) buyerName = buyerMember.user.username;
+  } catch { /* ignore */ }
+  try {
+    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
+    if (sellerMember) sellerName = sellerMember.user.username;
+  } catch { /* ignore */ }
+
   // Update the embed
   const tableData = {
-    buyer: `@${(await interaction.guild.members.fetch(data.buyerId))?.user.username || 'Unknown'}`.padEnd(15),
-    seller: `@${(await interaction.guild.members.fetch(data.sellerId))?.user.username || 'Unknown'}`.padEnd(15),
+    buyerDisplay: buyerName,
+    sellerDisplay: sellerName,
     method: data.method,
-    status: 'NOTIFIED',
-    middleman: null
+    statusDisplay: '⏳ SUPORTE NOTIFICADO',
+    middlemanDisplay: null,
+    statusColor: 0xF39C12
   };
 
   const messages = await channel.messages.fetch({ limit: 10 });
@@ -493,14 +562,7 @@ async function handleRequestMM(interaction) {
   if (tableMessage) {
     await tableMessage.edit({
       embeds: [createTicketTableEmbed(tableData)],
-      components: mmConfig.mmRoleId ? [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId(WIZARD_IDS.CLAIM_MM)
-            .setLabel('✋ Assumir Intermediação')
-            .setStyle(ButtonStyle.Secondary)
-        )
-      ] : []
+      components: mmConfig.mmRoleId ? [createClaimMMButton()] : []
     });
   }
 
@@ -508,8 +570,8 @@ async function handleRequestMM(interaction) {
   const roleToPing = mmConfig.mmRoleId || mmConfig.staffRoleId;
   if (roleToPing) {
     await channel.send({
-      content: `<@&${roleToPing}> Nova intermediação solicitada!\n` +
-               `Comprador: <@${data.buyerId}> | Vendedor: <@${data.sellerId}>`
+      content: '<@&' + roleToPing + '> Nova intermediação solicitada!\n' +
+               'Comprador: <@' + data.buyerId + '> | Vendedor: <@' + data.sellerId + '>'
     });
   }
 
@@ -522,7 +584,8 @@ async function handleRequestMM(interaction) {
 /**
  * Handle claim middleman button
  */
-async function handleClaimMM(interaction) {
+export async function handleClaimMM(interaction) {
+  // CRITICAL: Defer immediately
   await interaction.deferUpdate();
 
   const channel = interaction.channel;
@@ -537,33 +600,38 @@ async function handleClaimMM(interaction) {
   }
 
   // Check if already claimed
-  if (data.middlemanId) {
+  if (data.mmId) {
     return interaction.followUp({
-      content: `ℹ️ Esta intermediação já foi assumida por <@${data.middlemanId}>.`,
+      content: 'ℹ️ Esta intermediação já foi assumida por <@' + data.mmId + '>.',
       ephemeral: true
     });
   }
 
-  // Update data
-  data.middlemanId = interaction.user.id;
+  // Update data with middleman info
+  data.mmId = interaction.user.id;
   data.status = 'IN_PROGRESS';
   await channel.setTopic(serializeTopicData(data));
 
-  // Update database
-  const ticket = await Ticket.findOne({ channelId: channel.id });
-  if (ticket) {
-    ticket.middlemanId = interaction.user.id;
-    ticket.status = 'payment_received';
-    await ticket.save();
-  }
+  // Fetch usernames
+  let buyerName = 'Unknown';
+  let sellerName = 'Unknown';
+  try {
+    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
+    if (buyerMember) buyerName = buyerMember.user.username;
+  } catch { /* ignore */ }
+  try {
+    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
+    if (sellerMember) sellerName = sellerMember.user.username;
+  } catch { /* ignore */ }
 
   // Update embed
   const tableData = {
-    buyer: `@${(await interaction.guild.members.fetch(data.buyerId))?.user.username || 'Unknown'}`.padEnd(15),
-    seller: `@${(await interaction.guild.members.fetch(data.sellerId))?.user.username || 'Unknown'}`.padEnd(15),
+    buyerDisplay: buyerName,
+    sellerDisplay: sellerName,
     method: data.method,
-    status: 'IN_PROGRESS',
-    middleman: `@${interaction.user.username}`.padEnd(15)
+    statusDisplay: '🟢 EM ANDAMENTO',
+    middlemanDisplay: interaction.user.username,
+    statusColor: 0x2ECC71
   };
 
   const messages = await channel.messages.fetch({ limit: 10 });
@@ -572,21 +640,14 @@ async function handleClaimMM(interaction) {
   if (tableMessage) {
     await tableMessage.edit({
       embeds: [createTicketTableEmbed(tableData)],
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId(WIZARD_IDS.CLOSE_MM)
-            .setLabel('🔒 Fechar Intermediação')
-            .setStyle(ButtonStyle.Danger)
-        )
-      ]
+      components: [createCloseMMButton()]
     });
   }
 
   // Send notification
   await channel.send({
-    content: `✅ O Middleman ${interaction.user.toString()} assumiu a intermediação.\n` +
-             `Vendedor e Comprador podem prosseguir de forma segura.`
+    content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
+             'Vendedor e Comprador podem prosseguir de forma segura.'
   });
 
   await interaction.followUp({
@@ -598,7 +659,8 @@ async function handleClaimMM(interaction) {
 /**
  * Handle close intermediation button
  */
-async function handleCloseMM(interaction) {
+export async function handleCloseMM(interaction) {
+  // CRITICAL: Defer immediately
   await interaction.deferUpdate();
 
   const channel = interaction.channel;
@@ -612,8 +674,11 @@ async function handleCloseMM(interaction) {
     });
   }
 
-  // Only the assigned middleman can close
-  if (data.middlemanId !== interaction.user.id) {
+  // Only the assigned middleman or an admin can close
+  const member = await interaction.guild.members.fetch(interaction.user.id);
+  const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+  
+  if (data.mmId !== interaction.user.id && !isAdmin) {
     return interaction.followUp({
       content: '❌ Apenas o middleman responsável pode fechar esta intermediação.',
       ephemeral: true
@@ -624,22 +689,26 @@ async function handleCloseMM(interaction) {
   data.status = 'COMPLETED';
   await channel.setTopic(serializeTopicData(data));
 
-  // Update database
-  const ticket = await Ticket.findOne({ channelId: channel.id });
-  if (ticket) {
-    ticket.status = 'trade_completed';
-    ticket.closedAt = new Date();
-    ticket.tradeSuccessful = true;
-    await ticket.save();
-  }
+  // Fetch usernames
+  let buyerName = 'Unknown';
+  let sellerName = 'Unknown';
+  try {
+    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
+    if (buyerMember) buyerName = buyerMember.user.username;
+  } catch { /* ignore */ }
+  try {
+    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
+    if (sellerMember) sellerName = sellerMember.user.username;
+  } catch { /* ignore */ }
 
   // Update embed
   const tableData = {
-    buyer: `@${(await interaction.guild.members.fetch(data.buyerId))?.user.username || 'Unknown'}`.padEnd(15),
-    seller: `@${(await interaction.guild.members.fetch(data.sellerId))?.user.username || 'Unknown'}`.padEnd(15),
+    buyerDisplay: buyerName,
+    sellerDisplay: sellerName,
     method: data.method,
-    status: 'COMPLETED',
-    middleman: `@${interaction.user.username}`.padEnd(15)
+    statusDisplay: '✅ INTERMEDIAÇÃO CONCLUÍDA',
+    middlemanDisplay: interaction.user.username,
+    statusColor: 0x27AE60
   };
 
   const messages = await channel.messages.fetch({ limit: 10 });
@@ -652,63 +721,36 @@ async function handleCloseMM(interaction) {
     });
   }
 
-  // Send final message
-  await channel.send({
+  // Send final message with countdown
+  const countdownMsg = await channel.send({
     content: '🔒 **Intermediação Concluída**\n' +
-             `Fechada por: ${interaction.user.toString()}\n\n` +
-             'O canal será fechado em 5 segundos...'
+             'Fechada por: ' + interaction.user.toString() + '\n\n' +
+             '⚠️ Este canal será deletado em **5 segundos**...'
   });
 
-  // Delete channel after delay
-  setTimeout(async () => {
-    if (channel.deletable) {
-      await channel.delete();
-    }
-  }, 5000);
+  // Countdown
+  for (let i = 4; i >= 1; i--) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await countdownMsg.edit({
+        content: '🔒 **Intermediação Concluída**\n' +
+                 'Fechada por: ' + interaction.user.toString() + '\n\n' +
+                 '⚠️ Este canal será deletado em **' + i + ' segundos**...'
+      });
+    } catch { /* ignore */ }
+  }
+
+  // Delete channel
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  if (channel.deletable) {
+    await channel.delete();
+  }
 
   await interaction.followUp({
     content: '✅ Intermediação concluída com sucesso!',
     ephemeral: true
   });
 }
-
-/**
- * Parse topic data
- */
-function parseTopicData(topic) {
-  if (!topic || !topic.startsWith('MM_DATA:')) {
-    return null;
-  }
-
-  const dataStr = topic.replace('MM_DATA:', '');
-  const data = {};
-
-  dataStr.split('|').forEach(part => {
-    const [key, value] = part.split('=');
-    data[key] = value;
-  });
-
-  return data;
-}
-
-/**
- * Serialize topic data
- */
-function serializeTopicData(data) {
-  const parts = Object.entries(data).map(([key, value]) => `${key}=${value}`);
-  return `MM_DATA:${parts.join('|')}`;
-}
-
-export {
-  WIZARD_IDS,
-  handleStart,
-  handlePaymentSelect,
-  handleRoleSelect,
-  handleCounterpartySelect,
-  handleRequestMM,
-  handleClaimMM,
-  handleCloseMM
-};
 
 export default {
   wizardIds: WIZARD_IDS,
@@ -718,5 +760,7 @@ export default {
   handleCounterpartySelect,
   handleRequestMM,
   handleClaimMM,
-  handleCloseMM
+  handleCloseMM,
+  parseTopicData,
+  serializeTopicData
 };

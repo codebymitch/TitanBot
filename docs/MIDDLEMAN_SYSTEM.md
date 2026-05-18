@@ -1,189 +1,200 @@
-# Discord Middleman Management System
+# 🛡️ Sistema de Intermediação (Middleman) - Sem Banco de Dados
 
-A professional middleman ticket system for Discord servers where trades are managed by human middlemen, not automated bots.
+## Visão Geral
 
-## Features
+Este sistema de intermediação permite que trades seguras sejam realizadas no Discord **sem necessidade de banco de dados**. Todo o estado da intermediação é armazenado diretamente no **tópico do canal** criado para cada trade.
 
-- **Ticket System**: Create private tickets for each trade
-- **Slash Commands**: `/mm`, `/close`, `/rep`
-- **Interactive Buttons**: Status updates with one-click buttons
-- **Status Management**: Track trade progress through 5 stages
-- **Automatic Logs**: All actions are logged to a dedicated channel
-- **Transcripts**: HTML transcripts generated when tickets close
-- **Reputation System**: Track successful trades and user reputation
-- **MongoDB Storage**: Persistent data storage
+## ✨ Funcionalidades
 
-## Setup
+- ✅ **Sem banco de dados** - Todo estado é armazenado no tópico do canal
+- ✅ **Interface limpa** - Tabelas formatadas em estilo HTML-like usando code blocks
+- ✅ **Multi-step wizard** - Configuração via menus ephemeral (privados)
+- ✅ **Proteção anti-timeout** - `deferUpdate()` em todas as interações
+- ✅ **Sistema de cargos** - Middleman e Staff com permissões distintas
+- ✅ **Fechamento automático** - Canal deletado após conclusão
 
-### 1. Install Dependencies
+## 📋 Formato do Tópico do Canal
 
-```bash
-npm install mongoose discord-html-transcripts
+O estado da intermediação é armazenado no tópico do canal no seguinte formato:
+
+```
+MM_DATA:buyerId=123456|sellerId=789012|method=PIX|status=PENDING|mmId=345678
 ```
 
-### 2. Configure Environment Variables
+### Campos:
+| Campo | Descrição |
+|-------|-----------|
+| `buyerId` | ID do comprador |
+| `sellerId` | ID do vendedor |
+| `method` | Método de pagamento (ex: PIX) |
+| `status` | Status atual (PENDING, NOTIFIED, IN_PROGRESS, COMPLETED) |
+| `mmId` | ID do middleman (apenas após assumir) |
 
-Add these to your `.env` file:
+## 🚀 Configuração
+
+### 1. Variáveis de Ambiente (.env)
 
 ```env
-# MongoDB Connection
-MONGO_URI=mongodb://localhost:27017/cbloxbot_mm
+# IDs dos Cargos (OBRIGATÓRIO)
+MM_ROLE_ID=seu_id_do_cargo_middleman
+STAFF_ROLE_ID=seu_id_do_cargo_staff
 
-# Discord IDs (get these from your Discord server)
-MM_ROLE_ID=123456789012345678    # Role for middlemen
-STAFF_ROLE_ID=123456789012345678  # Role for staff/admins
-LOG_CHANNEL_ID=123456789012345678 # Channel for action logs
-MM_CATEGORY_ID=123456789012345678 # Category for ticket channels
-TRANSCRIPT_CHANNEL_ID=123456789012345678 # Channel for transcripts
-
-# Payment Information (optional, displayed in tickets)
-PIX_KEY=your_pix_key_here
-PAYPAL_EMAIL=your_paypal_email_here
+# ID da Categoria (OPCIONAL - será criada automaticamente se não existir)
+MM_CATEGORY_ID=seu_id_da_categoria
 ```
 
-### 3. Get Discord IDs
+### 2. Comandos Disponíveis
 
-To get the required IDs:
+#### `/setup-mm` (Apenas Administradores)
+Cria o painel de intermediação no canal atual.
 
-1. Enable Developer Mode in Discord (User Settings > Advanced > Developer Mode)
-2. Right-click on roles/channels and select "Copy ID"
+```
+/setup-mm
+```
 
-### 4. Create Roles and Channels
+#### 🤝 Fluxo do Usuário
 
-1. **MM Role**: Create a role called "Middleman" and assign it to trusted staff
-2. **Staff Role**: Create a role called "Staff" for administrators
-3. **Log Channel**: Create a private channel for bot logs
-4. **Transcript Channel**: Create a private channel for saved transcripts
-5. **MM Category**: (Optional) Create a category for ticket channels
+1. **Usuário clica em "🤝 Iniciar Intermediação"**
+   - Menu ephemeral de seleção de pagamento (PIX)
+   
+2. **Seleciona método de pagamento**
+   - Menu ephemeral de seleção de papel (Comprador/Vendedor)
+   
+3. **Seleciona seu papel**
+   - Menu de seleção de usuário (contraparte)
+   - Validação: não pode selecionar a si mesmo
+   
+4. **Seleciona a contraparte**
+   - Canal privado é criado com permissões restritas
+   - Tabela formatada é enviada
 
-## Commands
+## 📊 Tabela de Intermediação
 
-### `/mm`
-Opens a modal to create a new middleman trade ticket.
+Exemplo de como a tabela é exibida:
 
-**Fields:**
-- **Buyer**: User ID or @mention of the buyer
-- **Seller**: User ID or @mention of the seller
-- **Product**: Description of what's being traded
-- **Value**: Trade value (e.g., "50 BRL", "$10 USD")
+```
+┌──────────────────────────────────────────┐
+│        DADOS DA INTERMEDIAÇÃO            │
+├──────────────────────────────────────────┤
+│ 💵 Método:    PIX                       │
+│ 👤 Comprador: usuario_comprador         │
+│ 🎒 Vendedor:  usuario_vendedor          │
+├──────────────────────────────────────────┤
+│ Status: ⏳ AGUARDANDO MIDDLEMAN          │
+│                                          │
+└──────────────────────────────────────────┘
+```
 
-### `/close [status]`
-Closes the current ticket and generates a transcript.
+## 🔄 Fluxo de Work
 
-**Options:**
-- `status`: Choose "Successful Trade" or "Cancelled Trade"
+### 1. Criação do Ticket
+- Canal privado criado com permissões para:
+  - Comprador
+  - Vendedor
+  - Cargo Middleman
+  - Cargo Staff
 
-**Permissions:** Staff only
+### 2. Solicitar Middleman
+- Botão: **🚨 Solicitar Middleman**
+- Notifica o cargo `@Middleman` ou `@Staff`
+- Status muda para: **⏳ SUPORTE NOTIFICADO**
 
-### `/rep <user> <type> [comment]`
-Give reputation to a trader.
+### 3. Assumir Intermediação
+- Botão: **✋ Assumir Intermediação** (apenas para Staff/Middleman)
+- Primeiro a clicar assume o ticket
+- Status muda para: **🟢 EM ANDAMENTO**
+- ID do middleman é salvo no tópico
 
-**Options:**
-- `user`: The user to give reputation to
-- `type`: Positive, Negative, or Neutral
-- `comment`: Optional comment about the trade
+### 4. Fechar Intermediação
+- Botão: **🔒 Fechar Intermediação** (apenas para o middleman que assumiu)
+- Contagem regressiva de 5 segundos
+- Canal é deletado automaticamente
 
-## Button Functions
+## 🛡️ Segurança
 
-### Status Buttons
-- **⏳ Waiting Payment**: Initial state
-- **💰 Payment Received**: Buyer has paid the middleman
-- **📦 Item Delivered**: Seller has delivered the product
-- **✅ Trade Completed**: Trade finished successfully
-- **❌ Cancel Trade**: Trade was cancelled
+### Validações Implementadas:
+1. **Self-selection block** - Não pode selecionar a si mesmo
+2. **Role-based permissions** - Apenas middleman/staff pode assumir
+3. **Claim locking** - Apenas um middleman por ticket
+4. **Close protection** - Apenas o middleman que assumiu pode fechar
+5. **Admin override** - Administradores podem fechar qualquer ticket
 
-### Other Buttons
-- **🛡️ Claim as Middleman**: Assign yourself as the middleman
-- **📋 View Ticket Info**: Display ticket details
-- **🔒 Close Ticket**: Close the ticket (Staff only)
+### Anti-Timeout Protection:
+Todas as interações usam `deferUpdate()` ou `deferReply()` imediatamente:
 
-## Ticket Permissions
-
-Each ticket channel is private and only visible to:
-- The buyer
-- The seller
-- Users with the MM role
-- Users with the Staff role
-
-## Data Storage
-
-### Ticket Schema
 ```javascript
-{
-  channelId: String,      // Discord channel ID
-  guildId: String,        // Server ID
-  buyerId: String,        // Buyer's user ID
-  sellerId: String,       // Seller's user ID
-  middlemanId: String,    // Assigned middleman's ID
-  product: String,        // What's being traded
-  value: String,          // Trade value
-  status: String,         // Current status
-  createdAt: Date,        // When ticket was created
-  closedAt: Date,         // When ticket was closed
-  tradeSuccessful: Boolean // Was trade completed
+export async function handleStart(interaction) {
+  // CRITICAL: Defer immediately to prevent timeout
+  await interaction.deferUpdate();
+  // ... rest of handler
 }
 ```
 
-### Reputation Schema
-```javascript
-{
-  userId: String,         // User's ID
-  guildId: String,        // Server ID
-  successfulTrades: Number,
-  cancelledTrades: Number,
-  reps: [{
-    givenBy: String,      // Who gave the rep
-    type: String,         // positive/negative/neutral
-    ticketId: String,     // Related ticket
-    comment: String,      // Optional comment
-    createdAt: Date
-  }]
-}
+## 📁 Estrutura de Arquivos
+
+```
+src/
+├── commands/
+│   ├── mm.js              # Comando descontinuado (mostra mensagem de erro)
+│   └── setup-mm.js        # Comando para criar painel
+├── handlers/
+│   └── mmHumanoHandler.js # Handler principal do sistema
+├── config/
+│   └── mmConfig.js        # Configurações do sistema
+└── events/
+    └── interactionCreate.js # Handler de interações
 ```
 
-## Logs
+## 🔧 Funções de Parse/Serialize
 
-The system automatically logs:
-- Ticket creation
-- Status changes
-- Ticket closing
-- Reputation changes
-- Middleman assignments
+### Parse Topic Data
+```javascript
+import { parseTopicData } from './handlers/mmHumanoHandler.js';
 
-All logs are sent to the configured log channel.
+const data = parseTopicData(channel.topic);
+// Retorna: { buyerId: '123', sellerId: '456', method: 'PIX', status: 'PENDING', mmId: '789' }
+```
 
-## Transcripts
+### Serialize Topic Data
+```javascript
+import { serializeTopicData } from './handlers/mmHumanoHandler.js';
 
-When a ticket is closed:
-1. An HTML transcript is generated
-2. The transcript is saved to the transcript channel
-3. The ticket channel is deleted
-4. Reputation is updated based on trade outcome
+const topic = serializeTopicData({
+  buyerId: '123',
+  sellerId: '456',
+  method: 'PIX',
+  status: 'PENDING'
+});
+// Retorna: "MM_DATA:buyerId=123|sellerId=456|method=PIX|status=PENDING"
+```
 
-## Troubleshooting
+## ⚠️ Limitações
 
-### MM System not working
-1. Check that MongoDB is running
-2. Verify all required environment variables are set
-3. Check bot logs for connection errors
+1. **Sem histórico persistente** - Se o canal for deletado, os dados se perdem
+2. **Sem estatísticas globais** - Não há tracking de trades completadas
+3. **Sem sistema de reputação** - Não há ranking de usuários
+4. **Limite de tópico** - Discord tem limite de 1024 caracteres no tópico
 
-### Buttons not responding
-1. Ensure the bot has proper permissions
-2. Check that the MM role ID is correct
-3. Verify MongoDB connection is active
+## 🆘 Troubleshooting
 
-### Commands not showing
-1. Wait a few minutes for Discord to register slash commands
-2. Try kicking and re-adding the bot
-3. Ensure commands are registered in the correct guild
+### "O aplicativo não respondeu"
+- Verifique se `deferUpdate()` está sendo chamado no início de cada handler
 
-## Security Notes
+### Canal não é criado
+- Verifique se `MM_ROLE_ID` e `STAFF_ROLE_ID` estão configurados
+- Verifique as permissões do bot
 
-- Keep your MongoDB connection string secure
-- Never share your bot token
-- Regularly backup your MongoDB database
-- Review logs periodically for suspicious activity
+### Dados inválidos no tópico
+- Verifique se o formato `MM_DATA:...` está correto
+- Use `parseTopicData()` para ler os dados
 
-## Support
+## 📝 Changelog
 
-For issues or questions, please open an issue on the GitHub repository.
+### v2.0 (Atual)
+- ✅ Removida dependência do MongoDB
+- ✅ Estado armazenado no tópico do canal
+- ✅ Interface HTML-like com tabelas formatadas
+- ✅ Multi-step wizard ephemeral
+- ✅ Proteção anti-timeout em todas as interações
+- ✅ Sistema de claim locking
+- ✅ Contagem regressiva no fechamento

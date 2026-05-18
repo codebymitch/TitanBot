@@ -1,68 +1,50 @@
 /**
- * Middleman Management System Configuration
+ * Middleman System Configuration (Database-Free)
  * 
- * This configuration file contains all the settings for the Discord Middleman system.
+ * This configuration file contains the settings for the Discord Middleman system.
+ * All trade state is stored in channel topics, no database required.
+ * 
  * Replace the placeholder IDs with actual Discord IDs from your server.
  */
 
 const mmConfig = {
-  // Discord Role IDs
-  mmRoleId: process.env.MM_ROLE_ID || '',
-  staffRoleId: process.env.STAFF_ROLE_ID || '',
+  // Discord Role IDs (REQUIRED)
+  mmRoleId: process.env.MM_ROLE_ID || '',        // Role that can be pinged for MM requests
+  staffRoleId: process.env.STAFF_ROLE_ID || '',  // Role that can claim/close tickets
 
-  // Channel IDs
-  logChannelId: process.env.LOG_CHANNEL_ID || '',
-  mmCategoryId: process.env.MM_CATEGORY_ID || '',
-  transcriptChannelId: process.env.TRANSCRIPT_CHANNEL_ID || '',
-
-  // Payment Information (displayed in tickets)
-  pixKey: process.env.PIX_KEY || '',
-  paypalEmail: process.env.PAYPAL_EMAIL || '',
-
-  // MongoDB Connection
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/cbloxbot_mm',
+  // Channel IDs (OPTIONAL)
+  mmCategoryId: process.env.MM_CATEGORY_ID || '', // Category for MM channels (auto-created if not set)
 
   // Ticket Settings
-  ticketNamePrefix: 'trade',
-  ticketTopicTemplate: (buyer, seller, product) => 
-    `Middleman Trade | Buyer: ${buyer} | Seller: ${seller} | Product: ${product}`,
-
-  // Status options for tickets
-  statuses: {
-    waitingPayment: 'waiting_payment',
-    paymentReceived: 'payment_received',
-    itemDelivered: 'item_delivered',
-    tradeCompleted: 'trade_completed',
-    cancelled: 'cancelled'
+  ticketNamePrefix: 'mm',
+  
+  // Status labels for display (PT-BR)
+  statusLabels: {
+    PENDING: '⏳ AGUARDANDO MIDDLEMAN',
+    NOTIFIED: '⏳ SUPORTE NOTIFICADO',
+    IN_PROGRESS: '🟢 EM ANDAMENTO',
+    COMPLETED: '✅ INTERMEDIAÇÃO CONCLUÍDA',
+    CANCELLED: '❌ INTERMEDIAÇÃO CANCELADA'
   },
 
   // Status colors for embeds
   statusColors: {
-    waiting_payment: 0xFFA500,    // Orange
-    payment_received: 0x3498DB,   // Blue
-    item_delivered: 0x9B59B6,     // Purple
-    trade_completed: 0x2ECC71,    // Green
-    cancelled: 0xE74C3C           // Red
-  },
-
-  // Status labels for display
-  statusLabels: {
-    waiting_payment: '⏳ Waiting for Payment',
-    payment_received: '💰 Payment Received',
-    item_delivered: '📦 Item Delivered',
-    trade_completed: '✅ Trade Completed',
-    cancelled: '❌ Trade Cancelled'
+    PENDING: 0x3498DB,      // Blue
+    NOTIFIED: 0xF39C12,     // Orange
+    IN_PROGRESS: 0x2ECC71,  // Green
+    COMPLETED: 0x27AE60,    // Dark Green
+    CANCELLED: 0xE74C3C     // Red
   }
 };
 
 // Validation function to check if required config is set
 function validateMmConfig() {
-  const required = ['mmRoleId', 'staffRoleId', 'logChannelId', 'mmCategoryId', 'transcriptChannelId'];
+  const required = ['mmRoleId', 'staffRoleId'];
   const missing = required.filter(key => !mmConfig[key]);
   
   if (missing.length > 0) {
-    console.warn(`⚠️  MM Config Warning: Missing required configuration keys: ${missing.join(', ')}`);
-    console.warn('The middleman system may not work correctly without these values.');
+    console.warn('⚠️  MM Config Warning: Missing required configuration keys: ' + missing.join(', '));
+    console.warn('Set MM_ROLE_ID and STAFF_ROLE_ID in your .env file.');
     return false;
   }
   return true;
