@@ -315,7 +315,7 @@ export default {
               handler: 'general'
             }, interactionTraceContext));
           }
-        } else if (interaction.isStringSelectMenu()) {
+        } else if (interaction.isStringSelectMenu() || interaction.isUserSelectMenu()) {
           // NEW MM System select menus (database-free)
           if (interaction.customId.startsWith('mm_')) {
             try {
