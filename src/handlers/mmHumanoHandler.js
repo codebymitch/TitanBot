@@ -810,15 +810,12 @@ export async function handleClaimMM(interaction) {
  * Handle confirm delivery button (buyer only)
  */
 export async function handleConfirmDelivery(interaction) {
-  // CRITICAL: Defer immediately
-  await interaction.deferUpdate();
-
   const channel = interaction.channel;
   const topic = channel.topic || '';
   const data = parseTopicData(topic);
 
   if (!data) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '❌ Dados da intermediação inválidos.',
       ephemeral: true
     });
@@ -826,7 +823,7 @@ export async function handleConfirmDelivery(interaction) {
 
   // Only the buyer can confirm delivery
   if (data.buyerId !== interaction.user.id) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '❌ Apenas o Comprador pode confirmar o recebimento do item.',
       ephemeral: true
     });
@@ -836,7 +833,7 @@ export async function handleConfirmDelivery(interaction) {
   const modal = createConfirmDeliveryModal();
   const modalShown = await safeShowModal(interaction, modal);
   if (!modalShown) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '❌ Não foi possível abrir o modal. Tente novamente.',
       ephemeral: true
     });
@@ -1018,6 +1015,99 @@ export async function handleFinalizeMM(interaction) {
       await countdownMsg.edit({
         content: '🔒 **Intermediação Concluída**\n' +
                  'Finalizada por: ' + interaction.user.toString() + '\n\n' +
+                 '⚠️ Este canal será deletado em **' + i + ' segundos**...'
+      });
+    } catch { /* ignore */ }
+  }
+
+  await interaction.followUp({
+    content: '✅ Intermediação concluída com sucesso!',
+    ephemeral: true
+  });
+
+  // Delete channel after closing countdown
+  if (channel.deletable) {
+    await channel.delete();
+  }
+}
+
+/**
+ * Handle close intermediation button
+ */
+export async function handleCloseMM(interaction) {
+  // CRITICAL: Defer immediately
+  await interaction.deferUpdate();
+
+  const channel = interaction.channel;
+  const topic = channel.topic || '';
+  const data = parseTopicData(topic);
+
+  if (!data) {
+    return interaction.followUp({
+      content: '❌ Dados da intermediação inválidos.',
+      ephemeral: true
+    });
+  }
+
+  // Only the assigned middleman can close
+  if (data.mmId !== interaction.user.id) {
+    return interaction.followUp({
+      content: '❌ Apenas o middleman responsável pode fechar esta intermediação.',
+      ephemeral: true
+    });
+  }
+
+  // Update data
+  data.status = 'COMPLETED';
+  await channel.setTopic(serializeTopicData(data));
+
+  // Fetch usernames
+  let buyerName = 'Unknown';
+  let sellerName = 'Unknown';
+  try {
+    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
+    if (buyerMember) buyerName = buyerMember.user.username;
+  } catch { /* ignore */ }
+  try {
+    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
+    if (sellerMember) sellerName = sellerMember.user.username;
+  } catch { /* ignore */ }
+
+  // Update embed
+  const tableData = {
+    buyerDisplay: buyerName,
+    sellerDisplay: sellerName,
+    method: data.method,
+    amountDisplay: data.amount || 'N/A',
+    statusDisplay: mmConfig.statusLabels.COMPLETED,
+    middlemanDisplay: interaction.user.username,
+    statusColor: mmConfig.statusColors.COMPLETED
+  };
+
+  const messages = await channel.messages.fetch({ limit: 10 });
+  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
+
+  if (tableMessage) {
+    await tableMessage.edit({
+      embeds: [createTicketTableEmbed(tableData)],
+      components: [] // Remove all buttons
+    });
+  }
+
+  // Send final message with countdown
+  const countdownMsg = await channel.send({
+    content: '🔒 **Intermediação Concluída**\n' +
+             'Fechada por: ' + interaction.user.toString() + '\n\n' +
+             '⚠️ Este canal será deletado em **5 segundos**...'
+  });
+
+  // Countdown
+  for (let i = 4; i >= 1; i--) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await countdownMsg.edit({
+        content: '🔒 **Intermediação Concluída**\n' +
+                 'Fechada por: ' + interaction.user.toString() + '\n\n' +
                  '⚠️ Este canal será deletado em **' + i + ' segundos**...'
       });
     } catch { /* ignore */ }
