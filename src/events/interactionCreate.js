@@ -19,6 +19,7 @@ import {
   handleConfirmDelivery,
   handleConfirmDeliveryModal,
   handleFinalizeMM,
+  handleCloseTicketCommand,
   handleCloseMM
 } from '../handlers/mmHumanoHandler.js';
 
@@ -257,6 +258,9 @@ export default {
                   return;
                 case 'mm_close_intermediacao':
                   await handleCloseMM(interaction);
+                  return;
+                case 'mm_close_ticket_cmd':
+                  await handleCloseTicketCommand(interaction);
                   return;
                 default:
                   // Unknown MM button - silently ignore

@@ -34,7 +34,8 @@ export const WIZARD_IDS = {
   CONFIRM_DELIVERY: 'mm_confirm_entrega',
   CONFIRM_DELIVERY_MODAL: 'mm_confirmacao_entrega',
   FINALIZE_MM: 'mm_finalizar_intermediacao',
-  CLOSE_MM: 'mm_close_intermediacao'
+  CLOSE_MM: 'mm_close_intermediacao',
+  CLOSE_TICKET_COMMAND: 'mm_close_ticket_cmd'
 };
 
 // Wizard state stored in memory (per user, temporary)
@@ -201,8 +202,32 @@ function createAmountModal() {
     );
 }
 
+/**
+ * Calculate MM fee (10% of transaction value)
+ */
+function calculateMMFee(amountDisplay) {
+  if (!amountDisplay || amountDisplay === 'N/A') return 'R$ 0,00';
+  
+  // Extract numeric value from amount string like "R$ 150,00" or "150,00"
+  let numericStr = amountDisplay.replace(/[^0-9,\.]/g, '').trim();
+  
+  // Handle Brazilian format (comma as decimal separator)
+  if (numericStr.includes(',') && !numericStr.includes('.')) {
+    numericStr = numericStr.replace(',', '.');
+  }
+  
+  const value = parseFloat(numericStr);
+  if (isNaN(value)) return 'R$ 0,00';
+  
+  const fee = value * 0.10; // 10% fee
+  return 'R$ ' + fee.toFixed(2).replace('.', ',');
+}
+
 function createTicketTableEmbed(data) {
-  const { buyerDisplay, sellerDisplay, method, amountDisplay, statusDisplay, middlemanDisplay } = data;
+  const { buyerDisplay, sellerDisplay, method, amountDisplay, statusDisplay, middlemanDisplay, mmFeeDisplay } = data;
+
+  // Calculate MM fee if not provided
+  const feeDisplay = mmFeeDisplay || calculateMMFee(amountDisplay);
 
   let table = '```';
   table += '┌──────────────────────────────────────────┐\n';
@@ -210,14 +235,16 @@ function createTicketTableEmbed(data) {
   table += '├──────────────────────────────────────────┤\n';
   table += '│ 💵 Método: ' + method.padEnd(29) + '│\n';
   table += '│ 💰 Valor:  ' + amountDisplay.padEnd(29) + '│\n';
+  table += '│ 📊 Taxa MM:' + feeDisplay.padEnd(27) + '│\n';
   table += '│ 👤 Comprador: ' + buyerDisplay.padEnd(24) + '│\n';
   table += '│ 🎒 Vendedor:  ' + sellerDisplay.padEnd(24) + '│\n';
   table += '├──────────────────────────────────────────┤\n';
   table += '│ Status: ' + statusDisplay.padEnd(30) + '│\n';
+  // ALWAYS show Middleman line
   if (middlemanDisplay) {
-    table += '│ MM: ' + middlemanDisplay.padEnd(32) + '│\n';
+    table += '│ 🛡️ Middleman: ' + middlemanDisplay.padEnd(25) + '│\n';
   } else {
-    table += '│                                        │\n';
+    table += '│ 🛡️ Middleman: ' + 'Aguardando suporte'.padEnd(22) + '│\n';
   }
   table += '└──────────────────────────────────────────┘\n';
   table += '```';
@@ -230,7 +257,6 @@ function createTicketTableEmbed(data) {
     .setDescription(table)
     .setFooter({ text: 'ID: ' + Date.now().toString(36).toUpperCase() })
     .setTimestamp();
-
 
   return embed;
 }
@@ -756,6 +782,15 @@ export async function handleClaimMM(interaction) {
     });
   }
 
+  // PREVENT MM FROM ASSUMING THEIR OWN TICKET
+  // Check if the user is the ticket creator (buyer)
+  if (data.buyerId === interaction.user.id) {
+    return interaction.followUp({
+      content: '❌ Você não pode assumir sua própria intermediação.',
+      ephemeral: true
+    });
+  }
+
   // Update data with middleman info
   data.mmId = interaction.user.id;
   data.status = 'IN_PROGRESS';
@@ -1032,6 +1067,99 @@ export async function handleFinalizeMM(interaction) {
 }
 
 /**
+ * Handle close ticket via command button
+ */
+export async function handleCloseTicketCommand(interaction) {
+  // CRITICAL: Defer immediately
+  await interaction.deferUpdate();
+
+  const channel = interaction.channel;
+  const topic = channel.topic || '';
+  const data = parseTopicData(topic);
+
+  if (!data) {
+    return interaction.followUp({
+      content: '❌ Dados da intermediação inválidos.',
+      ephemeral: true
+    });
+  }
+
+  // Only the assigned middleman can close
+  if (data.mmId !== interaction.user.id) {
+    return interaction.followUp({
+      content: '❌ Apenas o MM responsável pode fechar este ticket.',
+      ephemeral: true
+    });
+  }
+
+  // Update data
+  data.status = 'COMPLETED';
+  await channel.setTopic(serializeTopicData(data));
+
+  // Fetch usernames
+  let buyerName = 'Unknown';
+  let sellerName = 'Unknown';
+  try {
+    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
+    if (buyerMember) buyerName = buyerMember.user.username;
+  } catch { /* ignore */ }
+  try {
+    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
+    if (sellerMember) sellerName = sellerMember.user.username;
+  } catch { /* ignore */ }
+
+  // Update embed
+  const tableData = {
+    buyerDisplay: buyerName,
+    sellerDisplay: sellerName,
+    method: data.method,
+    amountDisplay: data.amount || 'N/A',
+    statusDisplay: mmConfig.statusLabels.COMPLETED,
+    middlemanDisplay: interaction.user.username,
+    statusColor: mmConfig.statusColors.COMPLETED
+  };
+
+  const messages = await channel.messages.fetch({ limit: 10 });
+  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
+
+  if (tableMessage) {
+    await tableMessage.edit({
+      embeds: [createTicketTableEmbed(tableData)],
+      components: [] // Remove all buttons
+    });
+  }
+
+  // Send final message with countdown
+  const countdownMsg = await channel.send({
+    content: '🔒 **Intermediação Concluída**\n' +
+             'Fechada por comando de: ' + interaction.user.toString() + '\n\n' +
+             '⚠️ Este canal será deletado em **5 segundos**...'
+  });
+
+  // Countdown
+  for (let i = 4; i >= 1; i--) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await countdownMsg.edit({
+        content: '🔒 **Intermediação Concluída**\n' +
+                 'Fechada por comando de: ' + interaction.user.toString() + '\n\n' +
+                 '⚠️ Este canal será deletado em **' + i + ' segundos**...'
+      });
+    } catch { /* ignore */ }
+  }
+
+  await interaction.followUp({
+    content: '✅ Intermediação concluída com sucesso!',
+    ephemeral: true
+  });
+
+  // Delete channel after closing countdown
+  if (channel.deletable) {
+    await channel.delete();
+  }
+}
+
+/**
  * Handle close intermediation button
  */
 export async function handleCloseMM(interaction) {
@@ -1136,6 +1264,7 @@ export default {
   handleConfirmDelivery,
   handleConfirmDeliveryModal,
   handleFinalizeMM,
+  handleCloseTicketCommand,
   handleCloseMM,
   parseTopicData,
   serializeTopicData,
