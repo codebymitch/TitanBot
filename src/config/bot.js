@@ -545,5 +545,39 @@ export function getRandomColor() {
 export default botConfig;
 
 
+client.once("ready", async () => {
+  console.log(`Logged in as ${client.user.tag}`);
 
+  try {
+    const channel = await client.channels.fetch("1505785649226186873");
+
+    if (!channel) {
+      console.log("❌ לא נמצא ערוץ");
+      return;
+    }
+
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId("shop_menu")
+      .setPlaceholder("🛒 בחר רול לקנייה")
+      .addOptions(
+        shopItems.map(item => ({
+          label: `${item.label} - ${item.price} XP`,
+          value: item.value
+        }))
+      );
+
+    const row = new ActionRowBuilder().addComponents(menu);
+
+    const embed = new EmbedBuilder()
+      .setTitle("🛒 XP SHOP")
+      .setDescription("בחר רול מהתפריט וקנה אותו עם XP")
+      .setColor("Gold");
+
+    await channel.send({ embeds: [embed], components: [row] });
+
+    console.log("✅ החנות נשלחה בהצלחה");
+  } catch (err) {
+    console.log("❌ שגיאה בשליחת חנות:", err);
+  }
+});
 
