@@ -93,10 +93,16 @@ export default {
         });
       }
 
-      // Check if user is staff
-      const member = await interaction.guild.members.fetch(interaction.user.id);
+      // Check if user is staff (FAST CHECK)
+      const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+      if (!member) {
+        return interaction.editReply({
+          content: '❌ Erro ao verificar permissões.',
+          ephemeral: true
+        });
+      }
+
       const isStaff = await isUserStaff(member, interaction.guild);
-      
       if (!isStaff) {
         return interaction.editReply({
           content: '❌ Apenas membros da equipe com o cargo "Suporte" podem usar este comando.',
@@ -116,17 +122,14 @@ export default {
       data.status = 'COMPLETED';
       await channel.setTopic(serializeTopicData(data));
 
-      // Fetch usernames for display
-      let buyerName = 'Unknown';
-      let sellerName = 'Unknown';
-      try {
-        const buyerMember = await interaction.guild.members.fetch(data.buyerId);
-        if (buyerMember) buyerName = buyerMember.user.username;
-      } catch { /* ignore */ }
-      try {
-        const sellerMember = await interaction.guild.members.fetch(data.sellerId);
-        if (sellerMember) sellerName = sellerMember.user.username;
-      } catch { /* ignore */ }
+      // Fetch usernames for display (parallel for speed)
+      const [buyerMember, sellerMember] = await Promise.all([
+        interaction.guild.members.fetch(data.buyerId).catch(() => null),
+        interaction.guild.members.fetch(data.sellerId).catch(() => null)
+      ]);
+
+      const buyerName = buyerMember?.user.username || 'Unknown';
+      const sellerName = sellerMember?.user.username || 'Unknown';
 
       // Update the embed
       const tableData = {

@@ -751,94 +751,117 @@ async function isUserStaff(member, guild) {
 }
 
 export async function handleClaimMM(interaction) {
-  // CRITICAL: Defer immediately
-  await interaction.deferUpdate();
-
-  const channel = interaction.channel;
-  const topic = channel.topic || '';
-  const data = parseTopicData(topic);
-
-  if (!data) {
-    return interaction.followUp({
-      content: '❌ Dados da intermediação inválidos.',
-      ephemeral: true
-    });
-  }
-
-  const member = await interaction.guild.members.fetch(interaction.user.id);
-  const isStaff = await isUserStaff(member, interaction.guild);
-  if (!isStaff) {
-    return interaction.followUp({
-      content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
-      ephemeral: true
-    });
-  }
-
-  // Check if already claimed
-  if (data.mmId) {
-    return interaction.followUp({
-      content: 'ℹ️ Esta intermediação já foi assumida por <@' + data.mmId + '>.',
-      ephemeral: true
-    });
-  }
-
-  // PREVENT MM FROM ASSUMING THEIR OWN TICKET
-  // Check if the user is the ticket creator (buyer)
-  if (data.buyerId === interaction.user.id) {
-    return interaction.followUp({
-      content: '❌ Você não pode assumir sua própria intermediação.',
-      ephemeral: true
-    });
-  }
-
-  // Update data with middleman info
-  data.mmId = interaction.user.id;
-  data.status = 'IN_PROGRESS';
-  await channel.setTopic(serializeTopicData(data));
-
-  // Fetch usernames
-  let buyerName = 'Unknown';
-  let sellerName = 'Unknown';
   try {
-    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
-    if (buyerMember) buyerName = buyerMember.user.username;
-  } catch { /* ignore */ }
-  try {
-    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
-    if (sellerMember) sellerName = sellerMember.user.username;
-  } catch { /* ignore */ }
+    // CRITICAL: Defer immediately to prevent timeout
+    await interaction.deferUpdate();
 
-  // Update embed
-  const tableData = {
-    buyerDisplay: buyerName,
-    sellerDisplay: sellerName,
-    method: data.method,
-    amountDisplay: data.amount || 'N/A',
-    statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
-    middlemanDisplay: interaction.user.username,
-    statusColor: mmConfig.statusColors.IN_PROGRESS
-  };
+    const channel = interaction.channel;
+    const topic = channel.topic || '';
+    const data = parseTopicData(topic);
 
-  const messages = await channel.messages.fetch({ limit: 10 });
-  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
+    if (!data) {
+      return interaction.followUp({
+        content: '❌ Dados da intermediação inválidos.',
+        ephemeral: true
+      });
+    }
 
-  if (tableMessage) {
-    await tableMessage.edit({
-      embeds: [createTicketTableEmbed(tableData)],
-      components: [createConfirmDeliveryButton()]
+    // Check if already claimed FIRST (faster check)
+    if (data.mmId) {
+      return interaction.followUp({
+        content: 'ℹ️ Esta intermediação já foi assumida por <@' + data.mmId + '>.',
+        ephemeral: true
+      });
+    }
+
+    // Check if user is trying to assume their own ticket (FAST VALIDATION)
+    if (data.buyerId === interaction.user.id) {
+      return interaction.followUp({
+        content: '❌ Você não pode assumir sua própria intermediação.',
+        ephemeral: true
+      });
+    }
+
+    // Check staff permissions (may take time due to member fetch)
+    const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+    if (!member) {
+      return interaction.followUp({
+        content: '❌ Erro ao verificar permissões.',
+        ephemeral: true
+      });
+    }
+
+    const isStaff = await isUserStaff(member, interaction.guild);
+    if (!isStaff) {
+      return interaction.followUp({
+        content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
+        ephemeral: true
+      });
+    }
+
+    // Update data with middleman info
+    data.mmId = interaction.user.id;
+    data.status = 'IN_PROGRESS';
+    await channel.setTopic(serializeTopicData(data));
+
+    // Fetch usernames (parallel for speed)
+    const [buyerMember, sellerMember] = await Promise.all([
+      interaction.guild.members.fetch(data.buyerId).catch(() => null),
+      interaction.guild.members.fetch(data.sellerId).catch(() => null)
+    ]);
+
+    const buyerName = buyerMember?.user.username || 'Unknown';
+    const sellerName = sellerMember?.user.username || 'Unknown';
+
+    // Update embed
+    const tableData = {
+      buyerDisplay: buyerName,
+      sellerDisplay: sellerName,
+      method: data.method,
+      amountDisplay: data.amount || 'N/A',
+      statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
+      middlemanDisplay: interaction.user.username,
+      statusColor: mmConfig.statusColors.IN_PROGRESS
+    };
+
+    const messages = await channel.messages.fetch({ limit: 10 });
+    const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
+
+    if (tableMessage) {
+      await tableMessage.edit({
+        embeds: [createTicketTableEmbed(tableData)],
+        components: [createConfirmDeliveryButton()]
+      });
+    }
+
+    // Send notification
+    await channel.send({
+      content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
+               'Vendedor e Comprador podem prosseguir de forma segura.'
     });
+
+    await interaction.followUp({
+      content: '✅ Intermediação assumida com sucesso!',
+      ephemeral: true
+    });
+  } catch (error) {
+    console.error('Error in handleClaimMM:', error);
+    try {
+      if (interaction.deferred) {
+        await interaction.followUp({
+          content: '❌ Erro ao assumir intermediação. Tente novamente.',
+          ephemeral: true
+        });
+      } else {
+        await interaction.reply({
+          content: '❌ Erro ao assumir intermediação. Tente novamente.',
+          ephemeral: true
+        });
+      }
+    } catch (e) {
+      // Ignore if interaction already handled
+    }
   }
-
-  // Send notification
-  await channel.send({
-    content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
-             'Vendedor e Comprador podem prosseguir de forma segura.'
-  });
-
-  await interaction.followUp({
-    content: '✅ Intermediação assumida com sucesso!',
-    ephemeral: true
-  });
 }
 
 /**
