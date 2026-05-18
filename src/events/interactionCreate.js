@@ -1,8 +1,6 @@
 import { Events, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { handleApplicationModal } from '../commands/Community/apply.js';
-import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
 import { MessageTemplates } from '../utils/messageTemplates.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
@@ -374,33 +372,7 @@ export default {
         } else if (interaction.isModalSubmit()) {
           // NOTE: The new MM system does not use modals
           // All interactions are handled via buttons and select menus
-          // Old MM modals are no longer supported
-
-          if (interaction.customId.startsWith('app_modal_')) {
-            try {
-              await handleApplicationModal(interaction);
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'modal',
-                customId: interaction.customId,
-                handler: 'application'
-              }, interactionTraceContext));
-            }
-            return;
-          }
-
-          if (interaction.customId.startsWith('app_review_')) {
-            try {
-              await handleApplicationReviewModal(interaction);
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'modal',
-                customId: interaction.customId,
-                handler: 'application_review'
-              }, interactionTraceContext));
-            }
-            return;
-          }
+          // Old MM modals are not supported here.
 
           if (interaction.customId.startsWith('jtc_')) {
             logger.debug(`Skipping modal handler lookup for inline-awaited modal: ${interaction.customId}`, {
