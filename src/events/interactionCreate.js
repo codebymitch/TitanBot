@@ -10,6 +10,16 @@ import { createInteractionTraceContext, runWithTraceContext } from '../utils/tra
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { handleButtonInteraction as handleMmButton, handleModalInteraction as handleMmModal } from '../handlers/mmInteractions.js';
+import {
+  ButtonCustomIds as MmHumanoButtonIds,
+  handleIniciarIntermediacao,
+  handleSelectPagamento,
+  handleSelectPapel,
+  handleSelectUsuario,
+  handleSolicitarMiddleman,
+  handleAssumirIntermediacao,
+  handleFecharTicket
+} from '../handlers/mmHumanoHandler.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -227,7 +237,25 @@ export default {
           // Check for MM buttons first
           if (interaction.customId.startsWith('mm_')) {
             try {
-              await handleMmButton(interaction, client);
+              // Verificar se é botão do novo sistema de middleman humano
+              switch (interaction.customId) {
+                case MmHumanoButtonIds.INICIAR_INTERMEDIACAO:
+                  await handleIniciarIntermediacao(interaction, client);
+                  return;
+                case MmHumanoButtonIds.SOLICITAR_MIDDLEMAN:
+                  await handleSolicitarMiddleman(interaction, client);
+                  return;
+                case MmHumanoButtonIds.ASSUMIR_INTERMEDIACAO:
+                  await handleAssumirIntermediacao(interaction, client);
+                  return;
+                case MmHumanoButtonIds.FECHAR_TICKET:
+                  await handleFecharTicket(interaction, client);
+                  return;
+                default:
+                  // Botões do sistema antigo com banco de dados
+                  const handled = await handleMmButton(interaction, client);
+                  if (handled) return;
+              }
             } catch (error) {
               await handleInteractionError(interaction, error, withTraceContext({
                 type: 'button',
@@ -291,6 +319,49 @@ export default {
             }, interactionTraceContext));
           }
         } else if (interaction.isStringSelectMenu()) {
+          // Verificar se é select menu do novo sistema de middleman humano
+          if (interaction.customId === 'mm_select_pagamento') {
+            try {
+              await handleSelectPagamento(interaction, client);
+              return;
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'select_menu',
+                customId: interaction.customId,
+                handler: 'mm_humano'
+              }, interactionTraceContext));
+              return;
+            }
+          }
+
+          if (interaction.customId === 'mm_select_papel') {
+            try {
+              await handleSelectPapel(interaction, client);
+              return;
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'select_menu',
+                customId: interaction.customId,
+                handler: 'mm_humano'
+              }, interactionTraceContext));
+              return;
+            }
+          }
+
+          if (interaction.customId.startsWith('mm_select_usuario_')) {
+            try {
+              await handleSelectUsuario(interaction, client);
+              return;
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'select_menu',
+                customId: interaction.customId,
+                handler: 'mm_humano'
+              }, interactionTraceContext));
+              return;
+            }
+          }
+
           const [customId, ...args] = interaction.customId.split(':');
           const selectMenu = client.selectMenus.get(customId);
 
