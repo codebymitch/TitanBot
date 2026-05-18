@@ -584,13 +584,13 @@ async function createTicketChannel(interaction, state) {
     });
 
     // Set channel topic with MM data (NO DATABASE - state in topic)
-    const topicData = serializeTopicData({
+    // First, save initial data WITHOUT messageId
+    let topicData = serializeTopicData({
       buyerId: buyer.id,
       sellerId: seller.id,
       method: paymentMethod.toUpperCase(),
       amount: state.amount,
-      status: 'PENDING',
-      tableMessageId: tableMsg.id
+      status: 'PENDING'
     });
     await channel.setTopic(topicData);
 
@@ -611,6 +611,17 @@ async function createTicketChannel(interaction, state) {
       embeds: [createTicketTableEmbed(tableData)],
       components: [createRequestMMButton()]
     });
+
+    // Now update topic with messageId for future fast updates
+    topicData = serializeTopicData({
+      buyerId: buyer.id,
+      sellerId: seller.id,
+      method: paymentMethod.toUpperCase(),
+      amount: state.amount,
+      status: 'PENDING',
+      tableMessageId: tableMsg.id
+    });
+    await channel.setTopic(topicData);
 
     // Send info message
     await channel.send({
