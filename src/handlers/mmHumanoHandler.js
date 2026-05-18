@@ -652,6 +652,30 @@ export async function handleRequestMM(interaction) {
 /**
  * Handle claim middleman button
  */
+/**
+ * Check if a member is staff (can claim/close MM tickets)
+ * Checks: role named "Suporte", mmConfig.staffRoleId, or guild owner
+ */
+async function isUserStaff(member, guild) {
+  // Check if guild owner
+  if (member.id === guild.ownerId) {
+    return true;
+  }
+
+  // Check for "Suporte" role by name
+  const supportRole = guild.roles.cache.find(r => r.name.toLowerCase() === 'suporte');
+  if (supportRole && member.roles.cache.has(supportRole.id)) {
+    return true;
+  }
+
+  // Check for configured staff role
+  if (mmConfig.staffRoleId && member.roles.cache.has(mmConfig.staffRoleId)) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function handleClaimMM(interaction) {
   // CRITICAL: Defer immediately
   await interaction.deferUpdate();
@@ -668,10 +692,10 @@ export async function handleClaimMM(interaction) {
   }
 
   const member = await interaction.guild.members.fetch(interaction.user.id);
-  const isStaff = member.roles.cache.has(mmConfig.staffRoleId);
+  const isStaff = await isUserStaff(member, interaction.guild);
   if (!isStaff) {
     return interaction.followUp({
-      content: '❌ Apenas membros da equipe podem assumir esta intermediação.',
+      content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
       ephemeral: true
     });
   }
@@ -838,5 +862,6 @@ export default {
   handleClaimMM,
   handleCloseMM,
   parseTopicData,
-  serializeTopicData
+  serializeTopicData,
+  isUserStaff
 };
