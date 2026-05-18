@@ -1,215 +1,122 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
-import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { getColor } from '../../config/bot.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 
-const ACTIVITIES = {
-    'youtube': '880218394199220334',
-    'poker': '755827207812677713',
-    'chess': '832012774040141894',
-    'checkers': '832013003968348200',
-    'letter-league': '879863686565621790',
-    'spellcast': '852509694341283871',
-    'sketch': '902271654783242291',
-    'blazing8s': '832025144389533716',
-    'puttparty': '945737671223947305',
-    'landio': '903769130790969345',
-    'bobble': '947957217959759964',
-    'knowwhat': '976052223358406656'
-};
-
-const ACTIVITY_NAMES = {
-    'youtube': 'YouTube Together',
-    'poker': 'Poker Night',
-    'chess': 'Chess in the Park',
-    'checkers': 'Checkers in the Park',
-    'letter-league': 'Letter League',
-    'spellcast': 'SpellCast',
-    'sketch': 'Sketch Heads',
-    'blazing8s': 'Blazing 8s',
-    'puttparty': 'Putt Party',
-    'landio': 'Land-io',
-    'bobble': 'Bobble League',
-    'knowwhat': 'Know What I Mean'
-};
+const guildMMRoles = new Map();
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('activity')
-        .setDescription('Start a Discord Activity in your voice channel')
+        .setName('staff')
+        .setDescription('🛡️ Gerenciar quais cargos podem assumir intermediações')
         .setDMPermission(false)
-        .setDefaultMemberPermissions(PermissionFlagsBits.Connect)
-        
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand
-                .setName('youtube')
-                .setDescription('Watch YouTube videos together in a voice channel')
+                .setName('add-role')
+                .setDescription('Adicionar um cargo à lista de staff de MM')
+                .addRoleOption(option =>
+                    option
+                        .setName('role')
+                        .setDescription('O cargo que pode assumir intermediações')
+                        .setRequired(true)
+                )
         )
-        
         .addSubcommand(subcommand =>
             subcommand
-                .setName('poker')
-                .setDescription('Play Poker Night with friends')
+                .setName('remove-role')
+                .setDescription('Remover um cargo da lista de staff de MM')
+                .addRoleOption(option =>
+                    option
+                        .setName('role')
+                        .setDescription('O cargo a remover')
+                        .setRequired(true)
+                )
         )
-        
         .addSubcommand(subcommand =>
             subcommand
-                .setName('chess')
-                .setDescription('Play Chess in the Park')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('checkers')
-                .setDescription('Play Checkers in the Park')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('letter-league')
-                .setDescription('Play the word-based game Letter League')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('spellcast')
-                .setDescription('Play the magical word game SpellCast')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('sketch')
-                .setDescription('Play Sketch Heads (Pictionary style)')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('blazing8s')
-                .setDescription('Play the card game Blazing 8s')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('puttparty')
-                .setDescription('Play Putt Party (Mini-golf)')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('landio')
-                .setDescription('Play the territory game Land-io')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('bobble')
-                .setDescription('Play Bobble League')
-        )
-        
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('knowwhat')
-                .setDescription('Play Know What I Mean')
+                .setName('list')
+                .setDescription('Listar todos os cargos com permissão de MM')
         ),
 
-    category: "Voice",
+    async execute(interaction) {
+        const guildId = interaction.guildId;
+        const subcommand = interaction.options.getSubcommand();
+        const role = interaction.options.getRole('role');
 
-    async execute(interaction, config, client) {
-        try {
-            
-            const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
-            if (!deferred) {
-                return;
-            }
-
-            const { member, options } = interaction;
-            const activity = options.getSubcommand();
-            const activityId = ACTIVITIES[activity];
-            const activityName = ACTIVITY_NAMES[activity] || activity;
-
-            if (!member.voice.channel) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Not in Voice Channel', 'You need to be in a voice channel to start an activity!')]
-                });
-            }
-
-            logger.debug('Activity command - validating permissions', {
-                userId: interaction.user.id,
-                voiceChannelId: member.voice.channel.id,
-                voiceChannelName: member.voice.channel.name,
-                activity: activity
+        if (!guildId) {
+            return interaction.reply({
+                content: '❌ Este comando só pode ser usado em servidores.',
+                ephemeral: true
             });
-
-            const permissions = member.voice.channel.permissionsFor(interaction.guild.members.me);
-            if (!permissions.has('CreateInstantInvite')) {
-                logger.warn('Activity command - missing permissions', {
-                    userId: interaction.user.id,
-                    voiceChannelId: member.voice.channel.id,
-                    guildId: interaction.guildId,
-                    activity: activity,
-                    missingPermission: 'CreateInstantInvite'
-                });
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Missing Permissions', 'I need the `Create Invite` permission to start an activity!')]
-                });
-            }
-
-            const invite = await interaction.client.rest.post(
-                `/channels/${member.voice.channel.id}/invites`,
-                {
-                    body: {
-                        max_age: 86400,
-                        target_type: 2,
-                        target_application_id: activityId,
-                    },
-                }
-            );
-
-            logger.info('Activity invite created successfully', {
-                userId: interaction.user.id,
-                userTag: interaction.user.tag,
-                voiceChannelId: member.voice.channel.id,
-                voiceChannelName: member.voice.channel.name,
-                guildId: interaction.guildId,
-                activity: activity,
-                activityName: activityName,
-                inviteCode: invite.code,
-                commandName: 'activity'
-            });
-
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [createEmbed({
-                    title: `🎮 ${activityName}`,
-                    description: `Click the link below to start **${activityName}** in ${member.voice.channel.name}!\n\n[Join ${activityName} Activity](https://discord.gg/${invite.code})`,
-                    color: 'success'
-                })]
-            });
-
-        } catch (error) {
-            logger.error('Error creating activity invite', {
-                error: error.message,
-                stack: error.stack,
-                userId: interaction.user.id,
-                voiceChannelId: interaction.member?.voice.channel?.id,
-                guildId: interaction.guildId,
-                activity: options.getSubcommand(),
-                commandName: 'activity'
-            });
-            
-            if (!interaction.deferred && !interaction.replied) {
-                await handleInteractionError(interaction, error, {
-                    commandName: 'activity',
-                    source: 'discord_activity_api'
-                });
-            } else {
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Failed to Create Activity', 'An error occurred while trying to create the activity. Please try again later.')]
-                });
-            }
         }
+
+        if (!guildMMRoles.has(guildId)) {
+            guildMMRoles.set(guildId, new Set());
+        }
+
+        const mmRoles = guildMMRoles.get(guildId);
+
+        if (subcommand === 'add-role') {
+            if (mmRoles.has(role.id)) {
+                return interaction.reply({
+                    content: `⚠️ O cargo ${role.toString()} já tem permissão de MM.`,
+                    ephemeral: true
+                });
+            }
+
+            mmRoles.add(role.id);
+            return interaction.reply({
+                content: `✅ Cargo ${role.toString()} adicionado com sucesso!\n\n👥 Usuários com este cargo agora podem assumir intermediações.`,
+                ephemeral: true
+            });
+        }
+
+        if (subcommand === 'remove-role') {
+            if (!mmRoles.has(role.id)) {
+                return interaction.reply({
+                    content: `⚠️ O cargo ${role.toString()} não está na lista de staff de MM.`,
+                    ephemeral: true
+                });
+            }
+
+            mmRoles.delete(role.id);
+            return interaction.reply({
+                content: `✅ Cargo ${role.toString()} removido com sucesso!`,
+                ephemeral: true
+            });
+        }
+
+        if (subcommand === 'list') {
+            const supportRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'suporte');
+            let list = '**Cargos com Permissão de MM:**\n\n';
+
+            if (supportRole) {
+                list += `🔸 ${supportRole.toString()} (padrão - nome "Suporte")\n`;
+            } else {
+                list += '🔸 Nenhum cargo padrão com nome "Suporte" encontrado\n';
+            }
+
+            if (mmRoles.size > 0) {
+                list += '\n**Cargos Adicionados:**\n';
+                for (const roleId of mmRoles) {
+                    const r = interaction.guild.roles.cache.get(roleId);
+                    if (r) {
+                        list += `🔹 ${r.toString()}\n`;
+                    }
+                }
+            } else {
+                list += '\n*Nenhum cargo adicional configurado*';
+            }
+
+            list += '\n\n**Para adicionar um cargo:**\n`/staff add-role <cargo>`\n\n**Para remover:**\n`/staff remove-role <cargo>`';
+
+            return interaction.reply({
+                content: list,
+                ephemeral: true
+            });
+        }
+
+        return interaction.reply({
+            content: '❌ Subcomando desconhecido.',
+            ephemeral: true
+        });
     },
 };
-
-
