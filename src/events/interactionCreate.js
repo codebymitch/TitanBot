@@ -9,6 +9,7 @@ import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createInteractionTraceContext, runWithTraceContext } from '../utils/traceContext.js';
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
+import { handleButtonInteraction as handleMmButton, handleModalInteraction as handleMmModal } from '../handlers/mmInteractions.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -223,6 +224,20 @@ export default {
             }
           }
         } else if (interaction.isButton()) {
+          // Check for MM buttons first
+          if (interaction.customId.startsWith('mm_')) {
+            try {
+              await handleMmButton(interaction, client);
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'button',
+                customId: interaction.customId,
+                handler: 'mm'
+              }, interactionTraceContext));
+            }
+            return;
+          }
+
           if (interaction.customId.startsWith('shared_todo_')) {
             const parts = interaction.customId.split('_');
             const buttonType = parts.slice(0, 3).join('_');
@@ -304,6 +319,20 @@ export default {
             }, interactionTraceContext));
           }
         } else if (interaction.isModalSubmit()) {
+          // Check for MM modals first
+          if (interaction.customId.startsWith('mm_')) {
+            try {
+              await handleMmModal(interaction, client);
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'modal',
+                customId: interaction.customId,
+                handler: 'mm'
+              }, interactionTraceContext));
+            }
+            return;
+          }
+
           if (interaction.customId.startsWith('app_modal_')) {
             try {
               await handleApplicationModal(interaction);
