@@ -494,7 +494,7 @@ async function createTicketChannel(interaction, state) {
             PermissionFlagsBits.AttachFiles
           ]
         },
-        {
+        ...(mmConfig.staffRoleId ? [{
           id: mmConfig.staffRoleId,
           allow: [
             PermissionFlagsBits.ViewChannel,
@@ -505,7 +505,7 @@ async function createTicketChannel(interaction, state) {
             PermissionFlagsBits.AttachFiles,
             PermissionFlagsBits.ManageChannels
           ]
-        }
+        }] : [])
       ]
     });
 
