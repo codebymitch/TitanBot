@@ -81,9 +81,11 @@ export default {
    */
   async execute(interaction) {
     try {
+      await interaction.deferReply({ ephemeral: true });
+
       // Only administrators can use this command
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({
+        return interaction.editReply({
           content: '❌ Apenas administradores podem usar este comando.',
           ephemeral: true
         });
@@ -95,9 +97,8 @@ export default {
         components: [createStartButton()]
       });
 
-      await interaction.reply({
-        content: '✅ Painel de intermediação criado com sucesso neste canal!',
-        ephemeral: true
+      await interaction.editReply({
+        content: '✅ Painel de intermediação criado com sucesso neste canal!'
       });
 
     } catch (error) {

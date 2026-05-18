@@ -157,6 +157,15 @@ function createCounterpartySelectMenu() {
 /**
  * Create the main ticket table embed with HTML-like formatting
  */
+function sanitizeChannelName(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 90);
+}
+
 function createTicketTableEmbed(data) {
   const { buyerDisplay, sellerDisplay, method, statusDisplay, middlemanDisplay } = data;
 
@@ -164,7 +173,7 @@ function createTicketTableEmbed(data) {
   table += '┌──────────────────────────────────────────┐\n';
   table += '│        DADOS DA INTERMEDIAÇÃO            │\n';
   table += '├──────────────────────────────────────────┤\n';
-  table += '│ 💵 Método:    ' + method.padEnd(24) + '│\n';
+  table += '│ 💵 Método: ' + method.padEnd(29) + '│\n';
   table += '│ 👤 Comprador: ' + buyerDisplay.padEnd(24) + '│\n';
   table += '│ 🎒 Vendedor:  ' + sellerDisplay.padEnd(24) + '│\n';
   table += '├──────────────────────────────────────────┤\n';
@@ -283,16 +292,18 @@ export async function handleStart(interaction) {
  * Handle payment method selection
  */
 export async function handlePaymentSelect(interaction) {
+  await interaction.deferUpdate();
+
   const state = wizardStates.get(interaction.user.id);
   if (!state) {
-    return interaction.reply({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
+    return interaction.followUp({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
   }
 
   const paymentMethod = interaction.values[0];
   state.paymentMethod = paymentMethod;
   state.step = 'role';
 
-  await interaction.update({
+  await interaction.editReply({
     embeds: [createRoleSelectEmbed()],
     components: [createRoleSelectMenu()]
   });
@@ -302,16 +313,18 @@ export async function handlePaymentSelect(interaction) {
  * Handle role selection
  */
 export async function handleRoleSelect(interaction) {
+  await interaction.deferUpdate();
+
   const state = wizardStates.get(interaction.user.id);
   if (!state) {
-    return interaction.reply({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
+    return interaction.followUp({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
   }
 
   const role = interaction.values[0];
   state.userRole = role;
   state.step = 'counterparty';
 
-  await interaction.update({
+  await interaction.editReply({
     embeds: [createCounterpartySelectEmbed(role)],
     components: [createCounterpartySelectMenu()]
   });
@@ -321,7 +334,6 @@ export async function handleRoleSelect(interaction) {
  * Handle counterparty selection
  */
 export async function handleCounterpartySelect(interaction) {
-  // CRITICAL: Defer immediately
   await interaction.deferUpdate();
 
   const state = wizardStates.get(interaction.user.id);
@@ -329,28 +341,27 @@ export async function handleCounterpartySelect(interaction) {
     return interaction.followUp({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
   }
 
-  const selectedUsers = interaction.values;
-  if (!selectedUsers || selectedUsers.length === 0) {
+  const selectedUserId = interaction.values?.[0];
+  if (!selectedUserId) {
     return interaction.followUp({ content: '❌ Você precisa selecionar um usuário.', ephemeral: true });
   }
 
-  const selectedUser = selectedUsers[0];
-
-  // Validation: Cannot select self
-  if (selectedUser.id === interaction.user.id) {
+  if (selectedUserId === interaction.user.id) {
     return interaction.followUp({
       content: '❌ Você não pode selecionar a si mesmo como contraparte!',
       ephemeral: true
     });
   }
 
-  state.counterparty = selectedUser;
+  const selectedMember = await interaction.guild.members.fetch(selectedUserId).catch(() => null);
+  if (!selectedMember) {
+    return interaction.followUp({ content: '❌ Não foi possível encontrar o usuário selecionado.', ephemeral: true });
+  }
+
+  state.counterparty = selectedMember;
   state.step = 'complete';
 
-  // Create the ticket channel
   await createTicketChannel(interaction, state);
-
-  // Clean up wizard state
   wizardStates.delete(interaction.user.id);
 }
 
@@ -360,7 +371,7 @@ export async function handleCounterpartySelect(interaction) {
 async function createTicketChannel(interaction, state) {
   try {
     const { userRole, counterparty, paymentMethod } = state;
-    const initiator = interaction.user;
+    const initiator = interaction.member;
 
     // Determine buyer and seller
     const buyer = userRole === 'buyer' ? initiator : counterparty;
@@ -386,7 +397,9 @@ async function createTicketChannel(interaction, state) {
     }
 
     // Create channel name
-    const channelName = 'mm-' + seller.user.username + '-' + buyer.user.username.toLowerCase().slice(0, 100);
+    const sellerName = sanitizeChannelName(seller.user.username);
+    const buyerName = sanitizeChannelName(buyer.user.username);
+    const channelName = 'mm-' + sellerName + '-e-' + buyerName;
 
     // Create the private channel
     const channel = await interaction.guild.channels.create({
@@ -459,9 +472,9 @@ async function createTicketChannel(interaction, state) {
       buyerDisplay: buyer.user.username,
       sellerDisplay: seller.user.username,
       method: methodLabel,
-      statusDisplay: '⏳ AGUARDANDO MIDDLEMAN',
+      statusDisplay: mmConfig.statusLabels.PENDING,
       middlemanDisplay: null,
-      statusColor: 0x3498DB
+      statusColor: mmConfig.statusColors.PENDING
     };
 
     // Send the main table message
@@ -551,9 +564,9 @@ export async function handleRequestMM(interaction) {
     buyerDisplay: buyerName,
     sellerDisplay: sellerName,
     method: data.method,
-    statusDisplay: '⏳ SUPORTE NOTIFICADO',
+    statusDisplay: mmConfig.statusLabels.NOTIFIED,
     middlemanDisplay: null,
-    statusColor: 0xF39C12
+    statusColor: mmConfig.statusColors.NOTIFIED
   };
 
   const messages = await channel.messages.fetch({ limit: 10 });
@@ -562,7 +575,7 @@ export async function handleRequestMM(interaction) {
   if (tableMessage) {
     await tableMessage.edit({
       embeds: [createTicketTableEmbed(tableData)],
-      components: mmConfig.mmRoleId ? [createClaimMMButton()] : []
+      components: [createClaimMMButton()]
     });
   }
 
@@ -599,6 +612,15 @@ export async function handleClaimMM(interaction) {
     });
   }
 
+  const member = await interaction.guild.members.fetch(interaction.user.id);
+  const isStaff = member.roles.cache.has(mmConfig.staffRoleId);
+  if (!isStaff) {
+    return interaction.followUp({
+      content: '❌ Apenas membros da equipe podem assumir esta intermediação.',
+      ephemeral: true
+    });
+  }
+
   // Check if already claimed
   if (data.mmId) {
     return interaction.followUp({
@@ -629,9 +651,9 @@ export async function handleClaimMM(interaction) {
     buyerDisplay: buyerName,
     sellerDisplay: sellerName,
     method: data.method,
-    statusDisplay: '🟢 EM ANDAMENTO',
+    statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
     middlemanDisplay: interaction.user.username,
-    statusColor: 0x2ECC71
+    statusColor: mmConfig.statusColors.IN_PROGRESS
   };
 
   const messages = await channel.messages.fetch({ limit: 10 });
@@ -706,9 +728,9 @@ export async function handleCloseMM(interaction) {
     buyerDisplay: buyerName,
     sellerDisplay: sellerName,
     method: data.method,
-    statusDisplay: '✅ INTERMEDIAÇÃO CONCLUÍDA',
+    statusDisplay: mmConfig.statusLabels.COMPLETED,
     middlemanDisplay: interaction.user.username,
-    statusColor: 0x27AE60
+    statusColor: mmConfig.statusColors.COMPLETED
   };
 
   const messages = await channel.messages.fetch({ limit: 10 });
@@ -740,16 +762,15 @@ export async function handleCloseMM(interaction) {
     } catch { /* ignore */ }
   }
 
-  // Delete channel
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  if (channel.deletable) {
-    await channel.delete();
-  }
-
   await interaction.followUp({
     content: '✅ Intermediação concluída com sucesso!',
     ephemeral: true
   });
+
+  // Delete channel after closing countdown
+  if (channel.deletable) {
+    await channel.delete();
+  }
 }
 
 export default {
