@@ -589,7 +589,8 @@ async function createTicketChannel(interaction, state) {
       sellerId: seller.id,
       method: paymentMethod.toUpperCase(),
       amount: state.amount,
-      status: 'PENDING'
+      status: 'PENDING',
+      tableMessageId: tableMsg.id
     });
     await channel.setTopic(topicData);
 
@@ -605,8 +606,8 @@ async function createTicketChannel(interaction, state) {
       statusColor: mmConfig.statusColors.PENDING
     };
 
-    // Send the main table message
-    await channel.send({
+    // Send the main table message and capture ID for fast updates
+    const tableMsg = await channel.send({
       embeds: [createTicketTableEmbed(tableData)],
       components: [createRequestMMButton()]
     });
@@ -698,14 +699,19 @@ export async function handleRequestMM(interaction) {
     statusColor: mmConfig.statusColors.NOTIFIED
   };
 
-  const messages = await channel.messages.fetch({ limit: 10 });
-  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
-
-  if (tableMessage) {
-    await tableMessage.edit({
-      embeds: [createTicketTableEmbed(tableData)],
-      components: [createClaimMMButton()]
-    });
+  // Update the table message directly if ID is stored
+  if (data.tableMessageId) {
+    try {
+      const tableMessage = await channel.messages.fetch(data.tableMessageId);
+      if (tableMessage) {
+        await tableMessage.edit({
+          embeds: [createTicketTableEmbed(tableData)],
+          components: [createClaimMMButton()]
+        });
+      }
+    } catch (err) {
+      logger.warn('Failed to update table message', { error: err.message });
+    }
   }
 
   // Ping the staff role only
@@ -751,117 +757,103 @@ export async function isUserStaff(member, guild) {
 }
 
 export async function handleClaimMM(interaction) {
-  try {
-    // CRITICAL: Defer immediately to prevent timeout
-    await interaction.deferUpdate();
+  // CRITICAL: Defer immediately to prevent timeout
+  await interaction.deferUpdate();
 
-    const channel = interaction.channel;
-    const topic = channel.topic || '';
-    const data = parseTopicData(topic);
+  const channel = interaction.channel;
+  const topic = channel.topic || '';
+  const data = parseTopicData(topic);
 
-    if (!data) {
-      return interaction.followUp({
-        content: '❌ Dados da intermediação inválidos.',
-        ephemeral: true
-      });
-    }
-
-    // Check if already claimed FIRST (faster check)
-    if (data.mmId) {
-      return interaction.followUp({
-        content: 'ℹ️ Esta intermediação já foi assumida por <@' + data.mmId + '>.',
-        ephemeral: true
-      });
-    }
-
-    // Check if user is trying to assume their own ticket (FAST VALIDATION)
-    if (data.buyerId === interaction.user.id || data.sellerId === interaction.user.id) {
-      return interaction.followUp({
-        content: '❌ Você não pode assumir sua própria intermediação.',
-        ephemeral: true
-      });
-    }
-
-    // Check staff permissions (may take time due to member fetch)
-    const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
-    if (!member) {
-      return interaction.followUp({
-        content: '❌ Erro ao verificar permissões.',
-        ephemeral: true
-      });
-    }
-
-    const isStaff = await isUserStaff(member, interaction.guild);
-    if (!isStaff) {
-      return interaction.followUp({
-        content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
-        ephemeral: true
-      });
-    }
-
-    // Update data with middleman info
-    data.mmId = interaction.user.id;
-    data.status = 'IN_PROGRESS';
-    await channel.setTopic(serializeTopicData(data));
-
-    // Fetch usernames (parallel for speed)
-    const [buyerMember, sellerMember] = await Promise.all([
-      interaction.guild.members.fetch(data.buyerId).catch(() => null),
-      interaction.guild.members.fetch(data.sellerId).catch(() => null)
-    ]);
-
-    const buyerName = buyerMember?.user.username || 'Unknown';
-    const sellerName = sellerMember?.user.username || 'Unknown';
-
-    // Update embed
-    const tableData = {
-      buyerDisplay: buyerName,
-      sellerDisplay: sellerName,
-      method: data.method,
-      amountDisplay: data.amount || 'N/A',
-      statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
-      middlemanDisplay: interaction.user.username,
-      statusColor: mmConfig.statusColors.IN_PROGRESS
-    };
-
-    const messages = await channel.messages.fetch({ limit: 10 });
-    const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
-
-    if (tableMessage) {
-      await tableMessage.edit({
-        embeds: [createTicketTableEmbed(tableData)],
-        components: [createConfirmDeliveryButton(), createCloseMMButton()]
-      });
-    }
-
-    // Send notification
-    await channel.send({
-      content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
-               'Vendedor e Comprador podem prosseguir de forma segura.'
-    });
-
-    await interaction.followUp({
-      content: '✅ Intermediação assumida com sucesso!',
+  if (!data) {
+    return interaction.followUp({
+      content: '❌ Dados da intermediação inválidos.',
       ephemeral: true
     });
-  } catch (error) {
-    console.error('Error in handleClaimMM:', error);
+  }
+
+  // Check if already claimed FIRST (faster check)
+  if (data.mmId) {
+    return interaction.followUp({
+      content: 'ℹ️ Esta intermediação já foi assumida por <@' + data.mmId + '>.',
+      ephemeral: true
+    });
+  }
+
+  // Check if user is trying to assume their own ticket (FAST VALIDATION)
+  if (data.buyerId === interaction.user.id || data.sellerId === interaction.user.id) {
+    return interaction.followUp({
+      content: '❌ Você não pode assumir sua própria intermediação.',
+      ephemeral: true
+    });
+  }
+
+  // Check staff permissions (may take time due to member fetch)
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+  if (!member) {
+    return interaction.followUp({
+      content: '❌ Erro ao verificar permissões.',
+      ephemeral: true
+    });
+  }
+
+  const isStaff = await isUserStaff(member, interaction.guild);
+  if (!isStaff) {
+    return interaction.followUp({
+      content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
+      ephemeral: true
+    });
+  }
+
+  // Update data with middleman info
+  data.mmId = interaction.user.id;
+  data.status = 'IN_PROGRESS';
+  await channel.setTopic(serializeTopicData(data));
+
+  // Fetch usernames (parallel for speed)
+  const [buyerMember, sellerMember] = await Promise.all([
+    interaction.guild.members.fetch(data.buyerId).catch(() => null),
+    interaction.guild.members.fetch(data.sellerId).catch(() => null)
+  ]);
+
+  const buyerName = buyerMember?.user.username || 'Unknown';
+  const sellerName = sellerMember?.user.username || 'Unknown';
+
+  // Update embed
+  const tableData = {
+    buyerDisplay: buyerName,
+    sellerDisplay: sellerName,
+    method: data.method,
+    amountDisplay: data.amount || 'N/A',
+    statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
+    middlemanDisplay: interaction.user.username,
+    statusColor: mmConfig.statusColors.IN_PROGRESS
+  };
+
+  // Find and update the main table message (search by embed title)
+  if (data.tableMessageId) {
     try {
-      if (interaction.deferred) {
-        await interaction.followUp({
-          content: '❌ Erro ao assumir intermediação. Tente novamente.',
-          ephemeral: true
-        });
-      } else {
-        await interaction.reply({
-          content: '❌ Erro ao assumir intermediação. Tente novamente.',
-          ephemeral: true
+      const tableMessage = await channel.messages.fetch(data.tableMessageId);
+      if (tableMessage) {
+        await tableMessage.edit({
+          embeds: [createTicketTableEmbed(tableData)],
+          components: [createConfirmDeliveryButton()]
         });
       }
-    } catch (e) {
-      // Ignore if interaction already handled
+    } catch (err) {
+      logger.warn('Failed to update table message', { error: err.message });
     }
   }
+
+  // Send notification
+  await channel.send({
+    content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
+             'Vendedor e Comprador podem prosseguir de forma segura.'
+  });
+
+  await interaction.followUp({
+    content: '✅ Intermediação assumida com sucesso!',
+    ephemeral: true
+  });
 }
 
 /**
@@ -971,14 +963,19 @@ export async function handleConfirmDeliveryModal(interaction) {
     statusColor: mmConfig.statusColors.DELIVERED
   };
 
-  const messages = await channel.messages.fetch({ limit: 10 });
-  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
-
-  if (tableMessage) {
-    await tableMessage.edit({
-      embeds: [createTicketTableEmbed(tableData)],
-      components: [createFinalizeMMButton()]
-    });
+  // Update the table message directly if ID is stored
+  if (data.tableMessageId) {
+    try {
+      const tableMessage = await channel.messages.fetch(data.tableMessageId);
+      if (tableMessage) {
+        await tableMessage.edit({
+          embeds: [createTicketTableEmbed(tableData)],
+          components: [createFinalizeMMButton()]
+        });
+      }
+    } catch (err) {
+      logger.warn('Failed to update table message', { error: err.message });
+    }
   }
 
   // Send notification
@@ -1049,14 +1046,19 @@ export async function handleFinalizeMM(interaction) {
     statusColor: mmConfig.statusColors.COMPLETED
   };
 
-  const messages = await channel.messages.fetch({ limit: 10 });
-  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
-
-  if (tableMessage) {
-    await tableMessage.edit({
-      embeds: [createTicketTableEmbed(tableData)],
-      components: [] // Remove all buttons
-    });
+  // Update the table message directly if ID is stored
+  if (data.tableMessageId) {
+    try {
+      const tableMessage = await channel.messages.fetch(data.tableMessageId);
+      if (tableMessage) {
+        await tableMessage.edit({
+          embeds: [createTicketTableEmbed(tableData)],
+          components: [] // Remove all buttons
+        });
+      }
+    } catch (err) {
+      logger.warn('Failed to update table message', { error: err.message });
+    }
   }
 
   // Send final message with countdown
@@ -1142,14 +1144,19 @@ export async function handleCloseTicketCommand(interaction) {
     statusColor: mmConfig.statusColors.COMPLETED
   };
 
-  const messages = await channel.messages.fetch({ limit: 10 });
-  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
-
-  if (tableMessage) {
-    await tableMessage.edit({
-      embeds: [createTicketTableEmbed(tableData)],
-      components: [] // Remove all buttons
-    });
+  // Update the table message directly if ID is stored
+  if (data.tableMessageId) {
+    try {
+      const tableMessage = await channel.messages.fetch(data.tableMessageId);
+      if (tableMessage) {
+        await tableMessage.edit({
+          embeds: [createTicketTableEmbed(tableData)],
+          components: [] // Remove all buttons
+        });
+      }
+    } catch (err) {
+      logger.warn('Failed to update table message', { error: err.message });
+    }
   }
 
   // Send final message with countdown
@@ -1235,14 +1242,19 @@ export async function handleCloseMM(interaction) {
     statusColor: mmConfig.statusColors.COMPLETED
   };
 
-  const messages = await channel.messages.fetch({ limit: 10 });
-  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
-
-  if (tableMessage) {
-    await tableMessage.edit({
-      embeds: [createTicketTableEmbed(tableData)],
-      components: [] // Remove all buttons
-    });
+  // Update the table message directly if ID is stored
+  if (data.tableMessageId) {
+    try {
+      const tableMessage = await channel.messages.fetch(data.tableMessageId);
+      if (tableMessage) {
+        await tableMessage.edit({
+          embeds: [createTicketTableEmbed(tableData)],
+          components: [] // Remove all buttons
+        });
+      }
+    } catch (err) {
+      logger.warn('Failed to update table message', { error: err.message });
+    }
   }
 
   // Send final message with countdown
