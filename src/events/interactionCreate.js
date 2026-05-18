@@ -11,14 +11,13 @@ import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { handleButtonInteraction as handleMmButton, handleModalInteraction as handleMmModal } from '../handlers/mmInteractions.js';
 import {
-  ButtonCustomIds as MmHumanoButtonIds,
-  handleIniciarIntermediacao,
-  handleSelectPagamento,
-  handleSelectPapel,
-  handleSelectUsuario,
-  handleSolicitarMiddleman,
-  handleAssumirIntermediacao,
-  handleFecharTicket
+  handleStart,
+  handlePaymentSelect,
+  handleRoleSelect,
+  handleCounterpartySelect,
+  handleRequestMM,
+  handleClaimMM,
+  handleCloseMM
 } from '../handlers/mmHumanoHandler.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
@@ -239,17 +238,17 @@ export default {
             try {
               // Verificar se é botão do novo sistema de middleman humano
               switch (interaction.customId) {
-                case MmHumanoButtonIds.INICIAR_INTERMEDIACAO:
-                  await handleIniciarIntermediacao(interaction, client);
+                case 'mm_start_intermediacao':
+                  await handleStart(interaction);
                   return;
-                case MmHumanoButtonIds.SOLICITAR_MIDDLEMAN:
-                  await handleSolicitarMiddleman(interaction, client);
+                case 'mm_request_middleman':
+                  await handleRequestMM(interaction);
                   return;
-                case MmHumanoButtonIds.ASSUMIR_INTERMEDIACAO:
-                  await handleAssumirIntermediacao(interaction, client);
+                case 'mm_claim_middleman':
+                  await handleClaimMM(interaction);
                   return;
-                case MmHumanoButtonIds.FECHAR_TICKET:
-                  await handleFecharTicket(interaction, client);
+                case 'mm_close_intermediacao':
+                  await handleCloseMM(interaction);
                   return;
                 default:
                   // Botões do sistema antigo com banco de dados
@@ -320,9 +319,9 @@ export default {
           }
         } else if (interaction.isStringSelectMenu()) {
           // Verificar se é select menu do novo sistema de middleman humano
-          if (interaction.customId === 'mm_select_pagamento') {
+          if (interaction.customId === 'mm_payment_select') {
             try {
-              await handleSelectPagamento(interaction, client);
+              await handlePaymentSelect(interaction);
               return;
             } catch (error) {
               await handleInteractionError(interaction, error, withTraceContext({
@@ -334,9 +333,9 @@ export default {
             }
           }
 
-          if (interaction.customId === 'mm_select_papel') {
+          if (interaction.customId === 'mm_role_select') {
             try {
-              await handleSelectPapel(interaction, client);
+              await handleRoleSelect(interaction);
               return;
             } catch (error) {
               await handleInteractionError(interaction, error, withTraceContext({
@@ -348,9 +347,9 @@ export default {
             }
           }
 
-          if (interaction.customId.startsWith('mm_select_usuario_')) {
+          if (interaction.customId === 'mm_counterparty_select') {
             try {
-              await handleSelectUsuario(interaction, client);
+              await handleCounterpartySelect(interaction);
               return;
             } catch (error) {
               await handleInteractionError(interaction, error, withTraceContext({
