@@ -130,7 +130,7 @@ function createCounterpartySelectEmbed(userRole) {
   
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setTitle(roleEmoji + ' Passo 3/4 - Selecionar ' + roleLabel)
+    .setTitle(roleEmoji + ' Passo 4/4 - Selecionar ' + roleLabel)
     .setDescription('```' +
       '┌────────────────────────────────────────┐\n' +
       '│  Selecione o ' + roleLabel.toLowerCase() + ' com quem você    │\n' +
@@ -185,7 +185,7 @@ function formatTransactionAmount(value) {
 function createAmountModal() {
   return new ModalBuilder()
     .setCustomId('mm_amount_modal')
-    .setTitle('💰 Passo 4/4 - Valor da Transação')
+    .setTitle('💰 Passo 3/4 - Valor da Transação')
     .addComponents(
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
@@ -349,8 +349,7 @@ export async function handlePaymentSelect(interaction) {
  * Handle role selection
  */
 export async function handleRoleSelect(interaction) {
-  await interaction.deferUpdate();
-
+  // Do not defer here because we will show a modal immediately
   const state = wizardStates.get(interaction.user.id);
   if (!state) {
     return interaction.followUp({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
@@ -358,41 +357,6 @@ export async function handleRoleSelect(interaction) {
 
   const role = interaction.values[0];
   state.userRole = role;
-  state.step = 'counterparty';
-
-  await interaction.editReply({
-    embeds: [createCounterpartySelectEmbed(role)],
-    components: [createCounterpartySelectMenu()]
-  });
-}
-
-/**
- * Handle counterparty selection
- */
-export async function handleCounterpartySelect(interaction) {
-  const state = wizardStates.get(interaction.user.id);
-  if (!state) {
-    return interaction.reply({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
-  }
-
-  const selectedUserId = interaction.values?.[0];
-  if (!selectedUserId) {
-    return interaction.reply({ content: '❌ Você precisa selecionar um usuário.', ephemeral: true });
-  }
-
-  if (selectedUserId === interaction.user.id) {
-    return interaction.reply({
-      content: '❌ Você não pode selecionar a si mesmo como contraparte!',
-      ephemeral: true
-    });
-  }
-
-  const selectedMember = await interaction.guild.members.fetch(selectedUserId).catch(() => null);
-  if (!selectedMember) {
-    return interaction.reply({ content: '❌ Não foi possível encontrar o usuário selecionado.', ephemeral: true });
-  }
-
-  state.counterparty = selectedMember;
   state.step = 'amount';
 
   const modal = createAmountModal();
@@ -420,9 +384,47 @@ export async function handleCounterpartySelect(interaction) {
   }
 
   state.amount = formatTransactionAmount(cleanedAmount);
+  state.step = 'counterparty';
+
+  await modalSubmission.editReply({
+    embeds: [createCounterpartySelectEmbed(role)],
+    components: [createCounterpartySelectMenu()]
+  });
+}
+
+/**
+ * Handle counterparty selection
+ */
+export async function handleCounterpartySelect(interaction) {
+  // Acknowledge the select interaction immediately to avoid timeouts
+  await interaction.deferUpdate();
+
+  const state = wizardStates.get(interaction.user.id);
+  if (!state) {
+    return interaction.followUp({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
+  }
+
+  const selectedUserId = interaction.values?.[0];
+  if (!selectedUserId) {
+    return interaction.followUp({ content: '❌ Você precisa selecionar um usuário.', ephemeral: true });
+  }
+
+  if (selectedUserId === interaction.user.id) {
+    return interaction.followUp({
+      content: '❌ Você não pode selecionar a si mesmo como contraparte!',
+      ephemeral: true
+    });
+  }
+
+  const selectedMember = await interaction.guild.members.fetch(selectedUserId).catch(() => null);
+  if (!selectedMember) {
+    return interaction.followUp({ content: '❌ Não foi possível encontrar o usuário selecionado.', ephemeral: true });
+  }
+
+  state.counterparty = selectedMember;
   state.step = 'complete';
 
-  await createTicketChannel(modalSubmission, state);
+  await createTicketChannel(interaction, state);
   wizardStates.delete(interaction.user.id);
 }
 
