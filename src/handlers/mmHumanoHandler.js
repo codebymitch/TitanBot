@@ -13,11 +13,15 @@ import {
   ActionRowBuilder,
   StringSelectMenuBuilder,
   UserSelectMenuBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   PermissionFlagsBits,
   ChannelType
 } from 'discord.js';
 import mmConfig from '../config/mmConfig.js';
 import { logger } from '../utils/logger.js';
+import { safeShowModal } from '../utils/interactionValidator.js';
 
 // Custom IDs for the wizard
 export const WIZARD_IDS = {
@@ -166,14 +170,51 @@ function sanitizeChannelName(value) {
     .slice(0, 90);
 }
 
+function sanitizeTopicValue(value) {
+  return value
+    ? value.toString().replace(/\|/g, '/').replace(/[\r\n]/g, ' ').trim().slice(0, 200)
+    : '';
+}
+
+function formatTransactionAmount(value) {
+  if (!value) return 'N/A';
+  const cleaned = value.toString().trim().replace(/[^0-9,\.]/g, '').replace(/\s+/g, ' ');
+  return cleaned.startsWith('R$') ? cleaned : 'R$ ' + cleaned;
+}
+
+function createTransactionDetailsModal() {
+  return new ModalBuilder()
+    .setCustomId('mm_transaction_details_modal')
+    .setTitle('Detalhes da Transação')
+    .addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('mm_amount')
+          .setLabel('Valor da transação (ex: 150,00)')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setPlaceholder('150,00')
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('mm_details')
+          .setLabel('Descrição breve da negociação')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true)
+          .setPlaceholder('Ex: Venda de item digital, entrega após confirmação do pagamento')
+      )
+    );
+}
+
 function createTicketTableEmbed(data) {
-  const { buyerDisplay, sellerDisplay, method, statusDisplay, middlemanDisplay } = data;
+  const { buyerDisplay, sellerDisplay, method, amountDisplay, statusDisplay, middlemanDisplay } = data;
 
   let table = '```';
   table += '┌──────────────────────────────────────────┐\n';
   table += '│        DADOS DA INTERMEDIAÇÃO            │\n';
   table += '├──────────────────────────────────────────┤\n';
   table += '│ 💵 Método: ' + method.padEnd(29) + '│\n';
+  table += '│ 💰 Valor:  ' + amountDisplay.padEnd(29) + '│\n';
   table += '│ 👤 Comprador: ' + buyerDisplay.padEnd(24) + '│\n';
   table += '│ 🎒 Vendedor:  ' + sellerDisplay.padEnd(24) + '│\n';
   table += '├──────────────────────────────────────────┤\n';
@@ -188,12 +229,22 @@ function createTicketTableEmbed(data) {
 
   const statusColor = data.statusColor || 0x3498DB;
 
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(statusColor)
     .setTitle('🛡️ Intermediação Ativa')
     .setDescription(table)
     .setFooter({ text: 'ID: ' + Date.now().toString(36).toUpperCase() })
     .setTimestamp();
+
+  if (data.detailsDisplay) {
+    embed.addFields({
+      name: '📌 Detalhes da negociação',
+      value: data.detailsDisplay,
+      inline: false
+    });
+  }
+
+  return embed;
 }
 
 /**
@@ -334,20 +385,18 @@ export async function handleRoleSelect(interaction) {
  * Handle counterparty selection
  */
 export async function handleCounterpartySelect(interaction) {
-  await interaction.deferUpdate();
-
   const state = wizardStates.get(interaction.user.id);
   if (!state) {
-    return interaction.followUp({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
+    return interaction.reply({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
   }
 
   const selectedUserId = interaction.values?.[0];
   if (!selectedUserId) {
-    return interaction.followUp({ content: '❌ Você precisa selecionar um usuário.', ephemeral: true });
+    return interaction.reply({ content: '❌ Você precisa selecionar um usuário.', ephemeral: true });
   }
 
   if (selectedUserId === interaction.user.id) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '❌ Você não pode selecionar a si mesmo como contraparte!',
       ephemeral: true
     });
@@ -355,13 +404,42 @@ export async function handleCounterpartySelect(interaction) {
 
   const selectedMember = await interaction.guild.members.fetch(selectedUserId).catch(() => null);
   if (!selectedMember) {
-    return interaction.followUp({ content: '❌ Não foi possível encontrar o usuário selecionado.', ephemeral: true });
+    return interaction.reply({ content: '❌ Não foi possível encontrar o usuário selecionado.', ephemeral: true });
   }
 
   state.counterparty = selectedMember;
+  state.step = 'transaction_details';
+
+  const modal = createTransactionDetailsModal();
+  const modalShown = await safeShowModal(interaction, modal);
+  if (!modalShown) {
+    return;
+  }
+
+  const modalSubmission = await interaction.awaitModalSubmit({
+    filter: i => i.user.id === interaction.user.id,
+    time: 120000
+  }).catch(() => null);
+
+  if (!modalSubmission) {
+    return;
+  }
+
+  await modalSubmission.deferReply({ ephemeral: true });
+
+  const rawAmount = modalSubmission.fields.getTextInputValue('mm_amount').trim();
+  const rawDetails = modalSubmission.fields.getTextInputValue('mm_details').trim();
+  const cleanedAmount = rawAmount.replace(/[^0-9,\.]/g, '').trim();
+
+  if (!cleanedAmount) {
+    return modalSubmission.editReply({ content: '❌ Valor inválido. Por favor, insira um valor numérico válido.', ephemeral: true });
+  }
+
+  state.amount = formatTransactionAmount(cleanedAmount);
+  state.details = sanitizeTopicValue(rawDetails);
   state.step = 'complete';
 
-  await createTicketChannel(interaction, state);
+  await createTicketChannel(modalSubmission, state);
   wizardStates.delete(interaction.user.id);
 }
 
@@ -432,17 +510,6 @@ async function createTicketChannel(interaction, state) {
           ]
         },
         {
-          id: mmConfig.mmRoleId,
-          allow: [
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ReadMessageHistory,
-            PermissionFlagsBits.ManageMessages,
-            PermissionFlagsBits.AddReactions,
-            PermissionFlagsBits.AttachFiles
-          ]
-        },
-        {
           id: mmConfig.staffRoleId,
           allow: [
             PermissionFlagsBits.ViewChannel,
@@ -462,6 +529,8 @@ async function createTicketChannel(interaction, state) {
       buyerId: buyer.id,
       sellerId: seller.id,
       method: paymentMethod.toUpperCase(),
+      amount: state.amount,
+      details: state.details,
       status: 'PENDING'
     });
     await channel.setTopic(topicData);
@@ -472,6 +541,8 @@ async function createTicketChannel(interaction, state) {
       buyerDisplay: buyer.user.username,
       sellerDisplay: seller.user.username,
       method: methodLabel,
+      amountDisplay: state.amount || 'N/A',
+      detailsDisplay: state.details || 'Nenhum detalhe informado.',
       statusDisplay: mmConfig.statusLabels.PENDING,
       middlemanDisplay: null,
       statusColor: mmConfig.statusColors.PENDING
@@ -564,6 +635,8 @@ export async function handleRequestMM(interaction) {
     buyerDisplay: buyerName,
     sellerDisplay: sellerName,
     method: data.method,
+    amountDisplay: data.amount || 'N/A',
+    detailsDisplay: data.details || 'Nenhum detalhe informado.',
     statusDisplay: mmConfig.statusLabels.NOTIFIED,
     middlemanDisplay: null,
     statusColor: mmConfig.statusColors.NOTIFIED
@@ -579,8 +652,8 @@ export async function handleRequestMM(interaction) {
     });
   }
 
-  // Ping the MM/Staff role
-  const roleToPing = mmConfig.mmRoleId || mmConfig.staffRoleId;
+  // Ping the staff role only
+  const roleToPing = mmConfig.staffRoleId;
   if (roleToPing) {
     await channel.send({
       content: '<@&' + roleToPing + '> Nova intermediação solicitada!\n' +
@@ -651,6 +724,8 @@ export async function handleClaimMM(interaction) {
     buyerDisplay: buyerName,
     sellerDisplay: sellerName,
     method: data.method,
+    amountDisplay: data.amount || 'N/A',
+    detailsDisplay: data.details || 'Nenhum detalhe informado.',
     statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
     middlemanDisplay: interaction.user.username,
     statusColor: mmConfig.statusColors.IN_PROGRESS
@@ -696,11 +771,8 @@ export async function handleCloseMM(interaction) {
     });
   }
 
-  // Only the assigned middleman or an admin can close
-  const member = await interaction.guild.members.fetch(interaction.user.id);
-  const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-  
-  if (data.mmId !== interaction.user.id && !isAdmin) {
+  // Only the assigned middleman can close
+  if (data.mmId !== interaction.user.id) {
     return interaction.followUp({
       content: '❌ Apenas o middleman responsável pode fechar esta intermediação.',
       ephemeral: true
@@ -728,6 +800,8 @@ export async function handleCloseMM(interaction) {
     buyerDisplay: buyerName,
     sellerDisplay: sellerName,
     method: data.method,
+    amountDisplay: data.amount || 'N/A',
+    detailsDisplay: data.details || 'Nenhum detalhe informado.',
     statusDisplay: mmConfig.statusLabels.COMPLETED,
     middlemanDisplay: interaction.user.username,
     statusColor: mmConfig.statusColors.COMPLETED
