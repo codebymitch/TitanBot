@@ -23,6 +23,7 @@ const mmConfig = {
     PENDING: '⏳ AGUARDANDO MIDDLEMAN',
     NOTIFIED: '⏳ SUPORTE NOTIFICADO',
     IN_PROGRESS: '🟢 EM ANDAMENTO',
+    DELIVERED: '✅ ENTREGUE / AGUARDANDO MM',
     COMPLETED: '✅ INTERMEDIAÇÃO CONCLUÍDA',
     CANCELLED: '❌ INTERMEDIAÇÃO CANCELADA'
   },
@@ -32,6 +33,7 @@ const mmConfig = {
     PENDING: 0x3498DB,      // Blue
     NOTIFIED: 0xF39C12,     // Orange
     IN_PROGRESS: 0x2ECC71,  // Green
+    DELIVERED: 0x1ABC9C,    // Turquoise
     COMPLETED: 0x27AE60,    // Dark Green
     CANCELLED: 0xE74C3C     // Red
   }

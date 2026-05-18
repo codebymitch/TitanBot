@@ -31,6 +31,9 @@ export const WIZARD_IDS = {
   COUNTERPARTY_SELECT: 'mm_counterparty_select',
   REQUEST_MM: 'mm_request_middleman',
   CLAIM_MM: 'mm_claim_middleman',
+  CONFIRM_DELIVERY: 'mm_confirm_entrega',
+  CONFIRM_DELIVERY_MODAL: 'mm_confirmacao_entrega',
+  FINALIZE_MM: 'mm_finalizar_intermediacao',
   CLOSE_MM: 'mm_close_intermediacao'
 };
 
@@ -268,6 +271,51 @@ function createCloseMMButton() {
         .setCustomId(WIZARD_IDS.CLOSE_MM)
         .setLabel('🔒 Fechar Intermediação')
         .setStyle(ButtonStyle.Danger)
+    );
+}
+
+/**
+ * Create the "Confirm Delivery" button (for buyer after MM claims)
+ */
+function createConfirmDeliveryButton() {
+  return new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId(WIZARD_IDS.CONFIRM_DELIVERY)
+        .setLabel('📦 Confirmar Entrega')
+        .setStyle(ButtonStyle.Success)
+    );
+}
+
+/**
+ * Create the "Finalize Intermediation" button (for MM after buyer confirms)
+ */
+function createFinalizeMMButton() {
+  return new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId(WIZARD_IDS.FINALIZE_MM)
+        .setLabel('🔒 Finalizar Intermediação')
+        .setStyle(ButtonStyle.Danger)
+    );
+}
+
+/**
+ * Create the delivery confirmation modal
+ */
+function createConfirmDeliveryModal() {
+  return new ModalBuilder()
+    .setCustomId(WIZARD_IDS.CONFIRM_DELIVERY_MODAL)
+    .setTitle('Confirmação de Recebimento')
+    .addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('txt_confirmacao_entrega')
+          .setLabel('Digite \'SIM\' para confirmar que recebeu o item:')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setPlaceholder('SIM')
+      )
     );
 }
 
@@ -742,7 +790,7 @@ export async function handleClaimMM(interaction) {
   if (tableMessage) {
     await tableMessage.edit({
       embeds: [createTicketTableEmbed(tableData)],
-      components: [createCloseMMButton()]
+      components: [createConfirmDeliveryButton()]
     });
   }
 
@@ -759,9 +807,9 @@ export async function handleClaimMM(interaction) {
 }
 
 /**
- * Handle close intermediation button
+ * Handle confirm delivery button (buyer only)
  */
-export async function handleCloseMM(interaction) {
+export async function handleConfirmDelivery(interaction) {
   // CRITICAL: Defer immediately
   await interaction.deferUpdate();
 
@@ -776,10 +824,145 @@ export async function handleCloseMM(interaction) {
     });
   }
 
-  // Only the assigned middleman can close
-  if (data.mmId !== interaction.user.id) {
+  // Only the buyer can confirm delivery
+  if (data.buyerId !== interaction.user.id) {
     return interaction.followUp({
-      content: '❌ Apenas o middleman responsável pode fechar esta intermediação.',
+      content: '❌ Apenas o Comprador pode confirmar o recebimento do item.',
+      ephemeral: true
+    });
+  }
+
+  // Show the confirmation modal
+  const modal = createConfirmDeliveryModal();
+  const modalShown = await safeShowModal(interaction, modal);
+  if (!modalShown) {
+    return interaction.followUp({
+      content: '❌ Não foi possível abrir o modal. Tente novamente.',
+      ephemeral: true
+    });
+  }
+}
+
+/**
+ * Handle delivery confirmation modal submission
+ */
+export async function handleConfirmDeliveryModal(interaction) {
+  // CRITICAL: Defer immediately
+  await interaction.deferUpdate();
+
+  const channel = interaction.channel;
+  const topic = channel.topic || '';
+  const data = parseTopicData(topic);
+
+  if (!data) {
+    return interaction.followUp({
+      content: '❌ Dados da intermediação inválidos.',
+      ephemeral: true
+    });
+  }
+
+  // Only the buyer can submit this modal
+  if (data.buyerId !== interaction.user.id) {
+    return interaction.followUp({
+      content: '❌ Apenas o Comprador pode confirmar o recebimento.',
+      ephemeral: true
+    });
+  }
+
+  // Get the input and validate
+  const confirmationInput = interaction.fields.getTextInputValue('txt_confirmacao_entrega')
+    .trim()
+    .toLowerCase();
+
+  if (confirmationInput !== 'sim') {
+    return interaction.reply({
+      content: '❌ Confirmação recusada. Você precisa digitar exatamente \'SIM\' para prosseguir.',
+      ephemeral: true
+    });
+  }
+
+  // Update status to DELIVERED
+  data.status = 'DELIVERED';
+  await channel.setTopic(serializeTopicData(data));
+
+  // Fetch usernames
+  let buyerName = 'Unknown';
+  let sellerName = 'Unknown';
+  let middlemanName = null;
+  
+  try {
+    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
+    if (buyerMember) buyerName = buyerMember.user.username;
+  } catch { /* ignore */ }
+  try {
+    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
+    if (sellerMember) sellerName = sellerMember.user.username;
+  } catch { /* ignore */ }
+  try {
+    if (data.mmId) {
+      const mmMember = await interaction.guild.members.fetch(data.mmId);
+      if (mmMember) middlemanName = mmMember.user.username;
+    }
+  } catch { /* ignore */ }
+
+  // Update embed with DELIVERED status
+  const tableData = {
+    buyerDisplay: buyerName,
+    sellerDisplay: sellerName,
+    method: data.method,
+    amountDisplay: data.amount || 'N/A',
+    statusDisplay: mmConfig.statusLabels.DELIVERED,
+    middlemanDisplay: middlemanName,
+    statusColor: mmConfig.statusColors.DELIVERED
+  };
+
+  const messages = await channel.messages.fetch({ limit: 10 });
+  const tableMessage = messages.find(m => m.embeds.length > 0 && m.embeds[0].title === '🛡️ Intermediação Ativa');
+
+  if (tableMessage) {
+    await tableMessage.edit({
+      embeds: [createTicketTableEmbed(tableData)],
+      components: [createFinalizeMMButton()]
+    });
+  }
+
+  // Send notification
+  await channel.send({
+    content: '✅ O Comprador **' + interaction.user.username + '** confirmou o recebimento do item.\n' +
+             'Middleman pode agora finalizar a intermediação.'
+  });
+
+  await interaction.followUp({
+    content: '✅ Recebimento confirmado com sucesso!',
+    ephemeral: true
+  });
+}
+
+/**
+ * Handle finalize intermediation button (MM only or Admin)
+ */
+export async function handleFinalizeMM(interaction) {
+  // CRITICAL: Defer immediately
+  await interaction.deferUpdate();
+
+  const channel = interaction.channel;
+  const topic = channel.topic || '';
+  const data = parseTopicData(topic);
+
+  if (!data) {
+    return interaction.followUp({
+      content: '❌ Dados da intermediação inválidos.',
+      ephemeral: true
+    });
+  }
+
+  const member = await interaction.guild.members.fetch(interaction.user.id);
+  const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+
+  // Only the assigned middleman or an admin can finalize
+  if (data.mmId !== interaction.user.id && !isAdmin) {
+    return interaction.followUp({
+      content: '❌ Apenas o Middleman responsável ou um Administrador pode finalizar esta intermediação.',
       ephemeral: true
     });
   }
@@ -824,7 +1007,7 @@ export async function handleCloseMM(interaction) {
   // Send final message with countdown
   const countdownMsg = await channel.send({
     content: '🔒 **Intermediação Concluída**\n' +
-             'Fechada por: ' + interaction.user.toString() + '\n\n' +
+             'Finalizada por: ' + interaction.user.toString() + '\n\n' +
              '⚠️ Este canal será deletado em **5 segundos**...'
   });
 
@@ -834,7 +1017,7 @@ export async function handleCloseMM(interaction) {
     try {
       await countdownMsg.edit({
         content: '🔒 **Intermediação Concluída**\n' +
-                 'Fechada por: ' + interaction.user.toString() + '\n\n' +
+                 'Finalizada por: ' + interaction.user.toString() + '\n\n' +
                  '⚠️ Este canal será deletado em **' + i + ' segundos**...'
       });
     } catch { /* ignore */ }
@@ -860,6 +1043,9 @@ export default {
   handleCounterpartySelect,
   handleRequestMM,
   handleClaimMM,
+  handleConfirmDelivery,
+  handleConfirmDeliveryModal,
+  handleFinalizeMM,
   handleCloseMM,
   parseTopicData,
   serializeTopicData,
