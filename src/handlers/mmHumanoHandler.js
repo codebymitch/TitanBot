@@ -43,7 +43,7 @@ const wizardStates = new Map();
 function createPaymentSelectEmbed() {
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setTitle('💳 Passo 1/3 - Método de Pagamento')
+    .setTitle('💳 Passo 1/4 - Método de Pagamento')
     .setDescription('```' +
       '┌────────────────────────────────────────┐\n' +
       '│  Selecione o método de pagamento que   │\n' +
@@ -82,7 +82,7 @@ function createPaymentSelectMenu() {
 function createRoleSelectEmbed() {
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setTitle('👤 Passo 2/3 - Seu Papel')
+    .setTitle('👤 Passo 2/4 - Seu Papel')
     .setDescription('```' +
       '┌────────────────────────────────────────┐\n' +
       '│  Você é o comprador ou o vendedor      │\n' +
@@ -130,7 +130,7 @@ function createCounterpartySelectEmbed(userRole) {
   
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setTitle(roleEmoji + ' Passo 3/3 - Selecionar ' + roleLabel)
+    .setTitle(roleEmoji + ' Passo 3/4 - Selecionar ' + roleLabel)
     .setDescription('```' +
       '┌────────────────────────────────────────┐\n' +
       '│  Selecione o ' + roleLabel.toLowerCase() + ' com quem você    │\n' +
@@ -182,10 +182,10 @@ function formatTransactionAmount(value) {
   return cleaned.startsWith('R$') ? cleaned : 'R$ ' + cleaned;
 }
 
-function createTransactionDetailsModal() {
+function createAmountModal() {
   return new ModalBuilder()
-    .setCustomId('mm_transaction_details_modal')
-    .setTitle('Detalhes da Transação')
+    .setCustomId('mm_amount_modal')
+    .setTitle('💰 Passo 4/4 - Valor da Transação')
     .addComponents(
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
@@ -194,14 +194,6 @@ function createTransactionDetailsModal() {
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setPlaceholder('150,00')
-      ),
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder()
-          .setCustomId('mm_details')
-          .setLabel('Descrição breve da negociação')
-          .setStyle(TextInputStyle.Paragraph)
-          .setRequired(true)
-          .setPlaceholder('Ex: Venda de item digital, entrega após confirmação do pagamento')
       )
     );
 }
@@ -236,13 +228,6 @@ function createTicketTableEmbed(data) {
     .setFooter({ text: 'ID: ' + Date.now().toString(36).toUpperCase() })
     .setTimestamp();
 
-  if (data.detailsDisplay) {
-    embed.addFields({
-      name: '📌 Detalhes da negociação',
-      value: data.detailsDisplay,
-      inline: false
-    });
-  }
 
   return embed;
 }
@@ -408,9 +393,9 @@ export async function handleCounterpartySelect(interaction) {
   }
 
   state.counterparty = selectedMember;
-  state.step = 'transaction_details';
+  state.step = 'amount';
 
-  const modal = createTransactionDetailsModal();
+  const modal = createAmountModal();
   const modalShown = await safeShowModal(interaction, modal);
   if (!modalShown) {
     return;
@@ -428,7 +413,6 @@ export async function handleCounterpartySelect(interaction) {
   await modalSubmission.deferReply({ ephemeral: true });
 
   const rawAmount = modalSubmission.fields.getTextInputValue('mm_amount').trim();
-  const rawDetails = modalSubmission.fields.getTextInputValue('mm_details').trim();
   const cleanedAmount = rawAmount.replace(/[^0-9,\.]/g, '').trim();
 
   if (!cleanedAmount) {
@@ -436,7 +420,6 @@ export async function handleCounterpartySelect(interaction) {
   }
 
   state.amount = formatTransactionAmount(cleanedAmount);
-  state.details = sanitizeTopicValue(rawDetails);
   state.step = 'complete';
 
   await createTicketChannel(modalSubmission, state);
@@ -530,7 +513,6 @@ async function createTicketChannel(interaction, state) {
       sellerId: seller.id,
       method: paymentMethod.toUpperCase(),
       amount: state.amount,
-      details: state.details,
       status: 'PENDING'
     });
     await channel.setTopic(topicData);
@@ -542,7 +524,6 @@ async function createTicketChannel(interaction, state) {
       sellerDisplay: seller.user.username,
       method: methodLabel,
       amountDisplay: state.amount || 'N/A',
-      detailsDisplay: state.details || 'Nenhum detalhe informado.',
       statusDisplay: mmConfig.statusLabels.PENDING,
       middlemanDisplay: null,
       statusColor: mmConfig.statusColors.PENDING
@@ -636,7 +617,6 @@ export async function handleRequestMM(interaction) {
     sellerDisplay: sellerName,
     method: data.method,
     amountDisplay: data.amount || 'N/A',
-    detailsDisplay: data.details || 'Nenhum detalhe informado.',
     statusDisplay: mmConfig.statusLabels.NOTIFIED,
     middlemanDisplay: null,
     statusColor: mmConfig.statusColors.NOTIFIED
@@ -725,7 +705,6 @@ export async function handleClaimMM(interaction) {
     sellerDisplay: sellerName,
     method: data.method,
     amountDisplay: data.amount || 'N/A',
-    detailsDisplay: data.details || 'Nenhum detalhe informado.',
     statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
     middlemanDisplay: interaction.user.username,
     statusColor: mmConfig.statusColors.IN_PROGRESS
@@ -801,7 +780,6 @@ export async function handleCloseMM(interaction) {
     sellerDisplay: sellerName,
     method: data.method,
     amountDisplay: data.amount || 'N/A',
-    detailsDisplay: data.details || 'Nenhum detalhe informado.',
     statusDisplay: mmConfig.statusLabels.COMPLETED,
     middlemanDisplay: interaction.user.username,
     statusColor: mmConfig.statusColors.COMPLETED
