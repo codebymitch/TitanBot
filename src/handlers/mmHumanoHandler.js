@@ -730,7 +730,7 @@ export async function handleRequestMM(interaction) {
  * Check if a member is staff (can claim/close MM tickets)
  * Checks: role named "Suporte", mmConfig.staffRoleId, or guild owner
  */
-async function isUserStaff(member, guild) {
+export async function isUserStaff(member, guild) {
   // Check if guild owner
   if (member.id === guild.ownerId) {
     return true;
@@ -775,7 +775,7 @@ export async function handleClaimMM(interaction) {
     }
 
     // Check if user is trying to assume their own ticket (FAST VALIDATION)
-    if (data.buyerId === interaction.user.id) {
+    if (data.buyerId === interaction.user.id || data.sellerId === interaction.user.id) {
       return interaction.followUp({
         content: '❌ Você não pode assumir sua própria intermediação.',
         ephemeral: true
@@ -830,7 +830,7 @@ export async function handleClaimMM(interaction) {
     if (tableMessage) {
       await tableMessage.edit({
         embeds: [createTicketTableEmbed(tableData)],
-        components: [createConfirmDeliveryButton()]
+        components: [createConfirmDeliveryButton(), createCloseMMButton()]
       });
     }
 
