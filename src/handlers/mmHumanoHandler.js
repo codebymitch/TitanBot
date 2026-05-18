@@ -647,6 +647,20 @@ async function createTicketChannel(interaction, state) {
         '```'
     });
 
+    // Auto-ping support/middleman when channel is created
+    const supportRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'suporte');
+    if (supportRole) {
+      await channel.send({
+        content: '🔔 <@&' + supportRole.id + '> Nova intermediação criada!\n' +
+                 'Comprador: <@' + buyer.id + '> | Vendedor: <@' + seller.id + '>'
+      });
+    } else if (mmConfig.staffRoleId) {
+      await channel.send({
+        content: '🔔 <@&' + mmConfig.staffRoleId + '> Nova intermediação criada!\n' +
+                 'Comprador: <@' + buyer.id + '> | Vendedor: <@' + seller.id + '>'
+      });
+    }
+
     // Notify the initiator
     await interaction.followUp({
       content: '✅ Intermediação criada com sucesso!\nCanal: ' + channel.toString(),
@@ -725,13 +739,17 @@ export async function handleRequestMM(interaction) {
     }
   }
 
-  // Ping the staff role only
-  const roleToPing = mmConfig.staffRoleId;
+  // Ping the staff role - try "Suporte" role first, then staffRoleId
+  const supportRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'suporte');
+  const roleToPing = supportRole?.id || mmConfig.staffRoleId;
+  
   if (roleToPing) {
     await channel.send({
-      content: '<@&' + roleToPing + '> Nova intermediação solicitada!\n' +
+      content: '🚨 <@&' + roleToPing + '> Intermediação solicitada!\n' +
                'Comprador: <@' + data.buyerId + '> | Vendedor: <@' + data.sellerId + '>'
     });
+  } else {
+    logger.warn('No staff role found to ping for MM request', { channelId: channel.id });
   }
 
   await interaction.followUp({
