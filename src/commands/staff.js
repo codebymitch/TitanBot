@@ -1,13 +1,13 @@
 /**
- * MM Staff Management Command
+ * Staff Management Command
  * 
  * Allows server administrators to configure which roles can claim and close
  * middleman tickets. By default, users with role name "Suporte" can claim.
  * 
  * Usage:
- *   /mmstaff add-role <role> - Add a role that can claim MM tickets
- *   /mmstaff remove-role <role> - Remove a role from MM staff list
- *   /mmstaff list - List all roles with MM permissions
+ *   /staff add-role <role> - Add a role that can claim MM tickets
+ *   /staff remove-role <role> - Remove a role from MM staff list
+ *   /staff list - List all roles with MM permissions
  */
 
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
@@ -17,7 +17,7 @@ import { isUserStaff } from '../handlers/mmHumanoHandler.js';
 const guildMMRoles = new Map();
 
 export const data = new SlashCommandBuilder()
-  .setName('mmstaff')
+  .setName('staff')
   .setDescription('🛡️ Gerenciar quais cargos podem assumir intermediações')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand(sub =>
@@ -113,7 +113,7 @@ export async function execute(interaction) {
       list += '\n*Nenhum cargo adicional configurado*';
     }
 
-    list += '\n\n**Para adicionar um cargo:**\n`/mmstaff add-role <cargo>`\n\n**Para remover:**\n`/mmstaff remove-role <cargo>`';
+    list += '\n\n**Para adicionar um cargo:**\n`/staff add-role <cargo>`\n\n**Para remover:**\n`/staff remove-role <cargo>`';
 
     return interaction.reply({
       content: list,
