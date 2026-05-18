@@ -12,6 +12,7 @@ import {
   handleStart,
   handlePaymentSelect,
   handleRoleSelect,
+  handleAmountModalSubmit,
   handleCounterpartySelect,
   handleRequestMM,
   handleClaimMM,
@@ -370,9 +371,18 @@ export default {
             }, interactionTraceContext));
           }
         } else if (interaction.isModalSubmit()) {
-          // NOTE: The new MM system does not use modals
-          // All interactions are handled via buttons and select menus
-          // Old MM modals are not supported here.
+          if (interaction.customId === 'mm_amount_modal') {
+            try {
+              await handleAmountModalSubmit(interaction);
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'modal',
+                customId: interaction.customId,
+                handler: 'mm_humano'
+              }, interactionTraceContext));
+            }
+            return;
+          }
 
           if (interaction.customId.startsWith('jtc_')) {
             logger.debug(`Skipping modal handler lookup for inline-awaited modal: ${interaction.customId}`, {

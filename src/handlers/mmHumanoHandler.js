@@ -349,7 +349,7 @@ export async function handlePaymentSelect(interaction) {
  * Handle role selection
  */
 export async function handleRoleSelect(interaction) {
-  // Do not defer here because we will show a modal immediately
+  // Show the amount modal as step 3
   const state = wizardStates.get(interaction.user.id);
   if (!state) {
     return interaction.followUp({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
@@ -362,33 +362,33 @@ export async function handleRoleSelect(interaction) {
   const modal = createAmountModal();
   const modalShown = await safeShowModal(interaction, modal);
   if (!modalShown) {
-    return;
+    return interaction.followUp({ content: '❌ Não foi possível abrir o modal. Tente novamente.', ephemeral: true });
+  }
+}
+
+/**
+ * Handle amount modal submission
+ */
+export async function handleAmountModalSubmit(interaction) {
+  const state = wizardStates.get(interaction.user.id);
+  if (!state) {
+    return interaction.reply({ content: '❌ Sessão expirada. Por favor, inicie novamente.', ephemeral: true });
   }
 
-  const modalSubmission = await interaction.awaitModalSubmit({
-    filter: i => i.user.id === interaction.user.id,
-    time: 120000
-  }).catch(() => null);
-
-  if (!modalSubmission) {
-    return;
-  }
-
-  await modalSubmission.deferReply({ ephemeral: true });
-
-  const rawAmount = modalSubmission.fields.getTextInputValue('mm_amount').trim();
+  const rawAmount = interaction.fields.getTextInputValue('mm_amount').trim();
   const cleanedAmount = rawAmount.replace(/[^0-9,\.]/g, '').trim();
 
   if (!cleanedAmount) {
-    return modalSubmission.editReply({ content: '❌ Valor inválido. Por favor, insira um valor numérico válido.', ephemeral: true });
+    return interaction.reply({ content: '❌ Valor inválido. Por favor, insira um valor numérico válido.', ephemeral: true });
   }
 
   state.amount = formatTransactionAmount(cleanedAmount);
   state.step = 'counterparty';
 
-  await modalSubmission.editReply({
-    embeds: [createCounterpartySelectEmbed(role)],
-    components: [createCounterpartySelectMenu()]
+  await interaction.reply({
+    embeds: [createCounterpartySelectEmbed(state.userRole)],
+    components: [createCounterpartySelectMenu()],
+    ephemeral: true
   });
 }
 
@@ -832,6 +832,7 @@ export default {
   handleStart,
   handlePaymentSelect,
   handleRoleSelect,
+  handleAmountModalSubmit,
   handleCounterpartySelect,
   handleRequestMM,
   handleClaimMM,
