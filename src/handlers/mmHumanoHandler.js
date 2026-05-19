@@ -1052,114 +1052,95 @@ export async function handleClaimMM(interaction) {
  * Handle complete ticket button (MM only)
  */
 export async function handleCompleteTicket(interaction) {
-  await interaction.deferUpdate();
+  // ACK imediato — nunca pode vir depois de awaits
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferUpdate();
+  }
 
   const channel = interaction.channel;
-  const topic = channel.topic || '';
-  const data = parseTopicData(topic);
+  const data = parseTopicData(channel.topic || '');
 
   if (!data) {
-    return interaction.followUp({
-      content: '❌ Dados da intermediação inválidos.',
-      ephemeral: true
-    });
+    return interaction.followUp({ content: '❌ Dados da intermediação inválidos.', ephemeral: true });
   }
 
-  // MM responsável ou cargo de Suporte/Middleman pode concluir
   const canComplete = await canActAsMMOnTicket(interaction, data);
   if (!canComplete) {
-    return interaction.followUp({
-      content: '❌ Apenas o Middleman responsável pode concluir esta intermediação.',
-      ephemeral: true
-    });
+    return interaction.followUp({ content: '❌ Apenas o Middleman responsável pode concluir esta intermediação.', ephemeral: true });
   }
 
-  // Update status
+  // Persistir status (com timeout para não bloquear)
   data.status = 'COMPLETED';
-  await channel.setTopic(serializeTopicData(data));
+  try {
+    await Promise.race([
+      channel.setTopic(serializeTopicData(data)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+    ]);
+  } catch (err) {
+    logger.warn('setTopic timeout/falhou em handleCompleteTicket', { error: err.message });
+  }
 
-  // Fetch usernames from cache
-  const buyerMember = interaction.guild.members.cache.get(data.buyerId);
-  const sellerMember = interaction.guild.members.cache.get(data.sellerId);
-  const buyerName = buyerMember?.user.username || 'Unknown';
-  const sellerName = sellerMember?.user.username || 'Unknown';
+  // Nomes do cache
+  const buyerName = interaction.guild.members.cache.get(data.buyerId)?.user.username || 'Unknown';
+  const sellerName = interaction.guild.members.cache.get(data.sellerId)?.user.username || 'Unknown';
 
-  // Update embed
-  const tableData = {
-    buyerDisplay: buyerName,
-    sellerDisplay: sellerName,
-    method: data.method,
-    amountDisplay: data.amount || 'N/A',
-    statusDisplay: mmConfig.statusLabels.COMPLETED,
-    middlemanDisplay: interaction.user.username,
-    statusColor: mmConfig.statusColors.COMPLETED
-  };
-
+  // Atualizar embed
   if (data.tableMessageId) {
     try {
       const tableMessage = await channel.messages.fetch(data.tableMessageId);
       if (tableMessage) {
         await tableMessage.edit({
-          embeds: [createTicketTableEmbed(tableData)],
+          embeds: [createTicketTableEmbed({
+            buyerDisplay: buyerName,
+            sellerDisplay: sellerName,
+            method: data.method,
+            amountDisplay: data.amount || 'N/A',
+            statusDisplay: mmConfig.statusLabels.COMPLETED,
+            middlemanDisplay: interaction.user.username,
+            statusColor: mmConfig.statusColors.COMPLETED
+          })],
           components: []
         });
       }
     } catch (err) {
-      logger.warn('Failed to update table message', { error: err.message });
+      logger.warn('Failed to update table message on complete', { error: err.message });
     }
   }
 
-  // Send final message
   await channel.send({
     content: '✅ **Intermediação Concluída com Sucesso!**\n' +
              'Finalizada por: ' + interaction.user.toString() + '\n\n' +
              'Obrigado por usar nosso serviço de intermediação!'
   });
 
-  await interaction.followUp({
-    content: '✅ Intermediação concluída com sucesso!',
-    ephemeral: true
-  });
+  await interaction.followUp({ content: '✅ Intermediação concluída com sucesso!', ephemeral: true });
 
-  // Delete channel after a short delay
   await new Promise(resolve => setTimeout(resolve, 3000));
-  if (channel.deletable) {
-    await channel.delete();
-  }
+  if (channel.deletable) await channel.delete();
 }
 
 /**
- * Handle cancel ticket button (MM only)
+ * Handle cancel ticket button — abre modal de motivo (MM only)
+ * NÃO chama deferUpdate aqui pois modals exigem resposta não-deferred
  */
 export async function handleCancelTicket(interaction) {
   const channel = interaction.channel;
-  const topic = channel.topic || '';
-  const data = parseTopicData(topic);
+  const data = parseTopicData(channel.topic || '');
 
   if (!data) {
-    return interaction.reply({
-      content: '❌ Dados da intermediação inválidos.',
-      ephemeral: true
-    });
+    return interaction.reply({ content: '❌ Dados da intermediação inválidos.', ephemeral: true });
   }
 
-  // MM responsável ou cargo de Suporte/Middleman pode cancelar
   const canCancel = await canActAsMMOnTicket(interaction, data);
   if (!canCancel) {
-    return interaction.reply({
-      content: '❌ Apenas o Middleman responsável pode cancelar esta intermediação.',
-      ephemeral: true
-    });
+    return interaction.reply({ content: '❌ Apenas o Middleman responsável pode cancelar esta intermediação.', ephemeral: true });
   }
 
-  // Show cancel reason modal
+  // Modal precisa de showModal — não pode estar deferred antes
   const modal = createCancelReasonModal();
   const modalShown = await safeShowModal(interaction, modal);
   if (!modalShown) {
-    return interaction.reply({
-      content: '❌ Não foi possível abrir o modal. Tente novamente.',
-      ephemeral: true
-    });
+    return interaction.reply({ content: '❌ Não foi possível abrir o modal. Tente novamente.', ephemeral: true });
   }
 }
 
@@ -1167,74 +1148,68 @@ export async function handleCancelTicket(interaction) {
  * Handle cancel reason modal submission
  */
 export async function handleCancelReasonModal(interaction) {
-  const channel = interaction.channel;
-  const topic = channel.topic || '';
-  const data = parseTopicData(topic);
-
-  if (!data) {
-    return interaction.reply({
-      content: '❌ Dados da intermediação inválidos.',
-      ephemeral: true
-    });
-  }
-
-  // Only the assigned MM can cancel
-  if (data.mmId !== interaction.user.id) {
-    return interaction.reply({
-      content: '❌ Apenas o Middleman responsável pode cancelar esta intermediação.',
-      ephemeral: true
-    });
-  }
-
   const reason = interaction.fields.getTextInputValue('cancel_reason').trim();
-  
+
   if (!reason) {
-    return interaction.reply({
-      content: '❌ É necessário fornecer um motivo para o cancelamento.',
-      ephemeral: true
-    });
+    return interaction.reply({ content: '❌ É necessário fornecer um motivo para o cancelamento.', ephemeral: true });
   }
 
+  // ACK imediato após validação síncrona
   await interaction.deferUpdate();
 
-  // Update status
+  const channel = interaction.channel;
+  const data = parseTopicData(channel.topic || '');
+
+  if (!data) {
+    return interaction.followUp({ content: '❌ Dados da intermediação inválidos.', ephemeral: true });
+  }
+
+  // Verifica permissão com a mesma função centralizada
+  const canCancel = await canActAsMMOnTicket(interaction, data);
+  if (!canCancel) {
+    return interaction.followUp({ content: '❌ Apenas o Middleman responsável pode cancelar esta intermediação.', ephemeral: true });
+  }
+
+  // Persistir status (com timeout para não bloquear)
   data.status = 'CANCELLED';
   data.cancelReason = reason;
   data.cancelledBy = interaction.user.id;
-  await channel.setTopic(serializeTopicData(data));
+  try {
+    await Promise.race([
+      channel.setTopic(serializeTopicData(data)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+    ]);
+  } catch (err) {
+    logger.warn('setTopic timeout/falhou em handleCancelReasonModal', { error: err.message });
+  }
 
-  // Fetch usernames from cache
-  const buyerMember = interaction.guild.members.cache.get(data.buyerId);
-  const sellerMember = interaction.guild.members.cache.get(data.sellerId);
-  const buyerName = buyerMember?.user.username || 'Unknown';
-  const sellerName = sellerMember?.user.username || 'Unknown';
+  // Nomes do cache
+  const buyerName = interaction.guild.members.cache.get(data.buyerId)?.user.username || 'Unknown';
+  const sellerName = interaction.guild.members.cache.get(data.sellerId)?.user.username || 'Unknown';
 
-  // Update embed
-  const tableData = {
-    buyerDisplay: buyerName,
-    sellerDisplay: sellerName,
-    method: data.method,
-    amountDisplay: data.amount || 'N/A',
-    statusDisplay: mmConfig.statusLabels.CANCELLED,
-    middlemanDisplay: interaction.user.username,
-    statusColor: mmConfig.statusColors.CANCELLED
-  };
-
+  // Atualizar embed
   if (data.tableMessageId) {
     try {
       const tableMessage = await channel.messages.fetch(data.tableMessageId);
       if (tableMessage) {
         await tableMessage.edit({
-          embeds: [createTicketTableEmbed(tableData)],
+          embeds: [createTicketTableEmbed({
+            buyerDisplay: buyerName,
+            sellerDisplay: sellerName,
+            method: data.method,
+            amountDisplay: data.amount || 'N/A',
+            statusDisplay: mmConfig.statusLabels.CANCELLED,
+            middlemanDisplay: interaction.user.username,
+            statusColor: mmConfig.statusColors.CANCELLED
+          })],
           components: []
         });
       }
     } catch (err) {
-      logger.warn('Failed to update table message', { error: err.message });
+      logger.warn('Failed to update table message on cancel', { error: err.message });
     }
   }
 
-  // Send cancellation message with reason
   await channel.send({
     content: '❌ **Intermediação Cancelada**\n' +
              'Cancelada por: ' + interaction.user.toString() + '\n\n' +
@@ -1242,24 +1217,17 @@ export async function handleCancelReasonModal(interaction) {
              '```' + reason + '```'
   });
 
-  await interaction.followUp({
-    content: '✅ Intermediação cancelada com sucesso.',
-    ephemeral: true
-  });
+  await interaction.followUp({ content: '✅ Intermediação cancelada com sucesso.', ephemeral: true });
 
-  // Delete channel after a short delay
   await new Promise(resolve => setTimeout(resolve, 5000));
-  if (channel.deletable) {
-    await channel.delete();
-  }
+  if (channel.deletable) await channel.delete();
 }
 
 /**
- * Handle close intermediation button (legacy)
+ * Handle close intermediation button (legacy) — delega sem re-defer
  */
 export async function handleCloseMM(interaction) {
-  await interaction.deferUpdate();
-  // Redirect to complete ticket
+  // Não chama deferUpdate aqui — handleCompleteTicket verifica e faz o defer ele mesmo
   await handleCompleteTicket(interaction);
 }
 
@@ -1267,8 +1235,7 @@ export async function handleCloseMM(interaction) {
  * Handle close ticket via command button (legacy)
  */
 export async function handleCloseTicketCommand(interaction) {
-  await interaction.deferUpdate();
-  // Redirect to complete ticket
+  // Não chama deferUpdate aqui — handleCompleteTicket verifica e faz o defer ele mesmo
   await handleCompleteTicket(interaction);
 }
 
