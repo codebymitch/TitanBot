@@ -790,16 +790,13 @@ export async function isUserStaff(member, guild) {
 }
 
 export async function handleClaimMM(interaction) {
-  // CRITICAL: Defer immediately to prevent timeout
-  await interaction.deferUpdate();
-
   const channel = interaction.channel;
   const channelId = channel.id;
   const topic = channel.topic || '';
   const data = parseTopicData(topic);
 
   if (!data) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '❌ Dados da intermediação inválidos.',
       ephemeral: true
     });
@@ -807,10 +804,8 @@ export async function handleClaimMM(interaction) {
 
   // RACE CONDITION PREVENTION: Check if channel is already being claimed
   if (claimingChannels.has(channelId)) {
-    return interaction.followUp({
-      content: 'ℹ️ Alguém está assumindo esta intermediação no momento. Aguarde um segundo.',
-      ephemeral: true
-    });
+    await interaction.deferUpdate();
+    return;
   }
 
   // Check if already claimed FIRST (faster check)
@@ -823,7 +818,7 @@ export async function handleClaimMM(interaction) {
 
   // Check if user is trying to assume their own ticket (FAST VALIDATION)
   if (data.buyerId === interaction.user.id || data.sellerId === interaction.user.id) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '❌ Você não pode assumir sua própria intermediação.',
       ephemeral: true
     });
@@ -838,102 +833,105 @@ export async function handleClaimMM(interaction) {
   }, claimTimeout);
 
   try {
-// Check staff permissions using cache first to avoid unnecessary fetch delays
-  const member = interaction.guild.members.cache.get(interaction.user.id)
-    || await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
-  if (!member) {
-    claimingChannels.delete(channelId);
-    return interaction.followUp({
-      content: '❌ Erro ao verificar permissões.',
-      ephemeral: true
-    });
-  }
-
-  const isStaff = await isUserStaff(member, interaction.guild);
-  if (!isStaff) {
-    claimingChannels.delete(channelId);
-    return interaction.followUp({
-      content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
-      ephemeral: true
-    });
-  }
-
-  // DOUBLE-CHECK to prevent race condition from multiple simultaneous claims
-  const freshData = parseTopicData(channel.topic || '');
-  if (!freshData) {
-    claimingChannels.delete(channelId);
-    return interaction.followUp({
-      content: '❌ Dados da intermediação inválidos.',
-      ephemeral: true
-    });
-  }
-  if (freshData.mmId) {
-    claimingChannels.delete(channelId);
-    return interaction.followUp({
-      content: 'ℹ️ Esta intermediação já foi assumida por <@' + freshData.mmId + '>.',
-      ephemeral: true
-    });
-  }
-
-  // Update data with middleman info (ATOMIC: update immediately)
-  const updateData = { ...freshData };
-  updateData.mmId = interaction.user.id;
-  updateData.status = 'IN_PROGRESS';
-  await channel.setTopic(serializeTopicData(updateData));
-
-  await interaction.followUp({
-    content: '✅ Intermediação assumida com sucesso!',
-    ephemeral: true
-  });
-
-  // Continue updating ticket appearance without delaying the user response
-  const updateTask = (async () => {
-    const [buyerMember, sellerMember] = await Promise.all([
-      interaction.guild.members.cache.get(updateData.buyerId)
-        || interaction.guild.members.fetch(updateData.buyerId).catch(() => null),
-      interaction.guild.members.cache.get(updateData.sellerId)
-        || interaction.guild.members.fetch(updateData.sellerId).catch(() => null)
-    ]);
-
-    const buyerName = buyerMember?.user.username || 'Unknown';
-    const sellerName = sellerMember?.user.username || 'Unknown';
-
-    const tableData = {
-      buyerDisplay: buyerName,
-      sellerDisplay: sellerName,
-      method: updateData.method,
-      amountDisplay: updateData.amount || 'N/A',
-      statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
-      middlemanDisplay: interaction.user.username,
-      statusColor: mmConfig.statusColors.IN_PROGRESS
-    };
-
-    if (updateData.tableMessageId) {
-      try {
-        const tableMessage = await channel.messages.fetch(updateData.tableMessageId);
-        if (tableMessage) {
-          await tableMessage.edit({
-            embeds: [createTicketTableEmbed(tableData)],
-            components: [createConfirmDeliveryButton()]
-          });
-        }
-      } catch (err) {
-        logger.warn('Failed to update table message', { error: err.message });
-      }
-    }
-
-    try {
-      await channel.send({
-        content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
-                 'Vendedor e Comprador podem prosseguir de forma segura.'
+    // Check staff permissions using cache first to avoid unnecessary fetch delays
+    const member = interaction.guild.members.cache.get(interaction.user.id)
+      || await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+    if (!member) {
+      claimingChannels.delete(channelId);
+      return interaction.reply({
+        content: '❌ Erro ao verificar permissões.',
+        ephemeral: true
       });
-    } catch (err) {
-      logger.warn('Failed to send claim notification', { error: err.message });
     }
-  })();
 
-  void updateTask;
+    const isStaff = await isUserStaff(member, interaction.guild);
+    if (!isStaff) {
+      claimingChannels.delete(channelId);
+      return interaction.reply({
+        content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
+        ephemeral: true
+      });
+    }
 
+    // DOUBLE-CHECK to prevent race condition from multiple simultaneous claims
+    const freshData = parseTopicData(channel.topic || '');
+    if (!freshData) {
+      claimingChannels.delete(channelId);
+      return interaction.reply({
+        content: '❌ Dados da intermediação inválidos.',
+        ephemeral: true
+      });
+    }
+    if (freshData.mmId) {
+      claimingChannels.delete(channelId);
+      return interaction.reply({
+        content: 'ℹ️ Esta intermediação já foi assumida por <@' + freshData.mmId + '>.',
+        ephemeral: true
+      });
+    }
+
+    // Update data with middleman info (ATOMIC: update immediately)
+    const updateData = { ...freshData };
+    updateData.mmId = interaction.user.id;
+    updateData.status = 'IN_PROGRESS';
+    const topicUpdate = channel.setTopic(serializeTopicData(updateData)).catch(err => {
+      logger.warn('Failed to update channel topic during claim', { error: err.message });
+    });
+
+    await interaction.reply({
+      content: '✅ Intermediação assumida com sucesso!',
+      ephemeral: true
+    });
+
+    // Continue updating ticket appearance without delaying the user response
+    const updateTask = (async () => {
+      await topicUpdate;
+
+      const [buyerMember, sellerMember] = await Promise.all([
+        interaction.guild.members.cache.get(updateData.buyerId)
+          || interaction.guild.members.fetch(updateData.buyerId).catch(() => null),
+        interaction.guild.members.cache.get(updateData.sellerId)
+          || interaction.guild.members.fetch(updateData.sellerId).catch(() => null)
+      ]);
+
+      const buyerName = buyerMember?.user.username || 'Unknown';
+      const sellerName = sellerMember?.user.username || 'Unknown';
+
+      const tableData = {
+        buyerDisplay: buyerName,
+        sellerDisplay: sellerName,
+        method: updateData.method,
+        amountDisplay: updateData.amount || 'N/A',
+        statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
+        middlemanDisplay: interaction.user.username,
+        statusColor: mmConfig.statusColors.IN_PROGRESS
+      };
+
+      if (updateData.tableMessageId) {
+        try {
+          const tableMessage = await channel.messages.fetch(updateData.tableMessageId);
+          if (tableMessage) {
+            await tableMessage.edit({
+              embeds: [createTicketTableEmbed(tableData)],
+              components: [createConfirmDeliveryButton()]
+            });
+          }
+        } catch (err) {
+          logger.warn('Failed to update table message', { error: err.message });
+        }
+      }
+
+      try {
+        await channel.send({
+          content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
+                   'Vendedor e Comprador podem prosseguir de forma segura.'
+        });
+      } catch (err) {
+        logger.warn('Failed to send claim notification', { error: err.message });
+      }
+    })();
+
+    void updateTask;
   } finally {
     // Always remove the channel from claiming set
     clearTimeout(timeoutHandle);
