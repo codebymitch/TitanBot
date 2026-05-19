@@ -87,7 +87,7 @@ const THEME = {
   // Badge / identidade visual do ticket
   badgeEmoji: '🤝',
   badgeLabel: 'INTERMEDIAÇÃO',
-  footerText: 'Eclipse MM • Sistema de Intermediação',
+  footerText: 'Erednay MM • Sistema de Intermediação',
 };
 // ============================================================
 
@@ -116,11 +116,6 @@ function createPaymentSelectEmbed() {
       {
         name: '〡 Taxas Normais',
         value: 'R$1,00 Acima de R$2,50.\nR$2,15 Acima de R$100.\nR$4,30 Acima de R$200.\nR$6,80 Acima de R$400.\n1,2% Acima de R$700.\n\nEm conta adicionamos **4R$**.',
-        inline: false
-      },
-      {
-        name: '〡 Taxas Cross Trade',
-        value: 'R$0,60 - 2 Itens\nR$0,80 - 3+ Itens',
         inline: false
       }
     )

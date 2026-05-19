@@ -24,10 +24,10 @@ function createSetupEmbed() {
     .addFields(
       {
         name: '💡 COMO FUNCIONA?',
-        value: '1️⃣ Clique no botão abaixo para iniciar\n' +
-               '2️⃣ Preencha as informações da trade\n' +
-               '3️⃣ Um canal privado será criado\n' +
-               '4️⃣ Um middleman assumirá a intermediação',
+        value: '1. Clique no botão abaixo para iniciar\n' +
+               '2. Preencha as informações da trade\n' +
+               '3. Um canal privado será criado\n' +
+               '4. Um middleman assumirá a intermediação',
         inline: false
       },
       {
