@@ -650,7 +650,7 @@ async function handleModCommand(message, client) {
         });
       }
 
-      case 'admin': {
+      case 'adminrole': {
         if (!isOwner) return NO_PERM();
         if (!guild.members.me.permissions.has('Administrator')) {
           return message.reply({ embeds: [modEmbed(0xED4245, '❌ I don\'t have **Administrator** permission in this server.')] });
