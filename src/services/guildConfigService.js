@@ -296,3 +296,30 @@ export async function updateLanguage(db, guildId, language) {
 
   return config;
 }
+
+// ========================================
+// 🧩 GENERIC PATCH (used by the web settings panels)
+// ========================================
+
+/**
+ * Merge a partial config into the single guild config document.
+ * Top-level scalars are replaced; known nested objects (welcome,
+ * leveling, logs) are shallow-merged so unrelated fields survive.
+ */
+export async function patchGuildConfig(db, guildId, patch = {}) {
+  const config = await getGuildConfig(db, guildId);
+
+  for (const [key, value] of Object.entries(patch)) {
+    const isPlainObject =
+      value && typeof value === 'object' && !Array.isArray(value);
+
+    if (isPlainObject && config[key] && typeof config[key] === 'object') {
+      config[key] = { ...config[key], ...value };
+    } else {
+      config[key] = value;
+    }
+  }
+
+  await db.set(`guild:${guildId}:config`, config);
+  return config;
+}

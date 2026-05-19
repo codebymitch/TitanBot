@@ -8,6 +8,7 @@ import {
   updateWelcomeMessage,
   updateLogChannel,
   updateLogCategory,
+  patchGuildConfig,
 } from '../../services/guildConfigService.js';
 import {
   setLoggingEnabled,
@@ -33,6 +34,20 @@ function resolveChannel(guild, raw) {
   const ch = guild.channels.cache.get(String(raw));
   if (!ch || ch.type !== 0) return { ok: false };
   return { ok: true, id: ch.id };
+}
+
+// '' => null (clear). Otherwise must be a real, non-@everyone role.
+function resolveRole(guild, raw) {
+  if (raw === undefined || raw === null || raw === '') return { ok: true, id: null };
+  const r = guild.roles.cache.get(String(raw));
+  if (!r || r.id === guild.id) return { ok: false };
+  return { ok: true, id: r.id };
+}
+
+function clampInt(raw, min, max, fallback) {
+  const n = parseInt(raw, 10);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 }
 
 export function apiRoutes(client) {
@@ -132,6 +147,101 @@ export function apiRoutes(client) {
     } catch (e) {
       logger.error('dash logs category-channels', { error: e?.message });
       flashBack(req, res, 'err', 'No se pudo guardar el enrutamiento por categoría.');
+    }
+  });
+
+  router.post('/server/:id/general', async (req, res) => {
+    const language = req.body.language === 'en' ? 'en' : 'es';
+    const prefix = String(req.body.prefix || '!').trim().slice(0, 5) || '!';
+    try {
+      await patchGuildConfig(client.db, req.guild.id, { language, prefix });
+      flashBack(req, res, 'ok', 'Ajustes generales guardados.');
+    } catch (e) {
+      logger.error('dash general', { error: e?.message });
+      flashBack(req, res, 'err', 'No se pudo guardar.');
+    }
+  });
+
+  router.post('/server/:id/welcome/save', async (req, res) => {
+    const ch = resolveChannel(req.guild, req.body.channel);
+    if (!ch.ok) return flashBack(req, res, 'err', 'Canal de bienvenida inválido.');
+    const message = String(req.body.message || '').slice(0, 1500);
+    try {
+      await patchGuildConfig(client.db, req.guild.id, {
+        welcome: { channel: ch.id, message },
+      });
+      flashBack(req, res, 'ok', 'Bienvenida guardada.');
+    } catch (e) {
+      logger.error('dash welcome save', { error: e?.message });
+      flashBack(req, res, 'err', 'No se pudo guardar la bienvenida.');
+    }
+  });
+
+  router.post('/server/:id/leveling', async (req, res) => {
+    const ch = resolveChannel(req.guild, req.body.channel);
+    if (!ch.ok) return flashBack(req, res, 'err', 'Canal de niveles inválido.');
+    const xpmin = clampInt(req.body.xpmin, 1, 500, 15);
+    const xpmax = Math.max(xpmin, clampInt(req.body.xpmax, 1, 500, 25));
+    try {
+      await patchGuildConfig(client.db, req.guild.id, {
+        leveling: {
+          enabled: String(req.body.enabled) === '1',
+          announceLevelUp: String(req.body.announce) === '1',
+          levelUpChannel: ch.id,
+          xpPerMessage: { min: xpmin, max: xpmax },
+          xpCooldown: clampInt(req.body.cooldown, 0, 3600, 20),
+          xpMultiplier: clampInt(req.body.multiplier, 1, 10, 1),
+        },
+      });
+      flashBack(req, res, 'ok', 'Niveles guardado.');
+    } catch (e) {
+      logger.error('dash leveling', { error: e?.message });
+      flashBack(req, res, 'err', 'No se pudo guardar niveles.');
+    }
+  });
+
+  router.post('/server/:id/birthday', async (req, res) => {
+    const ch = resolveChannel(req.guild, req.body.channel);
+    const role = resolveRole(req.guild, req.body.role);
+    if (!ch.ok) return flashBack(req, res, 'err', 'Canal de cumpleaños inválido.');
+    if (!role.ok) return flashBack(req, res, 'err', 'Rol de cumpleaños inválido.');
+    try {
+      await patchGuildConfig(client.db, req.guild.id, {
+        birthdayChannelId: ch.id,
+        birthdayRoleId: role.id,
+      });
+      flashBack(req, res, 'ok', 'Cumpleaños guardado.');
+    } catch (e) {
+      logger.error('dash birthday', { error: e?.message });
+      flashBack(req, res, 'err', 'No se pudo guardar cumpleaños.');
+    }
+  });
+
+  router.post('/server/:id/moderation', async (req, res) => {
+    const mod = resolveRole(req.guild, req.body.modRole);
+    const admin = resolveRole(req.guild, req.body.adminRole);
+    if (!mod.ok || !admin.ok) return flashBack(req, res, 'err', 'Rol inválido.');
+    try {
+      await patchGuildConfig(client.db, req.guild.id, {
+        modRole: mod.id,
+        adminRole: admin.id,
+      });
+      flashBack(req, res, 'ok', 'Moderación guardada.');
+    } catch (e) {
+      logger.error('dash moderation', { error: e?.message });
+      flashBack(req, res, 'err', 'No se pudo guardar moderación.');
+    }
+  });
+
+  router.post('/server/:id/autorole', async (req, res) => {
+    const role = resolveRole(req.guild, req.body.autoRole);
+    if (!role.ok) return flashBack(req, res, 'err', 'Rol inválido.');
+    try {
+      await patchGuildConfig(client.db, req.guild.id, { autoRole: role.id });
+      flashBack(req, res, 'ok', 'Auto-rol guardado.');
+    } catch (e) {
+      logger.error('dash autorole', { error: e?.message });
+      flashBack(req, res, 'err', 'No se pudo guardar auto-rol.');
     }
   });
 
