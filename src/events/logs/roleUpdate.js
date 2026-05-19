@@ -1,5 +1,6 @@
 import { Events, AuditLogEvent } from 'discord.js';
 import { getGuildConfig } from '../../services/guildConfigService.js';
+import { isEventEnabled } from '../../services/loggingService.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 export default {
@@ -14,7 +15,7 @@ export default {
       oldMember.guild.id
     );
 
-    if (!config.logs?.enabled) return;
+    if (!isEventEnabled(config, 'role.update')) return;
 
     let logChannel = null;
 

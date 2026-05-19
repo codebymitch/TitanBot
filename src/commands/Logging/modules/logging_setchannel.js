@@ -34,6 +34,11 @@ export default {
                     enabled: false,
                     channelId: null,
                 };
+                // canonical schema read by the event handlers
+                currentConfig.logs = {
+                    ...(currentConfig.logs || {}),
+                    enabled: false,
+                };
                 await setGuildConfig(client, guildId, currentConfig);
                 return InteractionHelper.safeEditReply(interaction, {
                     embeds: [successEmbed('Logging Disabled 🚫', 'Audit logging has been disabled for this server.')],
@@ -54,6 +59,12 @@ export default {
                     ...(currentConfig.logging || {}),
                     enabled: true,
                     channelId: logChannel.id,
+                };
+                // canonical schema read by the event handlers
+                currentConfig.logs = {
+                    ...(currentConfig.logs || {}),
+                    enabled: true,
+                    channel: logChannel.id,
                 };
                 await setGuildConfig(client, guildId, currentConfig);
 

@@ -1,5 +1,6 @@
 import { Events } from 'discord.js';
 import { getGuildConfig } from '../../services/guildConfigService.js';
+import { isEventEnabled } from '../../services/loggingService.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 export default {
@@ -19,7 +20,7 @@ export default {
     for (const [, guild] of guilds) {
       try {
         const config = await getGuildConfig(client.db, guild.id);
-        if (!config.logs?.enabled) continue;
+        if (!isEventEnabled(config, 'member.namechange')) continue;
 
         let logChannel = null;
 

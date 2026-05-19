@@ -495,10 +495,90 @@ export async function getLoggingStatus(
       config.logs?.channel ||
       null,
 
+    enabledEvents:
+      config.logs?.enabledEvents ||
+      {},
+
     allEventTypes:
       EVENT_TYPES
   };
 }
+
+// 🔥 ALL CATEGORIES (derived from EVENT_TYPES)
+const LOGGING_CATEGORIES = [
+  ...new Set(
+    Object.values(EVENT_TYPES).map(
+      (eventType) => eventType.split('.')[0]
+    )
+  )
+];
+
+/**
+ * Single source of truth for "should this specific log fire?".
+ * Used by every event handler. Default is enabled; a category or
+ * event is only suppressed when explicitly set to false in
+ * config.logs.enabledEvents.
+ *
+ * @param {object} config - guild config (from guildConfigService)
+ * @param {string} eventType - e.g. 'member.namechange', 'role.update'
+ */
+export function isEventEnabled(config, eventType) {
+  if (!config?.logs?.enabled) return false;
+
+  const map = config.logs.enabledEvents || {};
+  const category = String(eventType).split('.')[0];
+
+  if (map[`${category}.*`] === false) return false;
+  if (map[eventType] === false) return false;
+
+  return true;
+}
+
+/**
+ * Toggle a single category wildcard (e.g. 'member.*') or a specific
+ * event (e.g. 'role.update') in config.logs.enabledEvents.
+ * enabled=true removes the key (back to default-on) to keep the map small.
+ */
+export async function setEventEnabled(client, guildId, eventKey, enabled) {
+  const config = await getGuildConfig(client.db, guildId);
+
+  if (!config.logs.enabledEvents || typeof config.logs.enabledEvents !== 'object') {
+    config.logs.enabledEvents = {};
+  }
+
+  if (enabled) {
+    delete config.logs.enabledEvents[eventKey];
+  } else {
+    config.logs.enabledEvents[eventKey] = false;
+  }
+
+  await client.db.set(`guild:${guildId}:config`, config);
+  return config;
+}
+
+/**
+ * Enable/disable every category at once (the "Toggle All" button).
+ */
+export async function setAllCategoriesEnabled(client, guildId, enabled) {
+  const config = await getGuildConfig(client.db, guildId);
+
+  if (!config.logs.enabledEvents || typeof config.logs.enabledEvents !== 'object') {
+    config.logs.enabledEvents = {};
+  }
+
+  for (const category of LOGGING_CATEGORIES) {
+    if (enabled) {
+      delete config.logs.enabledEvents[`${category}.*`];
+    } else {
+      config.logs.enabledEvents[`${category}.*`] = false;
+    }
+  }
+
+  await client.db.set(`guild:${guildId}:config`, config);
+  return config;
+}
+
+export { LOGGING_CATEGORIES };
 
 // 🔥 TOGGLE LOGS
 export async function setLoggingEnabled(

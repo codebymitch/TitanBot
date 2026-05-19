@@ -1,5 +1,6 @@
 import { Events, AuditLogEvent } from 'discord.js';
 import { getGuildConfig } from '../../services/guildConfigService.js';
+import { isEventEnabled } from '../../services/loggingService.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 const voiceSessions = new Map();
@@ -31,7 +32,7 @@ export default {
     if (!member || member.user.bot) return;
 
     const config = await getGuildConfig(client.db, guild.id);
-    if (!config.logs?.enabled) return;
+    if (!isEventEnabled(config, 'voice.update')) return;
 
     let logChannel = null;
 

@@ -1,5 +1,6 @@
 import { Events } from 'discord.js';
 import { getGuildConfig } from '../../services/guildConfigService.js';
+import { isEventEnabled } from '../../services/loggingService.js';
 
 export default {
   name: Events.ChannelCreate,
@@ -9,7 +10,7 @@ export default {
 
     const config = await getGuildConfig(channel.client.db, guild.id);
 
-    if (!config.logs?.enabled) return;
+    if (!isEventEnabled(config, 'channel.create')) return;
 
     let logChannel = null;
 

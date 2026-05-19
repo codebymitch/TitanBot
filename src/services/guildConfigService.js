@@ -21,6 +21,10 @@ const DEFAULT_CONFIG = {
 
     channel: null,
 
+    // per-category / per-event enable map. Absent or true = enabled.
+    // Keys: 'member.*', 'role.update', 'message.delete', ...
+    enabledEvents: {},
+
     categories: {
 
       message: null,
@@ -128,6 +132,39 @@ export async function getGuildConfig(db, guildId) {
     };
 
     updated = true;
+
+  }
+
+  if (!config.logs.enabledEvents || typeof config.logs.enabledEvents !== 'object') {
+    config.logs.enabledEvents = {};
+    updated = true;
+  }
+
+  // 🔄 MIGRATION: the dashboard / older /logging setchannel wrote the log
+  // channel under config.logging.channelId or config.logChannelId, but the
+  // event handlers only read config.logs.channel. Back-fill it once so
+  // already-configured servers keep working without re-running setchannel.
+  if (!config.logs.channel) {
+
+    const legacyChannel =
+      config.logging?.channelId ||
+      config.logChannelId ||
+      null;
+
+    if (legacyChannel) {
+
+      config.logs.channel = legacyChannel;
+
+      if (
+        config.logging?.enabled === true ||
+        config.enableLogging === true
+      ) {
+        config.logs.enabled = true;
+      }
+
+      updated = true;
+
+    }
 
   }
 

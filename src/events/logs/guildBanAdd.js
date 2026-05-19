@@ -1,5 +1,6 @@
 import { Events } from 'discord.js';
 import { getGuildConfig } from '../../services/guildConfigService.js';
+import { isEventEnabled } from '../../services/loggingService.js';
 
 export default {
   name: Events.GuildBanAdd,
@@ -12,7 +13,7 @@ export default {
       guild.id
     );
 
-    if (!config.logs?.enabled) return;
+    if (!isEventEnabled(config, 'moderation.ban')) return;
 
     let logChannel = null;
 

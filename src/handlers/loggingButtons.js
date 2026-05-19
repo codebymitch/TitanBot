@@ -3,7 +3,9 @@ import { PermissionFlagsBits } from 'discord.js';
 import {
   getLoggingStatus,
   EVENT_TYPES,
-  setLoggingEnabled
+  setLoggingEnabled,
+  setEventEnabled,
+  setAllCategoriesEnabled
 } from '../services/loggingService.js';
 
 import {
@@ -125,12 +127,12 @@ async function handleToggle(
 
   try {
 
-    const eventType =
+    const key =
       parseEventTypeFromButton(
         interaction.customId
       );
 
-    if (!eventType) {
+    if (!key) {
 
       return interaction.reply({
         content:
@@ -146,12 +148,40 @@ async function handleToggle(
         interaction.guildId
       );
 
-    // 🔥 SIMPLE GLOBAL TOGGLE
-    await setLoggingEnabled(
-      interaction.client,
-      interaction.guildId,
-      !Boolean(status.enabled)
-    );
+    const enabledEvents = status.enabledEvents || {};
+
+    if (key === 'audit_enabled') {
+
+      await setLoggingEnabled(
+        interaction.client,
+        interaction.guildId,
+        !Boolean(status.enabled)
+      );
+
+    } else if (key === 'all') {
+
+      const allOn = LOGGING_CATEGORIES.every(
+        (category) => enabledEvents[`${category}.*`] !== false
+      );
+
+      await setAllCategoriesEnabled(
+        interaction.client,
+        interaction.guildId,
+        !allOn
+      );
+
+    } else {
+
+      const currentlyEnabled = enabledEvents[key] !== false;
+
+      await setEventEnabled(
+        interaction.client,
+        interaction.guildId,
+        key,
+        !currentlyEnabled
+      );
+
+    }
 
     const {
       embed,
@@ -229,13 +259,13 @@ async function handleDashboardToggle(
 
   try {
 
-    const eventType =
+    const key =
       interaction.customId.replace(
         'log_dash_toggle:',
         ''
       );
 
-    if (!eventType) {
+    if (!key) {
 
       return interaction.reply({
         content:
@@ -251,12 +281,43 @@ async function handleDashboardToggle(
         interaction.guildId
       );
 
-    // 🔥 SIMPLE TOGGLE
-    await setLoggingEnabled(
-      interaction.client,
-      interaction.guildId,
-      !Boolean(status.enabled)
-    );
+    const enabledEvents = status.enabledEvents || {};
+
+    if (key === 'audit_enabled') {
+
+      // global on/off
+      await setLoggingEnabled(
+        interaction.client,
+        interaction.guildId,
+        !Boolean(status.enabled)
+      );
+
+    } else if (key === 'all') {
+
+      // flip every category at once
+      const allOn = LOGGING_CATEGORIES.every(
+        (category) => enabledEvents[`${category}.*`] !== false
+      );
+
+      await setAllCategoriesEnabled(
+        interaction.client,
+        interaction.guildId,
+        !allOn
+      );
+
+    } else {
+
+      // a single category wildcard ('member.*') or specific event
+      const currentlyEnabled = enabledEvents[key] !== false;
+
+      await setEventEnabled(
+        interaction.client,
+        interaction.guildId,
+        key,
+        !currentlyEnabled
+      );
+
+    }
 
     const {
       embed,
