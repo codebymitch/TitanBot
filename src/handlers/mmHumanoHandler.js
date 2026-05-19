@@ -52,7 +52,7 @@ const usersInWizard = new Set();
 
 // Track channels being claimed to prevent race conditions
 const claimingChannels = new Set();
-const claimTimeout = 15000; // 15 seconds timeout
+const claimTimeout = 3000; // 3 seconds timeout (reduced from 15s)
 
 // Cooldown map to prevent spam
 const userCooldowns = new Map();
@@ -921,10 +921,6 @@ export async function handleClaimMM(interaction) {
 
   // Mark channel as being claimed
   claimingChannels.add(channelId);
-  
-  const timeoutHandle = setTimeout(() => {
-    claimingChannels.delete(channelId);
-  }, claimTimeout);
 
   try {
     // Double-check race condition
@@ -1000,7 +996,6 @@ export async function handleClaimMM(interaction) {
     });
 
   } finally {
-    clearTimeout(timeoutHandle);
     claimingChannels.delete(channelId);
   }
 }
