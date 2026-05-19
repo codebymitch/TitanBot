@@ -35,8 +35,7 @@ function createSetupEmbed() {
         value: '🚫 Nunca compartilhe informações pessoais\n' +
                '⏳ Aguarde a confirmação do middleman\n' +
                '📋 Siga as instruções no canal privado\n' +
-               '🔒 Somente middlemen podem fechar a troca' +
-               '✅ Lembre-se de comunicar ao MM quando o item for entregue',
+               '🔒 Somente middlemen podem fechar a troca\n',
         inline: false
       }
     )

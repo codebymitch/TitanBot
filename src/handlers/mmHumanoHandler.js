@@ -785,6 +785,11 @@ async function createTicketChannel(interaction, state) {
               name: '🔒 Somente middleman pode fechar',
               value: 'A troca só pode ser encerrada pela equipe',
               inline: false
+            },
+            {
+              name: '✅ Lembre-se de comunicar ao MM quando o item for entregue',
+              value: 'Informe ao middleman assim que o item estiver pronto para entrega',
+              inline: false
             }
           )
           .setFooter({ text: THEME.footerText })
