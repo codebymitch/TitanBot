@@ -9,6 +9,8 @@ import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createInteractionTraceContext, runWithTraceContext } from '../utils/traceContext.js';
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
+import { isGuildApproved, isOwner } from '../services/accessService.js';
+import { botConfig } from '../config/bot.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -85,6 +87,33 @@ export default {
                   'This command has been disabled for this server.',
                   withTraceContext({ commandName: interaction.commandName, guildId: interaction.guild.id }, interactionTraceContext)
                 );
+              }
+            }
+
+            // Subscription / access gate — the bot only works in guilds
+            // the owner has approved. Owners and the /access command are
+            // always allowed; DMs (no guild) are unaffected.
+            if (
+              interaction.guild &&
+              interaction.commandName !== 'access' &&
+              !isOwner(interaction.user?.id)
+            ) {
+              const approved = await isGuildApproved(client.db, interaction.guild.id);
+              if (!approved) {
+                const brand = botConfig.brand?.name || 'Wolf';
+                await interaction.reply({
+                  embeds: [{
+                    color: 0xef4444,
+                    title: '🔒 Servidor no activado',
+                    description:
+                      `Este servidor todavía no tiene acceso a **${brand}**.\n\n` +
+                      'Pídele al dueño del bot que lo active para empezar a usar los comandos.',
+                    fields: [{ name: 'ID del servidor', value: `\`${interaction.guild.id}\`` }],
+                    footer: { text: brand },
+                  }],
+                  flags: MessageFlags.Ephemeral,
+                });
+                return;
               }
             }
 

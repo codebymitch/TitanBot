@@ -1,4 +1,5 @@
 import { botConfig } from '../../config/bot.js';
+import { isOwner } from '../../services/accessService.js';
 
 export const BRAND = botConfig.brand?.name || 'Wolf';
 export const TAGLINE = botConfig.brand?.tagline || '';
@@ -55,6 +56,7 @@ export function appShell({ title, user, active = '', flash, body }) {
   <aside class="sidebar">
     <div class="brand"><span class="logo">🐺</span> ${esc(BRAND)}</div>
     <a class="nav-link ${active === 'dashboard' ? 'active' : ''}" href="/dashboard">🏠 <span>Panel</span></a>
+    ${user && isOwner(user.id) ? `<a class="nav-link ${active === 'admin' ? 'active' : ''}" href="/admin">🛡️ <span>Panel del dueño</span></a>` : ''}
     <a class="nav-link" href="/invite">➕ <span>Añadir a un servidor</span></a>
     <div class="nav-spacer"></div>
     ${user ? `<div class="nav-link" style="cursor:default">

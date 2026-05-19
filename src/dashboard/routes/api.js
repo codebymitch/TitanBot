@@ -13,7 +13,8 @@ import {
   setLoggingEnabled,
   setEventEnabled,
 } from '../../services/loggingService.js';
-import { makeRequireGuildAdmin } from '../middleware/auth.js';
+import { makeRequireGuildAdmin, requireOwner } from '../middleware/auth.js';
+import { grantAccess, revokeAccess } from '../../services/accessService.js';
 
 const KNOWN_CATEGORIES = new Set([
   'moderation', 'message', 'member', 'role', 'channel', 'thread', 'voice',
@@ -132,6 +133,29 @@ export function apiRoutes(client) {
       logger.error('dash logs category-channels', { error: e?.message });
       flashBack(req, res, 'err', 'No se pudo guardar el enrutamiento por categoría.');
     }
+  });
+
+  // ── Owner-only: subscription/access control ──────────────────────
+  router.post('/admin/access', requireOwner, async (req, res) => {
+    const guildId = String(req.body.guild_id || '').trim();
+    const action = String(req.body.action || '');
+    if (!/^\d{15,25}$/.test(guildId) || !['grant', 'revoke'].includes(action)) {
+      req.session.flash = { type: 'err', msg: 'Datos inválidos.' };
+      return res.redirect('/admin');
+    }
+    try {
+      if (action === 'grant') {
+        await grantAccess(client.db, guildId, req.session.user.id);
+        req.session.flash = { type: 'ok', msg: `Servidor ${guildId} aprobado.` };
+      } else {
+        await revokeAccess(client.db, guildId);
+        req.session.flash = { type: 'ok', msg: `Acceso del servidor ${guildId} revocado.` };
+      }
+    } catch (e) {
+      logger.error('dash admin access', { error: e?.message });
+      req.session.flash = { type: 'err', msg: 'No se pudo actualizar el acceso.' };
+    }
+    return res.redirect('/admin');
   });
 
   return router;

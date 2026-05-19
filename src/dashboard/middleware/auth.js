@@ -1,4 +1,20 @@
 import { hasGuildAdmin } from '../lib/oauth.js';
+import { isOwner } from '../../services/accessService.js';
+
+/**
+ * Bot-owner-only gate for the hidden /admin area.
+ */
+export function requireOwner(req, res, next) {
+  if (!req.session?.user) {
+    req.session = req.session || {};
+    req.session.returnTo = req.originalUrl;
+    return res.redirect('/login');
+  }
+  if (!isOwner(req.session.user.id)) {
+    return res.status(403).send(deny('Esta área es solo para el dueño del bot.'));
+  }
+  return next();
+}
 
 export function requireLogin(req, res, next) {
   if (!req.session?.user) {
