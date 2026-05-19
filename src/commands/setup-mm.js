@@ -12,47 +12,34 @@ import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ButtonBuilder, 
 export const MM_SETUP_BUTTON_ID = 'mm_start_intermediacao';
 
 /**
- * Create the setup message embed with clean HTML-like formatting
+ * Create the setup message embed with modern customized design
  */
 function createSetupEmbed() {
   return new EmbedBuilder()
-    .setColor(0x2B2D31) // Dark/neutral color
-    .setTitle('🛡️ Serviço de Intermediação Seguro')
+    .setColor(0xE8511A) // Custom orange color
+    .setTitle('🛡️ INTERMEDIAÇÃO DE TRADES')
     .setDescription(
-      '```\n' +
-      '┌─────────────────────────────────────────────┐\n' +
-      '│         INTERMEDIAÇÃO DE TRADES             │\n' +
-      '├─────────────────────────────────────────────┤\n' +
-      '│                                             │\n' +
-      '│  Um middleman (intermediário) irá garantir  │\n' +
-      '│  que tanto o comprador quanto o vendedor    │\n' +
-      '│  cumpram com seus compromissos de forma     │\n' +
-      '│  segura e transparente.                     │\n' +
-      '│                                             │\n' +
-      '├─────────────────────────────────────────────┤\n' +
-      '│  COMO FUNCIONA?                             │\n' +
-      '│  ─────────────────────────────────────────  │\n' +
-      '│  1. Clique no botão abaixo para iniciar     │\n' +
-      '│  2. Preencha as informações da trade        │\n' +
-      '│  3. Um canal privado será criado            │\n' +
-      '│  4. Um middleman assumirá a intermediação   │\n' +
-      '│                                             │\n' +
-      '└─────────────────────────────────────────────┘\n' +
-      '```'
+      '> Um middleman (intermediário) irá garantir que tanto o comprador quanto o vendedor cumpram com seus compromissos de forma segura e transparente.'
     )
     .addFields(
       {
-        name: '⚠️ Regras Importantes',
-        value: '```\n' +
-               '│ 🚫 Nunca compartilhe informações pessoais     │\n' +
-               '│ ⏳ Aguarde a confirmação do middleman         │\n' +
-               '│ 📋 Siga as instruções no canal privado        │\n' +
-               '│ 🔒 Somente middlemen podem fechar a troca     │\n' +
-               '```',
+        name: '💡 COMO FUNCIONA?',
+        value: '1️⃣ Clique no botão abaixo para iniciar\n' +
+               '2️⃣ Preencha as informações da trade\n' +
+               '3️⃣ Um canal privado será criado\n' +
+               '4️⃣ Um middleman assumirá a intermediação',
+        inline: false
+      },
+      {
+        name: '⚠️ REGRAS IMPORTANTES',
+        value: '🚫 Nunca compartilhe informações pessoais\n' +
+               '⏳ Aguarde a confirmação do middleman\n' +
+               '📋 Siga as instruções no canal privado\n' +
+               '🔒 Somente middlemen podem fechar a troca',
         inline: false
       }
     )
-    .setFooter({ text: 'Sistema de Intermediação Seguro • v2.0' })
+    .setFooter({ text: 'Eclipse MM • Sistema de Intermediação' })
     .setTimestamp();
 }
 
