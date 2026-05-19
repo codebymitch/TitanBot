@@ -45,10 +45,7 @@ function createSetupEmbed() {
                'R$4,30 - Acima de R$200\n' +
                'R$6,80 - Acima de R$400\n' +
                '1,2% - Acima de R$700\n' +
-               'Em conta: adicionamos R$4,00\n\n' +
-               '**Taxas Cross Trade:**\n' +
-               'R$0,60 - 2 Itens\n' +
-               'R$0,80 - 3+ Itens',
+               'Em conta: adicionamos R$4,00\n\n',
         inline: false
       }
     )
