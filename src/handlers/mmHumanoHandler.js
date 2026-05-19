@@ -838,51 +838,66 @@ export async function handleClaimMM(interaction) {
   }, claimTimeout);
 
   try {
-    // Check staff permissions (may take time due to member fetch)
-    const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
-    if (!member) {
-      claimingChannels.delete(channelId);
-      return interaction.followUp({
-        content: '❌ Erro ao verificar permissões.',
-        ephemeral: true
-      });
-    }
+// Check staff permissions using cache first to avoid unnecessary fetch delays
+  const member = interaction.guild.members.cache.get(interaction.user.id)
+    || await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+  if (!member) {
+    claimingChannels.delete(channelId);
+    return interaction.followUp({
+      content: '❌ Erro ao verificar permissões.',
+      ephemeral: true
+    });
+  }
 
-    const isStaff = await isUserStaff(member, interaction.guild);
-    if (!isStaff) {
-      claimingChannels.delete(channelId);
-      return interaction.followUp({
-        content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
-        ephemeral: true
-      });
-    }
+  const isStaff = await isUserStaff(member, interaction.guild);
+  if (!isStaff) {
+    claimingChannels.delete(channelId);
+    return interaction.followUp({
+      content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
+      ephemeral: true
+    });
+  }
 
-    // DOUBLE-CHECK to prevent race condition from multiple simultaneous claims
-    const freshData = parseTopicData(channel.topic || '');
-    if (freshData && freshData.mmId) {
-      claimingChannels.delete(channelId);
-      return interaction.followUp({
-        content: 'ℹ️ Esta intermediação já foi assumida por <@' + freshData.mmId + '>.',
-        ephemeral: true
-      });
-    }
+  // DOUBLE-CHECK to prevent race condition from multiple simultaneous claims
+  const freshData = parseTopicData(channel.topic || '');
+  if (!freshData) {
+    claimingChannels.delete(channelId);
+    return interaction.followUp({
+      content: '❌ Dados da intermediação inválidos.',
+      ephemeral: true
+    });
+  }
+  if (freshData.mmId) {
+    claimingChannels.delete(channelId);
+    return interaction.followUp({
+      content: 'ℹ️ Esta intermediação já foi assumida por <@' + freshData.mmId + '>.',
+      ephemeral: true
+    });
+  }
 
-    // Update data with middleman info (ATOMIC: update immediately)
-    const updateData = { ...freshData };
-    updateData.mmId = interaction.user.id;
-    updateData.status = 'IN_PROGRESS';
-    await channel.setTopic(serializeTopicData(updateData));
+  // Update data with middleman info (ATOMIC: update immediately)
+  const updateData = { ...freshData };
+  updateData.mmId = interaction.user.id;
+  updateData.status = 'IN_PROGRESS';
+  await channel.setTopic(serializeTopicData(updateData));
 
-    // Fetch usernames (parallel for speed)
+  await interaction.followUp({
+    content: '✅ Intermediação assumida com sucesso!',
+    ephemeral: true
+  });
+
+  // Continue updating ticket appearance without delaying the user response
+  const updateTask = (async () => {
     const [buyerMember, sellerMember] = await Promise.all([
-      interaction.guild.members.fetch(updateData.buyerId).catch(() => null),
-      interaction.guild.members.fetch(updateData.sellerId).catch(() => null)
+      interaction.guild.members.cache.get(updateData.buyerId)
+        || interaction.guild.members.fetch(updateData.buyerId).catch(() => null),
+      interaction.guild.members.cache.get(updateData.sellerId)
+        || interaction.guild.members.fetch(updateData.sellerId).catch(() => null)
     ]);
 
     const buyerName = buyerMember?.user.username || 'Unknown';
     const sellerName = sellerMember?.user.username || 'Unknown';
 
-    // Update embed
     const tableData = {
       buyerDisplay: buyerName,
       sellerDisplay: sellerName,
@@ -893,7 +908,6 @@ export async function handleClaimMM(interaction) {
       statusColor: mmConfig.statusColors.IN_PROGRESS
     };
 
-    // Find and update the main table message (search by embed title)
     if (updateData.tableMessageId) {
       try {
         const tableMessage = await channel.messages.fetch(updateData.tableMessageId);
@@ -908,16 +922,17 @@ export async function handleClaimMM(interaction) {
       }
     }
 
-    // Send notification - SINGLE message only
-    await channel.send({
-      content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
-               'Vendedor e Comprador podem prosseguir de forma segura.'
-    });
+    try {
+      await channel.send({
+        content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
+                 'Vendedor e Comprador podem prosseguir de forma segura.'
+      });
+    } catch (err) {
+      logger.warn('Failed to send claim notification', { error: err.message });
+    }
+  })();
 
-    await interaction.followUp({
-      content: '✅ Intermediação assumida com sucesso!',
-      ephemeral: true
-    });
+  void updateTask;
 
   } finally {
     // Always remove the channel from claiming set
