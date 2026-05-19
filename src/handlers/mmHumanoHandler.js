@@ -115,7 +115,13 @@ function createPaymentSelectEmbed() {
     .addFields(
       {
         name: '〡 Taxas Normais',
-        value: 'R$1,00 Acima de R$2,50.\nR$2,15 Acima de R$100.\nR$4,30 Acima de R$200.\nR$6,80 Acima de R$400.\n1,2% Acima de R$700.\n',
+        value: 'R$0,50 - Abaixo de R$2,50\n' +
+               'R$1,00 - Acima de R$2,50\n' +
+               'R$2,00 - Acima de R$100\n' +
+               'R$3,50 - Acima de R$200\n' +
+               'R$5,00 - Acima de R$400\n' +
+               'R$7,00 - Acima de R$600\n' +
+               '1,2% - Acima de R$700',
         inline: false
       }
     )
