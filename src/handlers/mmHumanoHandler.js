@@ -41,6 +41,10 @@ export const WIZARD_IDS = {
 // Wizard state stored in memory (per user, temporary)
 const wizardStates = new Map();
 
+// Track channels being claimed to prevent race conditions and duplicate messages
+const claimingChannels = new Set();
+const claimTimeout = 15000; // 15 seconds timeout
+
 /**
  * Create the payment method selection embed
  */
@@ -321,7 +325,7 @@ function createFinalizeMMButton() {
     .addComponents(
       new ButtonBuilder()
         .setCustomId(WIZARD_IDS.FINALIZE_MM)
-        .setLabel('🔒 Finalizar Intermediação')
+        .setLabel('🔒 Fechar Ticket')
         .setStyle(ButtonStyle.Danger)
     );
 }
@@ -790,12 +794,21 @@ export async function handleClaimMM(interaction) {
   await interaction.deferUpdate();
 
   const channel = interaction.channel;
+  const channelId = channel.id;
   const topic = channel.topic || '';
   const data = parseTopicData(topic);
 
   if (!data) {
     return interaction.followUp({
       content: '❌ Dados da intermediação inválidos.',
+      ephemeral: true
+    });
+  }
+
+  // RACE CONDITION PREVENTION: Check if channel is already being claimed
+  if (claimingChannels.has(channelId)) {
+    return interaction.followUp({
+      content: 'ℹ️ Alguém está assumindo esta intermediação no momento. Aguarde um segundo.',
       ephemeral: true
     });
   }
@@ -816,73 +829,101 @@ export async function handleClaimMM(interaction) {
     });
   }
 
-  // Check staff permissions (may take time due to member fetch)
-  const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
-  if (!member) {
-    return interaction.followUp({
-      content: '❌ Erro ao verificar permissões.',
-      ephemeral: true
-    });
-  }
+  // ADD THE CHANNEL TO CLAIMING SET (prevents race conditions)
+  claimingChannels.add(channelId);
+  
+  // Auto-remove after timeout to prevent deadlocks
+  const timeoutHandle = setTimeout(() => {
+    claimingChannels.delete(channelId);
+  }, claimTimeout);
 
-  const isStaff = await isUserStaff(member, interaction.guild);
-  if (!isStaff) {
-    return interaction.followUp({
-      content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
-      ephemeral: true
-    });
-  }
-
-  // Update data with middleman info
-  data.mmId = interaction.user.id;
-  data.status = 'IN_PROGRESS';
-  await channel.setTopic(serializeTopicData(data));
-
-  // Fetch usernames (parallel for speed)
-  const [buyerMember, sellerMember] = await Promise.all([
-    interaction.guild.members.fetch(data.buyerId).catch(() => null),
-    interaction.guild.members.fetch(data.sellerId).catch(() => null)
-  ]);
-
-  const buyerName = buyerMember?.user.username || 'Unknown';
-  const sellerName = sellerMember?.user.username || 'Unknown';
-
-  // Update embed
-  const tableData = {
-    buyerDisplay: buyerName,
-    sellerDisplay: sellerName,
-    method: data.method,
-    amountDisplay: data.amount || 'N/A',
-    statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
-    middlemanDisplay: interaction.user.username,
-    statusColor: mmConfig.statusColors.IN_PROGRESS
-  };
-
-  // Find and update the main table message (search by embed title)
-  if (data.tableMessageId) {
-    try {
-      const tableMessage = await channel.messages.fetch(data.tableMessageId);
-      if (tableMessage) {
-        await tableMessage.edit({
-          embeds: [createTicketTableEmbed(tableData)],
-          components: [createConfirmDeliveryButton()]
-        });
-      }
-    } catch (err) {
-      logger.warn('Failed to update table message', { error: err.message });
+  try {
+    // Check staff permissions (may take time due to member fetch)
+    const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+    if (!member) {
+      claimingChannels.delete(channelId);
+      return interaction.followUp({
+        content: '❌ Erro ao verificar permissões.',
+        ephemeral: true
+      });
     }
+
+    const isStaff = await isUserStaff(member, interaction.guild);
+    if (!isStaff) {
+      claimingChannels.delete(channelId);
+      return interaction.followUp({
+        content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
+        ephemeral: true
+      });
+    }
+
+    // DOUBLE-CHECK to prevent race condition from multiple simultaneous claims
+    const freshData = parseTopicData(channel.topic || '');
+    if (freshData && freshData.mmId) {
+      claimingChannels.delete(channelId);
+      return interaction.followUp({
+        content: 'ℹ️ Esta intermediação já foi assumida por <@' + freshData.mmId + '>.',
+        ephemeral: true
+      });
+    }
+
+    // Update data with middleman info (ATOMIC: update immediately)
+    const updateData = { ...freshData };
+    updateData.mmId = interaction.user.id;
+    updateData.status = 'IN_PROGRESS';
+    await channel.setTopic(serializeTopicData(updateData));
+
+    // Fetch usernames (parallel for speed)
+    const [buyerMember, sellerMember] = await Promise.all([
+      interaction.guild.members.fetch(updateData.buyerId).catch(() => null),
+      interaction.guild.members.fetch(updateData.sellerId).catch(() => null)
+    ]);
+
+    const buyerName = buyerMember?.user.username || 'Unknown';
+    const sellerName = sellerMember?.user.username || 'Unknown';
+
+    // Update embed
+    const tableData = {
+      buyerDisplay: buyerName,
+      sellerDisplay: sellerName,
+      method: updateData.method,
+      amountDisplay: updateData.amount || 'N/A',
+      statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
+      middlemanDisplay: interaction.user.username,
+      statusColor: mmConfig.statusColors.IN_PROGRESS
+    };
+
+    // Find and update the main table message (search by embed title)
+    if (updateData.tableMessageId) {
+      try {
+        const tableMessage = await channel.messages.fetch(updateData.tableMessageId);
+        if (tableMessage) {
+          await tableMessage.edit({
+            embeds: [createTicketTableEmbed(tableData)],
+            components: [createConfirmDeliveryButton()]
+          });
+        }
+      } catch (err) {
+        logger.warn('Failed to update table message', { error: err.message });
+      }
+    }
+
+    // Send notification - SINGLE message only
+    await channel.send({
+      content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
+               'Vendedor e Comprador podem prosseguir de forma segura.'
+    });
+
+    await interaction.followUp({
+      content: '✅ Intermediação assumida com sucesso!',
+      ephemeral: true
+    });
+
+  } finally {
+    // Always remove the channel from claiming set
+    clearTimeout(timeoutHandle);
+    claimingChannels.delete(channelId);
   }
-
-  // Send notification
-  await channel.send({
-    content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
-             'Vendedor e Comprador podem prosseguir de forma segura.'
-  });
-
-  await interaction.followUp({
-    content: '✅ Intermediação assumida com sucesso!',
-    ephemeral: true
-  });
 }
 
 /**
@@ -1037,11 +1078,30 @@ export async function handleFinalizeMM(interaction) {
     });
   }
 
-  const member = await interaction.guild.members.fetch(interaction.user.id);
-  const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+  // PERMISSION CHECK: Only the assigned middleman or admin can close the ticket
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+  if (!member) {
+    return interaction.followUp({
+      content: '❌ Erro ao verificar permissões.',
+      ephemeral: true
+    });
+  }
 
-  // Only the assigned middleman or an admin can finalize
-  if (data.mmId !== interaction.user.id && !isAdmin) {
+  const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+  const isAssignedMM = data.mmId === interaction.user.id;
+
+  if (!isAssignedMM && !isAdmin) {
+    // Check if they are buyer or seller to give specific error
+    const isBuyer = data.buyerId === interaction.user.id;
+    const isSeller = data.sellerId === interaction.user.id;
+    
+    if (isBuyer || isSeller) {
+      return interaction.followUp({
+        content: '❌ Apenas o Middleman pode fechar o ticket.',
+        ephemeral: true
+      });
+    }
+    
     return interaction.followUp({
       content: '❌ Apenas o Middleman responsável ou um Administrador pode finalizar esta intermediação.',
       ephemeral: true
