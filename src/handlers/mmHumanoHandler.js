@@ -861,15 +861,26 @@ export async function isUserStaff(member, guild) {
 
 /**
  * Handle claim middleman button - OTIMIZADO PARA EVITAR DEMORA
+ *
+ * Correções aplicadas (v3):
+ * - Fix #1: deferUpdate() movido para o TOPO — ACK imediato evita expiração da interação em 3s
+ * - Fix #2: setTopic() protegido por Promise.race com timeout de 5s — evita travar por rate limit
+ * - Fix #3: claimTimeout agora usado como safety timer para auto-limpar o Set em caso de falha
+ * - Fix #4: member.fetch() como fallback quando cache miss
  */
 export async function handleClaimMM(interaction) {
   const channel = interaction.channel;
   const channelId = channel.id;
+
+  // Fix #1: ACK imediato — o Discord exige resposta em ~3 segundos.
+  // Fazer qualquer await antes disso arrisca expirar a interação.
+  await interaction.deferUpdate();
+
   const topic = channel.topic || '';
   const data = parseTopicData(topic);
 
   if (!data) {
-    return interaction.reply({
+    return interaction.followUp({
       content: '❌ Dados da intermediação inválidos.',
       ephemeral: true
     });
@@ -877,7 +888,7 @@ export async function handleClaimMM(interaction) {
 
   // Check if already being claimed
   if (claimingChannels.has(channelId)) {
-    return interaction.reply({
+    return interaction.followUp({
       content: '⏳ Alguém já está assumindo esta intermediação. Aguarde um instante...',
       ephemeral: true
     });
@@ -885,7 +896,7 @@ export async function handleClaimMM(interaction) {
 
   // Check if already claimed
   if (data.mmId) {
-    return interaction.reply({
+    return interaction.followUp({
       content: 'ℹ️ Esta intermediação já foi assumida por <@' + data.mmId + '>.',
       ephemeral: true
     });
@@ -893,16 +904,18 @@ export async function handleClaimMM(interaction) {
 
   // Check if user is trying to assume their own ticket
   if (data.buyerId === interaction.user.id || data.sellerId === interaction.user.id) {
-    return interaction.reply({
+    return interaction.followUp({
       content: '❌ Você não pode assumir sua própria intermediação.',
       ephemeral: true
     });
   }
 
-  // Check staff permissions FIRST (using cache only for speed)
-  const member = interaction.guild.members.cache.get(interaction.user.id);
+  // Fix #4: fallback para fetch() caso o membro não esteja no cache
+  const member = interaction.guild.members.cache.get(interaction.user.id)
+    ?? await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+
   if (!member) {
-    return interaction.reply({
+    return interaction.followUp({
       content: '❌ Erro ao verificar permissões.',
       ephemeral: true
     });
@@ -910,20 +923,18 @@ export async function handleClaimMM(interaction) {
 
   const isStaff = await isUserStaff(member, interaction.guild);
   if (!isStaff) {
-    return interaction.reply({
+    return interaction.followUp({
       content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
       ephemeral: true
     });
   }
 
-  // NOW defer - after all validations
-  await interaction.deferUpdate();
-
-  // Mark channel as being claimed
+  // Fix #3: safety timer que auto-limpa o Set caso o finally não execute
   claimingChannels.add(channelId);
+  const safetyTimer = setTimeout(() => claimingChannels.delete(channelId), claimTimeout);
 
   try {
-    // Double-check race condition
+    // Double-check race condition (re-lê o topic para pegar estado mais recente)
     const freshData = parseTopicData(channel.topic || '');
     if (!freshData) {
       return interaction.followUp({
@@ -938,21 +949,32 @@ export async function handleClaimMM(interaction) {
       });
     }
 
-    // Update data FIRST (atomic operation)
+    // Update data
     const updateData = { ...freshData };
     updateData.mmId = interaction.user.id;
     updateData.status = 'IN_PROGRESS';
-    
+
+    // Fix #2: setTopic() com timeout de 5s via Promise.race.
+    // O Discord pode segurar o request por até 10 minutos em rate limit de channel edit.
+    // Com o race, o claim visual acontece imediatamente mesmo se a persistência atrasar.
     try {
-      await channel.setTopic(serializeTopicData(updateData));
+      await Promise.race([
+        channel.setTopic(serializeTopicData(updateData)),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('setTopic timeout após 5s')), 5000)
+        )
+      ]);
     } catch (err) {
-      logger.warn('Failed to update channel topic during claim', { error: err.message });
+      logger.warn('setTopic falhou ou atingiu timeout durante claim (continuando sem persistência imediata)', {
+        error: err.message,
+        channelId
+      });
     }
 
     // Get member names from cache only (faster)
     const buyerMember = interaction.guild.members.cache.get(updateData.buyerId);
     const sellerMember = interaction.guild.members.cache.get(updateData.sellerId);
-    
+
     const buyerName = buyerMember?.user.username || 'Unknown';
     const sellerName = sellerMember?.user.username || 'Unknown';
 
@@ -996,6 +1018,7 @@ export async function handleClaimMM(interaction) {
     });
 
   } finally {
+    clearTimeout(safetyTimer);
     claimingChannels.delete(channelId);
   }
 }
