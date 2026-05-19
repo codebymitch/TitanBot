@@ -87,7 +87,7 @@ class TitanBot extends Client {
 
     setupDashboard(app, this);
 
-    app.get('/', (req, res) => res.json({ status: 'online', bot: 'TitanBot' }));
+    app.get('/healthz', (req, res) => res.json({ status: 'online', bot: 'Wolf' }));
 
     app.use((req, res) => res.status(404).json({ error: `Route not found: ${req.url}` }));
 

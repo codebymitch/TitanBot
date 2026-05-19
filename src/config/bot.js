@@ -3,6 +3,16 @@ import { logger } from '../utils/logger.js';
 
 export const botConfig = {
   // =========================
+  // BRANDING (single source of truth for the bot's public name)
+  // =========================
+  brand: {
+    name: "Wolf",
+    tagline: "The all-in-one Discord bot for moderation, economy, leveling and more.",
+    // Public dashboard URL (used in links/CTAs). Falls back to env or relative.
+    dashboardUrl: process.env.DASHBOARD_URL || "",
+  },
+
+  // =========================
   // BOT PRESENCE (what users see under the bot name)
   // =========================
   // `status` options:
@@ -24,7 +34,7 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        // Text users will see (example: "Playing /help | Titan Bot").
+        // Text users will see (example: "Playing /help | Wolf").
         name: "Made with ❤️",
         // Activity type number (0 = Playing).
         type: 0, 
@@ -136,7 +146,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: "Wolf",
       // Footer icon URL (null = no icon).
       icon: null,
     },
