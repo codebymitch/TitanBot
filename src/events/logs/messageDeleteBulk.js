@@ -6,46 +6,39 @@ import { fetchExecutor, executorText } from '../../utils/auditLog.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 export default {
-  name: Events.GuildBanAdd,
+  name: Events.MessageBulkDelete,
 
-  async execute(ban, client) {
-    const guild = ban.guild;
+  async execute(messages, channel, client) {
+    const guild = channel?.guild;
     if (!guild) return;
 
     const config = await getGuildConfig(client.db, guild.id);
-    if (!isEventEnabled(config, 'moderation.ban')) return;
+    if (!isEventEnabled(config, 'message.bulkdelete')) return;
 
-    const logChannel = await resolveLogChannel(guild, config, 'moderation');
+    const logChannel = await resolveLogChannel(guild, config, 'message');
     if (!logChannel) return;
 
-    const executor = await fetchExecutor(guild, AuditLogEvent.MemberBanAdd, {
-      targetId: ban.user.id,
+    const executor = await fetchExecutor(guild, AuditLogEvent.MessageBulkDelete, {
+      windowMs: 8000,
     });
 
-    const reason =
-      ban.reason ||
-      executor?.reason ||
-      'No especificada';
-
     const embed = createLogEmbed({
-      title: '🔨 Usuario Baneado',
-      color: '#721919',
-      user: ban.user,
-      thumbnail: ban.user.displayAvatarURL({ dynamic: true }),
+      title: '🗑️ Borrado Masivo de Mensajes',
+      color: '#FF0000',
       fields: [
         {
-          name: '👤 Usuario',
-          value: `${ban.user.tag}\n${ban.user}\n🆔 \`${ban.user.id}\``,
+          name: '💬 Canal',
+          value: `${channel}\n🆔 \`${channel.id}\``,
           inline: true,
         },
         {
-          name: '🧑‍💼 Baneado por',
+          name: '🔢 Cantidad',
+          value: `${messages.size} mensajes`,
+          inline: true,
+        },
+        {
+          name: '🧑‍💼 Ejecutado por',
           value: executorText(executor),
-          inline: true,
-        },
-        {
-          name: '📝 Razón',
-          value: reason,
           inline: false,
         },
       ],

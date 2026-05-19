@@ -6,30 +6,25 @@ import { fetchExecutor, executorText } from '../../utils/auditLog.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 export default {
-  name: Events.GuildBanAdd,
+  name: Events.GuildBanRemove,
 
   async execute(ban, client) {
     const guild = ban.guild;
     if (!guild) return;
 
     const config = await getGuildConfig(client.db, guild.id);
-    if (!isEventEnabled(config, 'moderation.ban')) return;
+    if (!isEventEnabled(config, 'moderation.unban')) return;
 
     const logChannel = await resolveLogChannel(guild, config, 'moderation');
     if (!logChannel) return;
 
-    const executor = await fetchExecutor(guild, AuditLogEvent.MemberBanAdd, {
+    const executor = await fetchExecutor(guild, AuditLogEvent.MemberBanRemove, {
       targetId: ban.user.id,
     });
 
-    const reason =
-      ban.reason ||
-      executor?.reason ||
-      'No especificada';
-
     const embed = createLogEmbed({
-      title: '🔨 Usuario Baneado',
-      color: '#721919',
+      title: '♻️ Usuario Desbaneado',
+      color: '#2ecc71',
       user: ban.user,
       thumbnail: ban.user.displayAvatarURL({ dynamic: true }),
       fields: [
@@ -39,14 +34,9 @@ export default {
           inline: true,
         },
         {
-          name: '🧑‍💼 Baneado por',
+          name: '🧑‍💼 Desbaneado por',
           value: executorText(executor),
           inline: true,
-        },
-        {
-          name: '📝 Razón',
-          value: reason,
-          inline: false,
         },
       ],
       footer: `Servidor: ${guild.name}`,

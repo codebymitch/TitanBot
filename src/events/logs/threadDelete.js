@@ -1,48 +1,43 @@
 import { Events, AuditLogEvent } from 'discord.js';
 import { getGuildConfig } from '../../services/guildConfigService.js';
 import { isEventEnabled } from '../../services/loggingService.js';
-import { resolveLogChannel, channelTypeName } from '../../utils/logChannel.js';
+import { resolveLogChannel } from '../../utils/logChannel.js';
 import { fetchExecutor, executorText } from '../../utils/auditLog.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 export default {
-  name: Events.ChannelCreate,
+  name: Events.ThreadDelete,
 
-  async execute(channel, client) {
-    const guild = channel.guild;
+  async execute(thread, client) {
+    const guild = thread.guild;
     if (!guild) return;
 
     const config = await getGuildConfig(client.db, guild.id);
-    if (!isEventEnabled(config, 'channel.create')) return;
+    if (!isEventEnabled(config, 'thread.delete')) return;
 
     const logChannel = await resolveLogChannel(guild, config, 'channel');
     if (!logChannel) return;
 
-    const executor = await fetchExecutor(guild, AuditLogEvent.ChannelCreate, {
-      targetId: channel.id,
+    const executor = await fetchExecutor(guild, AuditLogEvent.ThreadDelete, {
+      targetId: thread.id,
     });
 
     const embed = createLogEmbed({
-      title: '📁 Canal Creado',
-      color: '#2ecc71',
+      title: '🗑️ Hilo Eliminado',
+      color: '#e74c3c',
       fields: [
         {
-          name: '📦 Canal',
-          value: `${channel}\n\`${channel.name}\`\n🆔 \`${channel.id}\``,
+          name: '🧵 Hilo',
+          value: `\`${thread.name}\`\n🆔 \`${thread.id}\``,
           inline: true,
         },
         {
-          name: '🔧 Tipo',
-          value: channelTypeName(channel.type),
+          name: '📦 En canal',
+          value: thread.parent ? `${thread.parent}` : 'Desconocido',
           inline: true,
         },
         {
-          name: '🗂️ Categoría',
-          value: channel.parent ? channel.parent.name : 'Ninguna',
-          inline: true,
-        },
-        {
-          name: '🧑‍💼 Creado por',
+          name: '🧑‍💼 Eliminado por',
           value: executorText(executor),
           inline: false,
         },

@@ -24,6 +24,15 @@ const CATEGORY_MAP = [
     ['reactionrole', '🎭 Reaction Role Events'],
     ['giveaway',     '🎁 Giveaway Events'],
     ['counter',      '📊 Counter Events'],
+    ['channel',      '📁 Channel Events'],
+    ['thread',       '🧵 Thread Events'],
+    ['emoji',        '😀 Emoji Events'],
+    ['sticker',      '🏷️ Sticker Events'],
+    ['server',       '⚙️ Server Events'],
+    ['invite',       '🔗 Invite Events'],
+    ['webhook',      '🪝 Webhook Events'],
+    ['event',        '📅 Scheduled Events'],
+    ['integration',  '🧩 Integration Events'],
 ];
 
 function getCategoryStatus(enabledEvents, category, auditEnabled) {

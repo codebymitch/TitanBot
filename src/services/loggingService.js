@@ -107,7 +107,70 @@ const EVENT_TYPES = {
     'giveaway.delete',
 
   COUNTER_UPDATE:
-    'counter.update'
+    'counter.update',
+
+  MODERATION_UNBAN:
+    'moderation.unban',
+
+  MEMBER_BOOST:
+    'member.boost',
+
+  CHANNEL_CREATE:
+    'channel.create',
+
+  CHANNEL_DELETE:
+    'channel.delete',
+
+  CHANNEL_UPDATE:
+    'channel.update',
+
+  THREAD_CREATE:
+    'thread.create',
+
+  THREAD_DELETE:
+    'thread.delete',
+
+  THREAD_UPDATE:
+    'thread.update',
+
+  EMOJI_CREATE:
+    'emoji.create',
+
+  EMOJI_DELETE:
+    'emoji.delete',
+
+  EMOJI_UPDATE:
+    'emoji.update',
+
+  STICKER_CREATE:
+    'sticker.create',
+
+  STICKER_DELETE:
+    'sticker.delete',
+
+  SERVER_UPDATE:
+    'server.update',
+
+  INVITE_CREATE:
+    'invite.create',
+
+  INVITE_DELETE:
+    'invite.delete',
+
+  WEBHOOK_UPDATE:
+    'webhook.update',
+
+  EVENT_CREATE:
+    'event.create',
+
+  EVENT_DELETE:
+    'event.delete',
+
+  EVENT_UPDATE:
+    'event.update',
+
+  INTEGRATION_UPDATE:
+    'integration.update'
 };
 
 const EVENT_COLORS = {
@@ -207,6 +270,28 @@ const EVENT_COLORS = {
 
   'counter.update':
     0x0099ff,
+
+  'moderation.unban': 0x2ecc71,
+  'member.boost': 0xf47fff,
+  'channel.create': 0x2ecc71,
+  'channel.delete': 0xe74c3c,
+  'channel.update': 0x3498db,
+  'thread.create': 0x2ecc71,
+  'thread.delete': 0xe74c3c,
+  'thread.update': 0x3498db,
+  'emoji.create': 0x2ecc71,
+  'emoji.delete': 0xe74c3c,
+  'emoji.update': 0x3498db,
+  'sticker.create': 0x2ecc71,
+  'sticker.delete': 0xe74c3c,
+  'server.update': 0xf1c40f,
+  'invite.create': 0x2ecc71,
+  'invite.delete': 0xe74c3c,
+  'webhook.update': 0x9b59b6,
+  'event.create': 0x2ecc71,
+  'event.delete': 0xe74c3c,
+  'event.update': 0x3498db,
+  'integration.update': 0x95a5a6,
 };
 
 const EVENT_ICONS = {
@@ -306,6 +391,28 @@ const EVENT_ICONS = {
 
   'counter.update':
     '📊',
+
+  'moderation.unban': '♻️',
+  'member.boost': '🚀',
+  'channel.create': '📁',
+  'channel.delete': '🗂️',
+  'channel.update': '✏️',
+  'thread.create': '🧵',
+  'thread.delete': '🗑️',
+  'thread.update': '✏️',
+  'emoji.create': '😀',
+  'emoji.delete': '🚫',
+  'emoji.update': '✏️',
+  'sticker.create': '🏷️',
+  'sticker.delete': '🚫',
+  'server.update': '⚙️',
+  'invite.create': '🔗',
+  'invite.delete': '🔗',
+  'webhook.update': '🪝',
+  'event.create': '📅',
+  'event.delete': '🗑️',
+  'event.update': '✏️',
+  'integration.update': '🧩',
 };
 
 export async function logEvent({

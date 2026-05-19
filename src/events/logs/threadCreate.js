@@ -1,44 +1,39 @@
 import { Events, AuditLogEvent } from 'discord.js';
 import { getGuildConfig } from '../../services/guildConfigService.js';
 import { isEventEnabled } from '../../services/loggingService.js';
-import { resolveLogChannel, channelTypeName } from '../../utils/logChannel.js';
+import { resolveLogChannel } from '../../utils/logChannel.js';
 import { fetchExecutor, executorText } from '../../utils/auditLog.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 export default {
-  name: Events.ChannelCreate,
+  name: Events.ThreadCreate,
 
-  async execute(channel, client) {
-    const guild = channel.guild;
+  async execute(thread, client) {
+    const guild = thread.guild;
     if (!guild) return;
 
     const config = await getGuildConfig(client.db, guild.id);
-    if (!isEventEnabled(config, 'channel.create')) return;
+    if (!isEventEnabled(config, 'thread.create')) return;
 
     const logChannel = await resolveLogChannel(guild, config, 'channel');
     if (!logChannel) return;
 
-    const executor = await fetchExecutor(guild, AuditLogEvent.ChannelCreate, {
-      targetId: channel.id,
+    const executor = await fetchExecutor(guild, AuditLogEvent.ThreadCreate, {
+      targetId: thread.id,
     });
 
     const embed = createLogEmbed({
-      title: '📁 Canal Creado',
+      title: '🧵 Hilo Creado',
       color: '#2ecc71',
       fields: [
         {
-          name: '📦 Canal',
-          value: `${channel}\n\`${channel.name}\`\n🆔 \`${channel.id}\``,
+          name: '🧵 Hilo',
+          value: `${thread}\n\`${thread.name}\`\n🆔 \`${thread.id}\``,
           inline: true,
         },
         {
-          name: '🔧 Tipo',
-          value: channelTypeName(channel.type),
-          inline: true,
-        },
-        {
-          name: '🗂️ Categoría',
-          value: channel.parent ? channel.parent.name : 'Ninguna',
+          name: '📦 En canal',
+          value: thread.parent ? `${thread.parent}` : 'Desconocido',
           inline: true,
         },
         {

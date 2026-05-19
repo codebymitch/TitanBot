@@ -6,29 +6,29 @@ import { fetchExecutor, executorText } from '../../utils/auditLog.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 export default {
-  name: Events.ChannelCreate,
+  name: Events.ChannelDelete,
 
   async execute(channel, client) {
     const guild = channel.guild;
     if (!guild) return;
 
     const config = await getGuildConfig(client.db, guild.id);
-    if (!isEventEnabled(config, 'channel.create')) return;
+    if (!isEventEnabled(config, 'channel.delete')) return;
 
     const logChannel = await resolveLogChannel(guild, config, 'channel');
     if (!logChannel) return;
 
-    const executor = await fetchExecutor(guild, AuditLogEvent.ChannelCreate, {
+    const executor = await fetchExecutor(guild, AuditLogEvent.ChannelDelete, {
       targetId: channel.id,
     });
 
     const embed = createLogEmbed({
-      title: '📁 Canal Creado',
-      color: '#2ecc71',
+      title: '🗂️ Canal Eliminado',
+      color: '#e74c3c',
       fields: [
         {
           name: '📦 Canal',
-          value: `${channel}\n\`${channel.name}\`\n🆔 \`${channel.id}\``,
+          value: `\`${channel.name}\`\n🆔 \`${channel.id}\``,
           inline: true,
         },
         {
@@ -42,7 +42,7 @@ export default {
           inline: true,
         },
         {
-          name: '🧑‍💼 Creado por',
+          name: '🧑‍💼 Eliminado por',
           value: executorText(executor),
           inline: false,
         },

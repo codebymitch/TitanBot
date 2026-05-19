@@ -20,10 +20,26 @@ const DASHBOARD_CATEGORY_EMOJIS = {
   reactionrole: '🎭',
   giveaway: '🎁',
   counter: '📊',
+  channel: '📁',
+  thread: '🧵',
+  emoji: '😀',
+  sticker: '🏷️',
+  server: '⚙️',
+  invite: '🔗',
+  webhook: '🪝',
+  event: '📅',
+  integration: '🧩',
 };
 
+const ALL_CATEGORIES = [
+  'moderation', 'ticket', 'message', 'role', 'member',
+  'leveling', 'reactionrole', 'giveaway', 'counter',
+  'channel', 'thread', 'emoji', 'sticker', 'server',
+  'invite', 'webhook', 'event', 'integration',
+];
+
 function createDashboardCategoryButtons(enabledEvents = {}, loggingEnabled = false) {
-  const categories = ['moderation', 'ticket', 'message', 'role', 'member', 'leveling', 'reactionrole', 'giveaway', 'counter'];
+  const categories = ALL_CATEGORIES;
   const buttons = categories.map((category) => {
     const wildcardDisabled = enabledEvents[`${category}.*`] === false;
     const categoryEvents = EVENT_TYPES_BY_CATEGORY[category] || [];
@@ -146,7 +162,7 @@ export function getButtonStatusStyle(isEnabled) {
 
 
 export function createStatusIndicatorButtons(enabledEvents = {}, loggingEnabled = false) {
-  const eventCategories = ['moderation', 'ticket', 'message', 'role', 'member', 'leveling', 'reactionrole', 'giveaway', 'counter'];
+  const eventCategories = ALL_CATEGORIES;
   const buttons = [];
 
   for (const category of eventCategories) {
@@ -157,17 +173,7 @@ export function createStatusIndicatorButtons(enabledEvents = {}, loggingEnabled 
       : categoryEvents.every((eventType) => enabledEvents[eventType] !== false);
     const isEnabled = loggingEnabled && !categoryWildcardDisabled && categoryEventsEnabled;
 
-    const emoji = {
-      'moderation': '🔨',
-      'ticket': '🎫',
-      'message': '❌',
-      'role': '🏷️',
-      'member': '👋',
-      'leveling': '📈',
-      'reactionrole': '🎭',
-      'giveaway': '🎁',
-      'counter': '📊'
-    }[category] || '📌';
+    const emoji = DASHBOARD_CATEGORY_EMOJIS[category] || '📌';
 
     buttons.push(
       new ButtonBuilder()

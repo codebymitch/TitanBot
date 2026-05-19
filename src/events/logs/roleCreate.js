@@ -1,44 +1,39 @@
 import { Events, AuditLogEvent } from 'discord.js';
 import { getGuildConfig } from '../../services/guildConfigService.js';
 import { isEventEnabled } from '../../services/loggingService.js';
-import { resolveLogChannel, channelTypeName } from '../../utils/logChannel.js';
+import { resolveLogChannel } from '../../utils/logChannel.js';
 import { fetchExecutor, executorText } from '../../utils/auditLog.js';
 import { createLogEmbed } from '../../utils/logEmbed.js';
 
 export default {
-  name: Events.ChannelCreate,
+  name: Events.GuildRoleCreate,
 
-  async execute(channel, client) {
-    const guild = channel.guild;
+  async execute(role, client) {
+    const guild = role.guild;
     if (!guild) return;
 
     const config = await getGuildConfig(client.db, guild.id);
-    if (!isEventEnabled(config, 'channel.create')) return;
+    if (!isEventEnabled(config, 'role.create')) return;
 
-    const logChannel = await resolveLogChannel(guild, config, 'channel');
+    const logChannel = await resolveLogChannel(guild, config, 'role');
     if (!logChannel) return;
 
-    const executor = await fetchExecutor(guild, AuditLogEvent.ChannelCreate, {
-      targetId: channel.id,
+    const executor = await fetchExecutor(guild, AuditLogEvent.RoleCreate, {
+      targetId: role.id,
     });
 
     const embed = createLogEmbed({
-      title: '📁 Canal Creado',
+      title: '➕ Rol Creado',
       color: '#2ecc71',
       fields: [
         {
-          name: '📦 Canal',
-          value: `${channel}\n\`${channel.name}\`\n🆔 \`${channel.id}\``,
+          name: '🏷️ Rol',
+          value: `${role}\n\`${role.name}\`\n🆔 \`${role.id}\``,
           inline: true,
         },
         {
-          name: '🔧 Tipo',
-          value: channelTypeName(channel.type),
-          inline: true,
-        },
-        {
-          name: '🗂️ Categoría',
-          value: channel.parent ? channel.parent.name : 'Ninguna',
+          name: '🎨 Color',
+          value: role.hexColor,
           inline: true,
         },
         {
