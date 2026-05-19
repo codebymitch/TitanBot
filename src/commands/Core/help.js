@@ -39,6 +39,7 @@ const CATEGORY_INFO = {
     Voice:          { icon: "🔊",  desc: "Voice channel commands and activities" },
     Music:          { icon: "🎵",  desc: "Play music in voice channels, queue songs, and control playback" },
     Gorilla:        { icon: "🦍",  desc: "Gorilla Tag server status, cosmetics browser, and auto-update channel" },
+    Starrail:       { icon: "🌌",  desc: "Honkai: Star Rail — path assignment, character rolls, quotes, and Penacony dreamscapes" },
 };
 
 export async function createInitialHelpMenu(client, member) {

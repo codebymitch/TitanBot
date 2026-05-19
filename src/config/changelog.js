@@ -1,5 +1,15 @@
 export const changelog = [
     {
+        version: '2.9.3',
+        date: '2026-05-19',
+        entries: [
+            { type: 'new', text: 'Added `/hsr path` — get assigned a random Path of the Aeons with lore description' },
+            { type: 'new', text: 'Added `/hsr quote` — random quote from a Star Rail character' },
+            { type: 'new', text: 'Added `/hsr roll` — warp gacha simulator that pulls a random character' },
+            { type: 'new', text: 'Added `/hsr dream` — atmospheric Penacony/Evernight dreamscape embeds' },
+        ],
+    },
+    {
         version: '2.9.2',
         date: '2026-05-14',
         entries: [
