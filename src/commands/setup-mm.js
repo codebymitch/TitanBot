@@ -35,11 +35,12 @@ function createSetupEmbed() {
         value: '🚫 Nunca compartilhe informações pessoais\n' +
                '⏳ Aguarde a confirmação do middleman\n' +
                '📋 Siga as instruções no canal privado\n' +
-               '🔒 Somente middlemen podem fechar a troca',
+               '🔒 Somente middlemen podem fechar a troca' +
+               '✅ Lembre-se de comunicar ao MM quando o item for entregue',
         inline: false
       }
     )
-    .setFooter({ text: 'Eclipse MM • Sistema de Intermediação' })
+    .setFooter({ text: 'Erednay MM • Sistema de Intermediação' })
     .setTimestamp();
 }
 
