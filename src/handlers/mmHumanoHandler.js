@@ -859,6 +859,31 @@ export async function isUserStaff(member, guild) {
   return false;
 }
 
+// IDs dos cargos que podem concluir/cancelar tickets (Suporte e Middleman)
+const MM_ALLOWED_ROLE_IDS = ['1505631589407658064', '1505618270492033094'];
+
+/**
+ * Verifica se o membro pode agir como MM no ticket.
+ * Retorna true se for o MM responsável pelo ticket OU se tiver cargo de Suporte/Middleman.
+ */
+async function canActAsMMOnTicket(interaction, data) {
+  // É o MM responsável pelo ticket
+  if (data.mmId && data.mmId === interaction.user.id) {
+    return true;
+  }
+
+  // Tem cargo de Suporte ou Middleman
+  const member = interaction.guild.members.cache.get(interaction.user.id)
+    ?? await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+
+  if (!member) return false;
+
+  // Owner sempre pode
+  if (member.id === interaction.guild.ownerId) return true;
+
+  return MM_ALLOWED_ROLE_IDS.some(roleId => member.roles.cache.has(roleId));
+}
+
 /**
  * Handle claim middleman button - OTIMIZADO PARA EVITAR DEMORA
  *
@@ -1040,8 +1065,9 @@ export async function handleCompleteTicket(interaction) {
     });
   }
 
-  // Only the assigned MM can complete
-  if (data.mmId !== interaction.user.id) {
+  // MM responsável ou cargo de Suporte/Middleman pode concluir
+  const canComplete = await canActAsMMOnTicket(interaction, data);
+  if (!canComplete) {
     return interaction.followUp({
       content: '❌ Apenas o Middleman responsável pode concluir esta intermediação.',
       ephemeral: true
@@ -1117,8 +1143,9 @@ export async function handleCancelTicket(interaction) {
     });
   }
 
-  // Only the assigned MM can cancel
-  if (data.mmId !== interaction.user.id) {
+  // MM responsável ou cargo de Suporte/Middleman pode cancelar
+  const canCancel = await canActAsMMOnTicket(interaction, data);
+  if (!canCancel) {
     return interaction.reply({
       content: '❌ Apenas o Middleman responsável pode cancelar esta intermediação.',
       ephemeral: true
