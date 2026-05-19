@@ -102,11 +102,19 @@ Exemplo de como a tabela é exibida:
 ### 3. Assumir Intermediação
 - Botão: **✋ Assumir Intermediação** (apenas para Staff/Middleman)
 - Primeiro a clicar assume o ticket
+- Mensagem de carregamento é exibida para comprador e vendedor
 - Status muda para: **🟢 EM ANDAMENTO**
 - ID do middleman é salvo no tópico
+- Tempo de resposta otimizado (dentro do limite de 3 segundos do Discord)
 
-### 4. Fechar Intermediação
-- Botão: **🔒 Fechar Intermediação** (apenas para o middleman que assumiu)
+### 4. Confirmar Entrega
+- Botão: **📦 Confirmar Entrega** (apenas para o comprador)
+- Comprador deve digitar "SIM" em um modal para confirmar
+- Status muda para: **✅ ENTREGUE / AGUARDANDO MM**
+- Botão "🔒 Fechar Ticket" é exibido para o middleman
+
+### 5. Fechar Intermediação
+- Botão: **🔒 Fechar Ticket** (apenas para o middleman que assumiu)
 - Contagem regressiva de 5 segundos
 - Canal é deletado automaticamente
 

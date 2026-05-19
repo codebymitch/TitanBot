@@ -802,26 +802,35 @@ export async function handleClaimMM(interaction) {
     });
   }
 
+  // CRITICAL: Defer immediately to prevent Discord timeout (3 seconds)
+  // This must be the FIRST thing we do
+  await interaction.deferUpdate();
+
   // RACE CONDITION PREVENTION: Check if channel is already being claimed
   if (claimingChannels.has(channelId)) {
-    await interaction.deferUpdate();
+    await interaction.followUp({
+      content: '⏳ Alguém já está assumindo esta intermediação. Aguarde um instante...',
+      ephemeral: true
+    });
     return;
   }
 
   // Check if already claimed FIRST (faster check)
   if (data.mmId) {
-    return interaction.followUp({
+    await interaction.followUp({
       content: 'ℹ️ Esta intermediação já foi assumida por <@' + data.mmId + '>.',
       ephemeral: true
     });
+    return;
   }
 
   // Check if user is trying to assume their own ticket (FAST VALIDATION)
   if (data.buyerId === interaction.user.id || data.sellerId === interaction.user.id) {
-    return interaction.reply({
+    await interaction.followUp({
       content: '❌ Você não pode assumir sua própria intermediação.',
       ephemeral: true
     });
+    return;
   }
 
   // ADD THE CHANNEL TO CLAIMING SET (prevents race conditions)
@@ -837,101 +846,103 @@ export async function handleClaimMM(interaction) {
     const member = interaction.guild.members.cache.get(interaction.user.id)
       || await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
     if (!member) {
-      claimingChannels.delete(channelId);
-      return interaction.reply({
+      await interaction.followUp({
         content: '❌ Erro ao verificar permissões.',
         ephemeral: true
       });
+      return;
     }
 
     const isStaff = await isUserStaff(member, interaction.guild);
     if (!isStaff) {
-      claimingChannels.delete(channelId);
-      return interaction.reply({
+      await interaction.followUp({
         content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
         ephemeral: true
       });
+      return;
     }
 
     // DOUBLE-CHECK to prevent race condition from multiple simultaneous claims
     const freshData = parseTopicData(channel.topic || '');
     if (!freshData) {
-      claimingChannels.delete(channelId);
-      return interaction.reply({
+      await interaction.followUp({
         content: '❌ Dados da intermediação inválidos.',
         ephemeral: true
       });
+      return;
     }
     if (freshData.mmId) {
-      claimingChannels.delete(channelId);
-      return interaction.reply({
+      await interaction.followUp({
         content: 'ℹ️ Esta intermediação já foi assumida por <@' + freshData.mmId + '>.',
         ephemeral: true
       });
+      return;
     }
+
+    // Send loading message to buyer and seller FIRST (fast feedback)
+    await channel.send({
+      content: '⏳ **Alguém está assumindo a intermediação...**\nAguarde um instante, comprador e vendedor.'
+    });
 
     // Update data with middleman info (ATOMIC: update immediately)
     const updateData = { ...freshData };
     updateData.mmId = interaction.user.id;
     updateData.status = 'IN_PROGRESS';
-    const topicUpdate = channel.setTopic(serializeTopicData(updateData)).catch(err => {
+    
+    try {
+      await channel.setTopic(serializeTopicData(updateData));
+    } catch (err) {
       logger.warn('Failed to update channel topic during claim', { error: err.message });
+    }
+
+    // Get member names for display
+    const [buyerMember, sellerMember] = await Promise.all([
+      interaction.guild.members.cache.get(updateData.buyerId)
+        || interaction.guild.members.fetch(updateData.buyerId).catch(() => null),
+      interaction.guild.members.cache.get(updateData.sellerId)
+        || interaction.guild.members.fetch(updateData.sellerId).catch(() => null)
+    ]);
+
+    const buyerName = buyerMember?.user.username || 'Unknown';
+    const sellerName = sellerMember?.user.username || 'Unknown';
+
+    const tableData = {
+      buyerDisplay: buyerName,
+      sellerDisplay: sellerName,
+      method: updateData.method,
+      amountDisplay: updateData.amount || 'N/A',
+      statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
+      middlemanDisplay: interaction.user.username,
+      statusColor: mmConfig.statusColors.IN_PROGRESS
+    };
+
+    // Update the table message
+    if (updateData.tableMessageId) {
+      try {
+        const tableMessage = await channel.messages.fetch(updateData.tableMessageId);
+        if (tableMessage) {
+          await tableMessage.edit({
+            embeds: [createTicketTableEmbed(tableData)],
+            components: [createConfirmDeliveryButton()]
+          });
+        }
+      } catch (err) {
+        logger.warn('Failed to update table message', { error: err.message });
+      }
+    }
+
+    // Send success message
+    await channel.send({
+      content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
+               'Vendedor e Comprador podem prosseguir de forma segura.'
     });
 
-    await interaction.reply({
+    // Notify the middleman
+    await interaction.followUp({
       content: '✅ Intermediação assumida com sucesso!',
       ephemeral: true
     });
 
-    // Continue updating ticket appearance without delaying the user response
-    const updateTask = (async () => {
-      await topicUpdate;
-
-      const [buyerMember, sellerMember] = await Promise.all([
-        interaction.guild.members.cache.get(updateData.buyerId)
-          || interaction.guild.members.fetch(updateData.buyerId).catch(() => null),
-        interaction.guild.members.cache.get(updateData.sellerId)
-          || interaction.guild.members.fetch(updateData.sellerId).catch(() => null)
-      ]);
-
-      const buyerName = buyerMember?.user.username || 'Unknown';
-      const sellerName = sellerMember?.user.username || 'Unknown';
-
-      const tableData = {
-        buyerDisplay: buyerName,
-        sellerDisplay: sellerName,
-        method: updateData.method,
-        amountDisplay: updateData.amount || 'N/A',
-        statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
-        middlemanDisplay: interaction.user.username,
-        statusColor: mmConfig.statusColors.IN_PROGRESS
-      };
-
-      if (updateData.tableMessageId) {
-        try {
-          const tableMessage = await channel.messages.fetch(updateData.tableMessageId);
-          if (tableMessage) {
-            await tableMessage.edit({
-              embeds: [createTicketTableEmbed(tableData)],
-              components: [createConfirmDeliveryButton()]
-            });
-          }
-        } catch (err) {
-          logger.warn('Failed to update table message', { error: err.message });
-        }
-      }
-
-      try {
-        await channel.send({
-          content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
-                   'Vendedor e Comprador podem prosseguir de forma segura.'
-        });
-      } catch (err) {
-        logger.warn('Failed to send claim notification', { error: err.message });
-      }
-    })();
-
-    void updateTask;
   } finally {
     // Always remove the channel from claiming set
     clearTimeout(timeoutHandle);
@@ -977,15 +988,13 @@ export async function handleConfirmDelivery(interaction) {
  * Handle delivery confirmation modal submission
  */
 export async function handleConfirmDeliveryModal(interaction) {
-  // CRITICAL: Defer immediately
-  await interaction.deferUpdate();
-
   const channel = interaction.channel;
   const topic = channel.topic || '';
   const data = parseTopicData(topic);
 
   if (!data) {
-    return interaction.followUp({
+    // Must reply/defer first before any async operations
+    return interaction.reply({
       content: '❌ Dados da intermediação inválidos.',
       ephemeral: true
     });
@@ -993,13 +1002,13 @@ export async function handleConfirmDeliveryModal(interaction) {
 
   // Only the buyer can submit this modal
   if (data.buyerId !== interaction.user.id) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '❌ Apenas o Comprador pode confirmar o recebimento.',
       ephemeral: true
     });
   }
 
-  // Get the input and validate
+  // Get the input and validate BEFORE deferring
   const confirmationInput = interaction.fields.getTextInputValue('txt_confirmacao_entrega')
     .trim()
     .toLowerCase();
@@ -1011,66 +1020,83 @@ export async function handleConfirmDeliveryModal(interaction) {
     });
   }
 
-  // Update status to DELIVERED
-  data.status = 'DELIVERED';
-  await channel.setTopic(serializeTopicData(data));
+  // CRITICAL: Defer immediately AFTER validation to prevent Discord timeout
+  await interaction.deferUpdate();
 
-  // Fetch usernames
-  let buyerName = 'Unknown';
-  let sellerName = 'Unknown';
-  let middlemanName = null;
-  
   try {
-    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
-    if (buyerMember) buyerName = buyerMember.user.username;
-  } catch { /* ignore */ }
-  try {
-    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
-    if (sellerMember) sellerName = sellerMember.user.username;
-  } catch { /* ignore */ }
-  try {
-    if (data.mmId) {
-      const mmMember = await interaction.guild.members.fetch(data.mmId);
-      if (mmMember) middlemanName = mmMember.user.username;
-    }
-  } catch { /* ignore */ }
+    // Update status to DELIVERED
+    data.status = 'DELIVERED';
+    await channel.setTopic(serializeTopicData(data));
 
-  // Update embed with DELIVERED status
-  const tableData = {
-    buyerDisplay: buyerName,
-    sellerDisplay: sellerName,
-    method: data.method,
-    amountDisplay: data.amount || 'N/A',
-    statusDisplay: mmConfig.statusLabels.DELIVERED,
-    middlemanDisplay: middlemanName,
-    statusColor: mmConfig.statusColors.DELIVERED
-  };
-
-  // Update the table message directly if ID is stored
-  if (data.tableMessageId) {
+    // Fetch usernames using cache first for speed
+    let buyerName = 'Unknown';
+    let sellerName = 'Unknown';
+    let middlemanName = null;
+    
     try {
-      const tableMessage = await channel.messages.fetch(data.tableMessageId);
-      if (tableMessage) {
-        await tableMessage.edit({
-          embeds: [createTicketTableEmbed(tableData)],
-          components: [createFinalizeMMButton()]
-        });
+      const buyerMember = interaction.guild.members.cache.get(data.buyerId)
+        || await interaction.guild.members.fetch(data.buyerId).catch(() => null);
+      if (buyerMember) buyerName = buyerMember.user.username;
+    } catch { /* ignore */ }
+    
+    try {
+      const sellerMember = interaction.guild.members.cache.get(data.sellerId)
+        || await interaction.guild.members.fetch(data.sellerId).catch(() => null);
+      if (sellerMember) sellerName = sellerMember.user.username;
+    } catch { /* ignore */ }
+    
+    try {
+      if (data.mmId) {
+        const mmMember = interaction.guild.members.cache.get(data.mmId)
+          || await interaction.guild.members.fetch(data.mmId).catch(() => null);
+        if (mmMember) middlemanName = mmMember.user.username;
       }
-    } catch (err) {
-      logger.warn('Failed to update table message', { error: err.message });
+    } catch { /* ignore */ }
+
+    // Update embed with DELIVERED status
+    const tableData = {
+      buyerDisplay: buyerName,
+      sellerDisplay: sellerName,
+      method: data.method,
+      amountDisplay: data.amount || 'N/A',
+      statusDisplay: mmConfig.statusLabels.DELIVERED,
+      middlemanDisplay: middlemanName,
+      statusColor: mmConfig.statusColors.DELIVERED
+    };
+
+    // Update the table message directly if ID is stored
+    if (data.tableMessageId) {
+      try {
+        const tableMessage = await channel.messages.fetch(data.tableMessageId);
+        if (tableMessage) {
+          await tableMessage.edit({
+            embeds: [createTicketTableEmbed(tableData)],
+            components: [createFinalizeMMButton()]
+          });
+        }
+      } catch (err) {
+        logger.warn('Failed to update table message', { error: err.message });
+      }
     }
+
+    // Send notification to all users
+    await channel.send({
+      content: '✅ O Comprador **' + interaction.user.username + '** confirmou o recebimento do item.\n' +
+               'Middleman pode agora finalizar a intermediação.'
+    });
+
+    // Notify the buyer
+    await interaction.followUp({
+      content: '✅ Recebimento confirmado com sucesso!',
+      ephemeral: true
+    });
+  } catch (error) {
+    logger.error('Error in confirm delivery modal:', { error: error.message });
+    await interaction.followUp({
+      content: '❌ Erro ao processar confirmação. Tente novamente.',
+      ephemeral: true
+    });
   }
-
-  // Send notification
-  await channel.send({
-    content: '✅ O Comprador **' + interaction.user.username + '** confirmou o recebimento do item.\n' +
-             'Middleman pode agora finalizar a intermediação.'
-  });
-
-  await interaction.followUp({
-    content: '✅ Recebimento confirmado com sucesso!',
-    ephemeral: true
-  });
 }
 
 /**
