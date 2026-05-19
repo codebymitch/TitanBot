@@ -44,6 +44,53 @@ export const WIZARD_IDS = {
   CLOSE_TICKET_COMMAND: 'mm_close_ticket_cmd'
 };
 
+// ============================================================
+//  🎨 MANUAL DE ESTÉTICA — edite aqui para mudar a aparência
+// ============================================================
+//
+//  CORES (formato hexadecimal 0xRRGGBB):
+//    THEME.accent       → cor da barra lateral dos embeds de wizard (passos 1-4)
+//    THEME.pending      → cor do ticket enquanto aguarda MM
+//    THEME.inProgress   → cor do ticket em andamento
+//    THEME.completed    → cor do ticket concluído
+//    THEME.cancelled    → cor do ticket cancelado
+//
+//  BADGE / TÍTULO DO TICKET (createTicketTableEmbed):
+//    THEME.badgeEmoji   → emoji que aparece como ícone principal do embed
+//    THEME.badgeLabel   → texto da badge/título principal
+//    THEME.footerText   → rodapé fixo do embed de ticket
+//
+//  BOTÕES (createClaimMMButton / createMMActionButtons):
+//    Altere .setLabel() para mudar o texto dos botões
+//    Altere .setStyle() para mudar a cor:
+//      ButtonStyle.Primary   = Azul
+//      ButtonStyle.Secondary = Cinza
+//      ButtonStyle.Success   = Verde
+//      ButtonStyle.Danger    = Vermelho
+//
+//  CAMPOS DO EMBED DE TICKET:
+//    Em createTicketTableEmbed(), os .addFields() definem cada linha.
+//    Mude o `name` (rótulo em negrito) e `value` (conteúdo) de cada campo.
+//    `inline: true` coloca campos lado a lado, `false` ocupa linha inteira.
+//
+// ============================================================
+const THEME = {
+  // Cor dos embeds de wizard (passos do fluxo)
+  accent: 0xE8511A,          // Vermelho-alaranjado
+
+  // Cores de status do ticket
+  pending:    0xE8511A,      // Aguardando MM  → vermelho-alaranjado
+  inProgress: 0xE8511A,      // Em andamento   → vermelho-alaranjado
+  completed:  0x27AE60,      // Concluído      → verde
+  cancelled:  0x95A5A6,      // Cancelado      → cinza
+
+  // Badge / identidade visual do ticket
+  badgeEmoji: '🤝',
+  badgeLabel: 'INTERMEDIAÇÃO',
+  footerText: 'Eclipse MM • Sistema de Intermediação',
+};
+// ============================================================
+
 // Wizard state stored in memory (per user, temporary)
 const wizardStates = new Map();
 
@@ -63,17 +110,21 @@ const COOLDOWN_MS = 30000; // 30 seconds cooldown
  */
 function createPaymentSelectEmbed() {
   return new EmbedBuilder()
-    .setColor(0x3498DB)
-    .setTitle('💳 Passo 1/4 - Método de Pagamento')
-    .setDescription('```' +
-      '┌────────────────────────────────────────┐\n' +
-      '│  Selecione o método de pagamento que   │\n' +
-      '│  será utilizado na intermediação.      │\n' +
-      '└────────────────────────────────────────┘\n' +
-      '```'
+    .setColor(THEME.accent)
+    .setTitle(THEME.badgeEmoji + ' — Solicitar MM')
+    .addFields(
+      {
+        name: '〡 Taxas Normais',
+        value: 'R$1,00 Acima de R$2,50.\nR$2,15 Acima de R$100.\nR$4,30 Acima de R$200.\nR$6,80 Acima de R$400.\n1,2% Acima de R$700.\n\nEm conta adicionamos **4R$**.',
+        inline: false
+      },
+      {
+        name: '〡 Taxas Cross Trade',
+        value: 'R$0,60 - 2 Itens\nR$0,80 - 3+ Itens',
+        inline: false
+      }
     )
-    .setFooter({ text: 'Configuração de Intermediação' })
-    .setTimestamp();
+    .setFooter({ text: THEME.footerText });
 }
 
 /**
@@ -102,17 +153,10 @@ function createPaymentSelectMenu() {
  */
 function createRoleSelectEmbed() {
   return new EmbedBuilder()
-    .setColor(0x3498DB)
-    .setTitle('👤 Passo 2/4 - Seu Papel')
-    .setDescription('```' +
-      '┌────────────────────────────────────────┐\n' +
-      '│  Você é o comprador ou o vendedor      │\n' +
-      '│  nesta transação?                      │\n' +
-      '└────────────────────────────────────────┘\n' +
-      '```'
-    )
-    .setFooter({ text: 'Configuração de Intermediação' })
-    .setTimestamp();
+    .setColor(THEME.accent)
+    .setTitle('— Solicitar MM')
+    .setDescription('Você é o **comprador** ou o **vendedor** nesta transação?')
+    .setFooter({ text: THEME.footerText });
 }
 
 /**
@@ -166,23 +210,15 @@ function createAmountModal() {
  */
 function createCounterpartySelectEmbed(userRole) {
   const roleLabel = userRole === 'buyer' ? 'Vendedor' : 'Comprador';
-  const roleEmoji = userRole === 'buyer' ? '🎒' : '🛒';
-  
+
   return new EmbedBuilder()
-    .setColor(0x3498DB)
-    .setTitle(roleEmoji + ' Passo 4/4 - Selecionar ' + roleLabel)
-    .setDescription('```' +
-      '┌────────────────────────────────────────┐\n' +
-      '│  Selecione o ' + roleLabel.toLowerCase() + ' com quem você    │\n' +
-      '│  está fazendo a trade.                 │\n' +
-      '│                                        │\n' +
-      '│  ⚠️ Você não pode selecionar a si      │\n' +
-      '│  mesmo.                                │\n' +
-      '└────────────────────────────────────────┘\n' +
-      '```'
+    .setColor(THEME.accent)
+    .setTitle('— Solicitar MM')
+    .setDescription(
+      'Selecione o **' + roleLabel + '** com quem você está fazendo a trade.\n\n' +
+      '> ⚠️ Você não pode selecionar a si mesmo.'
     )
-    .setFooter({ text: 'Configuração de Intermediação' })
-    .setTimestamp();
+    .setFooter({ text: THEME.footerText });
 }
 
 /**
@@ -240,69 +276,74 @@ function calculateMMFee(amountDisplay) {
 
 /**
  * Create the main ticket table embed
+ *
+ * Para mudar a aparência deste embed, veja o bloco THEME no topo do arquivo.
+ * Para adicionar/remover campos, edite os .addFields() abaixo.
+ * Campos com inline:true ficam lado a lado (máx 3 por linha no Discord).
  */
 function createTicketTableEmbed(data) {
   const { buyerDisplay, sellerDisplay, method, amountDisplay, statusDisplay, middlemanDisplay, mmFeeDisplay } = data;
 
   const feeDisplay = mmFeeDisplay || calculateMMFee(amountDisplay);
+  const statusColor = data.statusColor || THEME.pending;
+  const mmField = middlemanDisplay || 'Aguardando suporte';
 
-  let table = '```';
-  table += '┌──────────────────────────────────────────┐\n';
-  table += '│        DADOS DA INTERMEDIAÇÃO            │\n';
-  table += '├──────────────────────────────────────────┤\n';
-  table += '│ 💵 Método: ' + method.padEnd(29) + '│\n';
-  table += '│ 💰 Valor:  ' + amountDisplay.padEnd(29) + '│\n';
-  table += '│ 📊 Taxa MM:' + feeDisplay.padEnd(27) + '│\n';
-  table += '│ 👤 Comprador: ' + buyerDisplay.padEnd(24) + '│\n';
-  table += '│ 🎒 Vendedor:  ' + sellerDisplay.padEnd(24) + '│\n';
-  table += '├──────────────────────────────────────────┤\n';
-  table += '│ Status: ' + statusDisplay.padEnd(30) + '│\n';
-  if (middlemanDisplay) {
-    table += '│ 🛡️ Middleman: ' + middlemanDisplay.padEnd(25) + '│\n';
-  } else {
-    table += '│ 🛡️ Middleman: ' + 'Aguardando suporte'.padEnd(22) + '│\n';
-  }
-  table += '└──────────────────────────────────────────┘\n';
-  table += '```';
-
-  const statusColor = data.statusColor || 0x3498DB;
-
-  const embed = new EmbedBuilder()
+  return new EmbedBuilder()
     .setColor(statusColor)
-    .setTitle('🛡️ Intermediação Ativa')
-    .setDescription(table)
-    .setFooter({ text: 'ID: ' + Date.now().toString(36).toUpperCase() })
-    .setTimestamp();
+    .setTitle(THEME.badgeEmoji + ' — ' + THEME.badgeLabel)
+    .addFields(
+      // ── Linha 1: comprador e vendedor lado a lado
+      { name: '👤 Comprador', value: buyerDisplay,  inline: true },
+      { name: '🎒 Vendedor',  value: sellerDisplay, inline: true },
+      // Espaçador invisível para quebrar linha no Discord (3 colunas)
+      { name: '​',       value: '​',       inline: true },
 
-  return embed;
+      // ── Linha 2: financeiro
+      { name: '💵 Método',  value: method,        inline: true },
+      { name: '💰 Valor',   value: amountDisplay, inline: true },
+      { name: '📊 Taxa MM', value: feeDisplay,    inline: true },
+
+      // ── Linha 3: status e MM (linha inteira cada)
+      { name: '📋 Status',      value: statusDisplay, inline: false },
+      { name: '🛡️ Middleman',   value: mmField,       inline: false }
+    )
+    .setFooter({ text: THEME.footerText })
+    .setTimestamp();
 }
 
 /**
  * Create the "Claim Intermediation" button
+ * Para mudar texto: edite .setLabel()
+ * Para mudar cor: troque ButtonStyle.Primary por Secondary / Success / Danger
  */
 function createClaimMMButton() {
   return new ActionRowBuilder()
     .addComponents(
       new ButtonBuilder()
         .setCustomId(WIZARD_IDS.CLAIM_MM)
-        .setLabel('✋ Assumir Intermediação')
-        .setStyle(ButtonStyle.Secondary)
+        .setLabel('Assumir intermediação')
+        .setEmoji('🤝')
+        .setStyle(ButtonStyle.Primary)
     );
 }
 
 /**
  * Create the MM action buttons (Complete + Cancel)
+ * Para mudar texto: edite .setLabel() de cada botão
+ * Para mudar cor: troque o ButtonStyle correspondente
  */
 function createMMActionButtons() {
   return new ActionRowBuilder()
     .addComponents(
       new ButtonBuilder()
         .setCustomId(WIZARD_IDS.COMPLETE_TICKET)
-        .setLabel('✅ Concluir Ticket')
+        .setLabel('Concluir Ticket')
+        .setEmoji('✅')
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(WIZARD_IDS.CANCEL_TICKET)
-        .setLabel('❌ Cancelar Ticket')
+        .setLabel('Cancelar Ticket')
+        .setEmoji('❌')
         .setStyle(ButtonStyle.Danger)
     );
 }
@@ -697,7 +738,7 @@ async function createTicketChannel(interaction, state) {
       amountDisplay: state.amount || 'N/A',
       statusDisplay: mmConfig.statusLabels.PENDING,
       middlemanDisplay: null,
-      statusColor: mmConfig.statusColors.PENDING
+      statusColor: THEME.pending
     };
 
     const tableMsg = await channel.send({
@@ -804,7 +845,7 @@ export async function handleRequestMM(interaction) {
     amountDisplay: data.amount || 'N/A',
     statusDisplay: mmConfig.statusLabels.NOTIFIED,
     middlemanDisplay: null,
-    statusColor: mmConfig.statusColors.NOTIFIED
+    statusColor: THEME.pending
   };
 
   if (data.tableMessageId) {
@@ -1010,7 +1051,7 @@ export async function handleClaimMM(interaction) {
       amountDisplay: updateData.amount || 'N/A',
       statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
       middlemanDisplay: interaction.user.username,
-      statusColor: mmConfig.statusColors.IN_PROGRESS
+      statusColor: THEME.inProgress
     };
 
     // Update the table message with MM action buttons
@@ -1097,7 +1138,7 @@ export async function handleCompleteTicket(interaction) {
             amountDisplay: data.amount || 'N/A',
             statusDisplay: mmConfig.statusLabels.COMPLETED,
             middlemanDisplay: interaction.user.username,
-            statusColor: mmConfig.statusColors.COMPLETED
+            statusColor: THEME.completed
           })],
           components: []
         });
@@ -1200,7 +1241,7 @@ export async function handleCancelReasonModal(interaction) {
             amountDisplay: data.amount || 'N/A',
             statusDisplay: mmConfig.statusLabels.CANCELLED,
             middlemanDisplay: interaction.user.username,
-            statusColor: mmConfig.statusColors.CANCELLED
+            statusColor: THEME.cancelled
           })],
           components: []
         });
