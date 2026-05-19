@@ -33,9 +33,22 @@ function createSetupEmbed() {
       {
         name: '⚠️ REGRAS IMPORTANTES',
         value: '🚫 Nunca compartilhe informações pessoais\n' +
-               '⏳ Aguarde a confirmação do middleman\n' +
                '📋 Siga as instruções no canal privado\n' +
-               '🔒 Somente middlemen podem fechar a troca\n',
+               '🔒 O middleman é o único autorizado a fechar a trade',
+        inline: false
+      },
+      {
+        name: '💰 TAXAS',
+        value: '**Taxas Normais:**\n' +
+               'R$1,00 - Acima de R$2,50\n' +
+               'R$2,15 - Acima de R$100\n' +
+               'R$4,30 - Acima de R$200\n' +
+               'R$6,80 - Acima de R$400\n' +
+               '1,2% - Acima de R$700\n' +
+               'Em conta: adicionamos R$4,00\n\n' +
+               '**Taxas Cross Trade:**\n' +
+               'R$0,60 - 2 Itens\n' +
+               'R$0,80 - 3+ Itens',
         inline: false
       }
     )
