@@ -27,14 +27,14 @@ function createSetupEmbed() {
         value: '1. Clique no botão abaixo para iniciar\n' +
                '2. Preencha as informações da trade\n' +
                '3. Um canal privado será criado\n' +
-               '4. Um middleman assumirá a intermediação',
+               '4. Um middleman assumirá a intermediação\n\n',
         inline: false
       },
       {
         name: '⚠️ REGRAS IMPORTANTES',
         value: '🚫 Nunca compartilhe informações pessoais\n' +
                '📋 Siga as instruções no canal privado\n' +
-               '🔒 O middleman é o único autorizado a fechar a trade',
+               '🔒 O middleman é o único autorizado a fechar a trade\n\n',
         inline: false
       },
       {
@@ -44,8 +44,7 @@ function createSetupEmbed() {
                'R$2,15 - Acima de R$100\n' +
                'R$4,30 - Acima de R$200\n' +
                'R$6,80 - Acima de R$400\n' +
-               '1,2% - Acima de R$700\n' +
-               'Em conta: adicionamos R$4,00\n\n',
+               '1,2% - Acima de R$700\n\n',
         inline: false
       }
     )
