@@ -16,13 +16,20 @@ export default {
 
     const status = newPresence.status ?? 'online';
 
+    if (status === 'offline' || status === 'invisible') {
+      client.user.setPresence({
+        status: 'idle',
+        activities: [{ name: '💤 itay100k is sleeping', type: ActivityType.Custom }],
+      });
+      return;
+    }
+
     const activity = newPresence.activities?.[0];
     if (!activity) {
       client.user.setPresence({ status, activities: [] });
       return;
     }
 
-    // Custom status uses ActivityType.Custom — copy the state text
     if (activity.type === ActivityType.Custom) {
       client.user.setPresence({
         status,
