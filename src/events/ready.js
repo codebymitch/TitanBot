@@ -23,7 +23,7 @@ export default {
       };
 
       setActivity();
-      setInterval(setActivity, 30_000);
+      client._presenceInterval = setInterval(setActivity, 30_000);
 
       startupLog(`Ready! Logged in as ${client.user.tag}`);
 
