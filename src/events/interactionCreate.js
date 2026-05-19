@@ -16,9 +16,9 @@ import {
   handleCounterpartySelect,
   handleRequestMM,
   handleClaimMM,
-  handleConfirmDelivery,
-  handleConfirmDeliveryModal,
-  handleFinalizeMM,
+  handleCompleteTicket,
+  handleCancelTicket,
+  handleCancelReasonModal,
   handleCloseTicketCommand,
   handleCloseMM
 } from '../handlers/mmHumanoHandler.js';
@@ -247,11 +247,11 @@ export default {
                 case 'mm_claim_middleman':
                   await handleClaimMM(interaction);
                   return;
-                case 'mm_confirm_entrega':
-                  await handleConfirmDelivery(interaction);
+                case 'mm_complete_ticket':
+                  await handleCompleteTicket(interaction);
                   return;
-                case 'mm_finalizar_intermediacao':
-                  await handleFinalizeMM(interaction);
+                case 'mm_cancel_ticket':
+                  await handleCancelTicket(interaction);
                   return;
                 case 'mm_close_intermediacao':
                   await handleCloseMM(interaction);
@@ -394,9 +394,9 @@ export default {
             return;
           }
 
-          if (interaction.customId === 'mm_confirmacao_entrega') {
+          if (interaction.customId === 'mm_cancel_reason_modal') {
             try {
-              await handleConfirmDeliveryModal(interaction);
+              await handleCancelReasonModal(interaction);
             } catch (error) {
               await handleInteractionError(interaction, error, withTraceContext({
                 type: 'modal',

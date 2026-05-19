@@ -1,15 +1,14 @@
 /**
- * Middleman Humano Handler - Sistema Sem Banco de Dados (VERSÃO CORRIGIDA)
- * 
- * Handles the multi-step ephemeral configuration menu for the MM system.
- * All state is stored in the channel topic (MM_DATA:buyer=id|seller=id|method=PIX|status=OPEN|mm=id).
- * No database dependency - completely self-contained.
+ * Middleman Humano Handler - Sistema Sem Banco de Dados (VERSÃO CORRIGIDA v2)
  * 
  * CORREÇÕES APLICADAS:
  * - Prevenção de criação duplicada de canais
  * - Sistema de locking para evitar race conditions
  * - Validação de canal existente antes de criar
  * - Cooldown entre tentativas
+ * - Removido botão "Confirmar Entrega" do comprador
+ * - Adicionados botões "Concluir Ticket" e "Cancelar Ticket" apenas para MM
+ * - Otimizado handleClaimMM para evitar demora de 10 minutos
  */
 
 import {
@@ -38,9 +37,9 @@ export const WIZARD_IDS = {
   COUNTERPARTY_SELECT: 'mm_counterparty_select',
   REQUEST_MM: 'mm_request_middleman',
   CLAIM_MM: 'mm_claim_middleman',
-  CONFIRM_DELIVERY: 'mm_confirm_entrega',
-  CONFIRM_DELIVERY_MODAL: 'mm_confirmacao_entrega',
-  FINALIZE_MM: 'mm_finalizar_intermediacao',
+  COMPLETE_TICKET: 'mm_complete_ticket',
+  CANCEL_TICKET: 'mm_cancel_ticket',
+  CANCEL_REASON_MODAL: 'mm_cancel_reason_modal',
   CLOSE_MM: 'mm_close_intermediacao',
   CLOSE_TICKET_COMMAND: 'mm_close_ticket_cmd'
 };
@@ -51,13 +50,13 @@ const wizardStates = new Map();
 // Track users currently in the wizard to prevent duplicate starts
 const usersInWizard = new Set();
 
-// Track channels being claimed to prevent race conditions and duplicate messages
+// Track channels being claimed to prevent race conditions
 const claimingChannels = new Set();
 const claimTimeout = 15000; // 15 seconds timeout
 
-// Cooldown map to prevent spam (user ID -> timestamp)
+// Cooldown map to prevent spam
 const userCooldowns = new Map();
-const COOLDOWN_MS = 30000; // 30 seconds cooldown between creating tickets
+const COOLDOWN_MS = 30000; // 30 seconds cooldown
 
 /**
  * Create the payment method selection embed
@@ -187,7 +186,7 @@ function createCounterpartySelectEmbed(userRole) {
 }
 
 /**
- * Create the counterparty select menu (UserSelectMenu)
+ * Create the counterparty select menu
  */
 function createCounterpartySelectMenu() {
   return new ActionRowBuilder()
@@ -209,15 +208,6 @@ function sanitizeChannelName(value) {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 90);
-}
-
-/**
- * Sanitize topic value
- */
-function sanitizeTopicValue(value) {
-  return value
-    ? value.toString().replace(/\|/g, '/').replace(/[\r\n]/g, ' ').trim().slice(0, 200)
-    : '';
 }
 
 /**
@@ -288,19 +278,6 @@ function createTicketTableEmbed(data) {
 }
 
 /**
- * Create the "Request Middleman" button
- */
-function createRequestMMButton() {
-  return new ActionRowBuilder()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId(WIZARD_IDS.REQUEST_MM)
-        .setLabel('🚨 Solicitar Middleman')
-        .setStyle(ButtonStyle.Primary)
-    );
-}
-
-/**
  * Create the "Claim Intermediation" button
  */
 function createClaimMMButton() {
@@ -314,46 +291,38 @@ function createClaimMMButton() {
 }
 
 /**
- * Create the "Confirm Delivery" button
+ * Create the MM action buttons (Complete + Cancel)
  */
-function createConfirmDeliveryButton() {
+function createMMActionButtons() {
   return new ActionRowBuilder()
     .addComponents(
       new ButtonBuilder()
-        .setCustomId(WIZARD_IDS.CONFIRM_DELIVERY)
-        .setLabel('📦 Confirmar Entrega')
-        .setStyle(ButtonStyle.Success)
-    );
-}
-
-/**
- * Create the "Finalize Intermediation" button
- */
-function createFinalizeMMButton() {
-  return new ActionRowBuilder()
-    .addComponents(
+        .setCustomId(WIZARD_IDS.COMPLETE_TICKET)
+        .setLabel('✅ Concluir Ticket')
+        .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
-        .setCustomId(WIZARD_IDS.FINALIZE_MM)
-        .setLabel('🔒 Fechar Ticket')
+        .setCustomId(WIZARD_IDS.CANCEL_TICKET)
+        .setLabel('❌ Cancelar Ticket')
         .setStyle(ButtonStyle.Danger)
     );
 }
 
 /**
- * Create the delivery confirmation modal
+ * Create the cancel reason modal
  */
-function createConfirmDeliveryModal() {
+function createCancelReasonModal() {
   return new ModalBuilder()
-    .setCustomId(WIZARD_IDS.CONFIRM_DELIVERY_MODAL)
-    .setTitle('Confirmação de Recebimento')
+    .setCustomId(WIZARD_IDS.CANCEL_REASON_MODAL)
+    .setTitle('Motivo do Cancelamento')
     .addComponents(
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
-          .setCustomId('txt_confirmacao_entrega')
-          .setLabel('Digite \'SIM\' para confirmar que recebeu o item:')
-          .setStyle(TextInputStyle.Short)
+          .setCustomId('cancel_reason')
+          .setLabel('Explique o motivo do cancelamento:')
+          .setStyle(TextInputStyle.Paragraph)
           .setRequired(true)
-          .setPlaceholder('SIM')
+          .setPlaceholder('Descreva o motivo do cancelamento...')
+          .setMaxLength(500)
       )
     );
 }
@@ -404,14 +373,12 @@ function isOnCooldown(userId) {
  * Check for existing active ticket for this buyer-seller pair
  */
 async function findExistingTicket(guild, buyerId, sellerId) {
-  // Get all channels in the MM category
   let mmCategory = null;
   if (mmConfig.mmCategoryId) {
     mmCategory = guild.channels.cache.get(mmConfig.mmCategoryId);
   }
   
   if (!mmCategory) {
-    // Try to find the category by name
     mmCategory = guild.channels.cache.find(ch => 
       ch.type === ChannelType.GuildCategory && ch.name.includes('intermedia')
     );
@@ -419,7 +386,6 @@ async function findExistingTicket(guild, buyerId, sellerId) {
   
   if (!mmCategory) return null;
   
-  // Check all channels in the category
   for (const [, channel] of mmCategory.children.cache) {
     if (channel.type !== ChannelType.GuildText) continue;
     
@@ -427,13 +393,12 @@ async function findExistingTicket(guild, buyerId, sellerId) {
     const data = parseTopicData(topic);
     if (!data) continue;
     
-    // Check if this channel involves the same buyer and seller
     const samePair = (
       (data.buyerId === buyerId && data.sellerId === sellerId) ||
       (data.buyerId === sellerId && data.sellerId === buyerId)
     );
     
-    if (samePair && data.status !== 'COMPLETED') {
+    if (samePair && data.status !== 'COMPLETED' && data.status !== 'CANCELLED') {
       return channel;
     }
   }
@@ -445,12 +410,10 @@ async function findExistingTicket(guild, buyerId, sellerId) {
  * Handle the start button click
  */
 export async function handleStart(interaction) {
-  // CRITICAL: Defer immediately to prevent timeout
   await interaction.deferUpdate();
 
   const userId = interaction.user.id;
 
-  // Check if user is already in a wizard
   if (usersInWizard.has(userId)) {
     return interaction.followUp({
       content: '❌ Você já está em um processo de intermediação. Complete ou cancele antes de iniciar outro.',
@@ -458,7 +421,6 @@ export async function handleStart(interaction) {
     });
   }
 
-  // Check cooldown
   if (isOnCooldown(userId)) {
     const lastAttempt = userCooldowns.get(userId);
     const remaining = Math.ceil((COOLDOWN_MS - (Date.now() - lastAttempt)) / 1000);
@@ -468,16 +430,13 @@ export async function handleStart(interaction) {
     });
   }
 
-  // Initialize wizard state
   wizardStates.set(userId, {
     step: 'payment',
     initiatorId: userId
   });
 
-  // Mark user as in wizard
   usersInWizard.add(userId);
 
-  // Show ephemeral message with payment selection
   await interaction.followUp({
     embeds: [createPaymentSelectEmbed()],
     components: [createPaymentSelectMenu()],
@@ -578,7 +537,7 @@ export async function handleAmountModalSubmit(interaction) {
 }
 
 /**
- * Handle counterparty selection - CREATES THE CHANNEL HERE
+ * Handle counterparty selection
  */
 export async function handleCounterpartySelect(interaction) {
   await interaction.deferUpdate();
@@ -623,31 +582,28 @@ export async function handleCounterpartySelect(interaction) {
   state.counterparty = selectedMember;
   state.step = 'complete';
 
-  // Set cooldown BEFORE creating channel
   userCooldowns.set(userId, Date.now());
 
   try {
     await createTicketChannel(interaction, state);
   } finally {
-    // Always clean up wizard state
     wizardStates.delete(userId);
     usersInWizard.delete(userId);
   }
 }
 
 /**
- * Create the private ticket channel (ONLY CALLED ONCE PER WIZARD)
+ * Create the private ticket channel
  */
 async function createTicketChannel(interaction, state) {
   try {
     const { userRole, counterparty, paymentMethod } = state;
     const initiator = interaction.member;
 
-    // Determine buyer and seller
     const buyer = userRole === 'buyer' ? initiator : counterparty;
     const seller = userRole === 'seller' ? initiator : counterparty;
 
-    // FIRST: Check for existing active ticket
+    // Check for existing active ticket
     const existingTicket = await findExistingTicket(interaction.guild, buyer.id, seller.id);
     if (existingTicket) {
       return interaction.followUp({
@@ -675,13 +631,11 @@ async function createTicketChannel(interaction, state) {
       });
     }
 
-    // Create unique channel name with timestamp to prevent collisions
     const sellerName = sanitizeChannelName(seller.user.username);
     const buyerName = sanitizeChannelName(buyer.user.username);
     const timestamp = Date.now().toString(36).slice(-4);
     const channelName = `mm-${sellerName}-e-${buyerName}-${timestamp}`;
 
-    // Create the private channel
     const channel = await interaction.guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
@@ -726,7 +680,6 @@ async function createTicketChannel(interaction, state) {
       ]
     });
 
-    // Set channel topic with MM data
     const topicData = serializeTopicData({
       buyerId: buyer.id,
       sellerId: seller.id,
@@ -736,7 +689,6 @@ async function createTicketChannel(interaction, state) {
     });
     await channel.setTopic(topicData);
 
-    // Prepare data for the table
     const methodLabel = paymentMethod === 'pix' ? 'PIX' : paymentMethod.toUpperCase();
     const tableData = {
       buyerDisplay: buyer.user.username,
@@ -748,13 +700,11 @@ async function createTicketChannel(interaction, state) {
       statusColor: mmConfig.statusColors.PENDING
     };
 
-    // Send the main table message and capture ID
     const tableMsg = await channel.send({
       embeds: [createTicketTableEmbed(tableData)],
       components: [createClaimMMButton()]
     });
 
-    // Update topic with messageId
     const updatedTopicData = serializeTopicData({
       buyerId: buyer.id,
       sellerId: seller.id,
@@ -765,17 +715,15 @@ async function createTicketChannel(interaction, state) {
     });
     await channel.setTopic(updatedTopicData);
 
-    // Send info message
     await channel.send({
       content: 
         '🛡️ **Intermediação Criada com Sucesso!**\n\n' +
         '• Comprador: ' + buyer.toString() + '\n' +
         '• Vendedor: ' + seller.toString() + '\n' +
         '• Método: ' + methodLabel + '\n\n' +
-        'Clique em **"✋ Assumir Intermediação"** para um middleman chamar.'
+        'Aguarde um middleman assumir a intermediação.'
     });
 
-    // Send rules message
     await channel.send({
       content: '```' +
         '┌────────────────────────────────────────┐\n' +
@@ -789,7 +737,6 @@ async function createTicketChannel(interaction, state) {
         '```'
     });
 
-    // Auto-ping support/middleman when channel is created
     const supportRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'suporte');
     if (supportRole) {
       await channel.send({
@@ -803,7 +750,6 @@ async function createTicketChannel(interaction, state) {
       });
     }
 
-    // Notify the initiator
     await interaction.followUp({
       content: '✅ Intermediação criada com sucesso!\nCanal: ' + channel.toString(),
       ephemeral: true
@@ -837,11 +783,9 @@ export async function handleRequestMM(interaction) {
     });
   }
 
-  // Update status to NOTIFIED
   data.status = 'NOTIFIED';
   await channel.setTopic(serializeTopicData(data));
 
-  // Fetch usernames
   let buyerName = 'Unknown';
   let sellerName = 'Unknown';
   try {
@@ -877,7 +821,6 @@ export async function handleRequestMM(interaction) {
     }
   }
 
-  // Ping the staff role
   const supportRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'suporte');
   const roleToPing = supportRole?.id || mmConfig.staffRoleId;
   
@@ -917,7 +860,7 @@ export async function isUserStaff(member, guild) {
 }
 
 /**
- * Handle claim middleman button
+ * Handle claim middleman button - OTIMIZADO PARA EVITAR DEMORA
  */
 export async function handleClaimMM(interaction) {
   const channel = interaction.channel;
@@ -932,12 +875,9 @@ export async function handleClaimMM(interaction) {
     });
   }
 
-  // CRITICAL: Defer immediately
-  await interaction.deferUpdate();
-
   // Check if already being claimed
   if (claimingChannels.has(channelId)) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '⏳ Alguém já está assumindo esta intermediação. Aguarde um instante...',
       ephemeral: true
     });
@@ -945,7 +885,7 @@ export async function handleClaimMM(interaction) {
 
   // Check if already claimed
   if (data.mmId) {
-    return interaction.followUp({
+    return interaction.reply({
       content: 'ℹ️ Esta intermediação já foi assumida por <@' + data.mmId + '>.',
       ephemeral: true
     });
@@ -953,11 +893,31 @@ export async function handleClaimMM(interaction) {
 
   // Check if user is trying to assume their own ticket
   if (data.buyerId === interaction.user.id || data.sellerId === interaction.user.id) {
-    return interaction.followUp({
+    return interaction.reply({
       content: '❌ Você não pode assumir sua própria intermediação.',
       ephemeral: true
     });
   }
+
+  // Check staff permissions FIRST (using cache only for speed)
+  const member = interaction.guild.members.cache.get(interaction.user.id);
+  if (!member) {
+    return interaction.reply({
+      content: '❌ Erro ao verificar permissões.',
+      ephemeral: true
+    });
+  }
+
+  const isStaff = await isUserStaff(member, interaction.guild);
+  if (!isStaff) {
+    return interaction.reply({
+      content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
+      ephemeral: true
+    });
+  }
+
+  // NOW defer - after all validations
+  await interaction.deferUpdate();
 
   // Mark channel as being claimed
   claimingChannels.add(channelId);
@@ -967,24 +927,6 @@ export async function handleClaimMM(interaction) {
   }, claimTimeout);
 
   try {
-    // Check staff permissions
-    const member = interaction.guild.members.cache.get(interaction.user.id)
-      || await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
-    if (!member) {
-      return interaction.followUp({
-        content: '❌ Erro ao verificar permissões.',
-        ephemeral: true
-      });
-    }
-
-    const isStaff = await isUserStaff(member, interaction.guild);
-    if (!isStaff) {
-      return interaction.followUp({
-        content: '❌ Apenas membros da equipe com o cargo "Suporte" podem assumir esta intermediação.',
-        ephemeral: true
-      });
-    }
-
     // Double-check race condition
     const freshData = parseTopicData(channel.topic || '');
     if (!freshData) {
@@ -1000,12 +942,7 @@ export async function handleClaimMM(interaction) {
       });
     }
 
-    // Send loading message
-    await channel.send({
-      content: '⏳ **Alguém está assumindo a intermediação...**\nAguarde um instante, comprador e vendedor.'
-    });
-
-    // Update data
+    // Update data FIRST (atomic operation)
     const updateData = { ...freshData };
     updateData.mmId = interaction.user.id;
     updateData.status = 'IN_PROGRESS';
@@ -1016,14 +953,10 @@ export async function handleClaimMM(interaction) {
       logger.warn('Failed to update channel topic during claim', { error: err.message });
     }
 
-    // Get member names
-    const [buyerMember, sellerMember] = await Promise.all([
-      interaction.guild.members.cache.get(updateData.buyerId)
-        || interaction.guild.members.fetch(updateData.buyerId).catch(() => null),
-      interaction.guild.members.cache.get(updateData.sellerId)
-        || interaction.guild.members.fetch(updateData.sellerId).catch(() => null)
-    ]);
-
+    // Get member names from cache only (faster)
+    const buyerMember = interaction.guild.members.cache.get(updateData.buyerId);
+    const sellerMember = interaction.guild.members.cache.get(updateData.sellerId);
+    
     const buyerName = buyerMember?.user.username || 'Unknown';
     const sellerName = sellerMember?.user.username || 'Unknown';
 
@@ -1037,14 +970,14 @@ export async function handleClaimMM(interaction) {
       statusColor: mmConfig.statusColors.IN_PROGRESS
     };
 
-    // Update the table message
+    // Update the table message with MM action buttons
     if (updateData.tableMessageId) {
       try {
         const tableMessage = await channel.messages.fetch(updateData.tableMessageId);
         if (tableMessage) {
           await tableMessage.edit({
             embeds: [createTicketTableEmbed(tableData)],
-            components: [createConfirmDeliveryButton()]
+            components: [createMMActionButtons()]
           });
         }
       } catch (err) {
@@ -1055,11 +988,14 @@ export async function handleClaimMM(interaction) {
     // Send success message
     await channel.send({
       content: '✅ O Middleman **' + interaction.user.username + '** assumiu a intermediação.\n' +
-               'Vendedor e Comprador podem prosseguir de forma segura.'
+               'Agora siga as instruções do middleman para concluir a trade.'
     });
 
     await interaction.followUp({
-      content: '✅ Intermediação assumida com sucesso!',
+      content: '✅ Intermediação assumida com sucesso!\n\n' +
+               '📋 **Ações disponíveis:**\n' +
+               '✅ **Concluir Ticket** - Finaliza a intermediação com sucesso\n' +
+               '❌ **Cancelar Ticket** - Cancela a intermediação (requer justificativa)',
       ephemeral: true
     });
 
@@ -1070,9 +1006,88 @@ export async function handleClaimMM(interaction) {
 }
 
 /**
- * Handle confirm delivery button
+ * Handle complete ticket button (MM only)
  */
-export async function handleConfirmDelivery(interaction) {
+export async function handleCompleteTicket(interaction) {
+  await interaction.deferUpdate();
+
+  const channel = interaction.channel;
+  const topic = channel.topic || '';
+  const data = parseTopicData(topic);
+
+  if (!data) {
+    return interaction.followUp({
+      content: '❌ Dados da intermediação inválidos.',
+      ephemeral: true
+    });
+  }
+
+  // Only the assigned MM can complete
+  if (data.mmId !== interaction.user.id) {
+    return interaction.followUp({
+      content: '❌ Apenas o Middleman responsável pode concluir esta intermediação.',
+      ephemeral: true
+    });
+  }
+
+  // Update status
+  data.status = 'COMPLETED';
+  await channel.setTopic(serializeTopicData(data));
+
+  // Fetch usernames from cache
+  const buyerMember = interaction.guild.members.cache.get(data.buyerId);
+  const sellerMember = interaction.guild.members.cache.get(data.sellerId);
+  const buyerName = buyerMember?.user.username || 'Unknown';
+  const sellerName = sellerMember?.user.username || 'Unknown';
+
+  // Update embed
+  const tableData = {
+    buyerDisplay: buyerName,
+    sellerDisplay: sellerName,
+    method: data.method,
+    amountDisplay: data.amount || 'N/A',
+    statusDisplay: mmConfig.statusLabels.COMPLETED,
+    middlemanDisplay: interaction.user.username,
+    statusColor: mmConfig.statusColors.COMPLETED
+  };
+
+  if (data.tableMessageId) {
+    try {
+      const tableMessage = await channel.messages.fetch(data.tableMessageId);
+      if (tableMessage) {
+        await tableMessage.edit({
+          embeds: [createTicketTableEmbed(tableData)],
+          components: []
+        });
+      }
+    } catch (err) {
+      logger.warn('Failed to update table message', { error: err.message });
+    }
+  }
+
+  // Send final message
+  await channel.send({
+    content: '✅ **Intermediação Concluída com Sucesso!**\n' +
+             'Finalizada por: ' + interaction.user.toString() + '\n\n' +
+             'Obrigado por usar nosso serviço de intermediação!'
+  });
+
+  await interaction.followUp({
+    content: '✅ Intermediação concluída com sucesso!',
+    ephemeral: true
+  });
+
+  // Delete channel after a short delay
+  await new Promise(resolve => setTimeout(resolve, 3000));
+  if (channel.deletable) {
+    await channel.delete();
+  }
+}
+
+/**
+ * Handle cancel ticket button (MM only)
+ */
+export async function handleCancelTicket(interaction) {
   const channel = interaction.channel;
   const topic = channel.topic || '';
   const data = parseTopicData(topic);
@@ -1084,16 +1099,16 @@ export async function handleConfirmDelivery(interaction) {
     });
   }
 
-  // Only the buyer can confirm delivery
-  if (data.buyerId !== interaction.user.id) {
+  // Only the assigned MM can cancel
+  if (data.mmId !== interaction.user.id) {
     return interaction.reply({
-      content: '❌ Apenas o Comprador pode confirmar o recebimento do item.',
+      content: '❌ Apenas o Middleman responsável pode cancelar esta intermediação.',
       ephemeral: true
     });
   }
 
-  // Show the confirmation modal
-  const modal = createConfirmDeliveryModal();
+  // Show cancel reason modal
+  const modal = createCancelReasonModal();
   const modalShown = await safeShowModal(interaction, modal);
   if (!modalShown) {
     return interaction.reply({
@@ -1104,9 +1119,9 @@ export async function handleConfirmDelivery(interaction) {
 }
 
 /**
- * Handle delivery confirmation modal submission
+ * Handle cancel reason modal submission
  */
-export async function handleConfirmDeliveryModal(interaction) {
+export async function handleCancelReasonModal(interaction) {
   const channel = interaction.channel;
   const topic = channel.topic || '';
   const data = parseTopicData(topic);
@@ -1118,260 +1133,36 @@ export async function handleConfirmDeliveryModal(interaction) {
     });
   }
 
-  // Only the buyer can submit this modal
-  if (data.buyerId !== interaction.user.id) {
-    return interaction.reply({
-      content: '❌ Apenas o Comprador pode confirmar o recebimento.',
-      ephemeral: true
-    });
-  }
-
-  // Get the input and validate
-  const confirmationInput = interaction.fields.getTextInputValue('txt_confirmacao_entrega')
-    .trim()
-    .toLowerCase();
-
-  if (confirmationInput !== 'sim') {
-    return interaction.reply({
-      content: '❌ Confirmação recusada. Você precisa digitar exatamente \'SIM\' para prosseguir.',
-      ephemeral: true
-    });
-  }
-
-  // Defer after validation
-  await interaction.deferUpdate();
-
-  try {
-    // Update status to DELIVERED
-    data.status = 'DELIVERED';
-    await channel.setTopic(serializeTopicData(data));
-
-    // Fetch usernames
-    let buyerName = 'Unknown';
-    let sellerName = 'Unknown';
-    let middlemanName = null;
-    
-    try {
-      const buyerMember = interaction.guild.members.cache.get(data.buyerId)
-        || await interaction.guild.members.fetch(data.buyerId).catch(() => null);
-      if (buyerMember) buyerName = buyerMember.user.username;
-    } catch { /* ignore */ }
-    
-    try {
-      const sellerMember = interaction.guild.members.cache.get(data.sellerId)
-        || await interaction.guild.members.fetch(data.sellerId).catch(() => null);
-      if (sellerMember) sellerName = sellerMember.user.username;
-    } catch { /* ignore */ }
-    
-    try {
-      if (data.mmId) {
-        const mmMember = interaction.guild.members.cache.get(data.mmId)
-          || await interaction.guild.members.fetch(data.mmId).catch(() => null);
-        if (mmMember) middlemanName = mmMember.user.username;
-      }
-    } catch { /* ignore */ }
-
-    // Update embed
-    const tableData = {
-      buyerDisplay: buyerName,
-      sellerDisplay: sellerName,
-      method: data.method,
-      amountDisplay: data.amount || 'N/A',
-      statusDisplay: mmConfig.statusLabels.DELIVERED,
-      middlemanDisplay: middlemanName,
-      statusColor: mmConfig.statusColors.DELIVERED
-    };
-
-    if (data.tableMessageId) {
-      try {
-        const tableMessage = await channel.messages.fetch(data.tableMessageId);
-        if (tableMessage) {
-          await tableMessage.edit({
-            embeds: [createTicketTableEmbed(tableData)],
-            components: [createFinalizeMMButton()]
-          });
-        }
-      } catch (err) {
-        logger.warn('Failed to update table message', { error: err.message });
-      }
-    }
-
-    // Send notification
-    await channel.send({
-      content: '✅ O Comprador **' + interaction.user.username + '** confirmou o recebimento do item.\n' +
-               'Middleman pode agora finalizar a intermediação.'
-    });
-
-    await interaction.followUp({
-      content: '✅ Recebimento confirmado com sucesso!',
-      ephemeral: true
-    });
-  } catch (error) {
-    logger.error('Error in confirm delivery modal:', { error: error.message });
-    await interaction.followUp({
-      content: '❌ Erro ao processar confirmação. Tente novamente.',
-      ephemeral: true
-    });
-  }
-}
-
-/**
- * Handle finalize intermediation button (MM only or Admin)
- */
-export async function handleFinalizeMM(interaction) {
-  await interaction.deferUpdate();
-
-  const channel = interaction.channel;
-  const topic = channel.topic || '';
-  const data = parseTopicData(topic);
-
-  if (!data) {
-    return interaction.followUp({
-      content: '❌ Dados da intermediação inválidos.',
-      ephemeral: true
-    });
-  }
-
-  // PERMISSION CHECK
-  const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
-  if (!member) {
-    return interaction.followUp({
-      content: '❌ Erro ao verificar permissões.',
-      ephemeral: true
-    });
-  }
-
-  const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-  const isAssignedMM = data.mmId === interaction.user.id;
-
-  if (!isAssignedMM && !isAdmin) {
-    const isBuyer = data.buyerId === interaction.user.id;
-    const isSeller = data.sellerId === interaction.user.id;
-    
-    if (isBuyer || isSeller) {
-      return interaction.followUp({
-        content: '❌ Apenas o Middleman pode fechar o ticket.',
-        ephemeral: true
-      });
-    }
-    
-    return interaction.followUp({
-      content: '❌ Apenas o Middleman responsável ou um Administrador pode finalizar esta intermediação.',
-      ephemeral: true
-    });
-  }
-
-  // Update data
-  data.status = 'COMPLETED';
-  await channel.setTopic(serializeTopicData(data));
-
-  // Fetch usernames
-  let buyerName = 'Unknown';
-  let sellerName = 'Unknown';
-  try {
-    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
-    if (buyerMember) buyerName = buyerMember.user.username;
-  } catch { /* ignore */ }
-  try {
-    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
-    if (sellerMember) sellerName = sellerMember.user.username;
-  } catch { /* ignore */ }
-
-  // Update embed
-  const tableData = {
-    buyerDisplay: buyerName,
-    sellerDisplay: sellerName,
-    method: data.method,
-    amountDisplay: data.amount || 'N/A',
-    statusDisplay: mmConfig.statusLabels.COMPLETED,
-    middlemanDisplay: interaction.user.username,
-    statusColor: mmConfig.statusColors.COMPLETED
-  };
-
-  if (data.tableMessageId) {
-    try {
-      const tableMessage = await channel.messages.fetch(data.tableMessageId);
-      if (tableMessage) {
-        await tableMessage.edit({
-          embeds: [createTicketTableEmbed(tableData)],
-          components: []
-        });
-      }
-    } catch (err) {
-      logger.warn('Failed to update table message', { error: err.message });
-    }
-  }
-
-  // Send final message with countdown
-  const countdownMsg = await channel.send({
-    content: '🔒 **Intermediação Concluída**\n' +
-             'Finalizada por: ' + interaction.user.toString() + '\n\n' +
-             '⚠️ Este canal será deletado em **5 segundos**...'
-  });
-
-  // Countdown
-  for (let i = 4; i >= 1; i--) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    try {
-      await countdownMsg.edit({
-        content: '🔒 **Intermediação Concluída**\n' +
-                 'Finalizada por: ' + interaction.user.toString() + '\n\n' +
-                 '⚠️ Este canal será deletado em **' + i + ' segundos**...'
-      });
-    } catch { /* ignore */ }
-  }
-
-  await interaction.followUp({
-    content: '✅ Intermediação concluída com sucesso!',
-    ephemeral: true
-  });
-
-  // Delete channel
-  if (channel.deletable) {
-    await channel.delete();
-  }
-}
-
-/**
- * Handle close ticket via command button
- */
-export async function handleCloseTicketCommand(interaction) {
-  await interaction.deferUpdate();
-
-  const channel = interaction.channel;
-  const topic = channel.topic || '';
-  const data = parseTopicData(topic);
-
-  if (!data) {
-    return interaction.followUp({
-      content: '❌ Dados da intermediação inválidos.',
-      ephemeral: true
-    });
-  }
-
-  // Only the assigned middleman can close
+  // Only the assigned MM can cancel
   if (data.mmId !== interaction.user.id) {
-    return interaction.followUp({
-      content: '❌ Apenas o MM responsável pode fechar este ticket.',
+    return interaction.reply({
+      content: '❌ Apenas o Middleman responsável pode cancelar esta intermediação.',
       ephemeral: true
     });
   }
 
-  // Update data
-  data.status = 'COMPLETED';
+  const reason = interaction.fields.getTextInputValue('cancel_reason').trim();
+  
+  if (!reason) {
+    return interaction.reply({
+      content: '❌ É necessário fornecer um motivo para o cancelamento.',
+      ephemeral: true
+    });
+  }
+
+  await interaction.deferUpdate();
+
+  // Update status
+  data.status = 'CANCELLED';
+  data.cancelReason = reason;
+  data.cancelledBy = interaction.user.id;
   await channel.setTopic(serializeTopicData(data));
 
-  // Fetch usernames
-  let buyerName = 'Unknown';
-  let sellerName = 'Unknown';
-  try {
-    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
-    if (buyerMember) buyerName = buyerMember.user.username;
-  } catch { /* ignore */ }
-  try {
-    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
-    if (sellerMember) sellerName = sellerMember.user.username;
-  } catch { /* ignore */ }
+  // Fetch usernames from cache
+  const buyerMember = interaction.guild.members.cache.get(data.buyerId);
+  const sellerMember = interaction.guild.members.cache.get(data.sellerId);
+  const buyerName = buyerMember?.user.username || 'Unknown';
+  const sellerName = sellerMember?.user.username || 'Unknown';
 
   // Update embed
   const tableData = {
@@ -1379,9 +1170,9 @@ export async function handleCloseTicketCommand(interaction) {
     sellerDisplay: sellerName,
     method: data.method,
     amountDisplay: data.amount || 'N/A',
-    statusDisplay: mmConfig.statusLabels.COMPLETED,
+    statusDisplay: mmConfig.statusLabels.CANCELLED,
     middlemanDisplay: interaction.user.username,
-    statusColor: mmConfig.statusColors.COMPLETED
+    statusColor: mmConfig.statusColors.CANCELLED
   };
 
   if (data.tableMessageId) {
@@ -1398,130 +1189,42 @@ export async function handleCloseTicketCommand(interaction) {
     }
   }
 
-  // Send final message with countdown
-  const countdownMsg = await channel.send({
-    content: '🔒 **Intermediação Concluída**\n' +
-             'Fechada por comando de: ' + interaction.user.toString() + '\n\n' +
-             '⚠️ Este canal será deletado em **5 segundos**...'
+  // Send cancellation message with reason
+  await channel.send({
+    content: '❌ **Intermediação Cancelada**\n' +
+             'Cancelada por: ' + interaction.user.toString() + '\n\n' +
+             '📝 **Motivo:**\n' +
+             '```' + reason + '```'
   });
 
-  // Countdown
-  for (let i = 4; i >= 1; i--) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    try {
-      await countdownMsg.edit({
-        content: '🔒 **Intermediação Concluída**\n' +
-                 'Fechada por comando de: ' + interaction.user.toString() + '\n\n' +
-                 '⚠️ Este canal será deletado em **' + i + ' segundos**...'
-      });
-    } catch { /* ignore */ }
-  }
-
   await interaction.followUp({
-    content: '✅ Intermediação concluída com sucesso!',
+    content: '✅ Intermediação cancelada com sucesso.',
     ephemeral: true
   });
 
-  // Delete channel
+  // Delete channel after a short delay
+  await new Promise(resolve => setTimeout(resolve, 5000));
   if (channel.deletable) {
     await channel.delete();
   }
 }
 
 /**
- * Handle close intermediation button
+ * Handle close intermediation button (legacy)
  */
 export async function handleCloseMM(interaction) {
   await interaction.deferUpdate();
+  // Redirect to complete ticket
+  await handleCompleteTicket(interaction);
+}
 
-  const channel = interaction.channel;
-  const topic = channel.topic || '';
-  const data = parseTopicData(topic);
-
-  if (!data) {
-    return interaction.followUp({
-      content: '❌ Dados da intermediação inválidos.',
-      ephemeral: true
-    });
-  }
-
-  // Only the assigned middleman can close
-  if (data.mmId !== interaction.user.id) {
-    return interaction.followUp({
-      content: '❌ Apenas o middleman responsável pode fechar esta intermediação.',
-      ephemeral: true
-    });
-  }
-
-  // Update data
-  data.status = 'COMPLETED';
-  await channel.setTopic(serializeTopicData(data));
-
-  // Fetch usernames
-  let buyerName = 'Unknown';
-  let sellerName = 'Unknown';
-  try {
-    const buyerMember = await interaction.guild.members.fetch(data.buyerId);
-    if (buyerMember) buyerName = buyerMember.user.username;
-  } catch { /* ignore */ }
-  try {
-    const sellerMember = await interaction.guild.members.fetch(data.sellerId);
-    if (sellerMember) sellerName = sellerMember.user.username;
-  } catch { /* ignore */ }
-
-  // Update embed
-  const tableData = {
-    buyerDisplay: buyerName,
-    sellerDisplay: sellerName,
-    method: data.method,
-    amountDisplay: data.amount || 'N/A',
-    statusDisplay: mmConfig.statusLabels.COMPLETED,
-    middlemanDisplay: interaction.user.username,
-    statusColor: mmConfig.statusColors.COMPLETED
-  };
-
-  if (data.tableMessageId) {
-    try {
-      const tableMessage = await channel.messages.fetch(data.tableMessageId);
-      if (tableMessage) {
-        await tableMessage.edit({
-          embeds: [createTicketTableEmbed(tableData)],
-          components: []
-        });
-      }
-    } catch (err) {
-      logger.warn('Failed to update table message', { error: err.message });
-    }
-  }
-
-  // Send final message with countdown
-  const countdownMsg = await channel.send({
-    content: '🔒 **Intermediação Concluída**\n' +
-             'Fechada por: ' + interaction.user.toString() + '\n\n' +
-             '⚠️ Este canal será deletado em **5 segundos**...'
-  });
-
-  // Countdown
-  for (let i = 4; i >= 1; i--) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    try {
-      await countdownMsg.edit({
-        content: '🔒 **Intermediação Concluída**\n' +
-                 'Fechada por: ' + interaction.user.toString() + '\n\n' +
-                 '⚠️ Este canal será deletado em **' + i + ' segundos**...'
-      });
-    } catch { /* ignore */ }
-  }
-
-  await interaction.followUp({
-    content: '✅ Intermediação concluída com sucesso!',
-    ephemeral: true
-  });
-
-  // Delete channel
-  if (channel.deletable) {
-    await channel.delete();
-  }
+/**
+ * Handle close ticket via command button (legacy)
+ */
+export async function handleCloseTicketCommand(interaction) {
+  await interaction.deferUpdate();
+  // Redirect to complete ticket
+  await handleCompleteTicket(interaction);
 }
 
 export default {
@@ -1533,9 +1236,9 @@ export default {
   handleCounterpartySelect,
   handleRequestMM,
   handleClaimMM,
-  handleConfirmDelivery,
-  handleConfirmDeliveryModal,
-  handleFinalizeMM,
+  handleCompleteTicket,
+  handleCancelTicket,
+  handleCancelReasonModal,
   handleCloseTicketCommand,
   handleCloseMM,
   parseTopicData,
