@@ -1566,6 +1566,17 @@ async function handleModCommand(message, client) {
         break;
       }
 
+      case 'vcdisconnect':
+      case 'vckick': {
+        if (!hasPerm('MoveMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>vcdisconnect @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xED4245, '❌ That user is not in a voice channel.')] });
+        await target.voice.disconnect(`Disconnected by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, `🔌 Disconnected **${target.user.tag}** from voice.`)] });
+        break;
+      }
+
       default:
         break;
     }
