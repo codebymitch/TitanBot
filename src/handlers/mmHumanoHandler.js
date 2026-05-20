@@ -95,7 +95,6 @@ const THEME = {
 const wizardStates = new Map();
 
 // Track users currently in the wizard to prevent duplicate starts
-const usersInWizard = new Set();
 
 // Track channels being claimed to prevent race conditions
 const claimingChannels = new Set();
@@ -259,20 +258,46 @@ function formatTransactionAmount(value) {
 /**
  * Calculate MM fee (10% of transaction value)
  */
+function parseAmountToNumber(amountDisplay) {
+  if (!amountDisplay) return 0;
+  let numericStr = String(amountDisplay).replace(/[^0-9,\.]/g, '').trim();
+  if (numericStr.includes(',') && !numericStr.includes('.')) numericStr = numericStr.replace(',', '.');
+  const v = parseFloat(numericStr);
+  return isNaN(v) ? 0 : v;
+}
+
+function formatCurrency(value) {
+  return 'R$ ' + value.toFixed(2).replace('.', ',');
+}
+
+/**
+ * Calculate MM fee according to the configured tier table.
+ * Returns a formatted string like 'R$ 1,00'.
+ */
 function calculateMMFee(amountDisplay) {
-  if (!amountDisplay || amountDisplay === 'N/A') return 'R$ 0,00';
-  
-  let numericStr = amountDisplay.replace(/[^0-9,\.]/g, '').trim();
-  
-  if (numericStr.includes(',') && !numericStr.includes('.')) {
-    numericStr = numericStr.replace(',', '.');
-  }
-  
-  const value = parseFloat(numericStr);
-  if (isNaN(value)) return 'R$ 0,00';
-  
-  const fee = value * 0.10;
-  return 'R$ ' + fee.toFixed(2).replace('.', ',');
+  const amount = parseAmountToNumber(amountDisplay);
+
+  let fee = 0;
+  if (amount <= 2.5) fee = 0.5;
+  else if (amount > 2.5 && amount <= 100) fee = 1.0;
+  else if (amount > 100 && amount <= 200) fee = 2.0;
+  else if (amount > 200 && amount <= 400) fee = 3.5;
+  else if (amount > 400 && amount <= 600) fee = 5.0;
+  else if (amount > 600 && amount <= 700) fee = 7.0;
+  else /* amount > 700 */ fee = parseFloat((amount * 0.012).toFixed(2));
+
+  return formatCurrency(fee);
+}
+
+function calculateMMFeeValue(amountDisplay) {
+  const amount = parseAmountToNumber(amountDisplay);
+  if (amount <= 2.5) return 0.5;
+  if (amount > 2.5 && amount <= 100) return 1.0;
+  if (amount > 100 && amount <= 200) return 2.0;
+  if (amount > 200 && amount <= 400) return 3.5;
+  if (amount > 400 && amount <= 600) return 5.0;
+  if (amount > 600 && amount <= 700) return 7.0;
+  return parseFloat((amount * 0.012).toFixed(2));
 }
 
 /**
@@ -286,6 +311,10 @@ function createTicketTableEmbed(data) {
   const { buyerDisplay, sellerDisplay, method, amountDisplay, statusDisplay, middlemanDisplay, mmFeeDisplay } = data;
 
   const feeDisplay = mmFeeDisplay || calculateMMFee(amountDisplay);
+  const feeValue = mmFeeDisplay ? parseAmountToNumber(mmFeeDisplay) : calculateMMFeeValue(amountDisplay);
+  const amountValue = parseAmountToNumber(amountDisplay);
+  const totalValue = amountValue + feeValue;
+  const totalDisplay = formatCurrency(totalValue);
   const statusColor = data.statusColor || THEME.pending;
   const mmField = middlemanDisplay || 'Aguardando suporte';
 
@@ -303,6 +332,9 @@ function createTicketTableEmbed(data) {
       { name: '💵 Método',  value: method,        inline: true },
       { name: '💰 Valor',   value: amountDisplay, inline: true },
       { name: '📊 Taxa MM', value: feeDisplay,    inline: true },
+
+      // ── Valor Total (destaque)
+      { name: '💳 Valor Total', value: `**${totalDisplay}**`, inline: false },
 
       // ── Linha 3: status e MM (linha inteira cada)
       { name: '📋 Status',      value: statusDisplay, inline: false },
@@ -456,12 +488,7 @@ export async function handleStart(interaction) {
 
   const userId = interaction.user.id;
 
-  if (usersInWizard.has(userId)) {
-    return interaction.followUp({
-      content: '❌ Você já está em um processo de intermediação. Complete ou cancele antes de iniciar outro.',
-      ephemeral: true
-    });
-  }
+  // (Removed per request: allow multiple concurrent wizards per user)
 
   if (isOnCooldown(userId)) {
     const lastAttempt = userCooldowns.get(userId);
@@ -477,7 +504,7 @@ export async function handleStart(interaction) {
     initiatorId: userId
   });
 
-  usersInWizard.add(userId);
+  
 
   await interaction.followUp({
     embeds: [createPaymentSelectEmbed()],
@@ -496,7 +523,6 @@ export async function handlePaymentSelect(interaction) {
   const state = wizardStates.get(userId);
   
   if (!state) {
-    usersInWizard.delete(userId);
     return interaction.followUp({
       content: '❌ Sessão expirada. Por favor, inicie novamente.',
       ephemeral: true
@@ -521,7 +547,6 @@ export async function handleRoleSelect(interaction) {
   const state = wizardStates.get(userId);
   
   if (!state) {
-    usersInWizard.delete(userId);
     return interaction.followUp({
       content: '❌ Sessão expirada. Por favor, inicie novamente.',
       ephemeral: true
@@ -535,7 +560,6 @@ export async function handleRoleSelect(interaction) {
   const modal = createAmountModal();
   const modalShown = await safeShowModal(interaction, modal);
   if (!modalShown) {
-    usersInWizard.delete(userId);
     return interaction.followUp({
       content: '❌ Não foi possível abrir o modal. Tente novamente.',
       ephemeral: true
@@ -551,7 +575,6 @@ export async function handleAmountModalSubmit(interaction) {
   const state = wizardStates.get(userId);
   
   if (!state) {
-    usersInWizard.delete(userId);
     return interaction.reply({
       content: '❌ Sessão expirada. Por favor, inicie novamente.',
       ephemeral: true
@@ -588,7 +611,6 @@ export async function handleCounterpartySelect(interaction) {
   const state = wizardStates.get(userId);
   
   if (!state) {
-    usersInWizard.delete(userId);
     return interaction.followUp({
       content: '❌ Sessão expirada. Por favor, inicie novamente.',
       ephemeral: true
@@ -597,7 +619,6 @@ export async function handleCounterpartySelect(interaction) {
 
   const selectedUserId = interaction.values?.[0];
   if (!selectedUserId) {
-    usersInWizard.delete(userId);
     return interaction.followUp({
       content: '❌ Você precisa selecionar um usuário.',
       ephemeral: true
@@ -605,7 +626,6 @@ export async function handleCounterpartySelect(interaction) {
   }
 
   if (selectedUserId === userId) {
-    usersInWizard.delete(userId);
     return interaction.followUp({
       content: '❌ Você não pode selecionar a si mesmo como contraparte!',
       ephemeral: true
@@ -614,7 +634,6 @@ export async function handleCounterpartySelect(interaction) {
 
   const selectedMember = await interaction.guild.members.fetch(selectedUserId).catch(() => null);
   if (!selectedMember) {
-    usersInWizard.delete(userId);
     return interaction.followUp({
       content: '❌ Não foi possível encontrar o usuário selecionado.',
       ephemeral: true
@@ -630,7 +649,6 @@ export async function handleCounterpartySelect(interaction) {
     await createTicketChannel(interaction, state);
   } finally {
     wizardStates.delete(userId);
-    usersInWizard.delete(userId);
   }
 }
 
@@ -1181,7 +1199,17 @@ export async function handleCompleteTicket(interaction) {
   await interaction.followUp({ content: '✅ Intermediação concluída com sucesso!', ephemeral: true });
 
   await new Promise(resolve => setTimeout(resolve, 3000));
-  if (channel.deletable) await channel.delete();
+  try {
+    const parent = channel.parent;
+    const parentChildCount = parent ? parent.children.cache.size : 0;
+    if (channel.deletable) await channel.delete('Intermediação concluída');
+    // If the category only contained this ticket, remove it as well
+    if (parent && parentChildCount <= 1 && parent.deletable) {
+      await parent.delete('Fechando categoria criada para a intermediação');
+    }
+  } catch (err) {
+    logger.warn('Failed to delete channel/category after completion', { error: err.message });
+  }
 }
 
 /**
@@ -1285,7 +1313,16 @@ export async function handleCancelReasonModal(interaction) {
   await interaction.followUp({ content: '✅ Intermediação cancelada com sucesso.', ephemeral: true });
 
   await new Promise(resolve => setTimeout(resolve, 5000));
-  if (channel.deletable) await channel.delete();
+  try {
+    const parent = channel.parent;
+    const parentChildCount = parent ? parent.children.cache.size : 0;
+    if (channel.deletable) await channel.delete('Intermediação cancelada');
+    if (parent && parentChildCount <= 1 && parent.deletable) {
+      await parent.delete('Fechando categoria criada para a intermediação');
+    }
+  } catch (err) {
+    logger.warn('Failed to delete channel/category after cancel', { error: err.message });
+  }
 }
 
 /**

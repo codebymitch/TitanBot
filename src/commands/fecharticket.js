@@ -9,23 +9,32 @@ import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ButtonBuilder, 
 import { parseTopicData, serializeTopicData, isUserStaff } from '../handlers/mmHumanoHandler.js';
 import mmConfig from '../config/mmConfig.js';
 
-/**
- * Calculate MM fee (10% of transaction value)
- */
+function parseAmountToNumber(amountDisplay) {
+  if (!amountDisplay) return 0;
+  let numericStr = String(amountDisplay).replace(/[^0-9,\.]/g, '').trim();
+  if (numericStr.includes(',') && !numericStr.includes('.')) numericStr = numericStr.replace(',', '.');
+  const v = parseFloat(numericStr);
+  return isNaN(v) ? 0 : v;
+}
+
+function formatCurrency(value) {
+  return 'R$ ' + value.toFixed(2).replace('.', ',');
+}
+
+function calculateMMFeeValue(amountDisplay) {
+  const amount = parseAmountToNumber(amountDisplay);
+  if (amount <= 2.5) return 0.5;
+  if (amount > 2.5 && amount <= 100) return 1.0;
+  if (amount > 100 && amount <= 200) return 2.0;
+  if (amount > 200 && amount <= 400) return 3.5;
+  if (amount > 400 && amount <= 600) return 5.0;
+  if (amount > 600 && amount <= 700) return 7.0;
+  return parseFloat((amount * 0.012).toFixed(2));
+}
+
 function calculateMMFee(amountDisplay) {
-  if (!amountDisplay || amountDisplay === 'N/A') return 'R$ 0,00';
-  
-  let numericStr = amountDisplay.replace(/[^0-9,\.]/g, '').trim();
-  
-  if (numericStr.includes(',') && !numericStr.includes('.')) {
-    numericStr = numericStr.replace(',', '.');
-  }
-  
-  const value = parseFloat(numericStr);
-  if (isNaN(value)) return 'R$ 0,00';
-  
-  const fee = value * 0.10;
-  return 'R$ ' + fee.toFixed(2).replace('.', ',');
+  const fee = calculateMMFeeValue(amountDisplay);
+  return formatCurrency(fee);
 }
 
 /**
@@ -34,6 +43,9 @@ function calculateMMFee(amountDisplay) {
 function createTicketTableEmbed(data) {
   const { buyerDisplay, sellerDisplay, method, amountDisplay, statusDisplay, middlemanDisplay, mmFeeDisplay } = data;
   const feeDisplay = mmFeeDisplay || calculateMMFee(amountDisplay);
+  const feeValue = mmFeeDisplay ? parseAmountToNumber(mmFeeDisplay) : calculateMMFeeValue(amountDisplay);
+  const amountValue = parseAmountToNumber(amountDisplay);
+  const totalDisplay = formatCurrency(amountValue + feeValue);
 
   let table = '```';
   table += '┌──────────────────────────────────────────┐\n';
@@ -53,6 +65,7 @@ function createTicketTableEmbed(data) {
   }
   table += '└──────────────────────────────────────────┘\n';
   table += '```';
+  table += '```';
 
   const statusColor = data.statusColor || 0x27AE60;
 
@@ -60,6 +73,7 @@ function createTicketTableEmbed(data) {
     .setColor(statusColor)
     .setTitle('🛡️ Intermediação Ativa')
     .setDescription(table)
+    .addFields({ name: '💳 Valor Total', value: `**${totalDisplay}**`, inline: false })
     .setFooter({ text: 'ID: ' + Date.now().toString(36).toUpperCase() })
     .setTimestamp();
 
@@ -175,9 +189,16 @@ export default {
         content: '✅ Intermediação concluída com sucesso!'
       });
 
-      // Delete channel after closing countdown
-      if (channel.deletable) {
-        await channel.delete();
+      // Delete channel after closing countdown and remove category if empty
+      try {
+        const parent = channel.parent;
+        const parentChildCount = parent ? parent.children.cache.size : 0;
+        if (channel.deletable) await channel.delete();
+        if (parent && parentChildCount <= 1 && parent.deletable) {
+          await parent.delete('Fechando categoria criada para a intermediação');
+        }
+      } catch (err) {
+        console.warn('Failed to delete channel/category after fecharticket', err && err.message ? err.message : err);
       }
 
     } catch (error) {
