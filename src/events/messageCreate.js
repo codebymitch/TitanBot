@@ -707,6 +707,24 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to Evernight red.\n> To move the role higher, drag it in **Server Settings → Roles**.`)] });
       }
 
+      case 'roletop': {
+        if (!hasPerm('ManageRoles')) return NO_PERM();
+        const role = message.mentions.roles.first();
+        if (!role) return message.reply('Usage: `>roletop @role`');
+        const botHighest = guild.members.me.roles.highest.position;
+        const target = botHighest - 1;
+        if (role.position >= target) {
+          return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${role.name}** is already at the highest position the bot can reach.`)] });
+        }
+        try {
+          await role.setPosition(target, { relative: false });
+          message.reply({ embeds: [modEmbed(0x57F287, `✅ Moved **${role.name}** to position **${target}** (just below the bot's role).`)] });
+        } catch (e) {
+          message.reply({ embeds: [modEmbed(0xED4245, `❌ Failed: ${e.message}`)] });
+        }
+        break;
+      }
+
       case 'rolename': {
         if (!hasPerm('ManageRoles')) return NO_PERM();
         const role = message.mentions.roles.first();
