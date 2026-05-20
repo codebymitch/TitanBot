@@ -17,33 +17,87 @@ const MM_LOGS_CHANNEL_ID = process.env.MM_LOGS_CHANNEL_ID || '150666757238345337
  * @returns {import('discord.js').TextChannel|null}
  */
 async function findMMLogsChannel(guild) {
-  // Tenta buscar pelo ID configurado
+  logger.info('MM Log Service: Buscando canal mm-logs', {
+    guildId: guild.id,
+    guildName: guild.name,
+    expectedChannelId: MM_LOGS_CHANNEL_ID
+  });
+
+  // Primeiro, tenta buscar pelo ID configurado no cache
   const channelById = guild.channels.cache.get(MM_LOGS_CHANNEL_ID);
   if (channelById && channelById.isTextBased()) {
+    logger.info('MM Log Service: Canal encontrado por ID no cache', {
+      channelId: channelById.id,
+      channelName: channelById.name
+    });
     return channelById;
   }
 
-  // Tenta buscar pelo nome
+  // Tenta buscar pelo nome no cache
   const channelByName = guild.channels.cache.find(
     ch => ch.name === 'mm-logs' && ch.isTextBased()
   );
   
   if (channelByName) {
+    logger.info('MM Log Service: Canal encontrado por nome no cache', {
+      channelId: channelByName.id,
+      channelName: channelByName.name
+    });
     return channelByName;
   }
 
-  // Se não encontrou, tenta fetch da API
+  // Se não encontrou no cache, tenta fetch da API pelo ID
+  logger.info('MM Log Service: Canal não encontrado no cache, tentando fetch da API pelo ID...');
   try {
     const fetchedChannel = await guild.channels.fetch(MM_LOGS_CHANNEL_ID);
     if (fetchedChannel && fetchedChannel.isTextBased()) {
+      logger.info('MM Log Service: Canal encontrado via API', {
+        channelId: fetchedChannel.id,
+        channelName: fetchedChannel.name
+      });
       return fetchedChannel;
     }
   } catch (error) {
-    logger.warn('MM Log Service: Canal mm-logs não encontrado', { 
+    logger.warn('MM Log Service: Não foi possível buscar canal por ID via API', { 
       error: error.message,
-      guildId: guild.id 
+      guildId: guild.id,
+      expectedChannelId: MM_LOGS_CHANNEL_ID
     });
   }
+
+  // Tenta buscar todos os canais do servidor para encontrar pelo nome
+  logger.info('MM Log Service: Tentando buscar todos os canais do servidor...');
+  try {
+    const allChannels = await guild.channels.fetch();
+    const mmLogsChannel = allChannels.find(
+      ch => ch.name === 'mm-logs' && ch.isTextBased()
+    );
+    
+    if (mmLogsChannel) {
+      logger.info('MM Log Service: Canal mm-logs encontrado na busca geral', {
+        channelId: mmLogsChannel.id,
+        channelName: mmLogsChannel.name
+      });
+      return mmLogsChannel;
+    }
+  } catch (error) {
+    logger.error('MM Log Service: Erro ao buscar todos os canais', {
+      error: error.message,
+      guildId: guild.id
+    });
+  }
+
+  // Debug: lista canais que contêm 'mm' ou 'log' no nome
+  const relevantChannels = guild.channels.cache
+    .filter(ch => ch.name.includes('mm') || ch.name.includes('log'))
+    .map(ch => ({ id: ch.id, name: ch.name, type: ch.type }));
+  
+  logger.warn('MM Log Service: Canal mm-logs NÃO encontrado.', {
+    totalChannelsInCache: guild.channels.cache.size,
+    expectedChannelId: MM_LOGS_CHANNEL_ID,
+    expectedChannelName: 'mm-logs',
+    relevantChannelsFound: relevantChannels
+  });
 
   return null;
 }
