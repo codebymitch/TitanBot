@@ -208,6 +208,14 @@ export default {
       birthday: {
         unknownSubcommand: 'Unknown subcommand',
       },
+      verify: {
+        alreadyTitle: 'Already Verified',
+        alreadyDesc: 'You are already verified.',
+        failedTitle: 'Verification Failed',
+        failedDesc: 'An error occurred during verification. Please try again or contact an administrator.',
+        completeTitle: 'Verification Complete',
+        completeDesc: 'You have been verified and given the **{role}** role! Welcome to the server! 🎉',
+      },
       leveling: {
         disabled: 'The leveling system is currently disabled on this server.',
         userNotFound: 'Could not find the specified user in this server.',

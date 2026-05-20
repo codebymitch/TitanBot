@@ -4,6 +4,7 @@ import { withErrorHandling } from '../../utils/errorHandler.js';
 import { verifyUser } from '../../services/verificationService.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -11,6 +12,7 @@ export default {
         .setDescription('Verify yourself and gain access to the server'),
 
     async execute(interaction, config, client) {
+        const lang = pickLanguage(config, interaction.guild);
         const wrappedExecute = withErrorHandling(async () => {
             const guild = interaction.guild;
 
@@ -22,25 +24,19 @@ export default {
             if (!result.success) {
                 if (result.alreadyVerified) {
                     return await InteractionHelper.safeReply(interaction, {
-                        embeds: [infoEmbed("Already Verified", "You are already verified.")],
+                        embeds: [infoEmbed(t(lang, 'wolf.cmd.verify.alreadyTitle'), t(lang, 'wolf.cmd.verify.alreadyDesc'))],
                         flags: MessageFlags.Ephemeral
                     });
                 }
 
                 return await InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed(
-                        "Verification Failed",
-                        "An error occurred during verification. Please try again or contact an administrator."
-                    )],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.verify.failedTitle'), t(lang, 'wolf.cmd.verify.failedDesc'))],
                     flags: MessageFlags.Ephemeral
                 });
             }
 
             await InteractionHelper.safeReply(interaction, {
-                embeds: [successEmbed(
-                    "Verification Complete",
-                    `You have been verified and given the **${result.roleName}** role! Welcome to the server! 🎉`
-                )],
+                embeds: [successEmbed(t(lang, 'wolf.cmd.verify.completeTitle'), t(lang, 'wolf.cmd.verify.completeDesc', { role: result.roleName }))],
                 flags: MessageFlags.Ephemeral
             });
         }, { command: 'verify' });

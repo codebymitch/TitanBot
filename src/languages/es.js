@@ -208,6 +208,14 @@ export default {
       birthday: {
         unknownSubcommand: 'Subcomando desconocido',
       },
+      verify: {
+        alreadyTitle: 'Ya verificado',
+        alreadyDesc: 'Ya estás verificado.',
+        failedTitle: 'Error de verificación',
+        failedDesc: 'Ocurrió un error al verificar. Inténtalo de nuevo o contacta a un administrador.',
+        completeTitle: 'Verificación completa',
+        completeDesc: 'Has sido verificado y se te ha dado el rol **{role}**. ¡Bienvenido al servidor! 🎉',
+      },
       leveling: {
         disabled: 'El sistema de niveles está desactivado en este servidor.',
         userNotFound: 'No se pudo encontrar al usuario en este servidor.',
