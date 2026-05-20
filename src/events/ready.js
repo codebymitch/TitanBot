@@ -1,5 +1,6 @@
 import { Events } from "discord.js";
 import { logger, startupLog } from "../utils/logger.js";
+import { syncFromGuild } from "../utils/presenceSync.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { loadAndScheduleTempRoles } from "../services/tempRoleService.js";
@@ -24,6 +25,9 @@ export default {
 
       setActivity();
       client._presenceInterval = setInterval(setActivity, 30_000);
+
+      // Poll the mirror user's presence every 60s as a fallback for missed presenceUpdate events
+      setInterval(() => syncFromGuild(client), 60_000);
 
       startupLog(`Ready! Logged in as ${client.user.tag}`);
 
