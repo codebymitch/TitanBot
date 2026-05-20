@@ -24,9 +24,7 @@ export const botConfig = {
     // Rotates every 30 seconds. Add/remove entries here to customize.
     // type: 0=Playing, 2=Listening, 3=Watching, 5=Competing
     activities: [
-      
-      { name: "💔quitting", state: "💔quitting", type: 4 },
-
+      { name: "Penacony's Evernight", type: 3 },
     ],
   },
 

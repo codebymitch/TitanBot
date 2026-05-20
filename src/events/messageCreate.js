@@ -697,24 +697,22 @@ async function handleModCommand(message, client) {
 
         const errors = [];
 
-        // Set color
-        try { await botRole.setColor(0xFEE75C); }
+        // Set color to Penacony/Evernight crimson
+        try { await botRole.setColor(0xC0152E); }
         catch (e) { errors.push(`Color: ${e.message}`); }
 
-        // Move to top — use guild.roles.setPositions for reliability
+        // Move to top — best effort, silently skip if hierarchy blocks it
+        let movedToTop = false;
         try {
-          const allRoles = [...guild.roles.cache.values()]
-            .sort((a, b) => a.position - b.position);
-          // Build new order: bot role goes just above the highest non-managed role
-          const others = allRoles.filter(r => r.id !== botRole.id && r.id !== guild.id);
-          const newOrder = [...others, botRole].map((r, i) => ({ role: r.id, position: i + 1 }));
-          await guild.roles.setPositions(newOrder);
-        } catch (e) { errors.push(`Position: ${e.message}`); }
+          await botRole.setPosition(guild.roles.cache.size - 1, { relative: false });
+          movedToTop = true;
+        } catch { /* hierarchy prevented move — user must drag manually */ }
 
         if (errors.length) {
-          return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ Partial fix for **${botRole.name}**:\n${errors.join('\n')}`)] });
+          return message.reply({ embeds: [modEmbed(0xED4245, `❌ Fix failed for **${botRole.name}**:\n${errors.join('\n')}`)] });
         }
-        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to yellow and moved to the top.`)] });
+        const posNote = movedToTop ? 'moved to the top' : 'position unchanged (drag it above other roles manually)';
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to Evernight red, ${posNote}.`)] });
       }
 
       case 'perms': {

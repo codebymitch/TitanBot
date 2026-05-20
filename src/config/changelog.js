@@ -1,5 +1,14 @@
 export const changelog = [
     {
+        version: '2.9.6',
+        date: '2026-05-20',
+        entries: [
+            { type: 'fix', text: '`>fixrole` — replaced failing `setPositions` call with best-effort `setPosition`; position failure is now silent with a manual note instead of an error' },
+            { type: 'change', text: '`>fixrole` role color changed from yellow to Evernight crimson (`#C0152E`, Penacony blood-moon red)' },
+            { type: 'change', text: 'Bot status changed from broken custom activity (`💔quitting`) to `Watching Penacony\'s Evernight`' },
+        ],
+    },
+    {
         version: '2.9.5',
         date: '2026-05-20',
         entries: [
