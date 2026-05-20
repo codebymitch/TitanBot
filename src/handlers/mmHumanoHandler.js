@@ -27,6 +27,11 @@ import {
 import mmConfig from '../config/mmConfig.js';
 import { logger } from '../utils/logger.js';
 import { safeShowModal } from '../utils/interactionValidator.js';
+import { 
+  sendSuccessLog, 
+  sendCancelledLog, 
+  prepareTicketDataForLog 
+} from '../services/mmLogService.js';
 
 // Custom IDs for the wizard
 export const WIZARD_IDS = {
@@ -1198,6 +1203,14 @@ export async function handleCompleteTicket(interaction) {
 
   await interaction.followUp({ content: '✅ Intermediação concluída com sucesso!', ephemeral: true });
 
+  // 📝 ENVIAR LOG MM - SUCESSO
+  try {
+    const ticketData = await prepareTicketDataForLog(interaction.guild, data);
+    await sendSuccessLog(interaction.guild, ticketData, interaction.user);
+  } catch (logError) {
+    logger.warn('Failed to send MM success log', { error: logError.message });
+  }
+
   await new Promise(resolve => setTimeout(resolve, 3000));
   try {
     const parent = channel.parent;
@@ -1311,6 +1324,14 @@ export async function handleCancelReasonModal(interaction) {
   });
 
   await interaction.followUp({ content: '✅ Intermediação cancelada com sucesso.', ephemeral: true });
+
+  // 📝 ENVIAR LOG MM - CANCELADO
+  try {
+    const ticketData = await prepareTicketDataForLog(interaction.guild, data);
+    await sendCancelledLog(interaction.guild, ticketData, interaction.user, reason);
+  } catch (logError) {
+    logger.warn('Failed to send MM cancelled log', { error: logError.message });
+  }
 
   await new Promise(resolve => setTimeout(resolve, 5000));
   try {

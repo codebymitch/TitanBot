@@ -8,6 +8,10 @@
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { parseTopicData, serializeTopicData, isUserStaff } from '../handlers/mmHumanoHandler.js';
 import mmConfig from '../config/mmConfig.js';
+import { 
+  sendSuccessLog, 
+  prepareTicketDataForLog 
+} from '../services/mmLogService.js';
 
 function parseAmountToNumber(amountDisplay) {
   if (!amountDisplay) return 0;
@@ -183,6 +187,14 @@ export default {
                      '⚠️ Este canal será deletado em **' + i + ' segundos**...'
           });
         } catch { /* ignore */ }
+      }
+
+      // 📝 ENVIAR LOG MM - SUCESSO (via comando)
+      try {
+        const ticketData = await prepareTicketDataForLog(interaction.guild, data);
+        await sendSuccessLog(interaction.guild, ticketData, interaction.user);
+      } catch (logError) {
+        console.warn('Failed to send MM success log from fecharticket', logError && logError.message ? logError.message : logError);
       }
 
       await interaction.editReply({
