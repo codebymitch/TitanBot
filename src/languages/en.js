@@ -77,6 +77,20 @@ export default {
       playlistTracks: '**{count}** tracks added to the queue.',
       queueEnded: 'Queue empty. Leaving the voice channel.',
       errorTitle: 'Playback error',
+      '247OnTitle': '🔁 24/7 mode enabled',
+      '247OnDesc': "The bot will stay in the voice channel even if the queue empties. Applies from the next playback.",
+      '247OffTitle': '⏹️ 24/7 mode disabled',
+      '247OffDesc': 'The bot will leave the voice channel when the queue ends or becomes empty.',
+    },
+    cmd: {
+      ping: {
+        title: '🏓 Pong!',
+        pinging: 'Pinging...',
+        botLatency: 'Bot Latency',
+        apiLatency: 'API Latency',
+        errorTitle: 'System Error',
+        errorDesc: 'Could not determine latency at this time.',
+      },
     },
   },
 

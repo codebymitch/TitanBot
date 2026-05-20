@@ -6,6 +6,7 @@ import {
 import { useMainPlayer, useQueue, QueueRepeatMode } from 'discord-player';
 import { logger } from '../../utils/logger.js';
 import { t, pickLanguage } from '../../services/i18n.js';
+import { patchGuildConfig } from '../../services/guildConfigService.js';
 
 const LOOP_MAP = {
   off: QueueRepeatMode.OFF,
@@ -55,13 +56,33 @@ export default {
     .addSubcommand((s) =>
       s.setName('remove').setDescription('Quita una canción de la cola por su posición.')
         .addIntegerOption((o) =>
-          o.setName('position').setDescription('Posición en la cola (empieza en 1)').setMinValue(1).setRequired(true))),
+          o.setName('position').setDescription('Posición en la cola (empieza en 1)').setMinValue(1).setRequired(true)))
+    .addSubcommand((s) =>
+      s.setName('247').setDescription('Modo 24/7: el bot se queda en el canal de voz al terminar la cola.')
+        .addStringOption((o) =>
+          o.setName('toggle').setDescription('Activar o desactivar el modo 24/7').setRequired(true)
+            .addChoices({ name: 'On', value: 'on' }, { name: 'Off', value: 'off' }))),
 
   async execute(interaction, config, client) {
     const sub = interaction.options.getSubcommand();
     const lang = pickLanguage(config, interaction.guild);
 
-    if (sub === 'play') return handlePlay(interaction, lang);
+    if (sub === 'play') return handlePlay(interaction, lang, config);
+
+    if (sub === '247') {
+      const on = interaction.options.getString('toggle') === 'on';
+      try {
+        await patchGuildConfig(client.db, interaction.guildId, { music: { stayInVC: on } });
+        return embed(
+          interaction, on ? 0x36d6c3 : 0x5b6072,
+          on ? t(lang, 'wolf.music.247OnTitle') : t(lang, 'wolf.music.247OffTitle'),
+          on ? t(lang, 'wolf.music.247OnDesc') : t(lang, 'wolf.music.247OffDesc'),
+        );
+      } catch (err) {
+        logger.error('music 247 toggle failed', { error: err?.message });
+        return embed(interaction, 0xef4444, 'Error', '```' + String(err?.message || err).slice(0, 400) + '```');
+      }
+    }
 
     const queue = useQueue(interaction.guildId);
     if (!queue) {
@@ -118,7 +139,7 @@ export default {
   },
 };
 
-async function handlePlay(interaction, lang) {
+async function handlePlay(interaction, lang, config) {
   const vc = interaction.member?.voice?.channel;
   if (!vc) {
     return embed(interaction, 0xef4444, t(lang, 'wolf.music.notInVc'), t(lang, 'wolf.music.joinFirst'));
@@ -136,14 +157,16 @@ async function handlePlay(interaction, lang) {
   const query = interaction.options.getString('query', true);
   await interaction.deferReply();
 
+  const stayInVC = Boolean(config?.music?.stayInVC);
+
   try {
     const player = useMainPlayer();
     const result = await player.play(vc, query, {
       nodeOptions: {
         metadata: { channel: interaction.channel, requestedBy: interaction.user, lang },
-        leaveOnEmpty: true,
+        leaveOnEmpty: !stayInVC,
         leaveOnEmptyCooldown: 60_000,
-        leaveOnEnd: true,
+        leaveOnEnd: !stayInVC,
         leaveOnEndCooldown: 60_000,
         selfDeaf: true,
         volume: 80,

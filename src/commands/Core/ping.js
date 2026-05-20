@@ -2,13 +2,15 @@ import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 export default {
     data: new SlashCommandBuilder()
         .setName("ping")
         .setDescription("Checks the bot's latency and API speed"),
 
-    async execute(interaction) {
+    async execute(interaction, config) {
+        const lang = pickLanguage(config, interaction.guild);
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
             logger.warn(`Ping interaction defer failed`, {
@@ -21,15 +23,15 @@ export default {
 
         try {
             await InteractionHelper.safeEditReply(interaction, {
-                content: "Pinging...",
+                content: t(lang, 'wolf.cmd.ping.pinging'),
             });
 
             const latency = Date.now() - interaction.createdTimestamp;
             const apiLatency = Math.round(interaction.client.ws.ping);
 
-            const embed = createEmbed({ title: "🏓 Pong!", description: null }).addFields(
-                { name: "Bot Latency", value: `${latency}ms`, inline: true },
-                { name: "API Latency", value: `${apiLatency}ms`, inline: true },
+            const embed = createEmbed({ title: t(lang, 'wolf.cmd.ping.title'), description: null }).addFields(
+                { name: t(lang, 'wolf.cmd.ping.botLatency'), value: `${latency}ms`, inline: true },
+                { name: t(lang, 'wolf.cmd.ping.apiLatency'), value: `${apiLatency}ms`, inline: true },
             );
 
             await InteractionHelper.safeEditReply(interaction, {
@@ -40,7 +42,7 @@ export default {
             logger.error('Ping command error:', error);
             try {
                 return await InteractionHelper.safeReply(interaction, {
-                    embeds: [createEmbed({ title: 'System Error', description: 'Could not determine latency at this time.', color: 'error' })],
+                    embeds: [createEmbed({ title: t(lang, 'wolf.cmd.ping.errorTitle'), description: t(lang, 'wolf.cmd.ping.errorDesc'), color: 'error' })],
                     flags: MessageFlags.Ephemeral,
                 });
             } catch (replyError) {

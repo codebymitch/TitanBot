@@ -56,11 +56,12 @@ export function basePage({ title, body, withFooter = true }) {
 }
 
 /**
- * Brand logo. Uses /assets/logo.png as a background image so when the
- * file is missing the gradient + "W" monogram still shows cleanly.
+ * Brand logo. Renders the uploaded /assets/logo.png as the background.
+ * If the image is missing, the gradient block still shows (no broken-
+ * image icon, no text overlay).
  */
 export function brandMark(size = 38) {
-  return `<span class="logo" style="width:${size}px;height:${size}px;background-image:url('${esc(LOGO)}');background-size:cover;background-position:center">W</span>`;
+  return `<span class="logo" style="width:${size}px;height:${size}px;background-image:url('${esc(LOGO)}');background-size:cover;background-position:center" aria-label="${esc(BRAND)}"></span>`;
 }
 
 function flashBlock(flash) {

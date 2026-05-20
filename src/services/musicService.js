@@ -1,5 +1,6 @@
 import { Player } from 'discord-player';
 import { DefaultExtractors } from '@discord-player/extractor';
+import { YoutubeiExtractor } from 'discord-player-youtubei';
 import { logger } from '../utils/logger.js';
 import { t } from './i18n.js';
 
@@ -32,6 +33,17 @@ export async function initMusic(client) {
     await player.extractors.loadMulti(DefaultExtractors);
   } catch (err) {
     logger.error('musicService: failed to load DefaultExtractors', { error: err?.message });
+  }
+
+  // discord-player v7's DefaultExtractors does NOT include a YouTube
+  // extractor — without this the bot couldn't play YouTube URLs and
+  // Spotify URLs couldn't resolve their audio match. v1 of
+  // discord-player-youtubei is pure JS (no yt-dlp dependency) so it
+  // works on Alpine without system binaries.
+  try {
+    await player.extractors.register(YoutubeiExtractor, {});
+  } catch (err) {
+    logger.error('musicService: failed to register YoutubeiExtractor', { error: err?.message });
   }
 
   const lang = (queue) => queue.metadata?.lang === 'en' ? 'en' : 'es';

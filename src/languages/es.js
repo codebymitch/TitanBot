@@ -77,6 +77,20 @@ export default {
       playlistTracks: '**{count}** canciones añadidas a la cola.',
       queueEnded: 'Cola vacía. Saliendo del canal de voz.',
       errorTitle: 'Error reproduciendo',
+      '247OnTitle': '🔁 Modo 24/7 activado',
+      '247OnDesc': 'El bot se quedará en el canal de voz aunque la cola se vacíe. Aplica desde la próxima reproducción.',
+      '247OffTitle': '⏹️ Modo 24/7 desactivado',
+      '247OffDesc': 'El bot saldrá del canal cuando la cola termine o se quede vacío.',
+    },
+    cmd: {
+      ping: {
+        title: '🏓 ¡Pong!',
+        pinging: 'Comprobando...',
+        botLatency: 'Latencia del bot',
+        apiLatency: 'Latencia de la API',
+        errorTitle: 'Error del sistema',
+        errorDesc: 'No se pudo determinar la latencia en este momento.',
+      },
     },
   },
 
