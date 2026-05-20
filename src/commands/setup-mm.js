@@ -50,7 +50,7 @@ function createSetupEmbed() {
         inline: false
       }
     )
-    .setFooter({ text: 'Erednay MM • Sistema de Intermediação' })
+    .setFooter({ text: 'Howl MM • Sistema de Intermediação' })
     .setTimestamp();
 }
 

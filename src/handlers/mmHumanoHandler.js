@@ -87,7 +87,7 @@ const THEME = {
   // Badge / identidade visual do ticket
   badgeEmoji: '🤝',
   badgeLabel: 'INTERMEDIAÇÃO',
-  footerText: 'Erednay MM • Sistema de Intermediação',
+  footerText: 'Howl MM • Sistema de Intermediação',
 };
 // ============================================================
 
