@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '2.9.5',
+        date: '2026-05-20',
+        entries: [
+            { type: 'new', text: 'Added `>voicehelp` — shows all voice prefix commands as clickable button chips; clicking any chip shows usage details and required permissions' },
+        ],
+    },
+    {
         version: '2.9.4',
         date: '2026-05-20',
         entries: [

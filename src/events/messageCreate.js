@@ -1654,6 +1654,51 @@ async function handleModCommand(message, client) {
         break;
       }
 
+      case 'voicehelp': {
+        const VOICE_CMDS = [
+          { name: 'activity',      usage: '>activity [type]',      desc: 'Start a Discord Activity (YouTube, Poker, Chess…)' },
+          { name: 'vcmute',        usage: '>vcmute @user',          desc: 'Server-mute a user in voice' },
+          { name: 'vcunmute',      usage: '>vcunmute @user',        desc: 'Server-unmute a user in voice' },
+          { name: 'vcdeafen',      usage: '>vcdeafen @user',        desc: 'Server-deafen a user in voice' },
+          { name: 'vcundeafen',    usage: '>vcundeafen @user',      desc: 'Server-undeafen a user in voice' },
+          { name: 'drag',          usage: '>drag @user',            desc: 'Pull a user to your voice channel' },
+          { name: 'moveall',       usage: '>moveall #channel',      desc: 'Move all VC members to another channel' },
+          { name: 'vcname',        usage: '>vcname <name>',         desc: 'Rename your voice channel' },
+          { name: 'vclimit',       usage: '>vclimit <0-99>',        desc: 'Set user limit (0 = unlimited)' },
+          { name: 'vcdisconnect',  usage: '>vcdisconnect @user',    desc: 'Disconnect a user from voice' },
+          { name: 'vclock',        usage: '>vclock',                desc: 'Lock VC — no new members can join' },
+          { name: 'vcunlock',      usage: '>vcunlock',              desc: 'Unlock your voice channel' },
+          { name: 'vcbitrate',     usage: '>vcbitrate <8-384>',     desc: 'Set voice channel bitrate (kbps)' },
+          { name: 'vcinfo',        usage: '>vcinfo',                desc: 'Show info about your current VC' },
+          { name: 'muteall',       usage: '>muteall',               desc: 'Server-mute everyone in your VC' },
+          { name: 'unmuteall',     usage: '>unmuteall',             desc: 'Server-unmute everyone in your VC' },
+          { name: 'disconnectall', usage: '>disconnectall',         desc: 'Disconnect everyone from your VC' },
+        ];
+
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('🔊 Voice Commands')
+          .setDescription(`**${VOICE_CMDS.length}** voice channel management commands. Click any command for usage details.`)
+          .setFooter({ text: 'Requires appropriate permissions • Prefix: >' })
+          .setTimestamp();
+
+        const rows = [];
+        for (let i = 0; i < VOICE_CMDS.length; i += 5) {
+          const chunk = VOICE_CMDS.slice(i, i + 5);
+          rows.push(new ActionRowBuilder().addComponents(
+            chunk.map(cmd =>
+              new ButtonBuilder()
+                .setCustomId(`vc-cmd:${cmd.name}`)
+                .setLabel(`>${cmd.name}`)
+                .setStyle(ButtonStyle.Secondary)
+            )
+          ));
+        }
+
+        message.reply({ embeds: [embed], components: rows });
+        break;
+      }
+
       default:
         break;
     }

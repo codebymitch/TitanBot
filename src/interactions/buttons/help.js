@@ -2,6 +2,7 @@ import {
   helpBackButton,
   helpPaginationButton,
   helpCmdButton,
+  vcCmdButton,
 } from '../../handlers/helpButtons.js';
 
 const paginationIds = [
@@ -16,4 +17,4 @@ const paginationInteractions = paginationIds.map((name) => ({
   execute: helpPaginationButton.execute,
 }));
 
-export default [helpBackButton, helpCmdButton, ...paginationInteractions];
+export default [helpBackButton, helpCmdButton, vcCmdButton, ...paginationInteractions];
