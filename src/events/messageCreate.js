@@ -26,11 +26,16 @@ const warnStore = new Map();
 // Sticky store: Map<channelId, { messageId, content, counter }>
 const stickyStore = new Map();
 
+const _processed = new Set();
+
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
       if (message.author.bot) return;
+      if (_processed.has(message.id)) return;
+      _processed.add(message.id);
+      setTimeout(() => _processed.delete(message.id), 5000);
 
       // Relay DM replies back to the staff member who sent the original DM
       if (!message.guild) {
