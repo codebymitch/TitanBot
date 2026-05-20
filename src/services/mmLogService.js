@@ -301,7 +301,7 @@ function createSuccessLogEmbed(data, middleman, guild) {
       }
     )
     .setFooter({ 
-      text: `${versionConfig.getFooter()} • Guild: ${guild.name}`,
+      text: versionConfig.getFooter(),
       iconURL: guild.iconURL() 
     })
     .setTimestamp();
@@ -358,7 +358,7 @@ function createCancelledLogEmbed(data, middleman, guild, cancelReason) {
       }
     )
     .setFooter({ 
-      text: `${versionConfig.getFooter()} • Guild: ${guild.name}`,
+      text: versionConfig.getFooter(),
       iconURL: guild.iconURL() 
     })
     .setTimestamp();

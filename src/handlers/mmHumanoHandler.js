@@ -33,8 +33,10 @@ import {
   sendCancelledLog, 
   prepareTicketDataForLog 
 } from '../services/mmLogService.js';
-
-const MM_BLOCKED_START_ROLE_IDS = ['1505636940618404042', '1505606856742277171', '1505611576940433538'];
+import {
+  canStartMM,
+  canBeSelectedAsCounterparty
+} from '../services/mmPermissionService.js';
 
 // Custom IDs for the wizard
 export const WIZARD_IDS = {
@@ -510,7 +512,7 @@ export async function handleStart(interaction) {
   }
 
   const member = interaction.member;
-  if (member && MM_BLOCKED_START_ROLE_IDS.some(roleId => member.roles.cache.has(roleId))) {
+  if (member && !canStartMM(member)) {
     return interaction.followUp({
       content: '❌ Você não tem permissão para iniciar uma intermediação.',
       ephemeral: true
@@ -654,6 +656,15 @@ export async function handleCounterpartySelect(interaction) {
   if (!selectedMember) {
     return interaction.followUp({
       content: '❌ Não foi possível encontrar o usuário selecionado.',
+      ephemeral: true
+    });
+  }
+
+  // Valida se a contraparte pode participar do MM
+  const counterpartyCheck = canBeSelectedAsCounterparty(selectedMember, userId);
+  if (!counterpartyCheck.allowed) {
+    return interaction.followUp({
+      content: `❌ ${counterpartyCheck.reason}`,
       ephemeral: true
     });
   }
@@ -960,9 +971,6 @@ export async function isUserStaff(member, guild) {
   return false;
 }
 
-// IDs dos cargos que podem concluir/cancelar tickets (Suporte e Middleman)
-const MM_ALLOWED_ROLE_IDS = ['1505631589407658064', '1505618270492033094'];
-
 /**
  * Verifica se o membro pode agir como MM no ticket.
  * Retorna true se for o MM responsável pelo ticket OU se tiver cargo de Suporte/Middleman.
@@ -982,6 +990,8 @@ async function canActAsMMOnTicket(interaction, data) {
   // Owner sempre pode
   if (member.id === interaction.guild.ownerId) return true;
 
+  // IDs dos cargos que podem concluir/cancelar tickets (Suporte e Middleman)
+  const MM_ALLOWED_ROLE_IDS = ['1505631589407658064', '1505618270492033094'];
   return MM_ALLOWED_ROLE_IDS.some(roleId => member.roles.cache.has(roleId));
 }
 
