@@ -7,6 +7,7 @@
 
 import { EmbedBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { logger } from '../utils/logger.js';
+import versionConfig from '../config/version.js';
 
 // ID do canal de logs (pode ser configurado via variável de ambiente)
 const MM_LOGS_CHANNEL_ID = process.env.MM_LOGS_CHANNEL_ID || '1506667572383453374';
@@ -300,7 +301,7 @@ function createSuccessLogEmbed(data, middleman, guild) {
       }
     )
     .setFooter({ 
-      text: `MM Log System • Guild: ${guild.name}`,
+      text: `${versionConfig.getFooter()} • Guild: ${guild.name}`,
       iconURL: guild.iconURL() 
     })
     .setTimestamp();
@@ -357,7 +358,7 @@ function createCancelledLogEmbed(data, middleman, guild, cancelReason) {
       }
     )
     .setFooter({ 
-      text: `MM Log System • Guild: ${guild.name}`,
+      text: `${versionConfig.getFooter()} • Guild: ${guild.name}`,
       iconURL: guild.iconURL() 
     })
     .setTimestamp();

@@ -25,6 +25,7 @@ import {
   ChannelType
 } from 'discord.js';
 import mmConfig from '../config/mmConfig.js';
+import versionConfig from '../config/version.js';
 import { logger } from '../utils/logger.js';
 import { safeShowModal } from '../utils/interactionValidator.js';
 import { 
@@ -92,7 +93,7 @@ const THEME = {
   // Badge / identidade visual do ticket
   badgeEmoji: '🤝',
   badgeLabel: 'INTERMEDIAÇÃO',
-  footerText: 'Howl MM • Sistema de Intermediação',
+  footerText: versionConfig.getFooter(),
 };
 // ============================================================
 

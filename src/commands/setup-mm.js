@@ -7,6 +7,7 @@
  */
 
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
+import versionConfig from '../config/version.js';
 
 // Custom IDs for the setup message button
 export const MM_SETUP_BUTTON_ID = 'mm_start_intermediacao';
@@ -50,7 +51,7 @@ function createSetupEmbed() {
         inline: false
       }
     )
-    .setFooter({ text: 'Howl MM • Sistema de Intermediação' })
+    .setFooter({ text: versionConfig.getFooter() })
     .setTimestamp();
 }
 
