@@ -14,6 +14,8 @@ import { checkRateLimit } from '../utils/rateLimiter.js';
 import { AutoresponderService } from '../services/autoresponderService.js';
 import { AntiNsfwService } from '../services/antiNsfwService.js';
 import { snipeCache } from '../utils/snipeCache.js';
+import { joinAndQueue, skipSong, stopMusic, togglePause, getQueue } from '../services/musicService.js';
+import { spawn } from 'child_process';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -1456,6 +1458,146 @@ async function handleModCommand(message, client) {
         }
 
         return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown subcommand. Use `stats`, `dm`, `broadcast`, or `guild`.')] });
+      }
+
+      case 'play':
+      case 'p': {
+        const voiceChannel = message.member.voice.channel;
+        if (!voiceChannel) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel to play music.')] });
+
+        const query = args.join(' ');
+        if (!query) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Usage: `>play <song name or URL>`')] });
+
+        const searching = await message.reply({ embeds: [modEmbed(0x5865F2, `🔍 Searching for \`${query}\`...`)] });
+
+        const isUrl = /^https?:\/\//i.test(query);
+        const searchArg = isUrl ? query : `ytsearch1:${query}`;
+
+        const results = await new Promise((resolve) => {
+          const proc = spawn('yt-dlp', ['--no-playlist', '--quiet', '--no-warnings', '--flat-playlist', '-j', searchArg]);
+          let out = '';
+          proc.stdout.on('data', chunk => { out += chunk; });
+          proc.on('close', () => {
+            if (!out.trim()) return resolve([]);
+            try {
+              const lines = out.trim().split('\n');
+              resolve(lines.map(line => {
+                const info = JSON.parse(line);
+                const id = info.id ?? info.webpage_url?.split('v=')[1];
+                const duration = info.duration
+                  ? `${Math.floor(info.duration / 60)}:${String(Math.floor(info.duration % 60)).padStart(2, '0')}`
+                  : '??:??';
+                return {
+                  title: info.title ?? 'Unknown',
+                  url: info.webpage_url ?? `https://www.youtube.com/watch?v=${id}`,
+                  duration,
+                  channel: info.channel ?? info.uploader ?? 'Unknown',
+                };
+              }).filter(r => r.url));
+            } catch { resolve([]); }
+          });
+          proc.on('error', () => resolve([]));
+        });
+
+        if (!results.length) {
+          return searching.edit({ embeds: [modEmbed(0xED4245, `❌ No results found for \`${query}\`.`)] });
+        }
+
+        const song = { ...results[0], requestedBy: message.author.tag };
+
+        try {
+          const { queue, queued } = await joinAndQueue(song, voiceChannel, message.channel);
+          if (queued) {
+            await searching.edit({
+              embeds: [new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle('📋 Added to Queue')
+                .setDescription(`[${song.title}](${song.url})`)
+                .addFields(
+                  { name: '⏱ Duration', value: song.duration, inline: true },
+                  { name: '📺 Channel', value: song.channel, inline: true },
+                  { name: '🔢 Position', value: `#${queue.songs.length}`, inline: true },
+                )],
+            });
+          } else {
+            await searching.delete().catch(() => {});
+          }
+        } catch (err) {
+          await searching.edit({ embeds: [modEmbed(0xED4245, `❌ ${err.message}`)] });
+        }
+        break;
+      }
+
+      case 'skip':
+      case 's': {
+        const skipped = skipSong(message.guild.id);
+        if (!skipped) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is playing.')] });
+        message.reply({ embeds: [modEmbed(0x57F287, '⏭ Skipped the current song.')] });
+        break;
+      }
+
+      case 'stop': {
+        const stopped = stopMusic(message.guild.id);
+        if (!stopped) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is playing.')] });
+        message.reply({ embeds: [modEmbed(0x57F287, '⏹ Stopped music and disconnected.')] });
+        break;
+      }
+
+      case 'pause': {
+        const paused = togglePause(message.guild.id);
+        if (paused === null) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is playing.')] });
+        message.reply({ embeds: [modEmbed(0x57F287, paused ? '⏸ Paused.' : '▶️ Resumed.')] });
+        break;
+      }
+
+      case 'resume': {
+        const q = getQueue(message.guild.id);
+        if (!q?.current) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is playing.')] });
+        if (!q.paused) return message.reply({ embeds: [modEmbed(0xFEE75C, '▶️ Already playing.')] });
+        togglePause(message.guild.id);
+        message.reply({ embeds: [modEmbed(0x57F287, '▶️ Resumed.')] });
+        break;
+      }
+
+      case 'queue':
+      case 'q': {
+        const q = getQueue(message.guild.id);
+        if (!q?.current) return message.reply({ embeds: [modEmbed(0xED4245, '❌ The queue is empty.')] });
+
+        const upcoming = q.songs.slice(0, 10).map((s, i) =>
+          `**${i + 1}.** [${s.title}](${s.url}) \`${s.duration}\``
+        );
+
+        const embed = new EmbedBuilder()
+          .setColor(0xFF0000)
+          .setTitle('📋 Music Queue')
+          .addFields({ name: '🎵 Now Playing', value: `[${q.current.title}](${q.current.url}) \`${q.current.duration}\`` });
+
+        if (upcoming.length) {
+          embed.addFields({ name: `⏭ Up Next (${q.songs.length} song${q.songs.length !== 1 ? 's' : ''})`, value: upcoming.join('\n') });
+        }
+
+        message.reply({ embeds: [embed] });
+        break;
+      }
+
+      case 'np':
+      case 'nowplaying': {
+        const q = getQueue(message.guild.id);
+        if (!q?.current) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is currently playing.')] });
+
+        const embed = new EmbedBuilder()
+          .setColor(0xFF0000)
+          .setTitle('🎵 Now Playing')
+          .setDescription(`[${q.current.title}](${q.current.url})`)
+          .addFields(
+            { name: '⏱ Duration', value: q.current.duration, inline: true },
+            { name: '📺 Channel', value: q.current.channel, inline: true },
+            { name: '👤 Requested by', value: q.current.requestedBy, inline: true },
+          );
+
+        message.reply({ embeds: [embed] });
+        break;
       }
 
       default:
