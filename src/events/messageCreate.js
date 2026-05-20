@@ -14,8 +14,7 @@ import { checkRateLimit } from '../utils/rateLimiter.js';
 import { AutoresponderService } from '../services/autoresponderService.js';
 import { AntiNsfwService } from '../services/antiNsfwService.js';
 import { snipeCache } from '../utils/snipeCache.js';
-import { joinAndQueue, skipSong, stopMusic, togglePause, getQueue } from '../services/musicService.js';
-import { spawn } from 'child_process';
+import VoiceService from '../services/voiceService.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -1460,143 +1459,110 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown subcommand. Use `stats`, `dm`, `broadcast`, or `guild`.')] });
       }
 
-      case 'play':
-      case 'p': {
-        const voiceChannel = message.member.voice.channel;
-        if (!voiceChannel) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel to play music.')] });
-
-        const query = args.join(' ');
-        if (!query) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Usage: `>play <song name or URL>`')] });
-
-        const searching = await message.reply({ embeds: [modEmbed(0x5865F2, `🔍 Searching for \`${query}\`...`)] });
-
-        const isUrl = /^https?:\/\//i.test(query);
-        const searchArg = isUrl ? query : `ytsearch1:${query}`;
-
-        const results = await new Promise((resolve) => {
-          const proc = spawn('yt-dlp', ['--no-playlist', '--quiet', '--no-warnings', '--flat-playlist', '-j', searchArg]);
-          let out = '';
-          proc.stdout.on('data', chunk => { out += chunk; });
-          proc.on('close', () => {
-            if (!out.trim()) return resolve([]);
-            try {
-              const lines = out.trim().split('\n');
-              resolve(lines.map(line => {
-                const info = JSON.parse(line);
-                const id = info.id ?? info.webpage_url?.split('v=')[1];
-                const duration = info.duration
-                  ? `${Math.floor(info.duration / 60)}:${String(Math.floor(info.duration % 60)).padStart(2, '0')}`
-                  : '??:??';
-                return {
-                  title: info.title ?? 'Unknown',
-                  url: info.webpage_url ?? `https://www.youtube.com/watch?v=${id}`,
-                  duration,
-                  channel: info.channel ?? info.uploader ?? 'Unknown',
-                };
-              }).filter(r => r.url));
-            } catch { resolve([]); }
-          });
-          proc.on('error', () => resolve([]));
-        });
-
-        if (!results.length) {
-          return searching.edit({ embeds: [modEmbed(0xED4245, `❌ No results found for \`${query}\`.`)] });
+      case 'activity': {
+        const activityType = args[0]?.toLowerCase();
+        if (!activityType) {
+          const list = VoiceService.formatActivityList();
+          return message.reply({ embeds: [new EmbedBuilder().setColor(0x5865F2).setTitle('🎮 Available Activities').setDescription(list)] });
         }
-
-        const song = { ...results[0], requestedBy: message.author.tag };
-
         try {
-          const { queue, queued } = await joinAndQueue(song, voiceChannel, message.channel);
-          if (queued) {
-            await searching.edit({
-              embeds: [new EmbedBuilder()
-                .setColor(0x5865F2)
-                .setTitle('📋 Added to Queue')
-                .setDescription(`[${song.title}](${song.url})`)
-                .addFields(
-                  { name: '⏱ Duration', value: song.duration, inline: true },
-                  { name: '📺 Channel', value: song.channel, inline: true },
-                  { name: '🔢 Position', value: `#${queue.songs.length}`, inline: true },
-                )],
-            });
-          } else {
-            await searching.delete().catch(() => {});
-          }
+          const result = await VoiceService.startActivity(client, message.member, activityType);
+          const embed = new EmbedBuilder()
+            .setColor(0x57F287)
+            .setTitle(`${result.icon} ${result.activity}`)
+            .setDescription(`${result.description}\n\n[**Click to join**](${result.inviteUrl})`)
+            .addFields({ name: '📢 Channel', value: result.channel, inline: true })
+            .setFooter({ text: 'Invite expires in 24 hours' });
+          message.reply({ embeds: [embed] });
         } catch (err) {
-          await searching.edit({ embeds: [modEmbed(0xED4245, `❌ ${err.message}`)] });
+          message.reply({ embeds: [modEmbed(0xED4245, `❌ ${err.userMessage ?? err.message}`)] });
         }
         break;
       }
 
-      case 'skip':
-      case 's': {
-        const skipped = skipSong(message.guild.id);
-        if (!skipped) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is playing.')] });
-        message.reply({ embeds: [modEmbed(0x57F287, '⏭ Skipped the current song.')] });
+      case 'vcmute': {
+        if (!hasPerm('MuteMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>vcmute @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xED4245, '❌ That user is not in a voice channel.')] });
+        await target.voice.setMute(true, `Muted by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, `🔇 Server-muted **${target.user.tag}**.`)] });
         break;
       }
 
-      case 'stop': {
-        const stopped = stopMusic(message.guild.id);
-        if (!stopped) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is playing.')] });
-        message.reply({ embeds: [modEmbed(0x57F287, '⏹ Stopped music and disconnected.')] });
+      case 'vcunmute': {
+        if (!hasPerm('MuteMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>vcunmute @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xED4245, '❌ That user is not in a voice channel.')] });
+        await target.voice.setMute(false, `Unmuted by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, `🔊 Server-unmuted **${target.user.tag}**.`)] });
         break;
       }
 
-      case 'pause': {
-        const paused = togglePause(message.guild.id);
-        if (paused === null) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is playing.')] });
-        message.reply({ embeds: [modEmbed(0x57F287, paused ? '⏸ Paused.' : '▶️ Resumed.')] });
+      case 'vcdeafen': {
+        if (!hasPerm('DeafenMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>vcdeafen @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xED4245, '❌ That user is not in a voice channel.')] });
+        await target.voice.setDeaf(true, `Deafened by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, `🔕 Server-deafened **${target.user.tag}**.`)] });
         break;
       }
 
-      case 'resume': {
-        const q = getQueue(message.guild.id);
-        if (!q?.current) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is playing.')] });
-        if (!q.paused) return message.reply({ embeds: [modEmbed(0xFEE75C, '▶️ Already playing.')] });
-        togglePause(message.guild.id);
-        message.reply({ embeds: [modEmbed(0x57F287, '▶️ Resumed.')] });
+      case 'vcundeafen': {
+        if (!hasPerm('DeafenMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>vcundeafen @user`');
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xED4245, '❌ That user is not in a voice channel.')] });
+        await target.voice.setDeaf(false, `Undeafened by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, `🔔 Server-undeafened **${target.user.tag}**.`)] });
         break;
       }
 
-      case 'queue':
-      case 'q': {
-        const q = getQueue(message.guild.id);
-        if (!q?.current) return message.reply({ embeds: [modEmbed(0xED4245, '❌ The queue is empty.')] });
-
-        const upcoming = q.songs.slice(0, 10).map((s, i) =>
-          `**${i + 1}.** [${s.title}](${s.url}) \`${s.duration}\``
-        );
-
-        const embed = new EmbedBuilder()
-          .setColor(0xFF0000)
-          .setTitle('📋 Music Queue')
-          .addFields({ name: '🎵 Now Playing', value: `[${q.current.title}](${q.current.url}) \`${q.current.duration}\`` });
-
-        if (upcoming.length) {
-          embed.addFields({ name: `⏭ Up Next (${q.songs.length} song${q.songs.length !== 1 ? 's' : ''})`, value: upcoming.join('\n') });
-        }
-
-        message.reply({ embeds: [embed] });
+      case 'drag': {
+        if (!hasPerm('MoveMembers')) return NO_PERM();
+        const target = message.mentions.members.first();
+        if (!target) return message.reply('Usage: `>drag @user`');
+        const myVC = message.member.voice.channel;
+        if (!myVC) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xED4245, '❌ That user is not in a voice channel.')] });
+        await target.voice.setChannel(myVC, `Dragged by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, `➡️ Moved **${target.user.tag}** to **${myVC.name}**.`)] });
         break;
       }
 
-      case 'np':
-      case 'nowplaying': {
-        const q = getQueue(message.guild.id);
-        if (!q?.current) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Nothing is currently playing.')] });
+      case 'moveall': {
+        if (!hasPerm('MoveMembers')) return NO_PERM();
+        const destChannel = message.mentions.channels.first();
+        if (!destChannel?.isVoiceBased?.()) return message.reply('Usage: `>moveall #voice-channel`');
+        const sourceVC = message.member.voice.channel;
+        if (!sourceVC) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in the source voice channel.')] });
+        const members = [...sourceVC.members.values()];
+        await Promise.all(members.map(m => m.voice.setChannel(destChannel).catch(() => {})));
+        message.reply({ embeds: [modEmbed(0x57F287, `➡️ Moved **${members.length}** member(s) to **${destChannel.name}**.`)] });
+        break;
+      }
 
-        const embed = new EmbedBuilder()
-          .setColor(0xFF0000)
-          .setTitle('🎵 Now Playing')
-          .setDescription(`[${q.current.title}](${q.current.url})`)
-          .addFields(
-            { name: '⏱ Duration', value: q.current.duration, inline: true },
-            { name: '📺 Channel', value: q.current.channel, inline: true },
-            { name: '👤 Requested by', value: q.current.requestedBy, inline: true },
-          );
+      case 'vcname': {
+        if (!hasPerm('ManageChannels')) return NO_PERM();
+        const newName = args.join(' ');
+        if (!newName) return message.reply('Usage: `>vcname <new name>`');
+        const vc = message.member.voice.channel;
+        if (!vc) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        await vc.setName(newName, `Renamed by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, `✏️ Renamed voice channel to **${newName}**.`)] });
+        break;
+      }
 
-        message.reply({ embeds: [embed] });
+      case 'vclimit': {
+        if (!hasPerm('ManageChannels')) return NO_PERM();
+        const limit = parseInt(args[0], 10);
+        if (isNaN(limit) || limit < 0 || limit > 99) return message.reply('Usage: `>vclimit <0-99>` (0 = unlimited)');
+        const vc = message.member.voice.channel;
+        if (!vc) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        await vc.setUserLimit(limit, `Limit set by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, limit === 0 ? `♾️ Removed user limit from **${vc.name}**.` : `👥 Set user limit to **${limit}** in **${vc.name}**.`)] });
         break;
       }
 

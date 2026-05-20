@@ -3,7 +3,7 @@ export const changelog = [
         version: '2.9.4',
         date: '2026-05-20',
         entries: [
-            { type: 'new', text: 'Added voice prefix commands: `>play <song>`, `>skip`, `>stop`, `>pause`, `>resume`, `>queue`, `>np` — play music directly without slash commands' },
+            { type: 'new', text: 'Added voice prefix commands: `>activity`, `>vcmute`, `>vcunmute`, `>vcdeafen`, `>vcundeafen`, `>drag`, `>moveall`, `>vcname`, `>vclimit`' },
         ],
     },
     {
