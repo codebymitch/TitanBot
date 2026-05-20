@@ -701,18 +701,10 @@ async function handleModCommand(message, client) {
         try { await botRole.setColor(0xC0152E); }
         catch (e) { errors.push(`Color: ${e.message}`); }
 
-        // Move to top — best effort, silently skip if hierarchy blocks it
-        let movedToTop = false;
-        try {
-          await botRole.setPosition(guild.roles.cache.size - 1, { relative: false });
-          movedToTop = true;
-        } catch { /* hierarchy prevented move — user must drag manually */ }
-
         if (errors.length) {
           return message.reply({ embeds: [modEmbed(0xED4245, `❌ Fix failed for **${botRole.name}**:\n${errors.join('\n')}`)] });
         }
-        const posNote = movedToTop ? 'moved to the top' : 'position unchanged (drag it above other roles manually)';
-        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to Evernight red, ${posNote}.`)] });
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to Evernight red.\n> To move the role higher, drag it in **Server Settings → Roles**.`)] });
       }
 
       case 'perms': {
