@@ -6,6 +6,7 @@ import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getTicketPermissionContext } from '../../utils/ticketPermissions.js';
 import { claimTicket } from '../../services/ticket.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("claim")
@@ -13,6 +14,7 @@ export default {
         .setDMPermission(false),
 
     async execute(interaction, guildConfig, client) {
+        const lang = pickLanguage(guildConfig, interaction.guild);
         try {
             
             const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
@@ -23,23 +25,13 @@ export default {
             const permissionContext = await getTicketPermissionContext({ client, interaction });
             if (!permissionContext.ticketData) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.notTicketTitle'), t(lang, 'wolf.cmd.ticket.notTicketDesc'))],
                 });
             }
 
             if (!permissionContext.canManageTicket) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Permission Denied",
-                            "You need the `Manage Channels` permission or the configured `Ticket Staff Role` to claim tickets.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.permDenied'), t(lang, 'wolf.cmd.ticket.permClaim'))],
                 });
             }
 
@@ -54,22 +46,12 @@ export default {
                     error: result.error
                 });
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            result.error || "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.notTicketTitle'), result.error || t(lang, 'wolf.cmd.ticket.notTicketDesc'))],
                 });
             }
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        "Ticket Claimed!",
-                        "You have successfully claimed this ticket.",
-                    ),
-                ],
+                embeds: [successEmbed(t(lang, 'wolf.cmd.ticket.claimedTitle'), t(lang, 'wolf.cmd.ticket.claimedDesc'))],
             });
 
             logger.info('Ticket claimed successfully', {

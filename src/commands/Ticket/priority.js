@@ -6,6 +6,7 @@ import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getTicketPermissionContext } from '../../utils/ticketPermissions.js';
 import { updateTicketPriority } from '../../services/ticket.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -28,6 +29,7 @@ export default {
     category: "Ticket",
 
     async execute(interaction, guildConfig, client) {
+        const lang = pickLanguage(guildConfig, interaction.guild);
         try {
             
             const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
@@ -38,23 +40,13 @@ export default {
             const permissionContext = await getTicketPermissionContext({ client, interaction });
             if (!permissionContext.ticketData) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.notTicketTitle'), t(lang, 'wolf.cmd.ticket.notTicketDesc'))],
                 });
             }
 
             if (!permissionContext.canManageTicket) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Permission Denied",
-                            "You need the `Manage Channels` permission or the configured `Ticket Staff Role` to change ticket priority.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.permDenied'), t(lang, 'wolf.cmd.ticket.permPriority'))],
                 });
             }
 
@@ -69,22 +61,12 @@ export default {
                     error: result.error
                 });
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            result.error || "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.notTicketTitle'), result.error || t(lang, 'wolf.cmd.ticket.notTicketDesc'))],
                 });
             }
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        "Priority Updated",
-                        `Ticket priority set to **${priorityLevel.toUpperCase()}**.`,
-                    ),
-                ],
+                embeds: [successEmbed(t(lang, 'wolf.cmd.ticket.priorityUpdated'), t(lang, 'wolf.cmd.ticket.prioritySetTo', { level: priorityLevel.toUpperCase() }))],
             });
 
             logger.info('Ticket priority updated successfully', {

@@ -7,6 +7,7 @@ import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 
 import ticketConfig from './modules/ticket_dashboard.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -94,6 +95,7 @@ export default {
     category: "ticket",
 
     async execute(interaction, config, client) {
+        const lang = pickLanguage(config, interaction.guild);
         try {
             
             const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
@@ -112,12 +114,7 @@ export default {
                     commandName: 'ticket'
                 });
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Permission Denied",
-                            "You need the `Manage Channels` permission for this action.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.permDenied'), t(lang, 'wolf.cmd.ticket.permSetup'))],
                 });
             }
 
@@ -131,12 +128,7 @@ export default {
             const existingConfig = await getGuildConfig(client, interaction.guildId);
             if (existingConfig?.ticketPanelChannelId) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            'Ticket System Already Active',
-                            `This server already has a ticket system set up (panel in <#${existingConfig.ticketPanelChannelId}>).\n\nOnly one ticket system is supported per server. Use \`/ticket dashboard\` to edit or update the existing setup, or select **Delete System** from the dashboard to remove it and start fresh.`,
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.alreadyActiveTitle'), t(lang, 'wolf.cmd.ticket.alreadyActiveDesc', { channel: existingConfig.ticketPanelChannelId }))],
                 });
             }
 
@@ -296,12 +288,7 @@ description: panelMessage,
                 });
                 if (interaction.deferred || interaction.replied) {
                     await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [
-                            errorEmbed(
-                                "Setup Failed",
-                                "Could not send the ticket panel or save configuration. Check the bot's permissions (especially the ability to send messages in the target channel) and database connection.",
-                            ),
-                        ],
+                        embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.setupFailed'), t(lang, 'wolf.cmd.ticket.setupFailedDesc'))],
                     }).catch(err => {
                         logger.error('Failed to send error reply', {
                             error: err.message,

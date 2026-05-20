@@ -6,6 +6,7 @@ import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getTicketPermissionContext } from '../../utils/ticketPermissions.js';
 import { closeTicket } from '../../services/ticket.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("close")
@@ -19,6 +20,7 @@ export default {
         ),
 
     async execute(interaction, guildConfig, client) {
+        const lang = pickLanguage(guildConfig, interaction.guild);
         try {
             
             const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
@@ -29,30 +31,20 @@ export default {
             const permissionContext = await getTicketPermissionContext({ client, interaction });
             if (!permissionContext.ticketData) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.notTicketTitle'), t(lang, 'wolf.cmd.ticket.notTicketDesc'))],
                 });
             }
 
             if (!permissionContext.canCloseTicket) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Permission Denied",
-                            "You need the `Manage Channels` permission, the configured `Ticket Staff Role`, or be the ticket creator to close this ticket.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.permDenied'), t(lang, 'wolf.cmd.ticket.permClose'))],
                 });
             }
 
             const channel = interaction.channel;
             const reason =
                 interaction.options?.getString("reason") ||
-                "Closed via command without a specific reason.";
+                t(lang, 'wolf.cmd.ticket.closedReasonDefault');
 
             const result = await closeTicket(channel, interaction.user, reason);
             
@@ -64,22 +56,12 @@ export default {
                     error: result.error
                 });
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            result.error || "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.ticket.notTicketTitle'), result.error || t(lang, 'wolf.cmd.ticket.notTicketDesc'))],
                 });
             }
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        "Ticket Closed!",
-                        "This ticket has been closed successfully.",
-                    ),
-                ],
+                embeds: [successEmbed(t(lang, 'wolf.cmd.ticket.closedTitle'), t(lang, 'wolf.cmd.ticket.closedDesc'))],
             });
 
             logger.info('Ticket closed successfully', {
