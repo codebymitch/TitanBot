@@ -216,6 +216,23 @@ export default {
         completeTitle: 'Verification Complete',
         completeDesc: 'You have been verified and given the **{role}** role! Welcome to the server! 🎉',
       },
+      avatar: {
+        title: "{user}'s Avatar",
+        download: '[Download image]({url})',
+      },
+      userinfo: {
+        title: '👤 User Info: {user}',
+        id: 'ID',
+        bot: 'Bot',
+        yes: 'Yes',
+        no: 'No',
+        roles: 'Roles',
+        none: 'None',
+        createdAt: 'Account Created',
+        joinedAt: 'Joined Server',
+        notInServer: 'Not in server',
+        highestRole: 'Highest Role',
+      },
       leveling: {
         disabled: 'The leveling system is currently disabled on this server.',
         userNotFound: 'Could not find the specified user in this server.',

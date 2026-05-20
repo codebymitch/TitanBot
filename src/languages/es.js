@@ -216,6 +216,23 @@ export default {
         completeTitle: 'Verificación completa',
         completeDesc: 'Has sido verificado y se te ha dado el rol **{role}**. ¡Bienvenido al servidor! 🎉',
       },
+      avatar: {
+        title: 'Avatar de {user}',
+        download: '[Descargar imagen]({url})',
+      },
+      userinfo: {
+        title: '👤 Información de {user}',
+        id: 'ID',
+        bot: '¿Es bot?',
+        yes: 'Sí',
+        no: 'No',
+        roles: 'Roles',
+        none: 'Ninguno',
+        createdAt: 'Cuenta creada',
+        joinedAt: 'Entró al servidor',
+        notInServer: 'No está en el servidor',
+        highestRole: 'Rol más alto',
+      },
       leveling: {
         disabled: 'El sistema de niveles está desactivado en este servidor.',
         userNotFound: 'No se pudo encontrar al usuario en este servidor.',

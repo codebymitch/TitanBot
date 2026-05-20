@@ -3,6 +3,7 @@ import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("userinfo")
@@ -13,7 +14,8 @@ export default {
         .setDescription("The user to inspect (defaults to you)"),
     ),
 
-  async execute(interaction) {
+  async execute(interaction, config) {
+    const lang = pickLanguage(config, interaction.guild);
     try {
       const deferSuccess = await InteractionHelper.safeDefer(interaction);
       if (!deferSuccess) {
@@ -31,35 +33,35 @@ export default {
       const createdTimestamp = Math.floor(user.createdAt.getTime() / 1000);
       const joinedTimestamp = member?.joinedAt ? Math.floor(member.joinedAt.getTime() / 1000) : null;
 
-      const embed = createEmbed({ title: `👤 User Info: ${user.username}` })
+      const embed = createEmbed({ title: t(lang, 'wolf.cmd.userinfo.title', { user: user.username }) })
         .setThumbnail(user.displayAvatarURL({ size: 256 }))
         .addFields(
-          { name: "ID", value: user.id, inline: true },
-          { name: "Bot", value: user.bot ? "Yes" : "No", inline: true },
+          { name: t(lang, 'wolf.cmd.userinfo.id'), value: user.id, inline: true },
+          { name: t(lang, 'wolf.cmd.userinfo.bot'), value: user.bot ? t(lang, 'wolf.cmd.userinfo.yes') : t(lang, 'wolf.cmd.userinfo.no'), inline: true },
           {
-            name: "Roles",
+            name: t(lang, 'wolf.cmd.userinfo.roles'),
             value:
               member && member.roles.cache.size > 1
                 ? member.roles.cache
                     .map((r) => r.name)
                     .slice(0, 5)
                     .join(", ")
-                : "None",
+                : t(lang, 'wolf.cmd.userinfo.none'),
             inline: true,
           },
           {
-            name: "Account Created",
+            name: t(lang, 'wolf.cmd.userinfo.createdAt'),
             value: `<t:${createdTimestamp}:R>`,
             inline: false,
           },
           {
-            name: "Joined Server",
-            value: joinedTimestamp ? `<t:${joinedTimestamp}:R>` : "Not in server",
+            name: t(lang, 'wolf.cmd.userinfo.joinedAt'),
+            value: joinedTimestamp ? `<t:${joinedTimestamp}:R>` : t(lang, 'wolf.cmd.userinfo.notInServer'),
             inline: false,
           },
           {
-            name: "Highest Role",
-            value: member?.roles?.highest?.name || "None",
+            name: t(lang, 'wolf.cmd.userinfo.highestRole'),
+            value: member?.roles?.highest?.name || t(lang, 'wolf.cmd.userinfo.none'),
             inline: true,
           },
         );
