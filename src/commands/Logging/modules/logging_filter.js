@@ -4,18 +4,25 @@ import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js
 import { logEvent } from '../../../utils/moderation.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
+import { t } from '../../../services/i18n.js';
 
 export default {
-    async execute(interaction, config, client) {
+    async execute(interaction, config, client, lang) {
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
             return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Permission Denied', 'You need **Administrator** permissions to manage log filters.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.logging.filter.permDeniedTitle'),
+                    t(lang, 'wolf.cmd.logging.filter.permDeniedDesc')
+                )],
             });
         }
 
         if (!client.db) {
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Database Error', 'Database not initialized.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.logging.filter.dbErrorTitle'),
+                    t(lang, 'wolf.cmd.logging.filter.dbErrorDesc')
+                )],
             });
         }
 
@@ -35,17 +42,20 @@ export default {
 
         if (type === 'user') {
             targetArray = currentConfig.logIgnore.users;
-            entityType = 'User';
+            entityType = t(lang, 'wolf.cmd.logging.filter.typeUser');
             const member = await interaction.guild.members.fetch(entityId).catch(() => null);
             entityName = member ? member.user.tag : `ID: ${entityId}`;
         } else if (type === 'channel') {
             targetArray = currentConfig.logIgnore.channels;
-            entityType = 'Channel';
+            entityType = t(lang, 'wolf.cmd.logging.filter.typeChannel');
             const channel = interaction.guild.channels.cache.get(entityId);
             entityName = channel ? `#${channel.name}` : `ID: ${entityId}`;
         } else {
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Invalid Type', "Choose `user` or `channel`.")],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.logging.filter.invalidTypeTitle'),
+                    t(lang, 'wolf.cmd.logging.filter.invalidTypeDesc')
+                )],
             });
         }
 
@@ -54,20 +64,26 @@ export default {
         if (subcommand === 'add') {
             if (targetArray.includes(entityId)) {
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Already Filtered', `${entityType} **${entityName}** is already on the ignore list.`)],
+                    embeds: [errorEmbed(
+                        t(lang, 'wolf.cmd.logging.filter.alreadyFilteredTitle'),
+                        t(lang, 'wolf.cmd.logging.filter.alreadyFilteredDesc', { type: entityType, name: entityName })
+                    )],
                 });
             }
             targetArray.push(entityId);
-            successMessage = `${entityType} **${entityName}** added to the log ignore list. Events from them will not be logged.`;
+            successMessage = t(lang, 'wolf.cmd.logging.filter.addedDesc', { type: entityType, name: entityName });
         } else if (subcommand === 'remove') {
             const index = targetArray.indexOf(entityId);
             if (index === -1) {
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Not Filtered', `${entityType} **${entityName}** was not on the ignore list.`)],
+                    embeds: [errorEmbed(
+                        t(lang, 'wolf.cmd.logging.filter.notFilteredTitle'),
+                        t(lang, 'wolf.cmd.logging.filter.notFilteredDesc', { type: entityType, name: entityName })
+                    )],
                 });
             }
             targetArray.splice(index, 1);
-            successMessage = `${entityType} **${entityName}** removed from the log ignore list. Events will now be logged.`;
+            successMessage = t(lang, 'wolf.cmd.logging.filter.removedDesc', { type: entityType, name: entityName });
         } else {
             return;
         }
@@ -87,12 +103,15 @@ export default {
             });
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [successEmbed('Filter Updated', successMessage)],
+                embeds: [successEmbed(t(lang, 'wolf.cmd.logging.filter.updatedTitle'), successMessage)],
             });
         } catch (error) {
             logger.error('logging filter error:', error);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Database Error', 'Failed to save the filter change.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.logging.filter.saveErrorTitle'),
+                    t(lang, 'wolf.cmd.logging.filter.saveErrorDesc')
+                )],
             });
         }
     },

@@ -3,6 +3,7 @@ import { errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 import report from './modules/report.js';
 import reportSetchannel from './modules/report_setchannel.js';
@@ -46,18 +47,19 @@ export default {
 
     async execute(interaction, config, client) {
         try {
+            const lang = pickLanguage(config, interaction.guild);
             const subcommand = interaction.options.getSubcommand();
 
             if (subcommand === 'file') {
-                return await report.execute(interaction, config, client);
+                return await report.execute(interaction, config, client, lang);
             }
 
             if (subcommand === 'setchannel') {
-                return await reportSetchannel.execute(interaction, config, client);
+                return await reportSetchannel.execute(interaction, config, client, lang);
             }
 
             return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Error', 'Unknown subcommand.')],
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.report.unknownSubcmd'), '')],
                 ephemeral: true,
             });
         } catch (error) {

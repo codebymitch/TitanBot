@@ -3,6 +3,8 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
+
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
 
@@ -17,8 +19,9 @@ export default {
                 .setRequired(true),
         ),
 
-    async execute(interaction) {
+    async execute(interaction, config) {
         try {
+            const lang = pickLanguage(config, interaction.guild);
             const deferSuccess = await InteractionHelper.safeDefer(interaction);
             if (!deferSuccess) {
                 logger.warn(`Weather interaction defer failed`, {
@@ -45,8 +48,8 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "City Not Found",
-                            `Could not find a location for **${city}**. Please check the spelling.`,
+                            t(lang, 'wolf.cmd.utility.weather.cityNotFoundTitle'),
+                            t(lang, 'wolf.cmd.utility.weather.cityNotFoundDesc', { city }),
                         ),
                     ],
                 });
@@ -71,8 +74,8 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "API Error",
-                            "A weather service error occurred.",
+                            t(lang, 'wolf.cmd.utility.weather.apiErrorTitle'),
+                            t(lang, 'wolf.cmd.utility.weather.apiErrorDesc'),
                         ),
                     ],
                 });
@@ -85,22 +88,26 @@ export default {
             const windSpeed = current.windspeed != null ? Math.round(current.windspeed) : "N/A";
             const weatherCode = current.weathercode ?? current.weather_code ?? null;
 
-            const condition = getWeatherDescription(weatherCode);
+            const conditionKey = getWeatherConditionKey(weatherCode);
+            const conditionDesc = t(lang, `wolf.cmd.utility.weather.${conditionKey}`);
 
-            const embed = createEmbed({ title: `🌎 Weather in ${cityDisplay}, ${country}`, description: condition.description })
+            const embed = createEmbed({
+                title: t(lang, 'wolf.cmd.utility.weather.embedTitle', { city: cityDisplay, country }),
+                description: conditionDesc
+            })
                 .addFields(
                     {
-                        name: "🌡️ Temperature",
+                        name: t(lang, 'wolf.cmd.utility.weather.fieldTemperature'),
                         value: `${temperature}°C`,
                         inline: true,
                     },
                     {
-                        name: "💧 Humidity",
+                        name: t(lang, 'wolf.cmd.utility.weather.fieldHumidity'),
                         value: `${humidity}%`,
                         inline: true,
                     },
                     {
-                        name: "💨 Wind Speed",
+                        name: t(lang, 'wolf.cmd.utility.weather.fieldWindSpeed'),
                         value: `${windSpeed} km/h`,
                         inline: true,
                     },
@@ -133,26 +140,12 @@ export default {
     },
 };
 
-
-
-
-
-function getWeatherDescription(code) {
-    if (code >= 0 && code <= 3) {
-        return { description: "Clear sky / Partly cloudy ☀️", emoji: "☀️" };
-    } else if (code >= 45 && code <= 48) {
-        return { description: "Fog and Rime fog 🌫️", emoji: "🌫️" };
-    } else if (code >= 51 && code <= 67) {
-        return { description: "Drizzle or Rain 🌧️", emoji: "🌧️" };
-    } else if (code >= 71 && code <= 75) {
-        return { description: "Snow fall ❄️", emoji: "❄️" };
-    } else if (code >= 80 && code <= 86) {
-        return { description: "Showers (Rain/Snow) 🌨️", emoji: "🌨️" };
-    } else if (code >= 95 && code <= 99) {
-        return { description: "Thunderstorm ⛈️", emoji: "⛈️" };
-    }
-    return { description: "Unknown conditions.", emoji: "" };
+function getWeatherConditionKey(code) {
+    if (code >= 0 && code <= 3) return 'conditionClear';
+    if (code >= 45 && code <= 48) return 'conditionFog';
+    if (code >= 51 && code <= 67) return 'conditionRain';
+    if (code >= 71 && code <= 75) return 'conditionSnow';
+    if (code >= 80 && code <= 86) return 'conditionShowers';
+    if (code >= 95 && code <= 99) return 'conditionThunderstorm';
+    return 'conditionUnknown';
 }
-
-
-

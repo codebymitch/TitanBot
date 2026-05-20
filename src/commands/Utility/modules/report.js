@@ -4,9 +4,10 @@ import { getGuildConfig } from '../../../services/guildConfig.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
 import { logger } from '../../../utils/logger.js';
+import { t } from '../../../services/i18n.js';
 
 export default {
-    async execute(interaction, config, client) {
+    async execute(interaction, config, client, lang) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
         if (!deferSuccess) {
             logger.warn('Report interaction defer failed', { userId: interaction.user.id, guildId: interaction.guildId });
@@ -22,37 +23,51 @@ export default {
 
         if (!reportChannelId) {
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Setup Required', 'The report channel has not been set up. Please ask a moderator to use `/report setchannel` first.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.utility.report.setupRequired'),
+                    t(lang, 'wolf.cmd.utility.report.setupRequiredDesc')
+                )],
             });
         }
 
         const reportChannel = interaction.guild.channels.cache.get(reportChannelId);
         if (!reportChannel) {
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Channel Missing', 'The configured report channel is missing or inaccessible. Please ask a moderator to reset it.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.utility.report.channelMissingTitle'),
+                    t(lang, 'wolf.cmd.utility.report.channelMissingDesc')
+                )],
             });
         }
 
         try {
             const reportEmbed = createEmbed({
-                title: `🚨 NEW USER REPORT: ${targetUser.tag}`,
-                description: `**Reported By:** ${interaction.user.tag} (\`${interaction.user.id}\`)\n**Reported User:** ${targetUser.tag} (\`${targetUser.id}\`)`,
+                title: t(lang, 'wolf.cmd.utility.report.reportEmbedTitle', { tag: targetUser.tag }),
+                description: t(lang, 'wolf.cmd.utility.report.reportEmbedDesc', {
+                    reporterTag: interaction.user.tag,
+                    reporterId: interaction.user.id,
+                    targetTag: targetUser.tag,
+                    targetId: targetUser.id,
+                }),
             })
                 .setColor(getColor('error'))
                 .setThumbnail(targetUser.displayAvatarURL())
                 .addFields(
-                    { name: 'Reason', value: reason },
-                    { name: 'Reported In Channel', value: interaction.channel.toString(), inline: true },
-                    { name: 'Time', value: new Date().toUTCString(), inline: true },
+                    { name: t(lang, 'wolf.cmd.utility.report.fieldReason'), value: reason },
+                    { name: t(lang, 'wolf.cmd.utility.report.fieldChannel'), value: interaction.channel.toString(), inline: true },
+                    { name: t(lang, 'wolf.cmd.utility.report.fieldTime'), value: new Date().toUTCString(), inline: true },
                 );
 
             await reportChannel.send({
-                content: `<@&${interaction.guild.ownerId}> New Report!`,
+                content: `<@&${interaction.guild.ownerId}> ${t(lang, 'wolf.cmd.utility.report.staffPing')}`,
                 embeds: [reportEmbed],
             });
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [createEmbed({ title: '✅ Report Submitted', description: `Your report against **${targetUser.tag}** has been successfully filed and sent to the moderation team. Thank you!` })],
+                embeds: [createEmbed({
+                    title: t(lang, 'wolf.cmd.utility.report.submittedTitle'),
+                    description: t(lang, 'wolf.cmd.utility.report.submittedDesc', { tag: targetUser.tag })
+                })],
             });
 
             logger.info('Report submitted', {

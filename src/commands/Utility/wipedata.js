@@ -3,8 +3,9 @@ import { createEmbed, errorEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getConfirmationButtons } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName('wipedata')
@@ -12,20 +13,10 @@ export default {
 
     async execute(interaction, guildConfig, client) {
         try {
-            const warningMessage = 
-                `⚠️ **THIS ACTION IS IRREVERSIBLE!** ⚠️\n\n` +
-                `This will permanently delete **ALL** your data from this server including:\n` +
-                `• 💰 Economy balance (wallet & bank)\n` +
-                `• 📊 Levels and XP\n` +
-                `• 🎒 Inventory items\n` +
-                `• 🛍️ Shop purchases\n` +
-                `• 🎂 Birthday information\n` +
-                `• 🔢 Counter data\n` +
-                `• 📋 All other personal data\n\n` +
-                `**This cannot be undone. Are you absolutely sure?**`;
+            const lang = pickLanguage(guildConfig, interaction.guild);
 
-            const embed = warningEmbed(warningMessage, '🗑️ Wipe All Data');
-
+            const warningMessage = t(lang, 'wolf.cmd.utility.wipedata.warningBody');
+            const embed = warningEmbed(warningMessage, t(lang, 'wolf.cmd.utility.wipedata.warningTitle'));
             const confirmButtons = getConfirmationButtons('wipedata');
 
             await InteractionHelper.safeReply(interaction, {
@@ -53,7 +44,3 @@ export default {
         }
     }
 };
-
-
-
-

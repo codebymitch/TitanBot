@@ -19,6 +19,9 @@ import {
   buildLoggingDashboardView
 } from '../commands/Logging/modules/logging_dashboard.js';
 
+import { getGuildConfig } from '../services/guildConfig.js';
+import { t, pickLanguage } from '../services/i18n.js';
+
 const LOGGING_CATEGORIES = [
   ...new Set(
     Object.values(EVENT_TYPES)
@@ -28,6 +31,15 @@ const LOGGING_CATEGORIES = [
       )
   )
 ];
+
+async function getLang(interaction) {
+  try {
+    const config = await getGuildConfig(interaction.client, interaction.guildId);
+    return pickLanguage(config, interaction.guild);
+  } catch {
+    return 'es';
+  }
+}
 
 export default {
 
@@ -47,10 +59,9 @@ export default {
           PermissionFlagsBits.ManageGuild
         )
       ) {
-
+        const lang = await getLang(interaction);
         return interaction.reply({
-          content:
-            '❌ You need **Manage Server** permissions to use this.',
+          content: t(lang, 'wolf.cmd.logging.buttons.noPermsContent'),
           ephemeral: true
         });
 
@@ -111,9 +122,9 @@ export default {
         error
       );
 
+      const lang = await getLang(interaction);
       await interaction.reply({
-        content:
-          '❌ An error occurred while processing your request.',
+        content: t(lang, 'wolf.cmd.logging.buttons.errGeneral'),
         ephemeral: true
       }).catch(() => {});
 
@@ -133,10 +144,9 @@ async function handleToggle(
       );
 
     if (!key) {
-
+      const lang = await getLang(interaction);
       return interaction.reply({
-        content:
-          '❌ Invalid event type.',
+        content: t(lang, 'wolf.cmd.logging.buttons.invalidEventType'),
         ephemeral: true
       });
 
@@ -183,13 +193,15 @@ async function handleToggle(
 
     }
 
+    const lang = await getLang(interaction);
     const {
       embed,
       components
     } =
       await buildLoggingDashboardView(
         interaction,
-        interaction.client
+        interaction.client,
+        lang
       );
 
     await interaction.update({
@@ -204,9 +216,9 @@ async function handleToggle(
       error
     );
 
+    const lang = await getLang(interaction);
     await interaction.reply({
-      content:
-        '❌ An error occurred while toggling logging.',
+      content: t(lang, 'wolf.cmd.logging.buttons.errToggle'),
       ephemeral: true
     });
 
@@ -219,13 +231,15 @@ async function handleRefresh(
 
   try {
 
+    const lang = await getLang(interaction);
     const {
       embed,
       components
     } =
       await buildLoggingDashboardView(
         interaction,
-        interaction.client
+        interaction.client,
+        lang
       );
 
     await interaction.update({
@@ -240,9 +254,9 @@ async function handleRefresh(
       error
     );
 
+    const lang = await getLang(interaction);
     await interaction.reply({
-      content:
-        '❌ An error occurred while refreshing status.',
+      content: t(lang, 'wolf.cmd.logging.buttons.errRefresh'),
       ephemeral: true
     });
 
@@ -266,10 +280,9 @@ async function handleDashboardToggle(
       );
 
     if (!key) {
-
+      const lang = await getLang(interaction);
       return interaction.reply({
-        content:
-          '❌ Invalid event type.',
+        content: t(lang, 'wolf.cmd.logging.buttons.invalidEventType'),
         ephemeral: true
       });
 
@@ -319,13 +332,15 @@ async function handleDashboardToggle(
 
     }
 
+    const lang = await getLang(interaction);
     const {
       embed,
       components
     } =
       await buildLoggingDashboardView(
         interaction,
-        interaction.client
+        interaction.client,
+        lang
       );
 
     await interaction.update({
@@ -340,9 +355,9 @@ async function handleDashboardToggle(
       error
     );
 
+    const lang = await getLang(interaction);
     await interaction.reply({
-      content:
-        '❌ An error occurred while toggling.',
+      content: t(lang, 'wolf.cmd.logging.buttons.errDashToggle'),
       ephemeral: true
     });
 
@@ -355,13 +370,15 @@ async function handleDashboardRefresh(
 
   try {
 
+    const lang = await getLang(interaction);
     const {
       embed,
       components
     } =
       await buildLoggingDashboardView(
         interaction,
-        interaction.client
+        interaction.client,
+        lang
       );
 
     await interaction.update({
@@ -376,9 +393,9 @@ async function handleDashboardRefresh(
       error
     );
 
+    const lang = await getLang(interaction);
     await interaction.reply({
-      content:
-        '❌ An error occurred while refreshing the dashboard.',
+      content: t(lang, 'wolf.cmd.logging.buttons.errDashRefresh'),
       ephemeral: true
     });
 

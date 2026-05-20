@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { EVENT_TYPES } from '../services/loggingService.js';
+import { t } from '../services/i18n.js';
 
 const EVENT_TYPES_BY_CATEGORY = Object.values(EVENT_TYPES).reduce((accumulator, eventType) => {
   const [category] = eventType.split('.');
@@ -38,17 +39,21 @@ const ALL_CATEGORIES = [
   'invite', 'webhook', 'event', 'integration',
 ];
 
-function createDashboardCategoryButtons(enabledEvents = {}, loggingEnabled = false) {
+function createDashboardCategoryButtons(enabledEvents = {}, loggingEnabled = false, lang = 'es') {
   const categories = ALL_CATEGORIES;
   const buttons = categories.map((category) => {
     const wildcardDisabled = enabledEvents[`${category}.*`] === false;
     const categoryEvents = EVENT_TYPES_BY_CATEGORY[category] || [];
     const allEnabled = categoryEvents.length === 0
       ? true
-      : categoryEvents.every((t) => enabledEvents[t] !== false);
+      : categoryEvents.every((tk) => enabledEvents[tk] !== false);
     const isEnabled = loggingEnabled && !wildcardDisabled && allEnabled;
     const emoji = DASHBOARD_CATEGORY_EMOJIS[category] || '📌';
-    const label = `${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`;
+    // Use translated category label from dictionary, fall back to capitalized category name
+    const translatedLabel = t(lang, `wolf.cmd.logging.dashboard.categories.${category}`);
+    const label = translatedLabel !== `wolf.cmd.logging.dashboard.categories.${category}`
+      ? translatedLabel
+      : `${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`;
     return new ButtonBuilder()
       .setCustomId(`log_dash_toggle:${category}.*`)
       .setLabel(label)
@@ -62,27 +67,26 @@ function createDashboardCategoryButtons(enabledEvents = {}, loggingEnabled = fal
   return rows;
 }
 
-export function createLoggingDashboardComponents(enabledEvents, loggingEnabled = false) {
-  const categoryRows = createDashboardCategoryButtons(enabledEvents, loggingEnabled);
+export function createLoggingDashboardComponents(enabledEvents, loggingEnabled = false, lang = 'es') {
+  const categoryRows = createDashboardCategoryButtons(enabledEvents, loggingEnabled, lang);
   const actionRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('log_dash_toggle:audit_enabled')
-      .setLabel(loggingEnabled ? '🧾 Audit: ON' : '🧾 Audit: OFF')
+      .setLabel(loggingEnabled
+        ? t(lang, 'wolf.cmd.logging.dashboard.btnAuditOn')
+        : t(lang, 'wolf.cmd.logging.dashboard.btnAuditOff'))
       .setStyle(loggingEnabled ? ButtonStyle.Success : ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId('log_dash_toggle:all')
-      .setLabel('Toggle All')
+      .setLabel(t(lang, 'wolf.cmd.logging.dashboard.btnToggleAll'))
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('log_dash_refresh')
-      .setLabel('🔄 Refresh')
+      .setLabel(t(lang, 'wolf.cmd.logging.dashboard.btnRefresh'))
       .setStyle(ButtonStyle.Primary),
   );
   return [...categoryRows, actionRow];
 }
-
-
-
 
 
 export function createLoggingButtons() {
@@ -147,19 +151,9 @@ export function createLoggingButtons() {
   return buttons;
 }
 
-
-
-
-
-
 export function getButtonStatusStyle(isEnabled) {
   return isEnabled ? ButtonStyle.Success : ButtonStyle.Danger;
 }
-
-
-
-
-
 
 export function createStatusIndicatorButtons(enabledEvents = {}, loggingEnabled = false) {
   const eventCategories = ALL_CATEGORIES;
@@ -217,11 +211,6 @@ export function createLoggingStatusComponents(enabledEvents, loggingEnabled = fa
 
   return [...categoryRows, actionRow];
 }
-
-
-
-
-
 
 export function parseEventTypeFromButton(customId) {
   if (!customId.startsWith('logging_toggle:')) {

@@ -3,12 +3,16 @@ import { errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
+import { t } from '../../../services/i18n.js';
 
 export default {
-    async execute(interaction, config, client) {
+    async execute(interaction, config, client, lang) {
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
             return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Permission Denied', 'You need **Manage Server** permissions to set the report channel.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.utility.report.permDeniedTitle'),
+                    t(lang, 'wolf.cmd.utility.report.permDeniedDesc')
+                )],
                 ephemeral: true,
             });
         }
@@ -22,13 +26,19 @@ export default {
             await setGuildConfig(client, guildId, guildConfig);
 
             return InteractionHelper.safeReply(interaction, {
-                embeds: [successEmbed('✅ Report Channel Set', `All new reports will now be sent to ${channel}.`)],
+                embeds: [successEmbed(
+                    t(lang, 'wolf.cmd.utility.report.channelSetTitle'),
+                    t(lang, 'wolf.cmd.utility.report.channelSetDesc', { channel: channel.toString() })
+                )],
                 ephemeral: true,
             });
         } catch (error) {
             logger.error('report_setchannel error:', error);
             return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Database Error', 'Could not save the channel configuration.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.utility.report.dbErrorTitle'),
+                    t(lang, 'wolf.cmd.utility.report.dbErrorDesc')
+                )],
                 ephemeral: true,
             });
         }

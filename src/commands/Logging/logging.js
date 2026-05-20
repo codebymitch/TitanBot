@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.j
 import { errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 import dashboard from './modules/logging_dashboard.js';
 import setchannel from './modules/logging_setchannel.js';
@@ -86,31 +87,31 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            // setchannel and filter both need a reply deferred before their logic runs
+            const lang = pickLanguage(config, interaction.guild);
             const subcommandGroup = interaction.options.getSubcommandGroup(false);
             const subcommand = interaction.options.getSubcommand();
 
             if (subcommand === 'dashboard') {
-                return await dashboard.execute(interaction, config, client);
+                return await dashboard.execute(interaction, config, client, lang);
             }
 
             await InteractionHelper.safeDefer(interaction);
 
             if (subcommand === 'setchannel') {
-                return await setchannel.execute(interaction, config, client);
+                return await setchannel.execute(interaction, config, client, lang);
             }
 
             if (subcommandGroup === 'filter') {
-                return await filter.execute(interaction, config, client);
+                return await filter.execute(interaction, config, client, lang);
             }
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Unknown Subcommand', 'This subcommand is not recognised.')],
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.logging.unknownSubcmd'), '')],
             });
         } catch (error) {
             logger.error('logging command error:', error);
             await InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Error', 'An unexpected error occurred.')],
+                embeds: [errorEmbed(t('es', 'wolf.cmd.logging.errGenericTitle'), t('es', 'wolf.cmd.logging.errGenericDesc'))],
                 ephemeral: true,
             }).catch(() => {});
         }

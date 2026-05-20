@@ -2,6 +2,17 @@ import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
+import { getGuildConfig } from '../services/guildConfig.js';
+import { t, pickLanguage } from '../services/i18n.js';
+
+async function getLang(interaction, client) {
+  try {
+    const config = await getGuildConfig(client, interaction.guildId);
+    return pickLanguage(config, interaction.guild);
+  } catch {
+    return 'es';
+  }
+}
 
 /**
  * Handle wipedata confirmation button
@@ -11,6 +22,7 @@ const wipedataConfirmHandler = {
   name: 'wipedata_yes',
   async execute(interaction, client) {
     try {
+      const lang = await getLang(interaction, client);
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
 
@@ -104,14 +116,11 @@ const wipedataConfirmHandler = {
         logger.warn('Could not perform prefix search on database:', error);
       }
 
-      const successMessage =
-        `✅ **Your data has been successfully wiped!**\n\n` +
-        `**Records Deleted:** ${deletedCount}\n\n` +
-        `Your account has been reset to default values. You can now start fresh!\n\n` +
-        `*All your economy balance, levels, items, and personal data have been removed.*`;
-
       await interaction.editReply({
-        embeds: [successEmbed(successMessage, '🗑️ Data Wipe Complete')],
+        embeds: [successEmbed(
+          t(lang, 'wolf.cmd.utility.wipedata.successTitle'),
+          t(lang, 'wolf.cmd.utility.wipedata.successBody', { count: deletedCount })
+        )],
         components: []
       });
 
@@ -124,26 +133,26 @@ const wipedataConfirmHandler = {
       logger.error('Wipedata confirm button handler error:', error);
       
       await interaction.editReply({
-        embeds: [errorEmbed('Data Wipe Failed', 'An error occurred while wiping your data. Please try again later or contact support.')],
+        embeds: [errorEmbed(
+          t('es', 'wolf.cmd.utility.wipedata.failedTitle'),
+          t('es', 'wolf.cmd.utility.wipedata.failedDesc')
+        )],
         components: []
       });
     }
   }
 };
 
-
-
-
-
 const wipedataCancelHandler = {
   name: 'wipedata_no',
   async execute(interaction, client) {
     try {
+      const lang = await getLang(interaction, client);
       await interaction.update({
         embeds: [
           createEmbed({
-            title: '❌ Data Wipe Cancelled',
-            description: 'Your data has been preserved. Your account remains unchanged.',
+            title: t(lang, 'wolf.cmd.utility.wipedata.cancelTitle'),
+            description: t(lang, 'wolf.cmd.utility.wipedata.cancelDesc'),
             color: 'info'
           })
         ],
@@ -156,7 +165,10 @@ const wipedataCancelHandler = {
       
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          embeds: [errorEmbed('Error', 'Could not cancel data wipe.')],
+          embeds: [errorEmbed(
+            t('es', 'wolf.cmd.utility.wipedata.cancelErrTitle'),
+            t('es', 'wolf.cmd.utility.wipedata.cancelErrDesc')
+          )],
           flags: MessageFlags.Ephemeral
         });
       }
@@ -165,7 +177,3 @@ const wipedataCancelHandler = {
 };
 
 export { wipedataConfirmHandler, wipedataCancelHandler };
-
-
-
-

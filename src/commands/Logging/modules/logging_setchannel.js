@@ -4,18 +4,25 @@ import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js
 import { logEvent } from '../../../utils/moderation.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
+import { t } from '../../../services/i18n.js';
 
 export default {
-    async execute(interaction, config, client) {
+    async execute(interaction, config, client, lang) {
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
             return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Permission Denied', 'You need **Administrator** permissions to change log channels.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.logging.setchannel.permDeniedTitle'),
+                    t(lang, 'wolf.cmd.logging.setchannel.permDeniedDesc')
+                )],
             });
         }
 
         if (!client.db) {
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Database Error', 'Database not initialized.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.logging.setchannel.dbErrorTitle'),
+                    t(lang, 'wolf.cmd.logging.setchannel.dbErrorDesc')
+                )],
             });
         }
 
@@ -41,7 +48,10 @@ export default {
                 };
                 await setGuildConfig(client, guildId, currentConfig);
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed('Logging Disabled 🚫', 'Audit logging has been disabled for this server.')],
+                    embeds: [successEmbed(
+                        t(lang, 'wolf.cmd.logging.setchannel.disabledTitle'),
+                        t(lang, 'wolf.cmd.logging.setchannel.disabledDesc')
+                    )],
                 });
             }
 
@@ -49,7 +59,10 @@ export default {
                 const perms = logChannel.permissionsFor(interaction.guild.members.me);
                 if (!perms.has(PermissionsBitField.Flags.SendMessages) || !perms.has(PermissionsBitField.Flags.EmbedLinks)) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Bot Permission Error', `I need **Send Messages** and **Embed Links** permissions in ${logChannel}.`)],
+                        embeds: [errorEmbed(
+                            t(lang, 'wolf.cmd.logging.setchannel.botPermErrorTitle'),
+                            t(lang, 'wolf.cmd.logging.setchannel.botPermErrorDesc', { channel: logChannel.toString() })
+                        )],
                     });
                 }
 
@@ -69,7 +82,10 @@ export default {
                 await setGuildConfig(client, guildId, currentConfig);
 
                 await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed('Log Channel Set 📝', `Audit logs will be sent to ${logChannel}.`)],
+                    embeds: [successEmbed(
+                        t(lang, 'wolf.cmd.logging.setchannel.setTitle'),
+                        t(lang, 'wolf.cmd.logging.setchannel.setDesc', { channel: logChannel.toString() })
+                    )],
                 });
 
                 await logEvent({
@@ -87,12 +103,18 @@ export default {
             }
 
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('No Option Provided', 'Provide one of: `channel` or `disable: True`.\n\n> Ticket transcript and logs channels are managed via `/ticket setup` or `/ticket dashboard`.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.logging.setchannel.noOptionTitle'),
+                    t(lang, 'wolf.cmd.logging.setchannel.noOptionDesc')
+                )],
             });
         } catch (error) {
             logger.error('logging setchannel error:', error);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Configuration Error', 'Could not save the configuration.')],
+                embeds: [errorEmbed(
+                    t(lang, 'wolf.cmd.logging.setchannel.configErrorTitle'),
+                    t(lang, 'wolf.cmd.logging.setchannel.configErrorDesc')
+                )],
             });
         }
     },

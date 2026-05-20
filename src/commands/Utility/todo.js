@@ -4,6 +4,7 @@ import { getFromDb, setInDb } from '../../utils/database.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 import crypto from 'crypto';
 
 function generateShareId() {
@@ -135,9 +136,10 @@ export default {
     category: "Utility",
 
     async execute(interaction, config, client) {
+        const lang = pickLanguage(config, interaction.guild);
         const userId = interaction.user.id;
-                const subcommand = interaction.options.getSubcommand();
-                const shareSubcommand = interaction.options.getSubcommandGroup() === 'share' ? interaction.options.getSubcommand() : null;
+        const subcommand = interaction.options.getSubcommand();
+        const shareSubcommand = interaction.options.getSubcommandGroup() === 'share' ? interaction.options.getSubcommand() : null;
 
         async function getOrCreateSharedList(listId, creatorId = null, listName = null) {
             const listKey = `shared_todo_${listId}`;
@@ -169,6 +171,23 @@ export default {
             return listData;
         }
 
+        function buildShareButtons(listId) {
+            return new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`shared_todo_add_${listId}`)
+                    .setLabel(t(lang, 'wolf.cmd.utility.todo.btnAddTask'))
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId(`shared_todo_complete_${listId}`)
+                    .setLabel(t(lang, 'wolf.cmd.utility.todo.btnCompleteTask'))
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`shared_todo_remove_${listId}`)
+                    .setLabel(t(lang, 'wolf.cmd.utility.todo.btnRemoveTask'))
+                    .setStyle(ButtonStyle.Danger)
+            );
+        }
+
         try {
             const deferSuccess = await InteractionHelper.safeDefer(interaction);
             if (!deferSuccess) {
@@ -198,9 +217,8 @@ export default {
                         return await InteractionHelper.safeEditReply(interaction, {
                             embeds: [
                                 successEmbed(
-                                    "Shared List Created",
-                                    `Created shared list "${listName}" with ID: \`${listId}\`\n` +
-                                    `Use \`/todo share add list_id:${listId} user:@username\` to add members.`
+                                    t(lang, 'wolf.cmd.utility.todo.shareCreatedTitle'),
+                                    t(lang, 'wolf.cmd.utility.todo.shareCreatedDesc', { name: listName, id: listId })
                                 )
                             ]
                         });
@@ -213,13 +231,13 @@ export default {
                         const listData = await getOrCreateSharedList(listId);
                         if (!listData) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Shared list not found.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareNotFound'))]
                             });
                         }
                         
                         if (listData.creatorId !== userId) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Only the list creator can add members.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareOnlyCreator'))]
                             });
                         }
                         
@@ -236,14 +254,15 @@ export default {
                             
                             return await InteractionHelper.safeEditReply(interaction, {
                                 embeds: [
-                                    successEmbed("Member Added", 
-                                        `Added ${memberToAdd.username} to the shared list "${listData.name}"`
+                                    successEmbed(
+                                        t(lang, 'wolf.cmd.utility.todo.shareMemberAddedTitle'),
+                                        t(lang, 'wolf.cmd.utility.todo.shareMemberAddedDesc', { user: memberToAdd.username, name: listData.name })
                                     )
                                 ]
                             });
                         } else {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "User is already a member of this list.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareAlreadyMember'))]
                             });
                         }
                     }
@@ -254,52 +273,35 @@ export default {
                         
                         if (!listData) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Shared list not found.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareNotFound'))]
                             });
                         }
                         
                         if (!listData.members.includes(userId)) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "You don't have access to this list.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareNoAccess'))]
                             });
                         }
                         
+                        const memberList = listData.members.map(memberId => {
+                            const member = interaction.guild.members.cache.get(memberId);
+                            return member ? member.user.username : `<@${memberId}>`;
+                        }).join(', ');
+                        
+                        const owner = interaction.guild.members.cache.get(listData.creatorId);
+                        const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
+                        const idLabel = t(lang, 'wolf.cmd.utility.todo.shareViewIdLabel', { id: listId });
+
                         if (listData.tasks.length === 0) {
-                            const memberList = listData.members.map(memberId => {
-                                const member = interaction.guild.members.cache.get(memberId);
-                                return member ? member.user.username : `<@${memberId}>`;
-                            }).join(', ');
-                            
-                            const owner = interaction.guild.members.cache.get(listData.creatorId);
-                            const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
-                            
                             return await InteractionHelper.safeEditReply(interaction, {
-                                    embeds: [
-                                        successEmbed(
-                                            `📋 **${listData.name}**\n\n` +
-                                            `👑 **Owner:** ${ownerName}\n` +
-                                            `👥 **Members:** ${memberList}\n\n` +
-                                            `*This list is currently empty. Use the "Add Task" button to add tasks!*`,
-                                            `Shared List (ID: \`${listId}\`)`
-                                        )
-                                    ],
-                                    components: [
-                                        new ActionRowBuilder().addComponents(
-                                            new ButtonBuilder()
-                                                .setCustomId(`shared_todo_add_${listId}`)
-                                                .setLabel('Add Task')
-                                                .setStyle(ButtonStyle.Primary),
-                                            new ButtonBuilder()
-                                                .setCustomId(`shared_todo_complete_${listId}`)
-                                                .setLabel('Complete Task')
-                                                .setStyle(ButtonStyle.Success),
-                                            new ButtonBuilder()
-                                                .setCustomId(`shared_todo_remove_${listId}`)
-                                                .setLabel('Remove Task')
-                                                .setStyle(ButtonStyle.Danger)
-                                        )
-                                    ]
-                                });
+                                embeds: [
+                                    successEmbed(
+                                        t(lang, 'wolf.cmd.utility.todo.shareViewEmptyBody', { name: listData.name, owner: ownerName, members: memberList }),
+                                        idLabel
+                                    )
+                                ],
+                                components: [buildShareButtons(listId)]
+                            });
                         }
                         
                         const taskList = listData.tasks
@@ -310,39 +312,14 @@ export default {
                             )
                             .join('\n');
 
-                        const memberList = listData.members.map(memberId => {
-                            const member = interaction.guild.members.cache.get(memberId);
-                            return member ? member.user.username : `<@${memberId}>`;
-                        }).join(', ');
-                        
-                        const owner = interaction.guild.members.cache.get(listData.creatorId);
-                        const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
-
-                        const fullListDisplay = `📋 **${listData.name}**\n\n` +
-                            `👑 **Owner:** ${ownerName}\n` +
-                            `👥 **Members:** ${memberList}\n\n` +
-                            `**Tasks:**\n${taskList}`;
-
                         return await InteractionHelper.safeEditReply(interaction, {
                             embeds: [
-                                successEmbed(fullListDisplay, `Shared List (ID: \`${listId}\`)`)
-                            ],
-                            components: [
-                                new ActionRowBuilder().addComponents(
-                                    new ButtonBuilder()
-                                        .setCustomId(`shared_todo_add_${listId}`)
-                                        .setLabel('Add Task')
-                                        .setStyle(ButtonStyle.Primary),
-                                    new ButtonBuilder()
-                                        .setCustomId(`shared_todo_complete_${listId}`)
-                                        .setLabel('Complete Task')
-                                        .setStyle(ButtonStyle.Success),
-                                    new ButtonBuilder()
-                                        .setCustomId(`shared_todo_remove_${listId}`)
-                                        .setLabel('Remove Task')
-                                        .setStyle(ButtonStyle.Danger)
+                                successEmbed(
+                                    t(lang, 'wolf.cmd.utility.todo.shareViewBody', { name: listData.name, owner: ownerName, members: memberList, tasks: taskList }),
+                                    idLabel
                                 )
-                            ]
+                            ],
+                            components: [buildShareButtons(listId)]
                         });
                     }
                     
@@ -354,13 +331,13 @@ export default {
                         
                         if (!listData) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Shared list not found.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareNotFound'))]
                             });
                         }
                         
                         if (!listData.members.includes(userId)) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "You don't have access to this list.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareNoAccess'))]
                             });
                         }
                         
@@ -377,7 +354,10 @@ export default {
                         
                         return await InteractionHelper.safeEditReply(interaction, {
                             embeds: [
-                                successEmbed("Task Added", `Added "${taskText}" to the shared list "${listData.name}"`)
+                                successEmbed(
+                                    t(lang, 'wolf.cmd.utility.todo.shareTaskAddedTitle'),
+                                    t(lang, 'wolf.cmd.utility.todo.shareTaskAddedDesc', { task: taskText, name: listData.name })
+                                )
                             ]
                         });
                     }
@@ -390,20 +370,20 @@ export default {
 
                         if (!listData) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Shared list not found.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareNotFound'))]
                             });
                         }
 
                         if (!listData.members.includes(userId)) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "You don't have access to this list.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.shareNoAccess'))]
                             });
                         }
 
                         const taskIndex = listData.tasks.findIndex(task => task.id === taskNumber);
                         if (taskIndex === -1) {
                             return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Task not found.")]
+                                embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.taskNotFound'))]
                             });
                         }
 
@@ -412,7 +392,10 @@ export default {
 
                         return await InteractionHelper.safeEditReply(interaction, {
                             embeds: [
-                                successEmbed("Task Removed", `Removed "${removedTask.text}" from the shared list "${listData.name}".`)
+                                successEmbed(
+                                    t(lang, 'wolf.cmd.utility.todo.shareTaskRemovedTitle'),
+                                    t(lang, 'wolf.cmd.utility.todo.shareTaskRemovedDesc', { task: removedTask.text, name: listData.name })
+                                )
                             ]
                         });
                     }
@@ -447,8 +430,8 @@ export default {
                     return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [
                             successEmbed(
-                                "Task Added",
-                                `Added "${taskText}" to your to-do list.`
+                                t(lang, 'wolf.cmd.utility.todo.addTitle'),
+                                t(lang, 'wolf.cmd.utility.todo.addDesc', { task: taskText })
                             ),
                         ],
                     });
@@ -457,7 +440,7 @@ export default {
                 case 'list': {
                     if (userData.tasks.length === 0) {
                         return await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [successEmbed("Your to-do list is empty!", "Your To-Do List")],
+                            embeds: [successEmbed(t(lang, 'wolf.cmd.utility.todo.listEmptyTitle'), t(lang, 'wolf.cmd.utility.todo.listTitle'))],
                         });
                     }
 
@@ -470,7 +453,7 @@ export default {
 
                     return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [
-                            successEmbed(taskList, "Your To-Do List")
+                            successEmbed(taskList, t(lang, 'wolf.cmd.utility.todo.listTitle'))
                         ],
                     });
                 }
@@ -481,13 +464,16 @@ export default {
                     
                     if (!task) {
                         return await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed("Error", "Task not found.")],
+                            embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.taskNotFound'))],
                         });
                     }
 
                     if (task.completed) {
                         return await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed("Task Already Completed", `Task #${task.id} is already completed.`)],
+                            embeds: [errorEmbed(
+                                t(lang, 'wolf.cmd.utility.todo.errorTitle'),
+                                t(lang, 'wolf.cmd.utility.todo.alreadyCompleted', { id: task.id })
+                            )],
                         });
                     }
                     
@@ -496,7 +482,10 @@ export default {
                     
                     return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [
-                            successEmbed("Task Completed", `Marked "${task.text}" as complete!`)
+                            successEmbed(
+                                t(lang, 'wolf.cmd.utility.todo.completeTitle'),
+                                t(lang, 'wolf.cmd.utility.todo.completeDesc', { task: task.text })
+                            )
                         ],
                     });
                 }
@@ -507,7 +496,7 @@ export default {
                     
                     if (taskIndex === -1) {
                         return await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed("Error", "Task not found.")],
+                            embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.taskNotFound'))],
                         });
                     }
                     
@@ -516,14 +505,17 @@ export default {
                     
                     return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [
-                            successEmbed("Task Removed", `Removed "${removedTask.text}" from your to-do list.`)
+                            successEmbed(
+                                t(lang, 'wolf.cmd.utility.todo.removeTitle'),
+                                t(lang, 'wolf.cmd.utility.todo.removeDesc', { task: removedTask.text })
+                            )
                         ],
                     });
                 }
 
                 default:
                     return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed("Error", "Invalid subcommand.")],
+                        embeds: [errorEmbed(t(lang, 'wolf.cmd.utility.todo.errorTitle'), t(lang, 'wolf.cmd.utility.todo.invalidSubcommand'))],
                     });
             }
         } catch (error) {
@@ -541,7 +533,3 @@ export default {
         }
     },
 };
-
-
-
-

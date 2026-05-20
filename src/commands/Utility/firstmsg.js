@@ -3,6 +3,8 @@ import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { t, pickLanguage } from '../../services/i18n.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("firstmsg")
@@ -13,6 +15,7 @@ export default {
 
     async execute(interaction, config, client) {
         try {
+            const lang = pickLanguage(config, interaction.guild);
             const deferSuccess = await InteractionHelper.safeDefer(interaction);
             if (!deferSuccess) {
                 logger.warn(`FirstMsg interaction defer failed`, {
@@ -38,7 +41,10 @@ export default {
                     guildId: interaction.guildId
                 });
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed("First Message", "No messages found in this channel!")],
+                    embeds: [successEmbed(
+                        t(lang, 'wolf.cmd.utility.firstmsg.noMessagesTitle'),
+                        t(lang, 'wolf.cmd.utility.firstmsg.noMessagesDesc')
+                    )],
                 });
             }
             
@@ -47,8 +53,8 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "First Message in #" + interaction.channel.name,
-                        `Message Link: ${messageLink}`
+                        t(lang, 'wolf.cmd.utility.firstmsg.foundTitle', { channel: interaction.channel.name }),
+                        t(lang, 'wolf.cmd.utility.firstmsg.foundDesc', { link: messageLink })
                     ),
                 ],
             });
