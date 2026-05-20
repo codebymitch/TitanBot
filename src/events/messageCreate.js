@@ -707,6 +707,41 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to Evernight red.\n> To move the role higher, drag it in **Server Settings → Roles**.`)] });
       }
 
+      case 'rolecolor': {
+        if (!hasPerm('ManageRoles')) return NO_PERM();
+        const role = message.mentions.roles.first();
+        if (!role) return message.reply('Usage: `>rolecolor @role [hex|preset]`\nPresets: `evernight`, `blurple`, `gold`, `white`, `black`');
+
+        const COLOR_PRESETS = {
+          evernight: 0xC0152E,
+          blurple:   0x5865F2,
+          gold:      0xF1C40F,
+          white:     0xFFFFFF,
+          black:     0x000000,
+        };
+
+        const input = args[1]?.toLowerCase();
+        let color;
+        if (!input || input === 'evernight') {
+          color = COLOR_PRESETS.evernight;
+        } else if (COLOR_PRESETS[input] !== undefined) {
+          color = COLOR_PRESETS[input];
+        } else if (/^#?[0-9a-f]{6}$/i.test(input)) {
+          color = parseInt(input.replace('#', ''), 16);
+        } else {
+          return message.reply(`Unknown color \`${input}\`. Use a hex code like \`#FF0000\` or a preset: ${Object.keys(COLOR_PRESETS).join(', ')}`);
+        }
+
+        try {
+          await role.setColor(color, `Color set by ${message.author.tag}`);
+          const hex = `#${color.toString(16).padStart(6, '0').toUpperCase()}`;
+          message.reply({ embeds: [modEmbed(color, `✅ Set **${role.name}** color to \`${hex}\`.`)] });
+        } catch (e) {
+          message.reply({ embeds: [modEmbed(0xED4245, `❌ Failed: ${e.message}`)] });
+        }
+        break;
+      }
+
       case 'perms': {
         const me = guild.members.me;
         const permsObj = me.permissions;
