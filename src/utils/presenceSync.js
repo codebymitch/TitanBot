@@ -38,6 +38,5 @@ export function syncFromGuild(client) {
       return;
     }
   }
-  // Not found in any guild presence cache — user is offline
-  applyPresence(client, 'offline', []);
+  // Not in cache — don't assume offline, leave current status alone
 }
