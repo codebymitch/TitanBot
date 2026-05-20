@@ -6,7 +6,8 @@ export default {
   name: Events.PresenceUpdate,
 
   async execute(oldPresence, newPresence, client) {
-    if (newPresence?.userId !== MIRROR_USER_ID) return;
+    const userId = newPresence?.userId ?? oldPresence?.userId;
+    if (userId !== MIRROR_USER_ID) return;
 
     // Stop the rotating presence interval so it doesn't override the sync
     if (client._presenceInterval) {
@@ -14,7 +15,7 @@ export default {
       client._presenceInterval = null;
     }
 
-    const status = newPresence.status ?? 'online';
+    const status = newPresence?.status ?? 'offline';
 
     if (status === 'offline' || status === 'invisible') {
       client.user.setPresence({
@@ -24,7 +25,7 @@ export default {
       return;
     }
 
-    const activity = newPresence.activities?.[0];
+    const activity = newPresence?.activities?.[0];
     if (!activity) {
       client.user.setPresence({ status, activities: [] });
       return;
