@@ -10,6 +10,7 @@ import { renderDashboard } from '../views/dashboardPage.js';
 import { renderServer } from '../views/serverPage.js';
 import { renderOwner } from '../views/ownerPage.js';
 import { renderTerms, renderPrivacy } from '../views/legal.js';
+import { renderCommands } from '../views/commandsPage.js';
 
 function takeFlash(req) {
   const flash = req.session?.flash || null;
@@ -27,6 +28,7 @@ export function pageRoutes(client) {
 
   router.get('/terms', (req, res) => { res.send(renderTerms()); });
   router.get('/privacy', (req, res) => { res.send(renderPrivacy()); });
+  router.get('/commands', (req, res) => { res.send(renderCommands({ client })); });
 
   router.get('/dashboard', requireLogin, (req, res) => {
     const guilds = manageableGuilds(req.session.guilds, client);

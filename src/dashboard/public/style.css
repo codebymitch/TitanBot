@@ -227,6 +227,47 @@ button:active { transform: translateY(1px); }
 .legal-foot { margin-top: 36px; color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--border-soft); padding-top: 18px; }
 .legal-foot a { color: var(--brand); }
 
+/* ---------- commands docs ---------- */
+.cmd-nav {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 30px;
+  padding: 16px; background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+}
+.cmd-nav a {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px; background: var(--bg);
+  color: var(--muted); font-size: 13px; font-weight: 600;
+  border: 1px solid var(--border-soft); transition: all .15s;
+}
+.cmd-nav a:hover { color: var(--text); border-color: var(--brand); }
+
+.cmd-section { margin: 36px 0; scroll-margin-top: 20px; }
+.cmd-section-head {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-soft); padding-bottom: 10px;
+}
+.cmd-section-head .ic { color: var(--brand); }
+.cmd-section-head h2 { font-size: 19px; font-weight: 800; flex: 1; }
+.cmd-count {
+  background: var(--surface-2); color: var(--muted);
+  font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+}
+.cmd-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.cmd-card {
+  background: var(--surface); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  transition: border-color .15s, transform .15s;
+}
+.cmd-card:hover { transform: translateY(-2px); border-color: rgba(123,108,255,.4); }
+.cmd-head code { background: var(--bg); color: var(--brand); padding: 3px 9px; border-radius: 6px; font-size: 13.5px; font-weight: 700; }
+.cmd-desc { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.cmd-subs { list-style: none; margin-top: 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cmd-subs li { font-size: 12.5px; color: var(--faint); padding-left: 10px; border-left: 2px solid var(--border); }
+.cmd-subs code { color: var(--text); background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
 /* ---------- footer ---------- */
 .site-foot {
   border-top: 1px solid var(--border-soft);

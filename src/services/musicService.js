@@ -1,6 +1,7 @@
 import { Player } from 'discord-player';
 import { DefaultExtractors } from '@discord-player/extractor';
 import { logger } from '../utils/logger.js';
+import { t } from './i18n.js';
 
 let _player = null;
 
@@ -33,38 +34,43 @@ export async function initMusic(client) {
     logger.error('musicService: failed to load DefaultExtractors', { error: err?.message });
   }
 
+  const lang = (queue) => queue.metadata?.lang === 'en' ? 'en' : 'es';
+
   // ── User-facing events ─────────────────────────────────────────
   player.events.on('playerStart', (queue, track) => {
     const channel = queue.metadata?.channel;
     if (!channel) return;
+    const L = lang(queue);
     channel.send({
       embeds: [{
         color: 0x7b6cff,
-        author: { name: 'Sonando ahora' },
-        title: track.title?.slice(0, 250) || 'Pista',
+        author: { name: t(L, 'wolf.music.nowPlayingHeader') },
+        title: track.title?.slice(0, 250) || 'Track',
         url: track.url,
-        description: `por **${track.author}** · \`${track.duration}\``,
+        description: `**${track.author}** · \`${track.duration}\``,
         thumbnail: track.thumbnail ? { url: track.thumbnail } : undefined,
-        footer: { text: `Pedida por ${track.requestedBy?.tag || 'anónimo'}` },
+        footer: { text: t(L, 'wolf.music.nowPlayingFooter', { user: track.requestedBy?.tag || 'anonymous' }) },
       }],
     }).catch(() => {});
   });
 
   player.events.on('audioTracksAdd', (queue, tracks) => {
+    const L = lang(queue);
     queue.metadata?.channel?.send({
       embeds: [{
         color: 0x36d6c3,
-        title: '📜 Playlist añadida',
-        description: `**${tracks.length}** canciones añadidas a la cola.`,
+        title: t(L, 'wolf.music.playlistFull'),
+        description: t(L, 'wolf.music.playlistTracks', { count: tracks.length }),
       }],
     }).catch(() => {});
   });
 
   player.events.on('emptyQueue', (queue) => {
+    const L = lang(queue);
     queue.metadata?.channel?.send({
       embeds: [{
         color: 0x5b6072,
-        description: 'Cola vacía. Saliendo del canal de voz.',
+        description: t(L, 'wolf.music.queueEnded'),
       }],
     }).catch(() => {});
   });
@@ -75,10 +81,11 @@ export async function initMusic(client) {
 
   player.events.on('error', (queue, err) => {
     logger.error('music queue error', { error: err?.message });
+    const L = lang(queue);
     queue.metadata?.channel?.send({
       embeds: [{
         color: 0xef4444,
-        title: 'Error reproduciendo',
+        title: t(L, 'wolf.music.errorTitle'),
         description: '```' + String(err?.message || err).slice(0, 600) + '```',
       }],
     }).catch(() => {});

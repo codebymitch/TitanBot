@@ -16,6 +16,7 @@ import {
 } from '../../services/loggingService.js';
 import { makeRequireGuildAdmin, requireOwner } from '../middleware/auth.js';
 import { grantAccess, revokeAccess } from '../../services/accessService.js';
+import { postApprovalSetup } from '../../services/approvalNotify.js';
 
 const KNOWN_CATEGORIES = new Set([
   'moderation', 'message', 'member', 'role', 'channel', 'thread', 'voice',
@@ -256,6 +257,9 @@ export function apiRoutes(client) {
     try {
       if (action === 'grant') {
         await grantAccess(client.db, guildId, req.session.user.id);
+        // Fire-and-forget: post a "welcome / pick a language" message
+        // in the approved guild. Failure is fine (no writable channel, etc.).
+        postApprovalSetup(client, guildId).catch(() => {});
         req.session.flash = { type: 'ok', msg: `Servidor ${guildId} aprobado.` };
       } else {
         await revokeAccess(client.db, guildId);

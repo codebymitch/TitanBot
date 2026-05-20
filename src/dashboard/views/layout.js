@@ -78,6 +78,7 @@ export function siteFooter() {
       <div class="foot-brand">${brandMark(26)}<span>${esc(BRAND)}</span></div>
       <div class="foot-links">
         <a href="/">Inicio</a>
+        <a href="/commands">Comandos</a>
         <a href="/invite">Añadir a un servidor</a>
         ${supportLink}
         <a href="/terms">Términos</a>

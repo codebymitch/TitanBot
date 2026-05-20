@@ -11,6 +11,7 @@ import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { isGuildApproved, isOwner } from '../services/accessService.js';
 import { botConfig } from '../config/bot.js';
+import { t, pickLanguage } from '../services/i18n.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -106,18 +107,19 @@ export default {
                 const logoUrl = dashboardUrl
                   ? `${dashboardUrl.replace(/\/$/, '')}${botConfig.brand?.logoPath || '/assets/logo.png'}`
                   : null;
+                // Guild config may not exist yet (server not approved); fall
+                // back to guild.preferredLocale.
+                const lang = pickLanguage(guildConfig, interaction.guild);
                 const description = supportInvite
-                  ? `Este servidor todavía no tiene acceso a **${brand}**.\n\n` +
-                    `Únete al servidor de soporte y envía el ID para activarlo:\n${supportInvite}`
-                  : `Este servidor todavía no tiene acceso a **${brand}**.\n\n` +
-                    'Pídele al dueño del bot que lo active para empezar a usar los comandos.';
+                  ? t(lang, 'wolf.access.blocked.descriptionWithSupport', { brand, support: supportInvite })
+                  : t(lang, 'wolf.access.blocked.description', { brand });
                 await interaction.reply({
                   embeds: [{
                     color: 0xef4444,
-                    title: '🔒 Servidor no activado',
+                    title: t(lang, 'wolf.access.blocked.title'),
                     description,
                     thumbnail: logoUrl ? { url: logoUrl } : undefined,
-                    fields: [{ name: 'ID del servidor', value: `\`${interaction.guild.id}\`` }],
+                    fields: [{ name: t(lang, 'wolf.access.blocked.serverIdLabel'), value: `\`${interaction.guild.id}\`` }],
                     footer: { text: brand },
                   }],
                   flags: MessageFlags.Ephemeral,

@@ -1,7 +1,7 @@
 {
-  "name": "titanbot-custom",
+  "name": "wolf-bot",
   "version": "2.0.0",
-  "description": "Modular Ultimate Community Bot by Touchpoint Support",
+  "description": "Wolf — the all-in-one Discord bot for moderation, music, economy, leveling and more.",
   "main": "index.js",
   "type": "module",
   "scripts": {

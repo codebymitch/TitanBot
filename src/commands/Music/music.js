@@ -5,6 +5,7 @@ import {
 } from 'discord.js';
 import { useMainPlayer, useQueue, QueueRepeatMode } from 'discord-player';
 import { logger } from '../../utils/logger.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 const LOOP_MAP = {
   off: QueueRepeatMode.OFF,
@@ -13,11 +14,11 @@ const LOOP_MAP = {
   autoplay: QueueRepeatMode.AUTOPLAY,
 };
 
-const LOOP_LABEL = {
-  off: 'desactivado',
-  track: 'canción actual',
-  queue: 'cola completa',
-  autoplay: 'autoplay (recomendaciones)',
+const LOOP_LABEL_KEY = {
+  off: 'wolf.music.loopOff',
+  track: 'wolf.music.loopTrack',
+  queue: 'wolf.music.loopQueue',
+  autoplay: 'wolf.music.loopAutoplay',
 };
 
 export default {
@@ -58,12 +59,13 @@ export default {
 
   async execute(interaction, config, client) {
     const sub = interaction.options.getSubcommand();
+    const lang = pickLanguage(config, interaction.guild);
 
-    if (sub === 'play') return handlePlay(interaction);
+    if (sub === 'play') return handlePlay(interaction, lang);
 
     const queue = useQueue(interaction.guildId);
     if (!queue) {
-      return embed(interaction, 0xf5b942, '⚠️ Nada sonando', 'No hay nada en la cola en este momento.');
+      return embed(interaction, 0xf5b942, t(lang, 'wolf.music.nothingTitle'), t(lang, 'wolf.music.nothingDesc'));
     }
 
     try {
@@ -71,30 +73,42 @@ export default {
         case 'skip': {
           const track = queue.currentTrack;
           queue.node.skip();
-          return embed(interaction, 0x7b6cff, '⏭️ Skip', track ? `Saltada: **${track.title}**` : 'Saltando…');
+          return embed(
+            interaction, 0x7b6cff,
+            t(lang, 'wolf.music.skipTitle'),
+            track ? t(lang, 'wolf.music.skipped', { title: track.title }) : t(lang, 'wolf.music.skipping'),
+          );
         }
-        case 'pause': queue.node.pause();  return embed(interaction, 0x7b6cff, '⏸️ Pausa', 'Reproducción pausada.');
-        case 'resume': queue.node.resume(); return embed(interaction, 0x7b6cff, '▶️ Reanudar', 'Reproducción reanudada.');
-        case 'stop': queue.delete();        return embed(interaction, 0xef4444, '⏹️ Stop', 'Cola vaciada y bot desconectado.');
-        case 'shuffle': queue.tracks.shuffle(); return embed(interaction, 0x7b6cff, '🔀 Shuffle', `Mezcladas **${queue.tracks.size}** canciones.`);
+        case 'pause': queue.node.pause();  return embed(interaction, 0x7b6cff, t(lang, 'wolf.music.pauseTitle'), t(lang, 'wolf.music.paused'));
+        case 'resume': queue.node.resume(); return embed(interaction, 0x7b6cff, t(lang, 'wolf.music.resumeTitle'), t(lang, 'wolf.music.resumed'));
+        case 'stop': queue.delete();        return embed(interaction, 0xef4444, t(lang, 'wolf.music.stopTitle'), t(lang, 'wolf.music.stopped'));
+        case 'shuffle': {
+          const count = queue.tracks.size;
+          queue.tracks.shuffle();
+          return embed(interaction, 0x7b6cff, t(lang, 'wolf.music.shuffleTitle'), t(lang, 'wolf.music.shuffled', { count }));
+        }
         case 'loop': {
           const mode = interaction.options.getString('mode');
           queue.setRepeatMode(LOOP_MAP[mode] ?? QueueRepeatMode.OFF);
-          return embed(interaction, 0x7b6cff, '🔁 Repetición', `Modo: **${LOOP_LABEL[mode]}**.`);
+          return embed(
+            interaction, 0x7b6cff,
+            t(lang, 'wolf.music.loopTitle'),
+            t(lang, 'wolf.music.loopSet', { mode: t(lang, LOOP_LABEL_KEY[mode] || LOOP_LABEL_KEY.off) }),
+          );
         }
         case 'volume': {
           const level = interaction.options.getInteger('level');
           queue.node.setVolume(level);
-          return embed(interaction, 0x7b6cff, '🔊 Volumen', `Volumen ajustado a **${level}**.`);
+          return embed(interaction, 0x7b6cff, t(lang, 'wolf.music.volumeTitle'), t(lang, 'wolf.music.volumeSet', { level }));
         }
-        case 'now': return handleNow(interaction, queue);
-        case 'queue': return handleQueue(interaction, queue);
+        case 'now': return handleNow(interaction, queue, lang);
+        case 'queue': return handleQueue(interaction, queue, lang);
         case 'remove': {
           const pos = interaction.options.getInteger('position');
           const track = queue.tracks.at(pos - 1);
-          if (!track) return embed(interaction, 0xef4444, '❌ No existe', `No hay canción en la posición ${pos}.`);
+          if (!track) return embed(interaction, 0xef4444, t(lang, 'wolf.music.positionTitle'), t(lang, 'wolf.music.positionDesc', { pos }));
           queue.removeTrack(pos - 1);
-          return embed(interaction, 0x7b6cff, '✂️ Removida', `Quitada: **${track.title}**.`);
+          return embed(interaction, 0x7b6cff, t(lang, 'wolf.music.removed'), t(lang, 'wolf.music.removedDesc', { title: track.title }));
         }
       }
     } catch (err) {
@@ -104,10 +118,10 @@ export default {
   },
 };
 
-async function handlePlay(interaction) {
+async function handlePlay(interaction, lang) {
   const vc = interaction.member?.voice?.channel;
   if (!vc) {
-    return embed(interaction, 0xef4444, '🔇 No estás en un canal de voz', 'Únete a un canal de voz primero.');
+    return embed(interaction, 0xef4444, t(lang, 'wolf.music.notInVc'), t(lang, 'wolf.music.joinFirst'));
   }
 
   const me = interaction.guild.members.me;
@@ -116,7 +130,7 @@ async function handlePlay(interaction) {
     !vc.permissionsFor(me)?.has(PermissionFlagsBits.Connect) ||
     !vc.permissionsFor(me)?.has(PermissionFlagsBits.Speak)
   ) {
-    return embed(interaction, 0xef4444, '🚫 Sin permisos', `No puedo conectarme o hablar en ${vc}.`);
+    return embed(interaction, 0xef4444, t(lang, 'wolf.music.noPerms'), t(lang, 'wolf.music.noPermsDesc', { channel: `${vc}` }));
   }
 
   const query = interaction.options.getString('query', true);
@@ -126,7 +140,7 @@ async function handlePlay(interaction) {
     const player = useMainPlayer();
     const result = await player.play(vc, query, {
       nodeOptions: {
-        metadata: { channel: interaction.channel, requestedBy: interaction.user },
+        metadata: { channel: interaction.channel, requestedBy: interaction.user, lang },
         leaveOnEmpty: true,
         leaveOnEmptyCooldown: 60_000,
         leaveOnEnd: true,
@@ -143,9 +157,9 @@ async function handlePlay(interaction) {
     return interaction.editReply({
       embeds: [{
         color: 0x36d6c3,
-        title: isPlaylist ? '📜 Playlist añadida' : '🎵 Añadido a la cola',
+        title: isPlaylist ? t(lang, 'wolf.music.playlistAdded') : t(lang, 'wolf.music.queued'),
         description: isPlaylist
-          ? `**${result.searchResult.playlist.title}** · ${result.searchResult.tracks.length} canciones`
+          ? t(lang, 'wolf.music.playlistAddedDesc', { name: result.searchResult.playlist.title, count: result.searchResult.tracks.length })
           : `[${track.title}](${track.url}) · **${track.author}**`,
         thumbnail: track.thumbnail ? { url: track.thumbnail } : undefined,
       }],
@@ -155,47 +169,47 @@ async function handlePlay(interaction) {
     return interaction.editReply({
       embeds: [{
         color: 0xef4444,
-        title: '❌ No se pudo reproducir',
+        title: t(lang, 'wolf.music.cantPlay'),
         description: '```' + String(err?.message || err).slice(0, 700) + '```',
       }],
     });
   }
 }
 
-function handleNow(interaction, queue) {
+function handleNow(interaction, queue, lang) {
   const track = queue.currentTrack;
-  if (!track) return embed(interaction, 0xf5b942, 'Nada sonando', 'No hay canción actual.');
+  if (!track) return embed(interaction, 0xf5b942, t(lang, 'wolf.music.nothingTitle'), t(lang, 'wolf.music.nothingDesc'));
   let progress = '';
   try { progress = queue.node.createProgressBar(); } catch { /* ignore */ }
   return interaction.reply({
     embeds: [{
       color: 0x7b6cff,
-      author: { name: 'Sonando ahora' },
+      author: { name: t(lang, 'wolf.music.nowPlayingHeader') },
       title: track.title?.slice(0, 250) || 'Pista',
       url: track.url,
-      description: `por **${track.author}**${progress ? `\n\n${progress}` : ''}`,
+      description: `**${track.author}**${progress ? `\n\n${progress}` : ''}`,
       thumbnail: track.thumbnail ? { url: track.thumbnail } : undefined,
-      footer: { text: `Pedida por ${track.requestedBy?.tag || 'anónimo'}` },
+      footer: { text: t(lang, 'wolf.music.nowPlayingFooter', { user: track.requestedBy?.tag || 'anonymous' }) },
     }],
   });
 }
 
-function handleQueue(interaction, queue) {
+function handleQueue(interaction, queue, lang) {
   const current = queue.currentTrack;
   const upcoming = queue.tracks.toArray().slice(0, 10);
   const lines = upcoming.map(
-    (t, i) => `\`${String(i + 1).padStart(2, ' ')}.\` [${t.title.slice(0, 70)}](${t.url}) · **${t.author}**`,
+    (t2, i) => `\`${String(i + 1).padStart(2, ' ')}.\` [${t2.title.slice(0, 70)}](${t2.url}) · **${t2.author}**`,
   );
-  const more = queue.tracks.size > 10 ? `\n\n*+ ${queue.tracks.size - 10} más en la cola…*` : '';
+  const more = queue.tracks.size > 10 ? `\n\n${t(lang, 'wolf.music.queueMore', { n: queue.tracks.size - 10 })}` : '';
   return interaction.reply({
     embeds: [{
       color: 0x7b6cff,
-      title: '📜 Cola de reproducción',
+      title: t(lang, 'wolf.music.queueTitle'),
       description:
-        (current ? `**Sonando ahora:** [${current.title}](${current.url})\n\n` : '') +
-        (lines.length ? lines.join('\n') : '*(la cola está vacía)*') +
+        (current ? `${t(lang, 'wolf.music.queueNowPlaying', { title: current.title, url: current.url })}\n\n` : '') +
+        (lines.length ? lines.join('\n') : t(lang, 'wolf.music.queueEmpty')) +
         more,
-      footer: { text: `${queue.tracks.size} canciones en cola` },
+      footer: { text: t(lang, 'wolf.music.queueFooter', { n: queue.tracks.size }) },
     }],
   });
 }

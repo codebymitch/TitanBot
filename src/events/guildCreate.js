@@ -2,6 +2,8 @@ import { Events, PermissionsBitField } from 'discord.js';
 import { isGuildApproved } from '../services/accessService.js';
 import { botConfig } from '../config/bot.js';
 import { logger } from '../utils/logger.js';
+import { t, pickLanguage } from '../services/i18n.js';
+import { getGuildConfig } from '../services/guildConfigService.js';
 
 export default {
   name: Events.GuildCreate,
@@ -39,22 +41,23 @@ export default {
         ? `${dashboardUrl.replace(/\/$/, '')}${botConfig.brand?.logoPath || '/assets/logo.png'}`
         : null;
 
+      const config = await getGuildConfig(client.db, guild.id).catch(() => ({}));
+      const lang = pickLanguage(config, guild);
+
       const activateValue = supportInvite
-        ? `Únete al servidor de soporte y envía el **ID de tu servidor** para que aprobemos el acceso.\n${supportInvite}`
-        : 'Comparte el ID de este servidor con el dueño del bot y pídele que lo active.';
+        ? t(lang, 'wolf.access.pending.howWithSupport', { support: supportInvite })
+        : t(lang, 'wolf.access.pending.howWithoutSupport');
 
       await channel.send({
         embeds: [{
           color: 0xf5b942,
-          title: `🔒 ${brand} está pendiente de activación`,
-          description:
-            `¡Gracias por añadir **${brand}**! Este servidor todavía **no está activado**, ` +
-            'así que los comandos estarán bloqueados hasta que se conceda acceso.',
+          title: t(lang, 'wolf.access.pending.title', { brand }),
+          description: t(lang, 'wolf.access.pending.description', { brand }),
           thumbnail: logoUrl ? { url: logoUrl } : undefined,
           fields: [
-            { name: '📋 Para activarlo', value: activateValue },
-            { name: '🆔 ID de este servidor', value: `\`${guild.id}\`` },
-            ...(dashboardUrl ? [{ name: '🌐 Panel', value: dashboardUrl }] : []),
+            { name: t(lang, 'wolf.access.pending.howLabel'), value: activateValue },
+            { name: t(lang, 'wolf.access.pending.serverIdLabel'), value: `\`${guild.id}\`` },
+            ...(dashboardUrl ? [{ name: t(lang, 'wolf.access.pending.panelLabel'), value: dashboardUrl }] : []),
           ],
           footer: { text: brand },
         }],
