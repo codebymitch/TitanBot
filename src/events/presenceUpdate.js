@@ -20,7 +20,7 @@ export default {
     if (status === 'offline' || status === 'invisible') {
       client.user.setPresence({
         status: 'idle',
-        activities: [{ name: '💤 itay100k is sleeping', type: ActivityType.Custom }],
+        activities: [{ name: '💤 itay100k is sleeping', type: ActivityType.Playing }],
       });
       return;
     }
@@ -31,11 +31,17 @@ export default {
       return;
     }
 
+    // Bots can't use ActivityType.Custom — show user's custom status text as Playing
     if (activity.type === ActivityType.Custom) {
-      client.user.setPresence({
-        status,
-        activities: [{ name: activity.state || 'custom', type: ActivityType.Custom }],
-      });
+      const text = activity.state || activity.name;
+      if (text) {
+        client.user.setPresence({
+          status,
+          activities: [{ name: text, type: ActivityType.Playing }],
+        });
+      } else {
+        client.user.setPresence({ status, activities: [] });
+      }
       return;
     }
 
