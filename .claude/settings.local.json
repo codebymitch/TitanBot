@@ -19,7 +19,12 @@
       "Bash(Select-Object FullName)",
       "Bash(Sort-Object FullName)",
       "Bash(Get-ChildItem -Path \"c:\\\\code\\\\zen-bot\\\\src\\\\commands\" -Recurse -Filter \"*.js\")",
-      "Bash(git -C \"/c/code/zen-bot\" log --oneline -5)"
+      "Bash(git -C \"/c/code/zen-bot\" log --oneline -5)",
+      "Bash(Get-ChildItem -Path \"c:\\\\code\\\\zen-bot\\\\src\\\\commands\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(docker run --rm -v \"c:/code/zen-bot:/app\" -w /app node:20-alpine npm install --save @discordjs/voice play-dl opusscript libsodium-wrappers 2>&1)",
+      "PowerShell(docker compose up -d --build 2>&1)",
+      "Bash(git revert *)"
     ]
   }
 }
