@@ -41,12 +41,29 @@ export const HELP_CLOSE_MODAL_ID = 'help_close_modal';
 // Staff role ID - hardcoded as per requirements
 const SUPPORT_ROLE_ID = '1505631589407658064';
 
+async function resolveGuildMember(interaction) {
+  if (interaction?.member) {
+    return interaction.member;
+  }
+
+  if (!interaction.inGuild()) {
+    return null;
+  }
+
+  try {
+    return await interaction.guild.members.fetch(interaction.user.id);
+  } catch (error) {
+    logger.warn(`Could not fetch member for support ticket interaction: ${error.message}`);
+    return null;
+  }
+}
+
 /**
  * Check if user has the Support role
  */
 function isSupportStaff(member) {
   if (!member) return false;
-  return member.roles.cache.has(SUPPORT_ROLE_ID);
+  return member.roles?.cache?.has(SUPPORT_ROLE_ID);
 }
 
 /**
@@ -122,8 +139,10 @@ const helpCreateTicketHandler = {
   name: HELP_CREATE_TICKET_ID,
   async execute(interaction, client) {
     try {
+      const member = await resolveGuildMember(interaction);
+
       // BLOCK: Staff members cannot open support tickets
-      if (isSupportStaff(interaction.member)) {
+      if (isSupportStaff(member)) {
         return await interaction.reply({
           embeds: [errorEmbed(
             '🚫 Acesso Restrito',
@@ -325,8 +344,10 @@ const helpCloseTicketHandler = {
   name: HELP_CLOSE_TICKET_ID,
   async execute(interaction, client) {
     try {
+      const member = await resolveGuildMember(interaction);
+
       // BLOCK: Only Support staff can close tickets
-      if (!isSupportStaff(interaction.member)) {
+      if (!isSupportStaff(member)) {
         return await interaction.reply({
           embeds: [errorEmbed(
             '🚫 Permissão Negada',
@@ -393,12 +414,13 @@ const helpCloseModalHandler = {
     try {
       await interaction.deferReply({ ephemeral: true });
 
+      const member = await resolveGuildMember(interaction);
       // Extract channel ID from custom ID
       const parts = interaction.customId.split(':');
       const channelId = parts[1] || interaction.channelId;
 
       // Verify staff permission again
-      if (!isSupportStaff(interaction.member)) {
+      if (!isSupportStaff(member)) {
         return await interaction.editReply({
           embeds: [errorEmbed('🚫 Permissão Negada', 'Apenas a equipe de suporte pode encerrar tickets.')],
         });

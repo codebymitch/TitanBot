@@ -1,0 +1,455 @@
+﻿diff --git a/src/handlers/helpTicketButtons.js b/src/handlers/helpTicketButtons.js
+index 0488262..36c8b3d 100644
+--- a/src/handlers/helpTicketButtons.js
++++ b/src/handlers/helpTicketButtons.js
+@@ -2,7 +2,13 @@
+  * Help Ticket Button Handlers
+  * 
+  * Handles the support ticket system triggered by the /setup-help command.
+- * This is a simplified ticket system focused on user support.
++ * This is a simplified ticket system focused on user support with strict rules.
++ * 
++ * Rules:
++ * - Staff (role ID: 1505631589407658064) cannot open support tickets
++ * - Only staff can close tickets
++ * - Modal required for closing with summary
++ * - Logs sent to mm-logs channel
+  */
+ 
+ import {
+@@ -12,21 +18,36 @@ import {
+   ButtonStyle,
+   EmbedBuilder,
+   PermissionFlagsBits,
+-  MessageFlags
++  MessageFlags,
++  ModalBuilder,
++  TextInputBuilder,
++  TextInputStyle
+ } from 'discord.js';
+ import { getGuildConfig } from '../services/guildConfig.js';
+-import { getTicketData, saveTicketData, deleteTicketData, getOpenTicketCountForUser, incrementTicketCounter } from '../utils/database.js';
++import { getTicketData, saveTicketData, deleteTicketData } from '../utils/database.js';
+ import { logger } from '../utils/logger.js';
+ import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
+ import { logTicketEvent } from '../utils/ticketLogging.js';
+ import { InteractionHelper } from '../utils/interactionHelper.js';
+ import { checkRateLimit } from '../utils/rateLimiter.js';
+ import versionConfig from '../config/version.js';
++import { findMMLogsChannel } from '../services/mmLogService.js';
+ 
+ // Custom IDs
+ export const HELP_CREATE_TICKET_ID = 'help_create_ticket';
+ export const HELP_CLOSE_TICKET_ID = 'help_close_ticket';
+-export const HELP_CLOSE_TICKET_CONFIRM_ID = 'help_close_ticket_confirm';
++export const HELP_CLOSE_MODAL_ID = 'help_close_modal';
++
++// Staff role ID - hardcoded as per requirements
++const SUPPORT_ROLE_ID = '1505631589407658064';
++
++/**
++ * Check if user has the Support role
++ */
++function isSupportStaff(member) {
++  if (!member) return false;
++  return member.roles.cache.has(SUPPORT_ROLE_ID);
++}
+ 
+ /**
+  * Get the next ticket number for support tickets
+@@ -101,6 +122,17 @@ const helpCreateTicketHandler = {
+   name: HELP_CREATE_TICKET_ID,
+   async execute(interaction, client) {
+     try {
++      // BLOCK: Staff members cannot open support tickets
++      if (isSupportStaff(interaction.member)) {
++        return await interaction.reply({
++          embeds: [errorEmbed(
++            '­ƒÜ½ Acesso Restrito',
++            'Membros da equipe de Suporte n├úo podem abrir tickets de suporte.\n\nCaso precise de assist├¬ncia, entre em contato diretamente com outros membros da administra├º├úo.'
++          )],
++          flags: MessageFlags.Ephemeral
++        });
++      }
++
+       // Check rate limit
+       const rateLimitKey = `${interaction.user.id}:help_create_ticket`;
+       const allowed = await checkRateLimit(rateLimitKey, 2, 60000);
+@@ -164,7 +196,7 @@ const helpCreateTicketHandler = {
+       // Create channel name
+       const channelName = `suporte-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}-${ticketNumber}`.slice(0, 100);
+ 
+-      // Create the ticket channel
++      // Create the ticket channel with strict permissions
+       const channel = await interaction.guild.channels.create({
+         name: channelName,
+         type: ChannelType.GuildText,
+@@ -183,19 +215,16 @@ const helpCreateTicketHandler = {
+               PermissionFlagsBits.ReadMessageHistory,
+             ],
+           },
+-          ...(config.ticketStaffRoleId ? [{
+-            id: config.ticketStaffRoleId,
++          // ONLY Support role can view and respond
++          {
++            id: SUPPORT_ROLE_ID,
+             allow: [
+               PermissionFlagsBits.ViewChannel,
+               PermissionFlagsBits.SendMessages,
+               PermissionFlagsBits.AttachFiles,
+               PermissionFlagsBits.ReadMessageHistory,
++              PermissionFlagsBits.ManageMessages,
+             ],
+-          }] : []),
+-          // Also allow users with ManageChannels permission (admins)
+-          {
+-            id: interaction.guild.roles.everyone.id,
+-            deny: [PermissionFlagsBits.ViewChannel],
+           },
+         ],
+       });
+@@ -204,12 +233,16 @@ const helpCreateTicketHandler = {
+       const ticketData = {
+         id: channel.id,
+         userId: interaction.user.id,
++        userTag: interaction.user.tag,
++        userName: interaction.user.username,
+         guildId: interaction.guildId,
+         createdAt: new Date().toISOString(),
+         status: 'open',
+         type: 'support',
+-        claimedBy: null,
+-        reason: 'Support ticket created via /setup-help',
++        closedBy: null,
++        closedAt: null,
++        closeReason: null,
++        attendedBy: null,
+       };
+ 
+       await saveTicketData(interaction.guildId, channel.id, ticketData);
+@@ -223,23 +256,22 @@ const helpCreateTicketHandler = {
+                      `ÔÇó **Criado por:** ${interaction.user.tag}\n` +
+                      `ÔÇó **Data:** <t:${Math.floor(Date.now() / 1000)}:F>\n` +
+                      `ÔÇó **ID:** ${channel.id}\n\n` +
+-                     '**ÔÅ▒´©Å Tempo m├®dio de resposta:** At├® 24 horas',
++                     '**ÔÅ▒´©Å Tempo m├®dio de atendimento:** At├® **1 hora**',
+         color: 0x5865F2,
+         footer: { text: versionConfig.getFooter() }
+       });
+ 
+-      // Create buttons row
++      // Create buttons row - only staff can close
+       const buttonsRow = new ActionRowBuilder().addComponents(
+         new ButtonBuilder()
+           .setCustomId(HELP_CLOSE_TICKET_ID)
+-          .setLabel('­ƒöÆ Fechar Ticket')
++          .setLabel('­ƒöÆ Terminar Atendimento')
+           .setStyle(ButtonStyle.Danger)
+       );
+ 
+       // Send welcome message
+-      const staffMention = config.ticketStaffRoleId ? ` <@&${config.ticketStaffRoleId}>` : '';
+       await channel.send({
+-        content: `${interaction.user.toString()}${staffMention}`,
++        content: `${interaction.user.toString()} <@&${SUPPORT_ROLE_ID}>`,
+         embeds: [welcomeEmbed],
+         components: [buttonsRow]
+       });
+@@ -287,12 +319,24 @@ const helpCreateTicketHandler = {
+ 
+ /**
+  * Handler for the "Close Ticket" button inside support tickets
++ * Only staff can click this button
+  */
+ const helpCloseTicketHandler = {
+   name: HELP_CLOSE_TICKET_ID,
+   async execute(interaction, client) {
+     try {
+-      // Check permissions - only ticket creator or staff can close
++      // BLOCK: Only Support staff can close tickets
++      if (!isSupportStaff(interaction.member)) {
++        return await interaction.reply({
++          embeds: [errorEmbed(
++            '­ƒÜ½ Permiss├úo Negada',
++            'Apenas a equipe de suporte pode encerrar o ticket.\n\nSe voc├¬ ├® o criador do ticket e precisa de ajuda, aguarde um membro do suporte.'
++          )],
++          flags: MessageFlags.Ephemeral
++        });
++      }
++
++      // Check if this is a valid support ticket
+       const ticketData = await getTicketData(interaction.guildId, interaction.channelId);
+       
+       if (!ticketData || ticketData.type !== 'support') {
+@@ -302,67 +346,149 @@ const helpCloseTicketHandler = {
+         });
+       }
+ 
+-      const isTicketCreator = ticketData.userId === interaction.user.id;
+-      const guildConfig = await getGuildConfig(client, interaction.guildId);
+-      const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels) || 
+-                      (guildConfig.ticketStaffRoleId && interaction.member.roles.cache.has(guildConfig.ticketStaffRoleId));
+-
+-      if (!isTicketCreator && !isStaff) {
++      if (ticketData.status !== 'open') {
+         return await interaction.reply({
+-          embeds: [errorEmbed('ÔØî Permiss├úo Negada', 'Apenas o criador do ticket ou membros da equipe podem fechar este ticket.')],
++          embeds: [errorEmbed('ÔØî Ticket J├í Fechado', 'Este ticket j├í foi encerrado.')],
+           flags: MessageFlags.Ephemeral
+         });
+       }
+ 
+-      // Defer the interaction
+-      const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+-      if (!deferred) return;
++      // Open the modal for summary
++      const modal = new ModalBuilder()
++        .setCustomId(`${HELP_CLOSE_MODAL_ID}:${interaction.channelId}`)
++        .setTitle('­ƒöÆ Encerrar Atendimento');
+ 
+-      // Update ticket data
+-      ticketData.status = 'closed';
+-      ticketData.closedBy = interaction.user.id;
+-      ticketData.closedAt = new Date().toISOString();
+-      
+-      await saveTicketData(interaction.guildId, interaction.channelId, ticketData);
++      const reasonInput = new TextInputBuilder()
++        .setCustomId('summary')
++        .setLabel('Resumo do Acontecido')
++        .setStyle(TextInputStyle.Paragraph)
++        .setPlaceholder('Descreva o que foi feito neste atendimento...')
++        .setRequired(true)
++        .setMaxLength(2000);
+ 
+-      // Remove permissions from user
+-      try {
+-        await interaction.channel.permissionOverwrites.edit(ticketData.userId, {
+-          ViewChannel: false,
+-          SendMessages: false,
++      const actionRow = new ActionRowBuilder().addComponents(reasonInput);
++      modal.addComponents(actionRow);
++
++      await interaction.showModal(modal);
++
++    } catch (error) {
++      logger.error('Error opening close ticket modal:', error);
++      
++      if (!interaction.replied && !interaction.deferred) {
++        await interaction.reply({
++          embeds: [errorEmbed('ÔØî Erro', 'N├úo foi poss├¡vel abrir o formul├írio de encerramento.')],
++          flags: MessageFlags.Ephemeral
+         });
+-      } catch (permError) {
+-        logger.warn('Could not update permissions when closing support ticket:', permError.message);
+       }
++    }
++  }
++};
+ 
+-      // Update the original message
+-      const messages = await interaction.channel.messages.fetch({ limit: 10 });
+-      const welcomeMessage = messages.find(m => 
+-        m.embeds.length > 0 && m.embeds[0].title?.includes('Ticket de Suporte')
+-      );
++/**
++ * Handler for the close ticket modal submission
++ */
++const helpCloseModalHandler = {
++  name: HELP_CLOSE_MODAL_ID,
++  async execute(interaction, client) {
++    try {
++      await interaction.deferReply({ ephemeral: true });
+ 
+-      if (welcomeMessage) {
+-        const updatedEmbed = EmbedBuilder.from(welcomeMessage.embeds[0])
+-          .setColor(0xE74C3C)
+-          .setFooter({ text: `Ticket fechado por ${interaction.user.tag}` });
+-        
+-        await welcomeMessage.edit({
+-          embeds: [updatedEmbed],
+-          components: []
++      // Extract channel ID from custom ID
++      const parts = interaction.customId.split(':');
++      const channelId = parts[1] || interaction.channelId;
++
++      // Verify staff permission again
++      if (!isSupportStaff(interaction.member)) {
++        return await interaction.editReply({
++          embeds: [errorEmbed('­ƒÜ½ Permiss├úo Negada', 'Apenas a equipe de suporte pode encerrar tickets.')],
+         });
+       }
+ 
+-      // Send closure message
+-      const closeEmbed = createEmbed({
+-        title: '­ƒöÆ Ticket Fechado',
+-        description: `Este ticket foi fechado por ${interaction.user}.\n\n` +
+-                     'O canal ser├í deletado em **5 segundos**.\n' +
+-                     'Obrigado por usar nosso sistema de suporte!',
+-        color: 0xE74C3C,
+-        footer: { text: `ID do Ticket: ${ticketData.id}` }
+-      });
++      // Get ticket data
++      const ticketData = await getTicketData(interaction.guildId, channelId);
++      
++      if (!ticketData || ticketData.type !== 'support') {
++        return await interaction.editReply({
++          embeds: [errorEmbed('ÔØî Ticket Inv├ílido', 'Este ticket n├úo foi encontrado ou j├í foi encerrado.')],
++        });
++      }
+ 
+-      await interaction.channel.send({ embeds: [closeEmbed] });
++      const summary = interaction.fields.getTextInputValue('summary');
++      const channel = interaction.guild.channels.cache.get(channelId);
++
++      // Update ticket data
++      ticketData.status = 'closed';
++      ticketData.closedBy = interaction.user.id;
++      ticketData.closedAt = new Date().toISOString();
++      ticketData.attendedBy = interaction.user.id;
++      ticketData.closeReason = summary;
++      
++      await saveTicketData(interaction.guildId, channelId, ticketData);
++
++      // Calculate duration
++      const createdAt = new Date(ticketData.createdAt);
++      const closedAt = new Date(ticketData.closedAt);
++      const durationMs = closedAt - createdAt;
++      const durationMinutes = Math.floor(durationMs / 60000);
++      const durationHours = Math.floor(durationMinutes / 60);
++
++      // Send log to mm-logs channel
++      try {
++        const logChannel = await findMMLogsChannel(interaction.guild);
++        
++        if (logChannel) {
++          const logEmbed = new EmbedBuilder()
++            .setColor(0x5865F2)
++            .setTitle('­ƒøá´©Å Ticket de Suporte Encerrado')
++            .setDescription(`Ticket de suporte finalizado com atendimento.`)
++            .addFields(
++              {
++                name: '­ƒôï Informa├º├Áes do Ticket',
++                value: [
++                  `**N├║mero:** #${ticketData.id}`,
++                  `**Canal:** #${channel?.name || 'deletado'}`,
++                  `**ID do Canal:** \`${channelId}\``
++                ].join('\n'),
++                inline: false
++              },
++              {
++                name: '­ƒæÑ Envolvidos',
++                value: [
++                  `**Usu├írio:** ${ticketData.userTag} (<@${ticketData.userId}>)`,
++                  `**Atendido por:** ${interaction.user.tag} (<@${interaction.user.id}>)`
++                ].join('\n'),
++                inline: false
++              },
++              {
++                name: 'ÔÅ▒´©Å Dura├º├úo',
++                value: durationHours > 0 
++                  ? `${durationHours}h ${durationMinutes % 60}min`
++                  : `${durationMinutes} minutos`,
++                inline: true
++              },
++              {
++                name: '­ƒôØ Resumo do Atendimento',
++                value: `>>> ${summary || 'Nenhum resumo fornecido'}`,
++                inline: false
++              },
++              {
++                name: 'Ôä╣´©Å Detalhes',
++                value: [
++                  `**Aberto em:** <t:${Math.floor(createdAt.getTime() / 1000)}:F>`,
++                  `**Fechado em:** <t:${Math.floor(closedAt.getTime() / 1000)}:F>`,
++                  `**Data:** ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
++                ].join('\n'),
++                inline: false
++              }
++            )
++            .setFooter({ text: versionConfig.getFooter() })
++            .setTimestamp();
++
++          await logChannel.send({ embeds: [logEmbed] });
++        }
++      } catch (logError) {
++        logger.warn('Failed to send support ticket log:', logError.message);
++      }
+ 
+       // Log the ticket event
+       await logTicketEvent({
+@@ -370,36 +496,51 @@ const helpCloseTicketHandler = {
+         guildId: interaction.guildId,
+         event: {
+           type: 'close',
+-          ticketId: interaction.channelId,
++          ticketId: channelId,
+           ticketNumber: ticketData.id,
+           userId: ticketData.userId,
+           executorId: interaction.user.id,
++          reason: summary,
+           metadata: {
+             closedAt: ticketData.closedAt,
+-            ticketType: 'support'
++            ticketType: 'support',
++            attendedBy: interaction.user.id,
++            duration: durationMs
+           }
+         }
+       });
+ 
+-      // Respond to interaction
++      // Send closure message in the ticket channel
++      if (channel) {
++        const closeEmbed = createEmbed({
++          title: '­ƒöÆ Atendimento Encerrado',
++          description: `Este ticket foi encerrado por ${interaction.user}.\n\n` +
++                       'O canal ser├í deletado em **5 segundos**.\n' +
++                       'Obrigado por usar nosso sistema de suporte!',
++          color: 0x27AE60,
++          footer: { text: `ID do Ticket: #${ticketData.id}` }
++        });
++
++        await channel.send({ embeds: [closeEmbed] });
++
++        // Delete channel after delay
++        setTimeout(async () => {
++          try {
++            await channel.delete('Support ticket closed');
++          } catch (deleteError) {
++            logger.error('Error deleting support ticket channel:', deleteError.message);
++          }
++        }, 5000);
++      }
++
+       await interaction.editReply({
+-        embeds: [successEmbed('Ticket Fechado', 'Este ticket ser├í deletado em instantes.')],
+-        flags: MessageFlags.Ephemeral
++        embeds: [successEmbed('Ô£à Atendimento Encerrado', 'O ticket foi fechado e o log enviado. O canal ser├í deletado em instantes.')],
+       });
+ 
+-      // Delete channel after delay
+-      setTimeout(async () => {
+-        try {
+-          await interaction.channel.delete('Support ticket closed');
+-        } catch (deleteError) {
+-          logger.error('Error deleting support ticket channel:', deleteError.message);
+-        }
+-      }, 5000);
+-
+     } catch (error) {
+-      logger.error('Error closing support ticket:', error);
++      logger.error('Error closing support ticket via modal:', error);
+       
+-      const errorMessage = 'ÔØî Ocorreu um erro ao fechar o ticket.';
++      const errorMessage = 'ÔØî Ocorreu um erro ao encerrar o ticket.';
+       
+       if (interaction.replied || interaction.deferred) {
+         await interaction.followUp({ content: errorMessage, ephemeral: true });
+@@ -411,4 +552,4 @@ const helpCloseTicketHandler = {
+ };
+ 
+ export default helpCreateTicketHandler;
+-export { helpCreateTicketHandler, helpCloseTicketHandler };
+\ No newline at end of file
++export { helpCreateTicketHandler, helpCloseTicketHandler, helpCloseModalHandler };
+\ No newline at end of file
