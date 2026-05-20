@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unban")
@@ -24,6 +25,7 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
+        const lang = pickLanguage(config, interaction.guild);
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
             logger.warn(`Unban interaction defer failed`, {
@@ -36,9 +38,8 @@ export default {
 
         try {
                 const targetUser = interaction.options.getUser("target");
-                const reason = interaction.options.getString("reason") || "No reason provided";
+                const reason = interaction.options.getString("reason") || t(lang, 'wolf.cmd.mod.common.noReason');
 
-                
                 const result = await ModerationService.unbanUser({
                     guild: interaction.guild,
                     user: targetUser,
@@ -49,8 +50,8 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
-                            "✅ User Unbanned",
-                            `Successfully unbanned **${targetUser.tag}** from the server.\n\n**Reason:** ${reason}\n**Case ID:** #${result.caseId}`
+                            t(lang, 'wolf.cmd.mod.unban.successTitle'),
+                            t(lang, 'wolf.cmd.mod.unban.successDesc', { user: targetUser.tag, reason, caseId: result.caseId }),
                         )
                     ]
                 });

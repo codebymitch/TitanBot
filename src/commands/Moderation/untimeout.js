@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("untimeout")
@@ -19,6 +20,7 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
+        const lang = pickLanguage(config, interaction.guild);
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
             logger.warn(`Untimeout interaction defer failed`, {
@@ -43,7 +45,7 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
-                            `🔓 **Removed timeout** from ${targetUser.tag}`,
+                            t(lang, 'wolf.cmd.mod.untimeout.successTitle', { user: targetUser.tag }),
                         ),
                     ],
                 });

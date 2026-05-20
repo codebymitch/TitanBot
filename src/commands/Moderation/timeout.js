@@ -3,7 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
-
+import { t, pickLanguage } from '../../services/i18n.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 const durationChoices = [
@@ -40,6 +40,7 @@ export default {
     category: "moderation",
 
     async execute(interaction, config, client) {
+        const lang = pickLanguage(config, interaction.guild);
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
             logger.warn(`Timeout interaction defer failed`, {
@@ -52,46 +53,25 @@ export default {
 
         try {
             if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-                throw new TitanBotError(
-                    "User lacks permission",
-                    ErrorTypes.PERMISSION,
-                    "You need the `Moderate Members` permission to set a timeout."
-                );
+                throw new TitanBotError("User lacks permission", ErrorTypes.PERMISSION, t(lang, 'wolf.cmd.mod.timeout.permDenied'));
             }
 
             const targetUser = interaction.options.getUser("target");
             const member = interaction.options.getMember("target");
             const durationMinutes = interaction.options.getInteger("duration");
-            const reason = interaction.options.getString("reason") || "No reason provided";
+            const reason = interaction.options.getString("reason") || t(lang, 'wolf.cmd.mod.common.noReason');
 
             if (targetUser.id === interaction.user.id) {
-                throw new TitanBotError(
-                    "Cannot timeout self",
-                    ErrorTypes.VALIDATION,
-                    "You cannot timeout yourself."
-                );
+                throw new TitanBotError("Cannot timeout self", ErrorTypes.VALIDATION, t(lang, 'wolf.cmd.mod.common.cantSelf'));
             }
             if (targetUser.id === client.user.id) {
-                throw new TitanBotError(
-                    "Cannot timeout bot",
-                    ErrorTypes.VALIDATION,
-                    "You cannot timeout the bot."
-                );
+                throw new TitanBotError("Cannot timeout bot", ErrorTypes.VALIDATION, t(lang, 'wolf.cmd.mod.common.cantBot'));
             }
             if (!member) {
-                throw new TitanBotError(
-                    "Target not found",
-                    ErrorTypes.USER_INPUT,
-                    "The target user is not currently in this server."
-                );
+                throw new TitanBotError("Target not found", ErrorTypes.USER_INPUT, t(lang, 'wolf.cmd.mod.common.targetNotFound'));
             }
-
             if (!member.moderatable) {
-                throw new TitanBotError(
-                    "Cannot timeout member",
-                    ErrorTypes.PERMISSION,
-                    "I cannot timeout this user. They might have a higher role than me or you."
-                );
+                throw new TitanBotError("Cannot timeout member", ErrorTypes.PERMISSION, t(lang, 'wolf.cmd.mod.timeout.cannotTimeout'));
             }
 
             const durationMs = durationMinutes * 60 * 1000;
@@ -122,8 +102,8 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
-                        `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
-                        `**Reason:** ${reason}\n**Case ID:** #${caseId}`,
+                        t(lang, 'wolf.cmd.mod.timeout.successTitle', { user: targetUser.tag, duration: durationDisplay }),
+                        `${t(lang, 'wolf.cmd.mod.common.reasonLabel')} ${reason}\n${t(lang, 'wolf.cmd.mod.common.caseLabel')}${caseId}`,
                     ),
                 ],
             });
@@ -131,9 +111,7 @@ export default {
             logger.error('Timeout command error:', error);
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
-                    errorEmbed(
-                        error.userMessage || "An unexpected error occurred during the timeout action. Please check my role permissions.",
-                    ),
+                    errorEmbed(error.userMessage || t(lang, 'wolf.cmd.mod.common.unexpectedError')),
                 ],
             });
         }

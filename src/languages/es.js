@@ -154,6 +154,49 @@ export default {
         errorTitle: 'Error del sistema',
         errorDesc: 'No se pudo calcular el tiempo activo.',
       },
+      mod: {
+        common: {
+          noReason: 'Sin razón especificada',
+          reasonLabel: '**Razón:**',
+          caseLabel: '**Caso #**',
+          cantSelf: 'No puedes hacer eso contigo mismo.',
+          cantBot: 'No puedes hacer eso con el bot.',
+          targetNotFound: 'El usuario objetivo no está en este servidor.',
+          higherRole: 'No puedes moderar a un usuario con un rol igual o superior al tuyo.',
+          botCannot: 'No puedo realizar esa acción. Comprueba la posición de mi rol respecto al objetivo.',
+          permDenied: 'Permiso denegado',
+          unexpectedError: 'Ocurrió un error inesperado al ejecutar la acción.',
+        },
+        ban: {
+          successTitle: '🚫 Baneado: {user}',
+          permDenied: 'Necesitas el permiso `Banear miembros`.',
+        },
+        kick: {
+          successTitle: '👢 Expulsado: {user}',
+          permDenied: 'Necesitas el permiso `Expulsar miembros`.',
+          unexpectedError: 'No se pudo expulsar al usuario.',
+        },
+        timeout: {
+          successTitle: '⏳ Timeout aplicado a {user} por {duration}',
+          permDenied: 'Necesitas el permiso `Moderar miembros` para aplicar un timeout.',
+          cannotTimeout: 'No puedo aplicar timeout a este usuario; podría tener un rol superior.',
+        },
+        untimeout: {
+          successTitle: '🔓 Timeout removido a {user}',
+        },
+        unban: {
+          successTitle: '✅ Usuario desbaneado',
+          successDesc: '**{user}** ha sido desbaneado del servidor.\n\n**Razón:** {reason}\n**Caso #**{caseId}',
+        },
+        purge: {
+          permDenied: 'Necesitas el permiso `Gestionar mensajes` para borrar mensajes.',
+          invalidAmount: 'Indica un número entre 1 y 100.',
+          rateLimited: 'Estás borrando mensajes muy rápido. Espera un minuto antes de reintentar.',
+          rateLimitedTitle: '⏳ Limitado',
+          successDesc: '🗑️ Borrados {count} mensajes en {channel}.',
+          oldMessages: 'Error inesperado al borrar. Nota: los mensajes de más de 14 días no se pueden borrar en bloque.',
+        },
+      },
     },
   },
 

@@ -4,6 +4,7 @@ import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { checkRateLimit } from '../../utils/rateLimiter.js';
 import { getColor } from '../../config/bot.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -20,6 +21,7 @@ export default {
   category: "moderation",
 
   async execute(interaction, config, client) {
+    const lang = pickLanguage(config, interaction.guild);
     const deferSuccess = await InteractionHelper.safeDefer(interaction);
     if (!deferSuccess) {
       logger.warn(`Purge interaction defer failed`, {
@@ -32,12 +34,7 @@ export default {
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages))
       return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Permission Denied",
-            "You need the `Manage Messages` permission to purge messages.",
-          ),
-        ],
+        embeds: [errorEmbed(t(lang, 'wolf.cmd.mod.common.permDenied'), t(lang, 'wolf.cmd.mod.purge.permDenied'))],
       });
 
     const amount = interaction.options.getInteger("amount");
@@ -45,12 +42,7 @@ export default {
 
     if (amount < 1 || amount > 100)
       return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Invalid Amount",
-            "Please specify a number between 1 and 100.",
-          ),
-        ],
+        embeds: [errorEmbed(t(lang, 'wolf.cmd.mod.purge.invalidAmount'))],
       });
 
     try {
@@ -59,12 +51,7 @@ export default {
       const isAllowed = await checkRateLimit(rateLimitKey, 5, 60000);
       if (!isAllowed) {
         return await InteractionHelper.safeEditReply(interaction, {
-          embeds: [
-            warningEmbed(
-              "You're purging messages too fast. Please wait a minute before trying again.",
-              "⏳ Rate Limited"
-            ),
-          ],
+          embeds: [warningEmbed(t(lang, 'wolf.cmd.mod.purge.rateLimited'), t(lang, 'wolf.cmd.mod.purge.rateLimitedTitle'))],
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -106,10 +93,8 @@ export default {
       });
 
       await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
-        ],
-flags: MessageFlags.Ephemeral,
+        embeds: [successEmbed(t(lang, 'wolf.cmd.mod.purge.successDesc', { count: deletedCount, channel: `${channel}` }))],
+        flags: MessageFlags.Ephemeral,
       });
 
       setTimeout(() => {
@@ -120,11 +105,7 @@ flags: MessageFlags.Ephemeral,
     } catch (error) {
       logger.error('Purge command error:', error);
       await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "An unexpected error occurred during message deletion. Note: Messages older than 14 days cannot be bulk deleted.",
-          ),
-        ],
+        embeds: [errorEmbed(t(lang, 'wolf.cmd.mod.purge.oldMessages'))],
         flags: MessageFlags.Ephemeral,
       });
     }

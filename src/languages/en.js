@@ -154,6 +154,49 @@ export default {
         errorTitle: 'System Error',
         errorDesc: 'Could not compute uptime.',
       },
+      mod: {
+        common: {
+          noReason: 'No reason provided',
+          reasonLabel: '**Reason:**',
+          caseLabel: '**Case #**',
+          cantSelf: "You can't do that to yourself.",
+          cantBot: "You can't do that to the bot.",
+          targetNotFound: 'The target user is not currently in this server.',
+          higherRole: 'You cannot moderate a user with an equal or higher role than you.',
+          botCannot: "I can't perform this action. Check my role position relative to the target.",
+          permDenied: 'Permission denied',
+          unexpectedError: 'An unexpected error occurred while running this action.',
+        },
+        ban: {
+          successTitle: '🚫 Banned: {user}',
+          permDenied: 'You need the `Ban Members` permission.',
+        },
+        kick: {
+          successTitle: '👢 Kicked: {user}',
+          permDenied: 'You need the `Kick Members` permission.',
+          unexpectedError: 'Could not kick the user.',
+        },
+        timeout: {
+          successTitle: '⏳ Timed out {user} for {duration}',
+          permDenied: 'You need the `Moderate Members` permission to set a timeout.',
+          cannotTimeout: "I can't timeout this user; they may have a higher role.",
+        },
+        untimeout: {
+          successTitle: '🔓 Timeout removed from {user}',
+        },
+        unban: {
+          successTitle: '✅ User Unbanned',
+          successDesc: 'Successfully unbanned **{user}** from the server.\n\n**Reason:** {reason}\n**Case #**{caseId}',
+        },
+        purge: {
+          permDenied: 'You need the `Manage Messages` permission to purge messages.',
+          invalidAmount: 'Please specify a number between 1 and 100.',
+          rateLimited: "You're purging too fast. Please wait a minute before trying again.",
+          rateLimitedTitle: '⏳ Rate Limited',
+          successDesc: '🗑️ Deleted {count} messages in {channel}.',
+          oldMessages: 'An unexpected error occurred during deletion. Note: messages older than 14 days cannot be bulk deleted.',
+        },
+      },
     },
   },
 
