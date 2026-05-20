@@ -707,6 +707,36 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${botRole.name}** — color set to Evernight red.\n> To move the role higher, drag it in **Server Settings → Roles**.`)] });
       }
 
+      case 'rolename': {
+        if (!hasPerm('ManageRoles')) return NO_PERM();
+        const role = message.mentions.roles.first();
+        if (!role) return message.reply('Usage: `>rolename @role <new name>`');
+        const newName = args.slice(1).join(' ');
+        if (!newName) return message.reply('Usage: `>rolename @role <new name>`');
+        try {
+          await role.setName(newName, `Renamed by ${message.author.tag}`);
+          message.reply({ embeds: [modEmbed(0x57F287, `✅ Renamed role to **${newName}**.`)] });
+        } catch (e) {
+          message.reply({ embeds: [modEmbed(0xED4245, `❌ Failed: ${e.message}`)] });
+        }
+        break;
+      }
+
+      case 'rolehoist': {
+        if (!hasPerm('ManageRoles')) return NO_PERM();
+        const role = message.mentions.roles.first();
+        if (!role) return message.reply('Usage: `>rolehoist @role [on|off]`');
+        const input = args[1]?.toLowerCase();
+        const hoist = input === 'on' ? true : input === 'off' ? false : !role.hoist;
+        try {
+          await role.setHoist(hoist, `Hoist toggled by ${message.author.tag}`);
+          message.reply({ embeds: [modEmbed(0x57F287, `✅ **${role.name}** — separate display **${hoist ? 'on' : 'off'}**.`)] });
+        } catch (e) {
+          message.reply({ embeds: [modEmbed(0xED4245, `❌ Failed: ${e.message}`)] });
+        }
+        break;
+      }
+
       case 'rolecolor': {
         if (!hasPerm('ManageRoles')) return NO_PERM();
         const role = message.mentions.roles.first();
