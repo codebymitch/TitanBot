@@ -1577,6 +1577,83 @@ async function handleModCommand(message, client) {
         break;
       }
 
+      case 'vclock': {
+        if (!hasPerm('ManageChannels')) return NO_PERM();
+        const vc = message.member.voice.channel;
+        if (!vc) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        await vc.permissionOverwrites.edit(guild.roles.everyone, { Connect: false });
+        message.reply({ embeds: [modEmbed(0x57F287, `🔒 Locked **${vc.name}** — no new members can join.`)] });
+        break;
+      }
+
+      case 'vcunlock': {
+        if (!hasPerm('ManageChannels')) return NO_PERM();
+        const vc = message.member.voice.channel;
+        if (!vc) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        await vc.permissionOverwrites.edit(guild.roles.everyone, { Connect: null });
+        message.reply({ embeds: [modEmbed(0x57F287, `🔓 Unlocked **${vc.name}**.`)] });
+        break;
+      }
+
+      case 'vcbitrate': {
+        if (!hasPerm('ManageChannels')) return NO_PERM();
+        const kbps = parseInt(args[0], 10);
+        if (isNaN(kbps) || kbps < 8 || kbps > 384) return message.reply('Usage: `>vcbitrate <8-384>`');
+        const vc = message.member.voice.channel;
+        if (!vc) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        await vc.setBitrate(kbps * 1000, `Bitrate set by ${message.author.tag}`);
+        message.reply({ embeds: [modEmbed(0x57F287, `📶 Set bitrate to **${kbps} kbps** in **${vc.name}**.`)] });
+        break;
+      }
+
+      case 'vcinfo': {
+        const vc = message.member.voice.channel ?? message.mentions.channels.first();
+        if (!vc?.isVoiceBased?.()) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel (or mention one).')] });
+        const members = [...vc.members.values()];
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(`📢 ${vc.name}`)
+          .addFields(
+            { name: '👥 Members', value: `${members.length}${vc.userLimit ? `/${vc.userLimit}` : ''}`, inline: true },
+            { name: '📶 Bitrate', value: `${vc.bitrate / 1000} kbps`, inline: true },
+            { name: '🔒 Locked', value: vc.permissionsFor(guild.roles.everyone).has('Connect') ? 'No' : 'Yes', inline: true },
+            { name: '🆔 Channel ID', value: vc.id, inline: true },
+          );
+        if (members.length) embed.addFields({ name: '🎙️ In Channel', value: members.map(m => m.user.tag).join('\n').slice(0, 1024) });
+        message.reply({ embeds: [embed] });
+        break;
+      }
+
+      case 'muteall': {
+        if (!hasPerm('MuteMembers')) return NO_PERM();
+        const vc = message.member.voice.channel;
+        if (!vc) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        const members = [...vc.members.values()].filter(m => !m.user.bot);
+        await Promise.all(members.map(m => m.voice.setMute(true).catch(() => {})));
+        message.reply({ embeds: [modEmbed(0x57F287, `🔇 Muted **${members.length}** member(s) in **${vc.name}**.`)] });
+        break;
+      }
+
+      case 'unmuteall': {
+        if (!hasPerm('MuteMembers')) return NO_PERM();
+        const vc = message.member.voice.channel;
+        if (!vc) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        const members = [...vc.members.values()].filter(m => !m.user.bot);
+        await Promise.all(members.map(m => m.voice.setMute(false).catch(() => {})));
+        message.reply({ embeds: [modEmbed(0x57F287, `🔊 Unmuted **${members.length}** member(s) in **${vc.name}**.`)] });
+        break;
+      }
+
+      case 'disconnectall': {
+        if (!hasPerm('MoveMembers')) return NO_PERM();
+        const vc = message.member.voice.channel;
+        if (!vc) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You must be in a voice channel.')] });
+        const members = [...vc.members.values()].filter(m => m.id !== message.author.id);
+        await Promise.all(members.map(m => m.voice.disconnect().catch(() => {})));
+        message.reply({ embeds: [modEmbed(0x57F287, `🔌 Disconnected **${members.length}** member(s) from **${vc.name}**.`)] });
+        break;
+      }
+
       default:
         break;
     }
