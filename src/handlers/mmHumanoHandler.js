@@ -93,7 +93,9 @@ const THEME = {
   // Badge / identidade visual do ticket
   badgeEmoji: '🤝',
   badgeLabel: 'INTERMEDIAÇÃO',
-  footerText: versionConfig.getFooter(),
+  get footerText() {
+    return versionConfig.getFooter();
+  },
 };
 // ============================================================
 
