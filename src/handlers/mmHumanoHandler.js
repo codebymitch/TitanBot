@@ -34,6 +34,8 @@ import {
   prepareTicketDataForLog 
 } from '../services/mmLogService.js';
 
+const MM_BLOCKED_START_ROLE_IDS = ['1505636940618404042', '1505606856742277171', '1505611576940433538'];
+
 // Custom IDs for the wizard
 export const WIZARD_IDS = {
   START: 'mm_start_intermediacao',
@@ -503,6 +505,14 @@ export async function handleStart(interaction) {
     const remaining = Math.ceil((COOLDOWN_MS - (Date.now() - lastAttempt)) / 1000);
     return interaction.followUp({
       content: `⏳ Aguarde ${remaining} segundos antes de iniciar outra intermediação.`,
+      ephemeral: true
+    });
+  }
+
+  const member = interaction.member;
+  if (member && MM_BLOCKED_START_ROLE_IDS.some(roleId => member.roles.cache.has(roleId))) {
+    return interaction.followUp({
+      content: '❌ Você não tem permissão para iniciar uma intermediação.',
       ephemeral: true
     });
   }

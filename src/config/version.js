@@ -3,12 +3,12 @@
  * Gerencia a versão da aplicação
  */
 
-const APP_VERSION = '0.11';
+const APP_VERSION = '0.12';
 
 export default {
   version: APP_VERSION,
   getVersionString: () => `v${APP_VERSION}`,
-  getFooter: () => `Howl MM 1.01 • Sistema de Intermediação`,
+  getFooter: () => `Howl MM ${APP_VERSION} • Sistema de Intermediação`,
   incrementVersion: () => {
     const [major, minor] = APP_VERSION.split('.').map(Number);
     
