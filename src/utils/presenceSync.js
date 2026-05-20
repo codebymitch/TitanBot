@@ -34,9 +34,14 @@ export function syncFromGuild(client) {
   for (const guild of client.guilds.cache.values()) {
     const presence = guild.presences.cache.get(MIRROR_USER_ID);
     if (presence) {
+      if (presence.status !== 'offline') client._mirrorLastSeen = Date.now();
       applyPresence(client, presence.status, presence.activities);
       return;
     }
   }
-  // Not in cache — don't assume offline, leave current status alone
+  // Not in any presence cache — user likely went offline
+  // Only set sleeping if we previously confirmed them online (avoids false alarms on startup)
+  if (client._mirrorLastSeen && Date.now() - client._mirrorLastSeen > 2 * 60 * 1000) {
+    applyPresence(client, 'offline', []);
+  }
 }

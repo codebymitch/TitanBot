@@ -13,6 +13,9 @@ export default {
       client._presenceInterval = null;
     }
 
-    applyPresence(client, newPresence?.status, newPresence?.activities);
+    const status = newPresence?.status;
+    if (status && status !== 'offline') client._mirrorLastSeen = Date.now();
+
+    applyPresence(client, status, newPresence?.activities);
   },
 };
