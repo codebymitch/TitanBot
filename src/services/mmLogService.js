@@ -5,11 +5,63 @@
  * para o canal mm-logs para auditoria futura.
  */
 
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { logger } from '../utils/logger.js';
 
 // ID do canal de logs (pode ser configurado via variável de ambiente)
 const MM_LOGS_CHANNEL_ID = process.env.MM_LOGS_CHANNEL_ID || '1506667572383453374';
+
+/**
+ * Verifica se o bot tem permissão para enviar mensagens no canal
+ * @param {import('discord.js').TextChannel} channel - O canal a verificar
+ * @returns {boolean} True se o bot pode enviar mensagens
+ */
+function canBotSendMessages(channel) {
+  if (!channel || !channel.send) {
+    logger.error('MM Log Service: Canal inválido ou não é um text channel', {
+      channelId: channel?.id,
+      isTextBased: channel?.isTextBased?.()
+    });
+    return false;
+  }
+
+  const permissions = channel.permissionsFor(channel.guild.members.me);
+  
+  if (!permissions) {
+    logger.error('MM Log Service: Não foi possível obter permissões do bot no canal', {
+      channelId: channel.id,
+      channelName: channel.name,
+      botId: channel.guild.members.me?.id
+    });
+    return false;
+  }
+
+  const requiredPerms = [
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.EmbedLinks
+  ];
+
+  const missingPerms = requiredPerms.filter(perm => !permissions.has(perm));
+
+  if (missingPerms.length > 0) {
+    logger.error('MM Log Service: Bot está faltando permissões no canal', {
+      channelId: channel.id,
+      channelName: channel.name,
+      missingPermissions: missingPerms.map(p => {
+        const permMap = {
+          [PermissionFlagsBits.SendMessages]: 'SEND_MESSAGES',
+          [PermissionFlagsBits.ViewChannel]: 'VIEW_CHANNEL',
+          [PermissionFlagsBits.EmbedLinks]: 'EMBED_LINKS'
+        };
+        return permMap[p] || p;
+      })
+    });
+    return false;
+  }
+
+  return true;
+}
 
 /**
  * Encontra o canal mm-logs no servidor
@@ -98,6 +150,40 @@ async function findMMLogsChannel(guild) {
     expectedChannelName: 'mm-logs',
     relevantChannelsFound: relevantChannels
   });
+
+  // Tenta CRIAR o canal automaticamente se não existir
+  logger.info('MM Log Service: Tentando CRIAR canal mm-logs automaticamente...');
+  try {
+    const newChannel = await guild.channels.create({
+      name: 'mm-logs',
+      type: ChannelType.GuildText,
+      reason: 'Auto-criado pelo MM Log Service',
+      permissionOverwrites: [
+        {
+          id: guild.id,
+          deny: ['ViewChannel'] // Apenas o bot pode ver
+        },
+        {
+          id: guild.members.me.id,
+          allow: ['SendMessages', 'ViewChannel', 'EmbedLinks', 'ReadMessageHistory']
+        }
+      ]
+    });
+
+    logger.info('MM Log Service: Canal mm-logs CRIADO com sucesso!', {
+      channelId: newChannel.id,
+      channelName: newChannel.name,
+      guildId: guild.id
+    });
+    
+    return newChannel;
+  } catch (createError) {
+    logger.error('MM Log Service: Falha ao criar canal mm-logs automaticamente', {
+      error: createError.message,
+      guildId: guild.id,
+      reason: 'Bot pode não ter permissão MANAGE_CHANNELS'
+    });
+  }
 
   return null;
 }
@@ -289,24 +375,42 @@ export async function sendSuccessLog(guild, ticketData, middleman) {
   try {
     const logChannel = await findMMLogsChannel(guild);
     if (!logChannel) {
-      logger.warn('MM Log Service: Canal mm-logs não encontrado para envio de log de sucesso');
+      logger.error('MM Log Service: Canal mm-logs não encontrado para envio de log de sucesso', {
+        guildId: guild.id,
+        guildName: guild.name,
+        expectedChannelId: MM_LOGS_CHANNEL_ID
+      });
+      return false;
+    }
+
+    // Verifica permissões do bot ANTES de enviar
+    if (!canBotSendMessages(logChannel)) {
+      logger.error('MM Log Service: Bot não tem permissão para enviar mensagens no canal mm-logs', {
+        guildId: guild.id,
+        guildName: guild.name,
+        channelId: logChannel.id,
+        channelName: logChannel.name
+      });
       return false;
     }
 
     const embed = createSuccessLogEmbed(ticketData, middleman, guild);
     await logChannel.send({ embeds: [embed] });
     
-    logger.info('MM Log Service: Log de sucesso enviado', {
+    logger.info('MM Log Service: Log de sucesso enviado com sucesso', {
       guildId: guild.id,
       ticketId: ticketData.ticketId,
       buyer: ticketData.buyerUsername,
-      seller: ticketData.sellerUsername
+      seller: ticketData.sellerUsername,
+      channelId: logChannel.id
     });
     
     return true;
   } catch (error) {
     logger.error('MM Log Service: Erro ao enviar log de sucesso', {
       error: error.message,
+      errorCode: error.code,
+      errorStatus: error.status,
       guildId: guild.id
     });
     return false;
@@ -324,25 +428,43 @@ export async function sendCancelledLog(guild, ticketData, middleman, cancelReaso
   try {
     const logChannel = await findMMLogsChannel(guild);
     if (!logChannel) {
-      logger.warn('MM Log Service: Canal mm-logs não encontrado para envio de log de cancelamento');
+      logger.error('MM Log Service: Canal mm-logs não encontrado para envio de log de cancelamento', {
+        guildId: guild.id,
+        guildName: guild.name,
+        expectedChannelId: MM_LOGS_CHANNEL_ID
+      });
+      return false;
+    }
+
+    // Verifica permissões do bot ANTES de enviar
+    if (!canBotSendMessages(logChannel)) {
+      logger.error('MM Log Service: Bot não tem permissão para enviar mensagens no canal mm-logs', {
+        guildId: guild.id,
+        guildName: guild.name,
+        channelId: logChannel.id,
+        channelName: logChannel.name
+      });
       return false;
     }
 
     const embed = createCancelledLogEmbed(ticketData, middleman, guild, cancelReason);
     await logChannel.send({ embeds: [embed] });
     
-    logger.info('MM Log Service: Log de cancelamento enviado', {
+    logger.info('MM Log Service: Log de cancelamento enviado com sucesso', {
       guildId: guild.id,
       ticketId: ticketData.ticketId,
       buyer: ticketData.buyerUsername,
       seller: ticketData.sellerUsername,
-      reason: cancelReason
+      reason: cancelReason,
+      channelId: logChannel.id
     });
     
     return true;
   } catch (error) {
     logger.error('MM Log Service: Erro ao enviar log de cancelamento', {
       error: error.message,
+      errorCode: error.code,
+      errorStatus: error.status,
       guildId: guild.id
     });
     return false;
