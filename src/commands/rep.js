@@ -6,11 +6,11 @@
  */
 
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { getTicketByChannel, getTicketById } from '../utils/createTicket.js';
-import Reputation from '../models/Reputation.js';
-import { canGiveReputation, validatePermission } from '../utils/mmPermissions.js';
-import { connectMongoDB } from '../database/mongoose.js';
-import { createReputationEmbed } from '../utils/mmEmbeds.js';
+// import { getTicketByChannel, getTicketById } from '../utils/createTicket.js';
+// import Reputation from '../models/Reputation.js';
+// import { canGiveReputation, validatePermission } from '../utils/mmPermissions.js';
+// import { connectMongoDB } from '../database/mongoose.js';
+// import { createReputationEmbed } from '../utils/mmEmbeds.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -53,7 +53,12 @@ export default {
       // Defer the reply
       await interaction.deferReply({ ephemeral: false });
 
-      // Check if user is in a guild
+      return interaction.editReply({
+        content: '❌ Este comando não está disponível no momento.'
+      });
+
+      // TODO: Implementar sistema de reputação quando módulos necessários forem restaurados
+      /*
       if (!interaction.guild) {
         return interaction.editReply({
           content: '❌ This command can only be used in a server.'
@@ -173,6 +178,7 @@ export default {
         type: repType,
         comment: comment || 'No comment'
       });
+      */
 
     } catch (error) {
       console.error('Error executing /rep command:', error);
