@@ -3,7 +3,7 @@
  * Gerencia a versão da aplicação
  */
 
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.05';
 
 export default {
   version: APP_VERSION,

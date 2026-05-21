@@ -45,6 +45,10 @@ export const WIZARD_IDS = {
   ROLE_SELECT: 'mm_role_select',
   AMOUNT_MODAL_SUBMIT: 'mm_amount_modal',
   COUNTERPARTY_SELECT: 'mm_counterparty_select',
+  FEE_PAYER_SELECT: 'mm_fee_payer_select',
+  FEE_PAYER_CONFIRM_BUYER: 'mm_fee_payer_confirm_buyer',
+  FEE_PAYER_CONFIRM_SELLER: 'mm_fee_payer_confirm_seller',
+  FEE_PAYER_RESET: 'mm_fee_payer_reset',
   REQUEST_MM: 'mm_request_middleman',
   CLAIM_MM: 'mm_claim_middleman',
   COMPLETE_TICKET: 'mm_complete_ticket',
@@ -247,6 +251,68 @@ function createCounterpartySelectMenu() {
 }
 
 /**
+ * Create the fee payer selection embed
+ */
+function createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, selectedUserId) {
+  let selectionStatus = '❌ Nenhum selecionado ainda';
+  let selectionMention = '';
+  
+  if (selectedUserId === 'buyer') {
+    selectionStatus = '✅ **Selecionado: Comprador**';
+    selectionMention = buyerDisplay;
+  } else if (selectedUserId === 'seller') {
+    selectionStatus = '✅ **Selecionado: Vendedor**';
+    selectionMention = sellerDisplay;
+  }
+
+  return new EmbedBuilder()
+    .setColor(THEME.accent)
+    .setTitle('💳 — Atribuição de Função de Pagamento')
+    .setDescription(
+      'Selecione qual das duas partes irá pagar a taxa de transação:\n\n' +
+      '> **Comprador:** ' + buyerDisplay + '\n' +
+      '> **Vendedor:** ' + sellerDisplay
+    )
+    .addFields(
+      {
+        name: '📊 Pagador Selecionado',
+        value: selectionStatus + (selectionMention ? '\n(' + selectionMention + ')' : ''),
+        inline: false
+      },
+      {
+        name: '✅ Confirmações Necessárias',
+        value: 'Ambos os usuários devem confirmar a escolha para prosseguir',
+        inline: false
+      }
+    )
+    .setFooter({ text: THEME.footerText });
+}
+
+/**
+ * Create the fee payer selection buttons
+ */
+function createFeePayerSelectButtons(buyerId, sellerId, buyerDisplay, sellerDisplay, selectedUserId, buyerConfirmed, sellerConfirmed) {
+  const buyerConfirmEmoji = buyerConfirmed ? '✅' : '⭕';
+  const sellerConfirmEmoji = sellerConfirmed ? '✅' : '⭕';
+  
+  return new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId(WIZARD_IDS.FEE_PAYER_SELECT + '_buyer')
+        .setLabel(buyerConfirmEmoji + ' ' + buyerDisplay)
+        .setStyle(selectedUserId === 'buyer' ? ButtonStyle.Success : ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(WIZARD_IDS.FEE_PAYER_SELECT + '_seller')
+        .setLabel(sellerConfirmEmoji + ' ' + sellerDisplay)
+        .setStyle(selectedUserId === 'seller' ? ButtonStyle.Success : ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(WIZARD_IDS.FEE_PAYER_RESET)
+        .setLabel('🔄 Redefinir')
+        .setStyle(ButtonStyle.Danger)
+    );
+}
+
+/**
  * Sanitize channel name
  */
 function sanitizeChannelName(value) {
@@ -320,7 +386,7 @@ function calculateMMFeeValue(amountDisplay) {
  * Campos com inline:true ficam lado a lado (máx 3 por linha no Discord).
  */
 function createTicketTableEmbed(data) {
-  const { buyerDisplay, sellerDisplay, method, amountDisplay, statusDisplay, middlemanDisplay, mmFeeDisplay } = data;
+  const { buyerDisplay, sellerDisplay, method, amountDisplay, statusDisplay, middlemanDisplay, mmFeeDisplay, feeResponsibleDisplay } = data;
 
   const feeDisplay = mmFeeDisplay || calculateMMFee(amountDisplay);
   const feeValue = mmFeeDisplay ? parseAmountToNumber(mmFeeDisplay) : calculateMMFeeValue(amountDisplay);
@@ -329,6 +395,7 @@ function createTicketTableEmbed(data) {
   const totalDisplay = formatCurrency(totalValue);
   const statusColor = data.statusColor || THEME.pending;
   const mmField = middlemanDisplay || 'Aguardando suporte';
+  const feePayerField = feeResponsibleDisplay || 'Não definido';
 
   return new EmbedBuilder()
     .setColor(statusColor)
@@ -347,6 +414,9 @@ function createTicketTableEmbed(data) {
 
       // ── Valor Total (destaque)
       { name: '💳 Valor Total', value: `**${totalDisplay}**`, inline: false },
+
+      // ── Pagador da Taxa
+      { name: '💳 Pagador da Taxa', value: feePayerField, inline: false },
 
       // ── Linha 3: status e MM (linha inteira cada)
       { name: '📋 Status',      value: statusDisplay, inline: false },
@@ -670,15 +740,146 @@ export async function handleCounterpartySelect(interaction) {
   }
 
   state.counterparty = selectedMember;
-  state.step = 'complete';
+  state.step = 'fee_payer';
+  state.feePayerSelected = null;
+  state.feePayerConfirmations = {
+    [userId]: false,
+    [selectedUserId]: false
+  };
 
-  userCooldowns.set(userId, Date.now());
+  // Determine buyer and seller based on role
+  const buyer = state.userRole === 'buyer' ? interaction.member : selectedMember;
+  const seller = state.userRole === 'seller' ? interaction.member : selectedMember;
 
-  try {
-    await createTicketChannel(interaction, state);
-  } finally {
-    wizardStates.delete(userId);
+  const buyerDisplay = buyer.user.username;
+  const sellerDisplay = seller.user.username;
+
+  await interaction.editReply({
+    embeds: [createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, null)],
+    components: [createFeePayerSelectButtons(buyer.id, seller.id, buyerDisplay, sellerDisplay, null, false, false)]
+  });
+}
+
+/**
+ * Handle fee payer selection/confirmation
+ */
+export async function handleFeePayerSelect(interaction) {
+  await interaction.deferUpdate();
+
+  const userId = interaction.user.id;
+  const state = wizardStates.get(userId);
+  
+  if (!state) {
+    return interaction.followUp({
+      content: '❌ Sessão expirada. Por favor, inicie novamente.',
+      ephemeral: true
+    });
   }
+
+  if (state.step !== 'fee_payer') {
+    return interaction.followUp({
+      content: '❌ Estado do wizard inválido.',
+      ephemeral: true
+    });
+  }
+
+  const customId = interaction.customId;
+  const action = customId.replace(WIZARD_IDS.FEE_PAYER_SELECT + '_', '');
+  
+  const buyer = state.userRole === 'buyer' ? interaction.member : state.counterparty;
+  const seller = state.userRole === 'seller' ? interaction.member : state.counterparty;
+  
+  // Apenas buyer ou seller podem interagir
+  if (userId !== buyer.id && userId !== seller.id) {
+    return interaction.followUp({
+      content: '❌ Apenas o comprador ou vendedor podem fazer esta escolha.',
+      ephemeral: true
+    });
+  }
+
+  // Registrar a escolha e confirmação deste usuário
+  if (action === 'buyer') {
+    state.feePayerSelected = 'buyer';
+    state.feePayerConfirmations[userId] = true;
+  } else if (action === 'seller') {
+    state.feePayerSelected = 'seller';
+    state.feePayerConfirmations[userId] = true;
+  }
+
+  const buyerDisplay = buyer.user.username;
+  const sellerDisplay = seller.user.username;
+  const buyerConfirmed = state.feePayerConfirmations[buyer.id];
+  const sellerConfirmed = state.feePayerConfirmations[seller.id];
+
+  // Se ambos confirmaram a mesma escolha, criar o ticket
+  if (buyerConfirmed && sellerConfirmed && state.feePayerSelected) {
+    userCooldowns.set(userId, Date.now());
+
+    try {
+      await createTicketChannel(interaction, state);
+    } finally {
+      wizardStates.delete(userId);
+    }
+  } else {
+    // Caso contrário, atualizar a mensagem mostrando progresso
+    await interaction.editReply({
+      embeds: [createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, state.feePayerSelected)],
+      components: [createFeePayerSelectButtons(buyer.id, seller.id, buyerDisplay, sellerDisplay, state.feePayerSelected, buyerConfirmed, sellerConfirmed)]
+    });
+  }
+}
+
+/**
+ * Handle fee payer reset
+ */
+export async function handleFeePayerReset(interaction) {
+  await interaction.deferUpdate();
+
+  const userId = interaction.user.id;
+  const state = wizardStates.get(userId);
+  
+  if (!state) {
+    return interaction.followUp({
+      content: '❌ Sessão expirada. Por favor, inicie novamente.',
+      ephemeral: true
+    });
+  }
+
+  if (state.step !== 'fee_payer') {
+    return interaction.followUp({
+      content: '❌ Estado do wizard inválido.',
+      ephemeral: true
+    });
+  }
+
+  const buyer = state.userRole === 'buyer' ? interaction.member : state.counterparty;
+  const seller = state.userRole === 'seller' ? interaction.member : state.counterparty;
+  
+  // Apenas buyer ou seller podem interagir
+  if (userId !== buyer.id && userId !== seller.id) {
+    return interaction.followUp({
+      content: '❌ Apenas o comprador ou vendedor podem fazer esta ação.',
+      ephemeral: true
+    });
+  }
+
+  // Resetar seleção e confirmações
+  state.feePayerSelected = null;
+  state.feePayerConfirmations[buyer.id] = false;
+  state.feePayerConfirmations[seller.id] = false;
+
+  const buyerDisplay = buyer.user.username;
+  const sellerDisplay = seller.user.username;
+
+  await interaction.editReply({
+    embeds: [createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, null)],
+    components: [createFeePayerSelectButtons(buyer.id, seller.id, buyerDisplay, sellerDisplay, null, false, false)]
+  });
+
+  await interaction.followUp({
+    content: '🔄 Seleção de pagador foi redefinida. Escolha novamente.',
+    ephemeral: true
+  });
 }
 
 /**
@@ -691,6 +892,14 @@ async function createTicketChannel(interaction, state) {
 
     const buyer = userRole === 'buyer' ? initiator : counterparty;
     const seller = userRole === 'seller' ? initiator : counterparty;
+
+    // Determine fee payer
+    const feePayerId = state.feePayerSelected === 'buyer' ? buyer.id : seller.id;
+    let feePayerDisplay = 'Não definido';
+    try {
+      const feePayerMember = await interaction.guild.members.fetch(feePayerId);
+      feePayerDisplay = feePayerMember.user.username;
+    } catch { /* ignore */ }
 
     // Check for existing active ticket
     const existingTicket = await findExistingTicket(interaction.guild, buyer.id, seller.id);
@@ -774,6 +983,7 @@ async function createTicketChannel(interaction, state) {
       sellerId: seller.id,
       method: paymentMethod.toUpperCase(),
       amount: state.amount,
+      feeResponsible: feePayerId,
       status: 'PENDING'
     });
     await channel.setTopic(topicData);
@@ -786,6 +996,7 @@ async function createTicketChannel(interaction, state) {
       amountDisplay: state.amount || 'N/A',
       statusDisplay: mmConfig.statusLabels.PENDING,
       middlemanDisplay: null,
+      feeResponsibleDisplay: feePayerDisplay,
       statusColor: THEME.pending
     };
 
@@ -799,6 +1010,7 @@ async function createTicketChannel(interaction, state) {
       sellerId: seller.id,
       method: paymentMethod.toUpperCase(),
       amount: state.amount,
+      feeResponsible: feePayerId,
       status: 'PENDING',
       tableMessageId: tableMsg.id
     });
@@ -809,7 +1021,8 @@ async function createTicketChannel(interaction, state) {
         '🛡️ **Intermediação Criada com Sucesso!**\n\n' +
         '• Comprador: ' + buyer.toString() + '\n' +
         '• Vendedor: ' + seller.toString() + '\n' +
-        '• Método: ' + methodLabel + '\n\n' +
+        '• Método: ' + methodLabel + '\n' +
+        '• Pagador da Taxa: ' + feePayerDisplay + '\n\n' +
         'Aguarde um middleman assumir a intermediação.'
     });
 
@@ -867,7 +1080,7 @@ async function createTicketChannel(interaction, state) {
       ephemeral: true
     });
 
-    logger.info('MM ticket created: ' + channel.name + ' | Buyer: ' + buyer.id + ' | Seller: ' + seller.id);
+    logger.info('MM ticket created: ' + channel.name + ' | Buyer: ' + buyer.id + ' | Seller: ' + seller.id + ' | FeeResponsible: ' + feePayerId);
 
   } catch (error) {
     logger.error('Error creating MM ticket channel:', error);
@@ -900,6 +1113,8 @@ export async function handleRequestMM(interaction) {
 
   let buyerName = 'Unknown';
   let sellerName = 'Unknown';
+  let feeResponsibleName = 'Não definido';
+  
   try {
     const buyerMember = await interaction.guild.members.fetch(data.buyerId);
     if (buyerMember) buyerName = buyerMember.user.username;
@@ -907,6 +1122,12 @@ export async function handleRequestMM(interaction) {
   try {
     const sellerMember = await interaction.guild.members.fetch(data.sellerId);
     if (sellerMember) sellerName = sellerMember.user.username;
+  } catch { /* ignore */ }
+  try {
+    if (data.feeResponsible) {
+      const feePayerMember = await interaction.guild.members.fetch(data.feeResponsible);
+      if (feePayerMember) feeResponsibleName = feePayerMember.user.username;
+    }
   } catch { /* ignore */ }
 
   const tableData = {
@@ -916,6 +1137,7 @@ export async function handleRequestMM(interaction) {
     amountDisplay: data.amount || 'N/A',
     statusDisplay: mmConfig.statusLabels.NOTIFIED,
     middlemanDisplay: null,
+    feeResponsibleDisplay: feeResponsibleName,
     statusColor: THEME.pending
   };
 
@@ -1113,6 +1335,12 @@ export async function handleClaimMM(interaction) {
 
     const buyerName = buyerMember?.user.username || 'Unknown';
     const sellerName = sellerMember?.user.username || 'Unknown';
+    let feeResponsibleName = 'Não definido';
+    
+    if (updateData.feeResponsible) {
+      const feePayerMember = interaction.guild.members.cache.get(updateData.feeResponsible);
+      if (feePayerMember) feeResponsibleName = feePayerMember.user.username;
+    }
 
     const tableData = {
       buyerDisplay: buyerName,
@@ -1121,6 +1349,7 @@ export async function handleClaimMM(interaction) {
       amountDisplay: updateData.amount || 'N/A',
       statusDisplay: mmConfig.statusLabels.IN_PROGRESS,
       middlemanDisplay: interaction.user.username,
+      feeResponsibleDisplay: feeResponsibleName,
       statusColor: THEME.inProgress
     };
 
@@ -1194,6 +1423,12 @@ export async function handleCompleteTicket(interaction) {
   // Nomes do cache
   const buyerName = interaction.guild.members.cache.get(data.buyerId)?.user.username || 'Unknown';
   const sellerName = interaction.guild.members.cache.get(data.sellerId)?.user.username || 'Unknown';
+  let feeResponsibleName = 'Não definido';
+  
+  if (data.feeResponsible) {
+    const feePayerMember = interaction.guild.members.cache.get(data.feeResponsible);
+    if (feePayerMember) feeResponsibleName = feePayerMember.user.username;
+  }
 
   // Atualizar embed
   if (data.tableMessageId) {
@@ -1208,6 +1443,7 @@ export async function handleCompleteTicket(interaction) {
             amountDisplay: data.amount || 'N/A',
             statusDisplay: mmConfig.statusLabels.COMPLETED,
             middlemanDisplay: interaction.user.username,
+            feeResponsibleDisplay: feeResponsibleName,
             statusColor: THEME.completed
           })],
           components: []
@@ -1315,6 +1551,12 @@ export async function handleCancelReasonModal(interaction) {
   // Nomes do cache
   const buyerName = interaction.guild.members.cache.get(data.buyerId)?.user.username || 'Unknown';
   const sellerName = interaction.guild.members.cache.get(data.sellerId)?.user.username || 'Unknown';
+  let feeResponsibleName = 'Não definido';
+  
+  if (data.feeResponsible) {
+    const feePayerMember = interaction.guild.members.cache.get(data.feeResponsible);
+    if (feePayerMember) feeResponsibleName = feePayerMember.user.username;
+  }
 
   // Atualizar embed
   if (data.tableMessageId) {
@@ -1329,6 +1571,7 @@ export async function handleCancelReasonModal(interaction) {
             amountDisplay: data.amount || 'N/A',
             statusDisplay: mmConfig.statusLabels.CANCELLED,
             middlemanDisplay: interaction.user.username,
+            feeResponsibleDisplay: feeResponsibleName,
             statusColor: THEME.cancelled
           })],
           components: []
@@ -1392,6 +1635,8 @@ export default {
   handleRoleSelect,
   handleAmountModalSubmit,
   handleCounterpartySelect,
+  handleFeePayerSelect,
+  handleFeePayerReset,
   handleRequestMM,
   handleClaimMM,
   handleCompleteTicket,

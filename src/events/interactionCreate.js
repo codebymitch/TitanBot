@@ -14,6 +14,8 @@ import {
   handleRoleSelect,
   handleAmountModalSubmit,
   handleCounterpartySelect,
+  handleFeePayerSelect,
+  handleFeePayerReset,
   handleRequestMM,
   handleClaimMM,
   handleCompleteTicket,
@@ -260,6 +262,16 @@ export default {
                   await handleCloseTicketCommand(interaction);
                   return;
                 default:
+                  // Handle fee payer selection buttons
+                  if (interaction.customId.startsWith('mm_fee_payer_select_')) {
+                    await handleFeePayerSelect(interaction);
+                    return;
+                  }
+                  // Handle fee payer reset button
+                  if (interaction.customId === 'mm_fee_payer_reset') {
+                    await handleFeePayerReset(interaction);
+                    return;
+                  }
                   // Unknown MM button - silently ignore
                   return;
               }
