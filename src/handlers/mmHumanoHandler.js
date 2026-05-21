@@ -46,9 +46,6 @@ export const WIZARD_IDS = {
   AMOUNT_MODAL_SUBMIT: 'mm_amount_modal',
   COUNTERPARTY_SELECT: 'mm_counterparty_select',
   FEE_PAYER_SELECT: 'mm_fee_payer_select',
-  FEE_PAYER_CONFIRM_BUYER: 'mm_fee_payer_confirm_buyer',
-  FEE_PAYER_CONFIRM_SELLER: 'mm_fee_payer_confirm_seller',
-  FEE_PAYER_RESET: 'mm_fee_payer_reset',
   REQUEST_MM: 'mm_request_middleman',
   CLAIM_MM: 'mm_claim_middleman',
   COMPLETE_TICKET: 'mm_complete_ticket',
@@ -800,59 +797,6 @@ export async function handleFeePayerSelect(interaction) {
   } finally {
     wizardStates.delete(userId);
   }
-}
-
-/**
- * Handle fee payer reset
- */
-export async function handleFeePayerReset(interaction) {
-  await interaction.deferUpdate();
-
-  const userId = interaction.user.id;
-  const state = wizardStates.get(userId);
-  
-  if (!state) {
-    return interaction.followUp({
-      content: '❌ Sessão expirada. Por favor, inicie novamente.',
-      ephemeral: true
-    });
-  }
-
-  if (state.step !== 'fee_payer') {
-    return interaction.followUp({
-      content: '❌ Estado do wizard inválido.',
-      ephemeral: true
-    });
-  }
-
-  const buyer = state.userRole === 'buyer' ? interaction.member : state.counterparty;
-  const seller = state.userRole === 'seller' ? interaction.member : state.counterparty;
-  
-  // Apenas buyer ou seller podem interagir
-  if (userId !== buyer.id && userId !== seller.id) {
-    return interaction.followUp({
-      content: '❌ Apenas o comprador ou vendedor podem fazer esta ação.',
-      ephemeral: true
-    });
-  }
-
-  // Resetar seleção e confirmações
-  state.feePayerSelected = null;
-  state.feePayerConfirmations[buyer.id] = false;
-  state.feePayerConfirmations[seller.id] = false;
-
-  const buyerDisplay = buyer.user.username;
-  const sellerDisplay = seller.user.username;
-
-  await interaction.editReply({
-    embeds: [createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, null)],
-    components: [createFeePayerSelectButtons(buyer.id, seller.id, buyerDisplay, sellerDisplay, null, false, false)]
-  });
-
-  await interaction.followUp({
-    content: '🔄 Seleção de pagador foi redefinida. Escolha novamente.',
-    ephemeral: true
-  });
 }
 
 /**
@@ -1609,7 +1553,6 @@ export default {
   handleAmountModalSubmit,
   handleCounterpartySelect,
   handleFeePayerSelect,
-  handleFeePayerReset,
   handleRequestMM,
   handleClaimMM,
   handleCompleteTicket,
