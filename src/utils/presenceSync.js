@@ -2,7 +2,7 @@ import { ActivityType } from 'discord.js';
 
 export const MIRROR_USER_ID = '1127099544560205914';
 
-const ONLINE_STATUS_TEXT = 'Forgetting me was your greatest fortune in this life';
+const ONLINE_STATUS_TEXT = 'Forgetting me was your greatest fortune';
 
 export function applyPresence(client, status, activities) {
   if (status === 'offline' || status === 'invisible' || !status) {
