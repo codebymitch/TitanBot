@@ -1,14 +1,14 @@
-import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 import { handleCreate } from './modules/serverstats_create.js';
 import { handleList } from './modules/serverstats_list.js';
 import { handleUpdate } from './modules/serverstats_update.js';
 import { handleDelete } from './modules/serverstats_delete.js';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("serverstats")
@@ -87,46 +87,40 @@ export default {
         ),
 
     async execute(interaction, guildConfig, client) {
+        const lang = pickLanguage(guildConfig, interaction.guild);
         const subcommand = interaction.options.getSubcommand();
 
         try {
             switch (subcommand) {
                 case "create":
-                    await handleCreate(interaction, client);
+                    await handleCreate(interaction, client, lang);
                     break;
                 case "list":
-                    await handleList(interaction, client);
+                    await handleList(interaction, client, lang);
                     break;
                 case "update":
-                    await handleUpdate(interaction, client);
+                    await handleUpdate(interaction, client, lang);
                     break;
                 case "delete":
-                    await handleDelete(interaction, client);
+                    await handleDelete(interaction, client, lang);
                     break;
                 default:
                     await InteractionHelper.safeReply(interaction, {
-                        embeds: [errorEmbed("Unknown subcommand.")],
+                        embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.unknownSub'))],
                         flags: MessageFlags.Ephemeral
                     });
             }
         } catch (error) {
             logger.error(`Error in serverstats ${subcommand}:`, error);
-            
-            const errorEmbedMsg = createEmbed({ 
-                title: "❌ Error", 
-                description: "An error occurred while processing your request.",
-                color: getColor('error')
-            });
-
+            const errorMsg = errorEmbed(
+                t(lang, 'wolf.cmd.serverstats.errorTitle'),
+                t(lang, 'wolf.cmd.serverstats.errorDesc')
+            );
             if (!interaction.replied && !interaction.deferred) {
-                await InteractionHelper.safeReply(interaction, { embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
+                await InteractionHelper.safeReply(interaction, { embeds: [errorMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
             } else {
-                await interaction.followUp({ embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
+                await interaction.followUp({ embeds: [errorMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
             }
         }
     }
 };
-
-
-
-

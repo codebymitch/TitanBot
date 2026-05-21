@@ -3,18 +3,13 @@ import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } fro
 import { createEmbed, errorEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
-
-
-
-
-
-
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-export async function handleDelete(interaction, client) {
+import { t } from '../../../services/i18n.js';
+
+export async function handleDelete(interaction, client, lang) {
     const guild = interaction.guild;
     const counterId = interaction.options.getString("counter-id");
-    
-    // Defer reply immediately to ensure interaction is acknowledged
+
     try {
         await InteractionHelper.safeDefer(interaction);
     } catch (error) {
@@ -22,10 +17,9 @@ export async function handleDelete(interaction, client) {
         return;
     }
 
-    // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await InteractionHelper.safeEditReply(interaction, { 
-            embeds: [errorEmbed("You need **Manage Channels** permission to delete counters.")]
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.noPermsDelete'))]
         }).catch(logger.error);
         return;
     }
@@ -35,7 +29,7 @@ export async function handleDelete(interaction, client) {
 
         if (counters.length === 0) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("No counters found to delete.")]
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.deleteNoneFound'))]
             }).catch(logger.error);
             return;
         }
@@ -43,27 +37,33 @@ export async function handleDelete(interaction, client) {
         const counterToDelete = counters.find(c => c.id === counterId);
         if (!counterToDelete) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`Counter with ID \`${counterId}\` not found. Use \`/counter list\` to see all counters.`)]
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.deleteNotFound', { id: counterId }))]
             }).catch(logger.error);
             return;
         }
 
         const channel = guild.channels.cache.get(counterToDelete.channelId);
+        const typeDisplay = `${getCounterEmoji(counterToDelete.type)} ${getCounterTypeLabel(counterToDelete.type)}`;
+        const channelDisplay = channel || t(lang, 'wolf.cmd.serverstats.deletedChannelLabel');
 
         const embed = createEmbed({
-            title: "⚠️ Delete Counter & Channel",
-            description: `Are you sure you want to delete this counter and its channel?\n\n**ID:** \`${counterToDelete.id}\`\n**Type:** ${getCounterTypeDisplay(counterToDelete.type)}\n**Channel:** ${channel || 'Deleted Channel'}\n\n⚠️ **The channel will be permanently deleted!**`,
+            title: t(lang, 'wolf.cmd.serverstats.deleteConfirmTitle'),
+            description: t(lang, 'wolf.cmd.serverstats.deleteConfirmDesc', {
+                id: counterToDelete.id,
+                typeDisplay,
+                channel: channelDisplay,
+            }),
             color: getColor('error')
         });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(`counter-delete:confirm:${counterToDelete.id}:${interaction.user.id}`)
-                .setLabel("Confirm Delete")
+                .setLabel(t(lang, 'wolf.cmd.serverstats.deleteConfirmBtn'))
                 .setStyle(ButtonStyle.Danger),
             new ButtonBuilder()
                 .setCustomId(`counter-delete:cancel:${counterToDelete.id}:${interaction.user.id}`)
-                .setLabel("Cancel")
+                .setLabel(t(lang, 'wolf.cmd.serverstats.deleteCancelBtn'))
                 .setStyle(ButtonStyle.Secondary)
         );
 
@@ -72,18 +72,12 @@ export async function handleDelete(interaction, client) {
     } catch (error) {
         logger.error("Error in handleDelete:", error);
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]
+            embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.deleteErrorFetch'))]
         }).catch(logger.error);
     }
 }
 
-
-
-
-
-
-
-export async function performDeletionByCounterId(client, guild, counterId) {
+export async function performDeletionByCounterId(client, guild, counterId, lang = 'es') {
     try {
         const counters = await getServerCounters(client, guild.id);
 
@@ -91,7 +85,7 @@ export async function performDeletionByCounterId(client, guild, counterId) {
         if (!counter) {
             return {
                 success: false,
-                message: `Counter with ID \`${counterId}\` was not found.`
+                message: t(lang, 'wolf.cmd.serverstats.performNotFound', { id: counterId })
             };
         }
 
@@ -101,7 +95,7 @@ export async function performDeletionByCounterId(client, guild, counterId) {
         if (!saved) {
             return {
                 success: false,
-                message: "Failed to delete counter. Please try again."
+                message: t(lang, 'wolf.cmd.serverstats.performSaveFailed')
             };
         }
 
@@ -117,38 +111,24 @@ export async function performDeletionByCounterId(client, guild, counterId) {
             }
         }
 
-        let message = `✅ **Counter Deleted Successfully!**\n\n**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}`;
-        
+        const typeDisplay = `${getCounterEmoji(counter.type)} ${getCounterTypeLabel(counter.type)}`;
+        let message = t(lang, 'wolf.cmd.serverstats.performSuccess', { id: counter.id, typeDisplay });
+
         if (channelDeleted) {
-            message += `\n**Channel:** ${channel.name} (deleted)`;
+            message += t(lang, 'wolf.cmd.serverstats.performChannelDeleted', { name: channel.name });
         } else if (channel) {
-            message += `\n**Channel:** ${channel.name} (failed to delete)`;
+            message += t(lang, 'wolf.cmd.serverstats.performChannelFailed', { name: channel.name });
         } else {
-            message += `\n**Channel:** Already deleted`;
+            message += t(lang, 'wolf.cmd.serverstats.performChannelAlreadyDeleted');
         }
 
-        return {
-            success: true,
-            message
-        };
+        return { success: true, message };
 
     } catch (error) {
         logger.error("Error deleting counter:", error);
         return {
             success: false,
-            message: "An error occurred while deleting the counter. Please try again."
+            message: t(lang, 'wolf.cmd.serverstats.performError')
         };
     }
 }
-
-
-
-
-
-
-function getCounterTypeDisplay(type) {
-    return `${getCounterEmoji(type)} ${getCounterTypeLabel(type)}`;
-}
-
-
-

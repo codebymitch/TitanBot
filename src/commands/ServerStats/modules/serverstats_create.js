@@ -1,21 +1,16 @@
 import { PermissionFlagsBits, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { errorEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter, getCounterBaseName, getCounterTypeLabel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
-
-
-
-
-
-
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-export async function handleCreate(interaction, client) {
+import { t } from '../../../services/i18n.js';
+
+export async function handleCreate(interaction, client, lang) {
     const guild = interaction.guild;
     const type = interaction.options.getString("type");
     const channelType = interaction.options.getString("channel_type");
     const category = interaction.options.getChannel("category");
 
-    // Defer reply immediately to ensure interaction is acknowledged
     try {
         await InteractionHelper.safeDefer(interaction);
     } catch (error) {
@@ -23,10 +18,9 @@ export async function handleCreate(interaction, client) {
         return;
     }
 
-    // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await InteractionHelper.safeEditReply(interaction, { 
-            embeds: [errorEmbed("You need **Manage Channels** permission to create counters.")]
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.noPermsCreate'))]
         }).catch(logger.error);
         return;
     }
@@ -34,7 +28,7 @@ export async function handleCreate(interaction, client) {
     try {
         if (!category || category.type !== ChannelType.GuildCategory) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Please select a valid category for the counter channel.")]
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.invalidCategory'))]
             }).catch(logger.error);
             return;
         }
@@ -48,8 +42,11 @@ export async function handleCreate(interaction, client) {
 
         if (duplicateType) {
             const duplicateChannel = guild.channels.cache.get(duplicateType.channelId);
+            const where = duplicateChannel
+                ? t(lang, 'wolf.cmd.serverstats.duplicateTypeIn', { channel: duplicateChannel })
+                : '';
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`A **${getCounterTypeLabel(type)}** counter already exists for this server${duplicateChannel ? ` in ${duplicateChannel}` : ''}. Delete it first before creating another.`)]
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.duplicateType', { label: getCounterTypeLabel(type), where }))]
             }).catch(logger.error);
             return;
         }
@@ -64,14 +61,14 @@ export async function handleCreate(interaction, client) {
         const existingCounter = counters.find(c => c.channelId === targetChannel.id);
         if (existingCounter) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`A counter already exists for channel **${targetChannel.name}**. Please delete it first or choose a different type.`)]
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.duplicateChannel', { channel: targetChannel.name }))]
             }).catch(logger.error);
             return;
         }
 
         const newCounter = {
             id: Date.now().toString(),
-            type: type,
+            type,
             channelId: targetChannel.id,
             guildId: guild.id,
             createdAt: new Date().toISOString(),
@@ -84,7 +81,7 @@ export async function handleCreate(interaction, client) {
         if (!saved) {
             await targetChannel.delete('Counter creation failed during save').catch(() => null);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Failed to save counter data. Please try again.")]
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.saveFailed'))]
             }).catch(logger.error);
             return;
         }
@@ -92,22 +89,30 @@ export async function handleCreate(interaction, client) {
         const updated = await updateCounter(client, guild, newCounter);
         if (!updated) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Counter created but failed to update channel name. The counter will update on the next scheduled run.")]
+                embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.updateChannelFailed'))]
             }).catch(logger.error);
             return;
         }
 
+        const channelTypeLabel = targetChannel.type === ChannelType.GuildVoice
+            ? t(lang, 'wolf.cmd.serverstats.channelTypeVoice')
+            : t(lang, 'wolf.cmd.serverstats.channelTypeText');
+
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [successEmbed(`✅ **Counter Created Successfully!**\n\n**Type:** ${getCounterTypeLabel(type)}\n**Channel Type:** ${targetChannel.type === ChannelType.GuildVoice ? 'voice' : 'text'}\n**Category:** ${category}\n**Channel:** ${targetChannel}\n**Channel Name:** ${targetChannel.name}\n**Counter ID:** \`${newCounter.id}\`\n\nThe counter will automatically update every 15 minutes.\n\nUse \`/counter list\` to view all counters.`)]
+            embeds: [successEmbed(t(lang, 'wolf.cmd.serverstats.createSuccess', {
+                label: getCounterTypeLabel(type),
+                channelType: channelTypeLabel,
+                category,
+                channel: targetChannel,
+                channelName: targetChannel.name,
+                id: newCounter.id,
+            }))]
         }).catch(logger.error);
 
     } catch (error) {
         logger.error("Error creating counter:", error);
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("An error occurred while creating the counter. Please try again.")]
+            embeds: [errorEmbed(t(lang, 'wolf.cmd.serverstats.createError'))]
         }).catch(logger.error);
     }
 }
-
-
-
