@@ -849,7 +849,7 @@ async function handleAddRole(selectInteraction, rootInteraction, panelData, guil
 
 // ─── Remove Role ──────────────────────────────────────────────────────────────
 
-async function handleRemoveRole(selectInteraction, rootInteraction, panelData, panels, guildId, guild, client) {
+async function handleRemoveRole(selectInteraction, rootInteraction, panelData, panels, guildId, guild, client, lang) {
     await selectInteraction.deferUpdate();
 
     const roleOptions = panelData.roles
@@ -861,7 +861,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
 
     if (roleOptions.length === 0) {
         await selectInteraction.followUp({
-            embeds: [errorEmbed('No Valid Roles', 'The roles on this panel no longer exist in the server.')],
+            embeds: [errorEmbed(t(lang, 'wolf.cmd.reactroles.noValidRolesExistTitle'), t(lang, 'wolf.cmd.reactroles.noValidRolesExistDesc'))],
             flags: MessageFlags.Ephemeral,
         });
         return;
@@ -869,7 +869,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
 
     const removeSelect = new StringSelectMenuBuilder()
         .setCustomId('rr_remove_role_pick')
-        .setPlaceholder('Select a role to remove...')
+        .setPlaceholder(t(lang, 'wolf.cmd.reactroles.removePlaceholder'))
         .setMaxValues(1)
         .addOptions(
             roleOptions.map(r =>
@@ -880,8 +880,8 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('➖ Remove Role')
-                .setDescription('Select the role you want to remove from this panel.')
+                .setTitle(t(lang, 'wolf.cmd.reactroles.removeRoleTitle'))
+                .setDescription(t(lang, 'wolf.cmd.reactroles.removeRoleSelectDesc'))
                 .setColor(getColor('info')),
         ],
         components: [new ActionRowBuilder().addComponents(removeSelect)],
@@ -914,8 +914,8 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
             await removeInteraction.followUp({
                 embeds: [
                     successEmbed(
-                        '✅ Role Removed',
-                        'That was the last role on the panel. The panel has been deleted.',
+                        t(lang, 'wolf.cmd.reactroles.removedRole'),
+                        t(lang, 'wolf.cmd.reactroles.lastRoleRemovedDesc'),
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,
@@ -931,8 +931,8 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
                 await InteractionHelper.safeEditReply(rootInteraction, {
                     embeds: [
                         new EmbedBuilder()
-                            .setTitle('📋 Reaction Roles Dashboard')
-                            .setDescription('No panels remain. Use `/reactroles setup` to create one.')
+                            .setTitle(t(lang, 'wolf.cmd.reactroles.dashTitle'))
+                            .setDescription(t(lang, 'wolf.cmd.reactroles.noPanelsRemainDesc'))
                             .setColor(getColor('info')),
                     ],
                     components: [],
@@ -942,8 +942,8 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
                 await InteractionHelper.safeEditReply(rootInteraction, {
                     embeds: [
                         new EmbedBuilder()
-                            .setTitle('📋 Reaction Roles Dashboard')
-                            .setDescription('Panel deleted. Run `/reactroles dashboard` to manage another panel.')
+                            .setTitle(t(lang, 'wolf.cmd.reactroles.dashTitle'))
+                            .setDescription(t(lang, 'wolf.cmd.reactroles.panelDeletedDashboardDesc'))
                             .setColor(getColor('success')),
                     ],
                     components: [],
@@ -957,8 +957,8 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
             await removeInteraction.followUp({
                 embeds: [
                     successEmbed(
-                        '✅ Role Removed',
-                        `${role ? role.toString() : `<@&${roleId}>`} has been removed from the panel.`,
+                        t(lang, 'wolf.cmd.reactroles.removedRole'),
+                        t(lang, 'wolf.cmd.reactroles.removedRoleSuccessDesc', { role: role ? role.toString() : `<@&${roleId}>` }),
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,
@@ -968,7 +968,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
             const discordMsg = channel
                 ? await channel.messages.fetch(panelData.messageId).catch(() => null)
                 : null;
-            await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild);
+            await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild, lang);
         }
     });
 
@@ -976,7 +976,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
         if (reason === 'time' && collected.size === 0) {
             selectInteraction
                 .followUp({
-                    embeds: [errorEmbed('Timed Out', 'No role selected. Nothing was changed.')],
+                    embeds: [errorEmbed(t(lang, 'wolf.cmd.reactroles.timeoutTitle'), t(lang, 'wolf.cmd.reactroles.timeoutDesc'))],
                     flags: MessageFlags.Ephemeral,
                 })
                 .catch(() => {});
@@ -986,26 +986,26 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
 
 // ─── Delete Panel ─────────────────────────────────────────────────────────────
 
-async function handleDeletePanel(btnInteraction, rootInteraction, panelData, panels, guildId, guild, client, collector, buttonCollector) {
+async function handleDeletePanel(btnInteraction, rootInteraction, panelData, panels, guildId, guild, client, collector, buttonCollector, lang) {
     const channel = guild.channels.cache.get(panelData.channelId);
     const discordMsg = channel
         ? await channel.messages.fetch(panelData.messageId).catch(() => null)
         : null;
-    const title = discordMsg?.embeds?.[0]?.title ?? 'this panel';
+    const title = discordMsg?.embeds?.[0]?.title ?? (lang === 'es' ? 'este panel' : 'this panel');
 
     const deleteModal = new ModalBuilder()
         .setCustomId('rr_delete_confirm_modal')
-        .setTitle('Delete Reaction Role Panel');
+        .setTitle(t(lang, 'wolf.cmd.reactroles.deleteModalTitle'));
 
     const deleteWarningText = new TextDisplayBuilder()
-        .setContent(`⚠️ You are about to permanently delete the panel **${title}**. This will remove the Discord message and all associated reaction role assignments.`);
+        .setContent(t(lang, 'wolf.cmd.reactroles.deleteConfirmWarning', { title }));
 
     const deleteCheckbox = new CheckboxBuilder()
         .setCustomId('delete_confirmation')
         .setDefault(false);
 
     const deleteCheckboxLabel = new LabelBuilder()
-        .setLabel('I confirm — this cannot be undone')
+        .setLabel(t(lang, 'wolf.cmd.reactroles.deleteConfirmCheckbox'))
         .setCheckboxComponent(deleteCheckbox);
 
     deleteModal
@@ -1022,7 +1022,7 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
         .catch(() => null);
 
     if (!submitted) {
-        await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild);
+        await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild, lang);
         return;
     }
 
@@ -1030,10 +1030,10 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
 
     if (!confirmed) {
         await submitted.reply({
-            embeds: [errorEmbed('Not Confirmed', 'You must tick the confirmation checkbox to delete the panel.')],
+            embeds: [errorEmbed(t(lang, 'wolf.cmd.reactroles.notConfirmedTitle'), t(lang, 'wolf.cmd.reactroles.notConfirmedDesc'))],
             flags: MessageFlags.Ephemeral,
         });
-        await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild);
+        await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild, lang);
         return;
     }
 
@@ -1064,7 +1064,7 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
     }
 
     await submitted.followUp({
-        embeds: [successEmbed('✅ Panel Deleted', `**${title}** has been deleted.`)],
+        embeds: [successEmbed(t(lang, 'wolf.cmd.reactroles.deleteSuccess'), t(lang, 'wolf.cmd.reactroles.deleteSuccessDesc', { title }))],
         flags: MessageFlags.Ephemeral,
     });
 
@@ -1080,8 +1080,8 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
         await InteractionHelper.safeEditReply(rootInteraction, {
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('📋 Reaction Roles Dashboard')
-                    .setDescription('No panels remain. Use `/reactroles setup` to create one.')
+                    .setTitle(t(lang, 'wolf.cmd.reactroles.dashTitle'))
+                    .setDescription(t(lang, 'wolf.cmd.reactroles.noPanelsRemainDesc'))
                     .setColor(getColor('info')),
             ],
             components: [],
@@ -1093,8 +1093,8 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
         await InteractionHelper.safeEditReply(rootInteraction, {
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('📋 Reaction Roles Dashboard')
-                    .setDescription('Panel deleted. Run `/reactroles dashboard` to manage another panel.')
+                    .setTitle(t(lang, 'wolf.cmd.reactroles.dashTitle'))
+                    .setDescription(t(lang, 'wolf.cmd.reactroles.panelDeletedDashboardDesc'))
                     .setColor(getColor('success')),
             ],
             components: [],
