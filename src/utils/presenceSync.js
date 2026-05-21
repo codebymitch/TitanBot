@@ -2,6 +2,8 @@ import { ActivityType } from 'discord.js';
 
 export const MIRROR_USER_ID = '1127099544560205914';
 
+const ONLINE_STATUS_TEXT = 'Forgetting me was your greatest fortune in this life';
+
 export function applyPresence(client, status, activities) {
   if (status === 'offline' || status === 'invisible' || !status) {
     client.user.setPresence({
@@ -11,23 +13,10 @@ export function applyPresence(client, status, activities) {
     return;
   }
 
-  const activity = activities?.[0];
-  if (!activity) {
-    client.user.setPresence({ status, activities: [] });
-    return;
-  }
-
-  // Bots cannot use ActivityType.Custom — show the text as Playing instead
-  if (activity.type === ActivityType.Custom) {
-    const text = activity.state || activity.name;
-    client.user.setPresence({
-      status,
-      activities: text ? [{ name: text, type: ActivityType.Playing }] : [],
-    });
-    return;
-  }
-
-  client.user.setPresence({ status, activities: [{ name: activity.name, type: activity.type }] });
+  client.user.setPresence({
+    status,
+    activities: [{ name: ONLINE_STATUS_TEXT, type: ActivityType.Playing }],
+  });
 }
 
 export function syncFromGuild(client) {
