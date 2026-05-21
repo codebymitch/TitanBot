@@ -941,8 +941,17 @@ async function handleModCommand(message, client) {
         const newName = args.join(' ').trim();
         if (!newName) return message.reply('Usage: `>rename <new name>`');
         if (newName.length < 2 || newName.length > 32) return message.reply('Username must be between 2 and 32 characters.');
-        await client.user.setUsername(newName);
-        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Bot renamed to **${newName}**.`)] });
+        try {
+          await client.user.setUsername(newName);
+          return message.reply({ embeds: [modEmbed(0x57F287, `✅ Bot renamed to **${newName}**.`)] });
+        } catch (e) {
+          const isRateLimit = e?.rawError?.errors?.username?.find?.(x => x?.code === 'USERNAME_RATE_LIMIT') ||
+            JSON.stringify(e?.rawError ?? '').includes('USERNAME_RATE_LIMIT');
+          if (isRateLimit) {
+            return message.reply({ embeds: [modEmbed(0xED4245, '❌ Discord rate limit hit — username can only be changed **2 times per hour**. Wait a bit and try again.')] });
+          }
+          throw e;
+        }
       }
 
       case 'avatar': {
