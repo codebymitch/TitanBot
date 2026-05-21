@@ -69,7 +69,7 @@ function canBotSendMessages(channel) {
  * @param {import('discord.js').Guild} guild - O servidor Discord
  * @returns {import('discord.js').TextChannel|null}
  */
-async function findMMLogsChannel(guild) {
+export async function findMMLogsChannel(guild) {
   logger.info('MM Log Service: Buscando canal mm-logs', {
     guildId: guild.id,
     guildName: guild.name,
