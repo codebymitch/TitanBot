@@ -6,6 +6,7 @@ import { handleInteractionError, createError, TitanBotError, ErrorTypes } from '
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { createReactionRoleMessage, hasDangerousPermissions, getAllReactionRoleMessages, deleteReactionRoleMessage } from '../../services/reactionRoleService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+import { t, pickLanguage } from '../../services/i18n.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -70,15 +71,16 @@ export default {
                 )
         ),
 
-    async execute(interaction) {
+    async execute(interaction, config) {
+        const lang = pickLanguage(config, interaction.guild);
         const subcommand = interaction.options.getSubcommand();
 
         try {
             if (subcommand === 'setup') {
-                await handleSetup(interaction);
+                await handleSetup(interaction, lang);
             } else if (subcommand === 'dashboard') {
                 const selectedPanelId = interaction.options.getString('panel');
-                await handleDashboard(interaction, selectedPanelId);
+                await handleDashboard(interaction, selectedPanelId, lang);
             }
         } catch (error) {
             await handleInteractionError(interaction, error, {
@@ -172,7 +174,7 @@ export default {
 
 // ─── Setup Subcommand ─────────────────────────────────────────────────────────
 
-async function handleSetup(interaction) {
+async function handleSetup(interaction, lang) {
     const deferSuccess = await InteractionHelper.safeDefer(interaction);
     if (!deferSuccess) return;
     
@@ -187,7 +189,7 @@ async function handleSetup(interaction) {
         throw createError(
             `Invalid channel type: ${channel.type}`,
             ErrorTypes.VALIDATION,
-            'Please select a text or announcement channel.',
+            t(lang, 'wolf.cmd.reactroles.invalidChannel'),
             { channelType: channel.type }
         );
     }
@@ -197,7 +199,7 @@ async function handleSetup(interaction) {
         throw createError(
             'Bot missing ManageRoles permission',
             ErrorTypes.PERMISSION,
-            'I need the "Manage Roles" permission to set up reaction roles.',
+            t(lang, 'wolf.cmd.reactroles.botNoManageRoles'),
             { permission: 'ManageRoles' }
         );
     }
@@ -206,7 +208,7 @@ async function handleSetup(interaction) {
         throw createError(
             `Bot cannot send messages in ${channel.name}`,
             ErrorTypes.PERMISSION,
-            `I don't have permission to send messages in ${channel}.`,
+            t(lang, 'wolf.cmd.reactroles.botNoSendMessages', { channel }),
             { channelId: channel.id }
         );
     }
@@ -217,7 +219,7 @@ async function handleSetup(interaction) {
         throw createError(
             'Panel limit reached',
             ErrorTypes.VALIDATION,
-            'Your guild has reached the maximum of 5 reaction role panels. Delete an existing panel to create a new one.',
+            t(lang, 'wolf.cmd.reactroles.panelLimit'),
             { maxPanels: 5, currentPanels: existingPanels.length }
         );
     }
@@ -230,22 +232,22 @@ async function handleSetup(interaction) {
         const role = interaction.options.getRole(`role${i}`);
         if (role) {
             if (role.position >= interaction.guild.members.me.roles.highest.position) {
-                roleValidationErrors.push(`**${role.name}** - My bot's role is positioned lower than this role in your server's role hierarchy and cannot assign it`);
+                roleValidationErrors.push(t(lang, 'wolf.cmd.reactroles.roleHigher', { role: role.name }));
                 continue;
             }
-            
+
             if (hasDangerousPermissions(role)) {
-                roleValidationErrors.push(`**${role.name}** - This role has dangerous permissions (Administrator, Manage Server, etc.)`);
+                roleValidationErrors.push(t(lang, 'wolf.cmd.reactroles.roleDangerous', { role: role.name }));
                 continue;
             }
-            
+
             if (role.managed) {
-                roleValidationErrors.push(`**${role.name}** - This is a managed role (integration/bot role)`);
+                roleValidationErrors.push(t(lang, 'wolf.cmd.reactroles.roleManaged', { role: role.name }));
                 continue;
             }
-            
+
             if (role.id === interaction.guild.id) {
-                roleValidationErrors.push(`**${role.name}** - Cannot use the @everyone role`);
+                roleValidationErrors.push(t(lang, 'wolf.cmd.reactroles.roleEveryone', { role: role.name }));
                 continue;
             }
             
@@ -254,8 +256,8 @@ async function handleSetup(interaction) {
     }
     
     if (roleValidationErrors.length > 0) {
-        const errorMsg = `The following roles cannot be added:\n${roleValidationErrors.join('\n')}`;
-        
+        const errorMsg = t(lang, 'wolf.cmd.reactroles.roleErrorsHeader', { errors: roleValidationErrors.join('\n') });
+
         if (roles.length === 0) {
             throw createError(
                 'No valid roles provided',
@@ -264,9 +266,9 @@ async function handleSetup(interaction) {
                 { errors: roleValidationErrors }
             );
         }
-        
+
         await interaction.followUp({
-            embeds: [warningEmbed('Role Validation Warning', errorMsg)],
+            embeds: [warningEmbed(t(lang, 'wolf.cmd.reactroles.roleWarningTitle'), errorMsg)],
             ephemeral: true
         });
     }
@@ -275,7 +277,7 @@ async function handleSetup(interaction) {
         throw createError(
             'No roles provided',
             ErrorTypes.VALIDATION,
-            'You must provide at least one valid role.',
+            t(lang, 'wolf.cmd.reactroles.noValidRoles'),
             {}
         );
     }
@@ -284,13 +286,13 @@ async function handleSetup(interaction) {
     const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
             .setCustomId('reaction_roles')
-            .setPlaceholder('Select your roles')
+            .setPlaceholder(t(lang, 'wolf.cmd.reactroles.selectPlaceholder'))
             .setMinValues(0)
             .setMaxValues(roles.length)
             .addOptions(
                 roles.map(role => ({
                     label: role.name,
-                    description: `Add/remove the ${role.name} role`,
+                    description: t(lang, 'wolf.cmd.reactroles.addRemoveRole', { name: role.name }),
                     value: role.id,
                     emoji: '🎭'
                 }))
@@ -302,10 +304,10 @@ async function handleSetup(interaction) {
         .setDescription(description)
         .setColor(getColor('info'))
         .addFields({
-            name: 'Available Roles',
+            name: t(lang, 'wolf.cmd.reactroles.availableRolesField'),
             value: roles.map(role => `• ${role}`).join('\n')
         })
-        .setFooter({ text: 'Select roles from the dropdown menu below' });
+        .setFooter({ text: t(lang, 'wolf.cmd.reactroles.panelFooter') });
 
     const message = await channel.send({
         embeds: [panelEmbed],
@@ -366,13 +368,16 @@ async function handleSetup(interaction) {
     }
 
     await InteractionHelper.safeEditReply(interaction, {
-        embeds: [successEmbed('Success', `✅ Reaction role panel created in ${channel}!\n\n${message.url}`)]
+        embeds: [successEmbed(
+            t(lang, 'wolf.cmd.reactroles.successTitle'),
+            t(lang, 'wolf.cmd.reactroles.successDesc', { channel, url: message.url })
+        )]
     });
 }
 
 // ─── Dashboard Subcommand ─────────────────────────────────────────────────────
 
-async function handleDashboard(interaction, selectedPanelId) {
+async function handleDashboard(interaction, selectedPanelId, lang) {
     const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ['Ephemeral'] });
     if (!deferSuccess) return;
 
@@ -386,8 +391,8 @@ async function handleDashboard(interaction, selectedPanelId) {
         return await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 errorEmbed(
-                    'No Panels Found',
-                    'No reaction role panels exist yet. Use `/reactroles setup` to create one.',
+                    t(lang, 'wolf.cmd.reactroles.noPanelsTitle'),
+                    t(lang, 'wolf.cmd.reactroles.noPanelsDesc'),
                 ),
             ],
         });
@@ -414,14 +419,13 @@ async function handleDashboard(interaction, selectedPanelId) {
         return await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 errorEmbed(
-                    'No Valid Panels Found',
-                    'No reaction role panels exist yet. Use `/reactroles setup` to create one.',
+                    t(lang, 'wolf.cmd.reactroles.noValidPanelsTitle'),
+                    t(lang, 'wolf.cmd.reactroles.noPanelsDesc'),
                 ),
             ],
         });
     }
 
-    // If a panel was selected, use it. Otherwise, pick a random one.
     let activePanelData = null;
     if (selectedPanelId) {
         activePanelData = validPanels.find(p => p.messageId === selectedPanelId);
@@ -429,8 +433,8 @@ async function handleDashboard(interaction, selectedPanelId) {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        'Panel Not Found',
-                        'That panel no longer exists or has been deleted.',
+                        t(lang, 'wolf.cmd.reactroles.panelNotFoundTitle'),
+                        t(lang, 'wolf.cmd.reactroles.panelNotFoundDesc'),
                     ),
                 ],
             });
@@ -441,7 +445,7 @@ async function handleDashboard(interaction, selectedPanelId) {
     }
 
     const discordMsg = await fetchPanelDiscordMessage(guild, activePanelData);
-    await showPanelDashboard(interaction, activePanelData, discordMsg, guildId, guild);
+    await showPanelDashboard(interaction, activePanelData, discordMsg, guildId, guild, lang);
 
     let rootInteraction = interaction;
     const collector = interaction.channel.createMessageComponentCollector({
@@ -466,10 +470,10 @@ async function handleDashboard(interaction, selectedPanelId) {
                 const option = ci.values[0];
                 switch (option) {
                     case 'add_role':
-                        await handleAddRole(ci, rootInteraction, activePanelData, guildId, guild, client);
+                        await handleAddRole(ci, rootInteraction, activePanelData, guildId, guild, client, lang);
                         break;
                     case 'remove_role':
-                        await handleRemoveRole(ci, rootInteraction, activePanelData, validPanels, guildId, guild, client);
+                        await handleRemoveRole(ci, rootInteraction, activePanelData, validPanels, guildId, guild, client, lang);
                         break;
                 }
             }
@@ -477,11 +481,11 @@ async function handleDashboard(interaction, selectedPanelId) {
             logger.error('Error in reactroles dashboard collector:', error);
             const msg =
                 error instanceof TitanBotError
-                    ? error.userMessage || 'An error occurred.'
-                    : 'An unexpected error occurred.';
+                    ? error.userMessage || t(lang, 'wolf.cmd.reactroles.genericError')
+                    : t(lang, 'wolf.cmd.reactroles.unexpectedError');
             if (!ci.replied && !ci.deferred) await ci.deferUpdate().catch(() => {});
             await ci
-                .followUp({ embeds: [errorEmbed('Error', msg)], flags: MessageFlags.Ephemeral })
+                .followUp({ embeds: [errorEmbed(t(lang, 'wolf.cmd.reactroles.errorTitle'), msg)], flags: MessageFlags.Ephemeral })
                 .catch(() => {});
         }
     });
@@ -489,9 +493,9 @@ async function handleDashboard(interaction, selectedPanelId) {
     buttonCollector.on('collect', async btnInteraction => {
         try {
             if (btnInteraction.customId === `rr_edit_text_${guildId}`) {
-                await handleEditText(btnInteraction, rootInteraction, activePanelData, guildId, guild, client);
+                await handleEditText(btnInteraction, rootInteraction, activePanelData, guildId, guild, client, lang);
             } else if (btnInteraction.customId === `rr_delete_${guildId}`) {
-                await handleDeletePanel(btnInteraction, rootInteraction, activePanelData, validPanels, guildId, guild, client, collector, buttonCollector);
+                await handleDeletePanel(btnInteraction, rootInteraction, activePanelData, validPanels, guildId, guild, client, collector, buttonCollector, lang);
             }
         } catch (error) {
             logger.error('Error in reactroles button collector:', error);
@@ -510,8 +514,8 @@ async function handleDashboard(interaction, selectedPanelId) {
         buttonCollector.stop();
         if (reason === 'time') {
             const timeoutEmbed = new EmbedBuilder()
-                .setTitle('⏱️ Dashboard Timeout')
-                .setDescription('This dashboard session has timed out due to inactivity (10 minutes).\n\nTo continue managing your reaction roles, please run `/reactroles dashboard` again.')
+                .setTitle(t(lang, 'wolf.cmd.reactroles.timeoutTitle'))
+                .setDescription(t(lang, 'wolf.cmd.reactroles.timeoutDesc'))
                 .setColor(getColor('warning'));
             
             await InteractionHelper.safeEditReply(interaction, {
@@ -583,19 +587,19 @@ async function rebuildLivePanelMessage(guild, panelData) {
 
 // ─── View Builders ────────────────────────────────────────────────────────────
 
-async function showPanelDashboard(interaction, panelData, discordMsg, guildId, guild) {
+async function showPanelDashboard(interaction, panelData, discordMsg, guildId, guild, lang = 'es') {
     const channel = guild.channels.cache.get(panelData.channelId);
-    const title = discordMsg?.embeds?.[0]?.title ?? 'Untitled Panel';
+    const title = discordMsg?.embeds?.[0]?.title ?? t(lang, 'wolf.cmd.reactroles.untitledPanel');
     const roleList =
         panelData.roles.length > 0
             ? panelData.roles.map(id => `<@&${id}>`).join(', ')
-            : '`None`';
+            : t(lang, 'wolf.cmd.reactroles.dashRoleListEmpty');
+
+    const link = discordMsg ? t(lang, 'wolf.cmd.reactroles.dashLink', { url: discordMsg.url }) : '';
 
     const embed = new EmbedBuilder()
-        .setTitle('🎭 Reaction Roles Dashboard')
-        .setDescription(
-            `**Title:** ${title}\n\nSelect an option below to modify a setting.${discordMsg ? `\n[Click Here to View Panel](${discordMsg.url})` : ''}`,
-        )
+        .setTitle(t(lang, 'wolf.cmd.reactroles.dashTitle'))
+        .setDescription(t(lang, 'wolf.cmd.reactroles.dashDescPanel', { title, link }))
         .setColor(getColor('info'))
         .addFields(
             { name: '📍 Channel', value: channel ? `<#${channel.id}>` : '`Not found`', inline: true },
