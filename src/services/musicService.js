@@ -14,6 +14,34 @@ export function getPlayer() {
 }
 
 /**
+ * Convert Netscape HTTP cookie file format to an HTTP Cookie header string.
+ * Netscape format: domain TAB flag TAB path TAB secure TAB expiry TAB name TAB value
+ * Output format:  name=value; name2=value2  (standard Cookie header)
+ */
+function parseCookiesToHeader(netscapeContent) {
+  if (!netscapeContent) return null;
+  try {
+    return netscapeContent
+      .split('\n')
+      .filter(line => line.trim() && !line.startsWith('#') && line.includes('\t'))
+      .map(line => {
+        const parts = line.split('\t');
+        if (parts.length >= 7) {
+          const name = parts[5]?.trim();
+          const value = parts[6]?.trim();
+          if (name && value) return `${name}=${value}`;
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .join('; ');
+  } catch (e) {
+    logger.warn('musicService: failed to parse YOUTUBE_COOKIE', { error: e?.message });
+    return null;
+  }
+}
+
+/**
  * Create and configure the discord-player instance.
  *
  * Sources (priority): YouTube (via youtubei.js + BotGuard), Spotify
@@ -52,37 +80,45 @@ export async function initMusic(client) {
 
   // ── YouTube via youtubei.js (discord-player-youtubei) ──
   // useClient: 'IOS' avoids YouTube's signature-decipher entirely.
-  // On cloud hosts (Railway, Heroku, etc.) YouTube blocks anonymous
-  // streams — passing YOUTUBE_COOKIE (Netscape format) authenticates
-  // the session and bypasses bot-detection.
-  const youtubeCookie = process.env.YOUTUBE_COOKIE || null;
-  if (youtubeCookie) {
-    logger.info('musicService: YOUTUBE_COOKIE found — authenticated YouTube session will be used');
+  // On cloud hosts (Railway, etc.) YouTube blocks anonymous streams.
+  // YOUTUBE_COOKIE must be in Netscape format (exported from browser).
+  // We convert it to HTTP Cookie header format (name=value; name2=value2)
+  // and pass it via streamOptions.cookie.
+  // NOTE: `authentication` expects an OAuth2 token (access_token=XXX),
+  // NOT cookies — never pass raw Netscape cookies to `authentication`.
+  const rawCookie = process.env.YOUTUBE_COOKIE || null;
+  const cookieHeader = rawCookie ? parseCookiesToHeader(rawCookie) : null;
+
+  if (cookieHeader) {
+    const cookieCount = cookieHeader.split(';').length;
+    logger.info(`musicService: YOUTUBE_COOKIE parsed — ${cookieCount} cookies loaded for authenticated YT session`);
   } else {
     logger.warn('musicService: YOUTUBE_COOKIE not set — YouTube streams may be blocked on cloud hosts');
   }
 
-  try {
-    await player.extractors.register(YoutubeiExtractor, {
-      authentication: youtubeCookie,
-      streamOptions: {
-        useClient: 'IOS',
-      },
-    });
-    logger.info('musicService: YoutubeiExtractor registered (IOS client' + (youtubeCookie ? ', authenticated' : ', anonymous') + ')');
-  } catch (err) {
-    logger.warn('musicService: IOS client failed, retrying with ANDROID', { error: err?.message });
+  // Build extractor options — try IOS first (no signature decipher needed),
+  // fall back to TV_EMBEDDED (more lenient on cloud IPs).
+  const makeExtractorOpts = (client) => ({
+    streamOptions: {
+      useClient: client,
+      ...(cookieHeader && { cookie: cookieHeader }),
+    },
+  });
+
+  let youtubeRegistered = false;
+  for (const clientName of ['IOS', 'TV_EMBEDDED', 'ANDROID']) {
     try {
-      await player.extractors.register(YoutubeiExtractor, {
-        authentication: youtubeCookie,
-        streamOptions: {
-          useClient: 'ANDROID',
-        },
-      });
-      logger.info('musicService: YoutubeiExtractor registered (ANDROID fallback' + (youtubeCookie ? ', authenticated' : ', anonymous') + ')');
-    } catch (err2) {
-      logger.error('musicService: failed to register YoutubeiExtractor', { error: err2?.message });
+      await player.extractors.register(YoutubeiExtractor, makeExtractorOpts(clientName));
+      logger.info(`musicService: YoutubeiExtractor registered (${clientName}${cookieHeader ? ', authenticated' : ', anonymous'})`);
+      youtubeRegistered = true;
+      break;
+    } catch (err) {
+      logger.warn(`musicService: ${clientName} client failed — ${err?.message}`);
     }
+  }
+
+  if (!youtubeRegistered) {
+    logger.error('musicService: failed to register YoutubeiExtractor with any client — YouTube will not work');
   }
 
   const registeredCount = player.extractors.size;
