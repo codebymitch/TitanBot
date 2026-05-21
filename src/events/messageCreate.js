@@ -169,7 +169,7 @@ async function handleModCommand(message, client) {
         if (!guild.members.me.permissions.has('KickMembers')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
         if (!target) return message.reply('Usage: `>kick @user [reason]`');
-        if (!target.kickable) return message.reply({ embeds: [modEmbed(0xED4245, '❌ I cannot kick that user.')] });
+        if (!target.kickable) return message.reply({ embeds: [modEmbed(0xED4245, `❌ Cannot kick **${target.user.tag}** — their role is higher than or equal to mine.\nFix: drag the bot's role above theirs in **Server Settings → Roles**.`)] });
         shiftMention();
         const reason = args.join(' ') || 'No reason provided';
         await target.kick(`${message.author.tag}: ${reason}`);
@@ -410,10 +410,10 @@ async function handleModCommand(message, client) {
         if (!hasPerm('MoveMembers')) return NO_PERM();
         if (!guild.members.me.permissions.has('MoveMembers')) return BOT_NO_PERM();
         const target = message.mentions.members.first();
-        if (!target) return message.reply('Usage: `>move @user #voice-channel`');
+        if (!target) return message.reply('Usage: `>move @user [#voice-channel]`');
         if (!target.voice.channel) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ That user is not in a voice channel.')] });
-        const destChannel = message.mentions.channels.first();
-        if (!destChannel || destChannel.type !== ChannelType.GuildVoice) return message.reply('Provide a voice channel: `>move @user #voice-channel`');
+        const destChannel = message.mentions.channels.first() ?? message.member.voice?.channel;
+        if (!destChannel?.isVoiceBased?.()) return message.reply('Provide a voice channel or join one first: `>move @user #voice-channel`');
         await target.voice.setChannel(destChannel, message.author.tag);
         return message.reply({ embeds: [modEmbed(0x57F287, `🔀 **${target.user.tag}** moved to **${destChannel.name}**.`)] });
       }
