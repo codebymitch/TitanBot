@@ -19,6 +19,7 @@ function createSetupEmbed() {
   return new EmbedBuilder()
     .setColor(0x5865F2) // Discord blurple color
     .setTitle('🛠️ Atendimento e Suporte')
+    .setThumbnail('https://images-ext-1.discordapp.net/external/8h1dXavug_ACztUMxYRo-aZMCdIL6o1GkUcN-S9ybWA/https/media.tenor.com/IpTNBgceTUAAAAPo/howl.mp4')
     .setDescription(
       'Clique no botão abaixo para abrir um ticket privado e falar diretamente com a nossa equipe.'
     )

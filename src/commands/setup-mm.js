@@ -19,6 +19,7 @@ function createSetupEmbed() {
   return new EmbedBuilder()
     .setColor(0xE8511A) // Custom orange color
     .setTitle('🛡️ INTERMEDIAÇÃO DE TRADES')
+    .setThumbnail('https://images-ext-1.discordapp.net/external/8h1dXavug_ACztUMxYRo-aZMCdIL6o1GkUcN-S9ybWA/https/media.tenor.com/IpTNBgceTUAAAAPo/howl.mp4')
     .setDescription(
       '> Um middleman (intermediário) irá garantir que tanto o comprador quanto o vendedor cumpram com seus compromissos de forma segura e transparente.'
     )
