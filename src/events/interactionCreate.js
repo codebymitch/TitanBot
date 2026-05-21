@@ -15,7 +15,6 @@ import {
   handleAmountModalSubmit,
   handleCounterpartySelect,
   handleFeePayerSelect,
-  handleFeePayerReset,
   handleRequestMM,
   handleClaimMM,
   handleCompleteTicket,
@@ -262,16 +261,6 @@ export default {
                   await handleCloseTicketCommand(interaction);
                   return;
                 default:
-                  // Handle fee payer selection buttons
-                  if (interaction.customId.startsWith('mm_fee_payer_select_')) {
-                    await handleFeePayerSelect(interaction);
-                    return;
-                  }
-                  // Handle fee payer reset button
-                  if (interaction.customId === 'mm_fee_payer_reset') {
-                    await handleFeePayerReset(interaction);
-                    return;
-                  }
                   // Unknown MM button - silently ignore
                   return;
               }
@@ -351,20 +340,9 @@ export default {
                 case 'mm_counterparty_select':
                   await handleCounterpartySelect(interaction);
                   return;
-                default:
-                  // Unknown MM select menu - silently ignore
+                case 'mm_fee_payer_select':
+                  await handleFeePayerSelect(interaction);
                   return;
-              }
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'select_menu',
-                customId: interaction.customId,
-                handler: 'mm_humano'
-              }, interactionTraceContext));
-              return;
-            }
-          }
-
           const [customId, ...args] = interaction.customId.split(':');
           const selectMenu = client.selectMenus.get(customId);
 
