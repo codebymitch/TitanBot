@@ -254,34 +254,32 @@ function createCounterpartySelectMenu() {
  * Create the fee payer selection embed
  */
 function createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, selectedUserId) {
-  let selectionStatus = '❌ Nenhum selecionado ainda';
-  let selectionMention = '';
-  
-  if (selectedUserId === 'buyer') {
-    selectionStatus = '✅ **Selecionado: Comprador**';
-    selectionMention = buyerDisplay;
-  } else if (selectedUserId === 'seller') {
-    selectionStatus = '✅ **Selecionado: Vendedor**';
-    selectionMention = sellerDisplay;
-  }
+  const selectionStatus = selectedUserId === 'buyer'
+    ? '✅ **Selecionado: Comprador**\n(' + buyerDisplay + ')'
+    : selectedUserId === 'seller'
+      ? '✅ **Selecionado: Vendedor**\n(' + sellerDisplay + ')'
+      : '❌ Nenhum selecionado ainda';
 
   return new EmbedBuilder()
     .setColor(THEME.accent)
     .setTitle('💳 — Atribuição de Função de Pagamento')
     .setDescription(
-      'Selecione qual das duas partes irá pagar a taxa de transação:\n\n' +
-      '> **Comprador:** ' + buyerDisplay + '\n' +
-      '> **Vendedor:** ' + sellerDisplay
+      'Selecione quem irá pagar a taxa de transação.'
     )
     .addFields(
       {
-        name: '📊 Pagador Selecionado',
-        value: selectionStatus + (selectionMention ? '\n(' + selectionMention + ')' : ''),
-        inline: false
+        name: '🔹 Comprador',
+        value: buyerDisplay,
+        inline: true
       },
       {
-        name: '✅ Confirmações Necessárias',
-        value: 'Ambos os usuários devem confirmar a escolha para prosseguir',
+        name: '🔹 Vendedor',
+        value: sellerDisplay,
+        inline: true
+      },
+      {
+        name: '📊 Pagador Selecionado',
+        value: selectionStatus,
         inline: false
       }
     )
@@ -289,26 +287,31 @@ function createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, selectedUserId) 
 }
 
 /**
- * Create the fee payer selection buttons
+ * Create the fee payer selection menu
  */
-function createFeePayerSelectButtons(buyerId, sellerId, buyerDisplay, sellerDisplay, selectedUserId, buyerConfirmed, sellerConfirmed) {
-  const buyerConfirmEmoji = buyerConfirmed ? '✅' : '⭕';
-  const sellerConfirmEmoji = sellerConfirmed ? '✅' : '⭕';
-  
+function createFeePayerSelectMenu(viewerRole, selectedUserId) {
   return new ActionRowBuilder()
     .addComponents(
-      new ButtonBuilder()
-        .setCustomId(WIZARD_IDS.FEE_PAYER_SELECT + '_buyer')
-        .setLabel(buyerConfirmEmoji + ' ' + buyerDisplay)
-        .setStyle(selectedUserId === 'buyer' ? ButtonStyle.Success : ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId(WIZARD_IDS.FEE_PAYER_SELECT + '_seller')
-        .setLabel(sellerConfirmEmoji + ' ' + sellerDisplay)
-        .setStyle(selectedUserId === 'seller' ? ButtonStyle.Success : ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId(WIZARD_IDS.FEE_PAYER_RESET)
-        .setLabel('🔄 Redefinir')
-        .setStyle(ButtonStyle.Danger)
+      new StringSelectMenuBuilder()
+        .setCustomId(WIZARD_IDS.FEE_PAYER_SELECT)
+        .setPlaceholder('Selecione quem paga a taxa...')
+        .addOptions([
+          {
+            label: 'Comprador',
+            description: viewerRole === 'buyer' ? 'Você' : undefined,
+            value: 'buyer',
+            emoji: '🛒',
+            default: selectedUserId === 'buyer'
+          },
+          {
+            label: 'Vendedor',
+            description: viewerRole === 'seller' ? 'Você' : undefined,
+            value: 'seller',
+            emoji: '🏷️',
+            default: selectedUserId === 'seller'
+          }
+        ])
+        .setMaxValues(1)
     );
 }
 
@@ -742,10 +745,6 @@ export async function handleCounterpartySelect(interaction) {
   state.counterparty = selectedMember;
   state.step = 'fee_payer';
   state.feePayerSelected = null;
-  state.feePayerConfirmations = {
-    [userId]: false,
-    [selectedUserId]: false
-  };
 
   // Determine buyer and seller based on role
   const buyer = state.userRole === 'buyer' ? interaction.member : selectedMember;
@@ -753,15 +752,16 @@ export async function handleCounterpartySelect(interaction) {
 
   const buyerDisplay = buyer.user.username;
   const sellerDisplay = seller.user.username;
+  const viewerRole = state.userRole;
 
   await interaction.editReply({
     embeds: [createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, null)],
-    components: [createFeePayerSelectButtons(buyer.id, seller.id, buyerDisplay, sellerDisplay, null, false, false)]
+    components: [createFeePayerSelectMenu(viewerRole, null)]
   });
 }
 
 /**
- * Handle fee payer selection/confirmation
+ * Handle fee payer selection
  */
 export async function handleFeePayerSelect(interaction) {
   await interaction.deferUpdate();
@@ -783,49 +783,22 @@ export async function handleFeePayerSelect(interaction) {
     });
   }
 
-  const customId = interaction.customId;
-  const action = customId.replace(WIZARD_IDS.FEE_PAYER_SELECT + '_', '');
-  
-  const buyer = state.userRole === 'buyer' ? interaction.member : state.counterparty;
-  const seller = state.userRole === 'seller' ? interaction.member : state.counterparty;
-  
-  // Apenas buyer ou seller podem interagir
-  if (userId !== buyer.id && userId !== seller.id) {
+  const selectedUserId = interaction.values?.[0];
+  if (!selectedUserId || !['buyer', 'seller'].includes(selectedUserId)) {
     return interaction.followUp({
-      content: '❌ Apenas o comprador ou vendedor podem fazer esta escolha.',
+      content: '❌ Seleção inválida. Por favor, escolha Comprador ou Vendedor.',
       ephemeral: true
     });
   }
 
-  // Registrar a escolha e confirmação deste usuário
-  if (action === 'buyer') {
-    state.feePayerSelected = 'buyer';
-    state.feePayerConfirmations[userId] = true;
-  } else if (action === 'seller') {
-    state.feePayerSelected = 'seller';
-    state.feePayerConfirmations[userId] = true;
-  }
+  state.feePayerSelected = selectedUserId;
 
-  const buyerDisplay = buyer.user.username;
-  const sellerDisplay = seller.user.username;
-  const buyerConfirmed = state.feePayerConfirmations[buyer.id];
-  const sellerConfirmed = state.feePayerConfirmations[seller.id];
+  userCooldowns.set(userId, Date.now());
 
-  // Se ambos confirmaram a mesma escolha, criar o ticket
-  if (buyerConfirmed && sellerConfirmed && state.feePayerSelected) {
-    userCooldowns.set(userId, Date.now());
-
-    try {
-      await createTicketChannel(interaction, state);
-    } finally {
-      wizardStates.delete(userId);
-    }
-  } else {
-    // Caso contrário, atualizar a mensagem mostrando progresso
-    await interaction.editReply({
-      embeds: [createFeePayerSelectEmbed(buyerDisplay, sellerDisplay, state.feePayerSelected)],
-      components: [createFeePayerSelectButtons(buyer.id, seller.id, buyerDisplay, sellerDisplay, state.feePayerSelected, buyerConfirmed, sellerConfirmed)]
-    });
+  try {
+    await createTicketChannel(interaction, state);
+  } finally {
+    wizardStates.delete(userId);
   }
 }
 

@@ -351,20 +351,9 @@ export default {
                 case 'mm_counterparty_select':
                   await handleCounterpartySelect(interaction);
                   return;
-                default:
-                  // Unknown MM select menu - silently ignore
+                case 'mm_fee_payer_select':
+                  await handleFeePayerSelect(interaction);
                   return;
-              }
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'select_menu',
-                customId: interaction.customId,
-                handler: 'mm_humano'
-              }, interactionTraceContext));
-              return;
-            }
-          }
-
           const [customId, ...args] = interaction.customId.split(':');
           const selectMenu = client.selectMenus.get(customId);
 
