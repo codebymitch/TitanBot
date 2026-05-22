@@ -1,5 +1,5 @@
 import { EmbedBuilder, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
-import { buildPanel, buildEndedPanel, getVoteRequired, fmtDuration } from '../../utils/musicPanel.js';
+import { buildPanel, buildEndedPanel, buildQueueEmptyPanel, getVoteRequired, fmtDuration } from '../../utils/musicPanel.js';
 import { botConfig } from '../../config/botConfig.js';
 
 function getPlayer(interaction) {
@@ -72,10 +72,16 @@ export default [
                     await player.skip();
                     // trackStart or queueEnd event will update the panel
                 } catch {
-                    // Nothing left to skip to — end the session
-                    client.musicPanels?.delete(interaction.guildId);
-                    await player.destroy().catch(() => {});
-                    await interaction.editReply(buildEndedPanel());
+                    // Nothing left to skip to — show empty panel so user can add more
+                    const panel = client.musicPanels?.get(interaction.guildId);
+                    if (panel) panel.isPaused = false;
+                    await interaction.editReply(buildQueueEmptyPanel());
+                    setTimeout(() => {
+                        if (!player.playing) {
+                            client.musicPanels?.delete(interaction.guildId);
+                            player.destroy().catch(() => {});
+                        }
+                    }, 3 * 60_000);
                 }
             } else {
                 await interaction.update(buildPanel(player, votes.size, required));
