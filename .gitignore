@@ -144,3 +144,10 @@ dist
 # Database backup artifacts
 backups/
 *.dump
+
+# Lavalink downloaded plugins (rebuilt on container start)
+lavalink/plugins/
+
+# Cloudflare tunnel logs
+cloudflared.log
+cloudflared_err.log
