@@ -62,8 +62,15 @@ export default [
             if (votes.size >= required) {
                 client.musicVotes.delete(interaction.guildId);
                 await interaction.deferUpdate();
-                await player.skip();
-                // trackStart or queueEnd event will update the panel
+                try {
+                    await player.skip();
+                    // trackStart or queueEnd event will update the panel
+                } catch {
+                    // Nothing left to skip to — end the session
+                    client.musicPanels?.delete(interaction.guildId);
+                    await player.destroy().catch(() => {});
+                    await interaction.editReply(buildEndedPanel());
+                }
             } else {
                 await interaction.update(buildPanel(player, votes.size, required));
             }
