@@ -18,7 +18,7 @@ export default {
         .addSubcommand(sub => sub
             .setName('play')
             .setDescription('Play a song in your voice channel')
-            .addStringOption(o => o.setName('song').setDescription('Song name or YouTube URL').setRequired(true))
+            .addStringOption(o => o.setName('song').setDescription('Song name or URL').setRequired(true))
         )
         .addSubcommand(sub => sub
             .setName('skip')
