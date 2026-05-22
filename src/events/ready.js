@@ -1,6 +1,6 @@
 import { Events } from "discord.js";
 import { logger, startupLog } from "../utils/logger.js";
-import { buildPanel, buildEndedPanel, getVoteRequired } from "../utils/musicPanel.js";
+import { buildPanel, buildEndedPanel, buildQueueEmptyPanel, getVoteRequired } from "../utils/musicPanel.js";
 import { syncFromGuild } from "../utils/presenceSync.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
@@ -66,12 +66,18 @@ export default {
           client.musicVotes?.delete(player.guildId);
           const panel = client.musicPanels?.get(player.guildId);
           if (panel) {
-            client.musicPanels.delete(player.guildId);
+            panel.isPaused = false;
             const channel = client.channels.cache.get(panel.textChannelId);
             const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
-            if (message) await message.edit(buildEndedPanel()).catch(() => {});
+            if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
           }
-          setTimeout(() => { if (!player.playing) player.destroy().catch(() => {}); }, 30_000);
+          // Destroy player after 3 minutes if nothing is added
+          setTimeout(() => {
+            if (!player.playing) {
+              client.musicPanels?.delete(player.guildId);
+              player.destroy().catch(() => {});
+            }
+          }, 3 * 60_000);
         });
 
         startupLog('Lavalink manager initialized');

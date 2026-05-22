@@ -15,16 +15,28 @@ export default [
         async execute(interaction) {
             const client = interaction.client;
             const player = getPlayer(interaction);
+            console.log(`[music_pause] player=${!!player} current=${!!player?.queue.current} voiceChannelId=${player?.voiceChannelId} userVC=${interaction.member?.voice?.channelId}`);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
             if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
 
             const panel = client.musicPanels?.get(interaction.guildId);
             const currentlyPaused = panel?.isPaused ?? player.paused;
             const newPaused = !currentlyPaused;
+            console.log(`[music_pause] player.paused=${player.paused} panel.isPaused=${panel?.isPaused} currentlyPaused=${currentlyPaused} newPaused=${newPaused}`);
             try {
-                if (newPaused) await player.pause();
-                else await player.resume();
-            } catch { /* state already correct */ }
+                if (newPaused) {
+                    await player.pause();
+                    console.log('[music_pause] called player.pause()');
+                } else {
+                    await player.resume();
+                    console.log('[music_pause] called player.resume()');
+                    // Reconnect voice to refresh the UDP session (may drop during silence)
+                    await player.connect();
+                    console.log('[music_pause] reconnected voice');
+                }
+            } catch (e) {
+                console.log('[music_pause] caught error:', e.message);
+            }
             if (panel) panel.isPaused = newPaused;
 
             const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
@@ -86,7 +98,7 @@ export default [
         name: 'music_addtrack',
         async execute(interaction) {
             const player = getPlayer(interaction);
-            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!player) return interaction.reply({ content: 'No active music session.', ephemeral: true });
 
             const modal = new ModalBuilder()
                 .setCustomId('music_addtrack_modal')

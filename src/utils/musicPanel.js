@@ -51,9 +51,26 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
     return { embeds: [embed], components: [row] };
 }
 
-export function buildEndedPanel(reason = 'Queue ended — see you next time!') {
+export function buildQueueEmptyPanel() {
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('music_addtrack')
+            .setLabel('Add Track')
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId('music_stop')
+            .setEmoji('⏹️')
+            .setStyle(ButtonStyle.Danger),
+    );
     return {
-        embeds: [new EmbedBuilder().setColor(0x99AAB5).setDescription(`⏹️ ${reason}`)],
+        embeds: [new EmbedBuilder().setColor(0x99AAB5).setDescription('⏸️ Queue empty — add a track to keep going!')],
+        components: [row],
+    };
+}
+
+export function buildEndedPanel() {
+    return {
+        embeds: [new EmbedBuilder().setColor(0x99AAB5).setDescription('⏹️ Stopped — see you next time!')],
         components: [],
     };
 }

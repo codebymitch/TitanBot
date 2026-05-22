@@ -1,3 +1,5 @@
+import { buildPanel, getVoteRequired } from '../../utils/musicPanel.js';
+
 const skipPattern = /remaster(?:ed)?|\blive\b|\bremix\b|\bkaraoke\b|\btribute\b|\bcover\b/i;
 
 export default {
@@ -6,9 +8,10 @@ export default {
         await interaction.deferReply({ ephemeral: true });
 
         const query = interaction.fields.getTextInputValue('music_track_query');
-        const player = interaction.client.lavalink?.getPlayer(interaction.guildId);
+        const client = interaction.client;
+        const player = client.lavalink?.getPlayer(interaction.guildId);
 
-        if (!player?.queue.current) {
+        if (!player) {
             return interaction.editReply({ content: '❌ No active music session.' });
         }
 
@@ -24,8 +27,13 @@ export default {
         const track = result.tracks.find(t => !skipPattern.test(t.info.title)) ?? result.tracks[0];
         await player.queue.add(track);
 
+        const wasEmpty = !player.queue.current;
+        if (wasEmpty) {
+            await player.play({ paused: false });
+        }
+
         return interaction.editReply({
-            content: `✅ Added to queue: **${track.info.title}** by ${track.info.author}`,
+            content: `✅ Added: **${track.info.title}** by ${track.info.author}${wasEmpty ? ' — starting now!' : ''}`,
         });
     },
 };
