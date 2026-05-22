@@ -1,5 +1,6 @@
 import { EmbedBuilder, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { buildPanel, buildEndedPanel, getVoteRequired, fmtDuration } from '../../utils/musicPanel.js';
+import { botConfig } from '../../config/botConfig.js';
 
 function getPlayer(interaction) {
     return interaction.client.lavalink?.getPlayer(interaction.guildId);
@@ -7,6 +8,10 @@ function getPlayer(interaction) {
 
 function inVC(interaction, player) {
     return interaction.member?.voice?.channelId === player.voiceChannelId;
+}
+
+function isOwner(interaction) {
+    return botConfig.commands.owners.includes(interaction.user.id);
 }
 
 export default [
@@ -17,7 +22,7 @@ export default [
             const player = getPlayer(interaction);
             console.log(`[music_pause] player=${!!player} current=${!!player?.queue.current} voiceChannelId=${player?.voiceChannelId} userVC=${interaction.member?.voice?.channelId}`);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-            if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+            if (!inVC(interaction, player) && !isOwner(interaction)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
 
             const panel = client.musicPanels?.get(interaction.guildId);
             const currentlyPaused = panel?.isPaused ?? player.paused;
@@ -47,7 +52,7 @@ export default [
             const client = interaction.client;
             const player = getPlayer(interaction);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-            if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+            if (!inVC(interaction, player) && !isOwner(interaction)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
 
             if (!client.musicVotes.has(interaction.guildId)) client.musicVotes.set(interaction.guildId, new Set());
             const votes = client.musicVotes.get(interaction.guildId);
@@ -57,6 +62,7 @@ export default [
             }
 
             votes.add(interaction.user.id);
+            if (isOwner(interaction)) votes.add(`${interaction.user.id}_owner_weight`);
             const required = getVoteRequired(player, client);
 
             if (votes.size >= required) {
@@ -82,7 +88,7 @@ export default [
             const client = interaction.client;
             const player = getPlayer(interaction);
             if (!player) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-            if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+            if (!inVC(interaction, player) && !isOwner(interaction)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
             const panel = client.musicPanels?.get(interaction.guildId);
             if (panel?.requesterId && interaction.user.id !== panel.requesterId) {
                 return interaction.reply({ content: '❌ Only the person who started the music can stop it.', ephemeral: true });
