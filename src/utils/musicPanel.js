@@ -47,6 +47,7 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
     const bar = '▬'.repeat(filled) + '🔘' + '▬'.repeat(13 - filled);
 
     const footerParts = [
+        '⚠️ Beta',
         isPaused ? '⏸️ Paused' : '▶️ Playing',
         `🔊 ${vol}%`,
         queueLen ? `${queueLen} up next` : 'No queue',
@@ -132,7 +133,7 @@ export function buildQueueEmptyPanel() {
             .setStyle(ButtonStyle.Danger),
     );
     return {
-        embeds: [new EmbedBuilder().setColor(0x99AAB5).setDescription('⏸️ Queue empty — add a track to keep going!')],
+        embeds: [new EmbedBuilder().setColor(0x99AAB5).setDescription('⏸️ Queue empty — add a track to keep going!\n-# ⚠️ Music is in beta — may be unstable')],
         components: [row],
     };
 }
