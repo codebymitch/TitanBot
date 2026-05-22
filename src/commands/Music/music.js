@@ -16,7 +16,7 @@ export default {
         .addSubcommand(sub => sub
             .setName('play')
             .setDescription('Play a song in your voice channel')
-            .addStringOption(o => o.setName('song').setDescription('Song name or URL').setRequired(true))
+            .addStringOption(o => o.setName('song').setDescription('Song name, URL, or playlist URL').setRequired(true))
         )
         .addSubcommand(sub => sub
             .setName('panel')
@@ -56,10 +56,38 @@ export default {
                 return InteractionHelper.safeEditReply(interaction, { embeds: [errorEmbed('Search failed. Try a different query.')] });
             }
 
+            const wasPlaying = player.playing;
+
+            // ── Playlist ──────────────────────────────────────────────
+            if (result.loadType === 'playlist') {
+                const tracks = result.tracks;
+                await player.queue.add(tracks);
+                if (!player.playing) await player.play({ paused: false });
+
+                const playlistName = result.playlist?.name ?? 'Playlist';
+
+                if (wasPlaying) {
+                    return InteractionHelper.safeEditReply(interaction, {
+                        embeds: [createEmbed({
+                            title: '✅ Playlist Added to Queue',
+                            description: `**${playlistName}**\n📋 ${tracks.length} tracks added`,
+                            color: 'blurple',
+                            thumbnail: tracks[0]?.info?.artworkUrl ?? null,
+                        })],
+                    });
+                }
+
+                const required = getVoteRequired(player, client);
+                const msg = await interaction.editReply(buildPanel(player, 0, required, false, null));
+                client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, voiceChannelId: interaction.member.voice.channelId, requesterId: interaction.user.id, isPaused: false, activeFilter: null });
+                await interaction.followUp({ content: `✅ Loaded **${playlistName}** — ${tracks.length} tracks queued!\n⚠️ **Music is in beta** — playback may be unstable.`, ephemeral: true });
+                return;
+            }
+
+            // ── Single track ──────────────────────────────────────────
             const track = result.tracks.find(t => !skipPattern.test(t.info.title) && !isPreview(t))
                 ?? result.tracks.find(t => !isPreview(t))
                 ?? result.tracks[0];
-            const wasPlaying = player.playing;
             await player.queue.add(track);
             if (!player.playing) await player.play({ paused: false });
 

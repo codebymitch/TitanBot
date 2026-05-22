@@ -27,6 +27,21 @@ export default {
             return interaction.editReply({ content: '❌ Search failed. Try a different query.' });
         }
 
+        // Playlist — add all tracks directly, no picker needed
+        if (result.loadType === 'playlist') {
+            await player.queue.add(result.tracks);
+            const wasEmpty = !player.queue.current;
+            if (wasEmpty) {
+                await player.connect();
+                await player.play({ paused: false });
+            }
+            const playlistName = result.playlist?.name ?? 'Playlist';
+            return interaction.editReply({
+                content: `✅ Added **${result.tracks.length} tracks** from **${playlistName}** to the queue${wasEmpty ? ' — starting now!' : ''}`,
+                components: [],
+            });
+        }
+
         // Filter non-preview, prefer no-skip-pattern tracks, take top 5
         const nonPreview = result.tracks.filter(t => !isPreview(t));
         const pool = nonPreview.length ? nonPreview : result.tracks;
