@@ -75,8 +75,8 @@ export default {
             }
 
             const required = getVoteRequired(player, client);
-            const msg = await interaction.editReply(buildPanel(player, 0, required, false));
-            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, requesterId: interaction.user.id, isPaused: false });
+            const msg = await interaction.editReply(buildPanel(player, 0, required, false, null));
+            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, requesterId: interaction.user.id, isPaused: false, activeFilter: null });
         }
 
         if (sub === 'panel') {
@@ -88,8 +88,8 @@ export default {
             await InteractionHelper.safeDefer(interaction, {});
             const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
             const required = getVoteRequired(player, client);
-            const msg = await interaction.editReply(buildPanel(player, votes, required));
-            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId });
+            const msg = await interaction.editReply(buildPanel(player, votes, required, false, null));
+            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, activeFilter: null });
         }
     },
 };

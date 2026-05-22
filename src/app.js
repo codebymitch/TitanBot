@@ -77,8 +77,9 @@ class TitanBot extends Client {
     this.cooldowns = new Collection();
     this.db = null;
     this.lavalink = null;
-    this.musicPanels = new Map(); // guildId -> { messageId, textChannelId }
-    this.musicVotes = new Map();  // guildId -> Set<userId>
+    this.musicPanels = new Map();       // guildId -> { messageId, textChannelId, requesterId, isPaused, activeFilter, progressInterval, emptyVCTimeout }
+    this.musicVotes = new Map();        // guildId -> Set<userId>
+    this.musicSearchResults = new Map(); // guildId:userId -> Track[]
     this.rest = new REST({ version: '10' }).setToken(config.bot.token);
   }
 

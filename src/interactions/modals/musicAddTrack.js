@@ -1,4 +1,5 @@
-import { buildPanel, buildQueueEmptyPanel, getVoteRequired } from '../../utils/musicPanel.js';
+import { ActionRowBuilder, StringSelectMenuBuilder } from 'discord.js';
+import { buildPanel, getVoteRequired, fmtDuration } from '../../utils/musicPanel.js';
 
 const skipPattern = /remaster(?:ed)?|\blive\b|\bremix\b|\bkaraoke\b|\btribute\b|\bcover\b/i;
 
@@ -15,9 +16,7 @@ export default {
         const client = interaction.client;
         const player = client.lavalink?.getPlayer(interaction.guildId);
 
-        if (!player) {
-            return interaction.editReply({ content: '❌ No active music session.' });
-        }
+        if (!player) return interaction.editReply({ content: '❌ No active music session.' });
 
         const result = await player.search({ query }, interaction.user);
 
@@ -28,28 +27,28 @@ export default {
             return interaction.editReply({ content: '❌ Search failed. Try a different query.' });
         }
 
-        const track = result.tracks.find(t => !skipPattern.test(t.info.title) && !isPreview(t))
-            ?? result.tracks.find(t => !isPreview(t))
-            ?? result.tracks[0];
-        await player.queue.add(track);
+        // Filter non-preview, prefer no-skip-pattern tracks, take top 5
+        const nonPreview = result.tracks.filter(t => !isPreview(t));
+        const pool = nonPreview.length ? nonPreview : result.tracks;
+        const options = pool.slice(0, 5);
 
-        const wasEmpty = !player.queue.current;
-        if (wasEmpty) {
-            await player.connect();
-            await player.play({ paused: false });
-            // Update the panel to show Now Playing (trackStart event may race on resume from idle)
-            setTimeout(async () => {
-                const panel = client.musicPanels?.get(interaction.guildId);
-                if (!panel || !player.queue.current) return;
-                const required = getVoteRequired(player, client);
-                const channel = client.channels.cache.get(panel.textChannelId);
-                const msg = await channel?.messages.fetch(panel.messageId).catch(() => null);
-                if (msg) await msg.edit(buildPanel(player, 0, required, false)).catch(() => {});
-            }, 500);
-        }
+        // Store results for the select menu handler (expires in 60s)
+        const key = `${interaction.guildId}:${interaction.user.id}`;
+        client.musicSearchResults.set(key, options);
+        setTimeout(() => client.musicSearchResults.delete(key), 60_000);
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('music_search_select')
+            .setPlaceholder('Choose a track to add…')
+            .addOptions(options.map((t, i) => ({
+                label: t.info.title.slice(0, 100),
+                description: `${t.info.author} • ${fmtDuration(t.info.duration)}`.slice(0, 100),
+                value: String(i),
+            })));
 
         return interaction.editReply({
-            content: `✅ Added: **${track.info.title}** by ${track.info.author}${wasEmpty ? ' — starting now!' : ''}`,
+            content: `🔍 **Results for "${query}"** — pick one:`,
+            components: [new ActionRowBuilder().addComponents(menu)],
         });
     },
 };

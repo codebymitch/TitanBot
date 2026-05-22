@@ -1,11 +1,18 @@
 import { Events } from "discord.js";
 import { logger, startupLog } from "../utils/logger.js";
-import { buildPanel, buildEndedPanel, buildQueueEmptyPanel, getVoteRequired } from "../utils/musicPanel.js";
+import { buildPanel, buildQueueEmptyPanel, getVoteRequired } from "../utils/musicPanel.js";
 import { syncFromGuild } from "../utils/presenceSync.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { loadAndScheduleTempRoles } from "../services/tempRoleService.js";
 import { loadAndScheduleTempBans } from "../services/tempbanService.js";
+
+function clearPanelInterval(panel) {
+    if (panel?.progressInterval) {
+        clearInterval(panel.progressInterval);
+        panel.progressInterval = null;
+    }
+}
 
 export default {
   name: Events.ClientReady,
@@ -55,11 +62,28 @@ export default {
           const panel = client.musicPanels?.get(player.guildId);
           if (!panel) return;
           panel.isPaused = false;
+
+          // Clear any old progress interval before starting a new one
+          clearPanelInterval(panel);
+
           const channel = client.channels.cache.get(panel.textChannelId);
           const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
           if (!message) return;
+
           const required = getVoteRequired(player, client);
-          await message.edit(buildPanel(player, 0, required, false)).catch(() => {});
+          await message.edit(buildPanel(player, 0, required, false, panel.activeFilter)).catch(() => {});
+
+          // Live progress bar — update panel every 30s
+          panel.progressInterval = setInterval(async () => {
+            const currentPanel = client.musicPanels?.get(player.guildId);
+            if (!currentPanel || !player.queue.current) return clearPanelInterval(currentPanel);
+            const ch = client.channels.cache.get(currentPanel.textChannelId);
+            const msg = await ch?.messages.fetch(currentPanel.messageId).catch(() => null);
+            if (!msg) return clearPanelInterval(currentPanel);
+            const req = getVoteRequired(player, client);
+            const votes = client.musicVotes?.get(player.guildId)?.size ?? 0;
+            await msg.edit(buildPanel(player, votes, req, currentPanel.isPaused, currentPanel.activeFilter)).catch(() => {});
+          }, 30_000);
         });
 
         client.lavalink.on('trackEnd', async (player, track, payload) => {
@@ -67,9 +91,11 @@ export default {
           if (reason !== 'finished' && reason !== 'replaced') {
             logger.warn(`Track ended unexpectedly in guild ${player.guildId}: "${track?.info?.title}" — reason: ${reason}`);
           }
+          // Clear progress interval on any track end
+          const panel = client.musicPanels?.get(player.guildId);
+          clearPanelInterval(panel);
+
           if (reason === 'loadFailed') {
-            // Belt-and-suspenders: trackError should also fire, but handle here if it doesn't
-            const panel = client.musicPanels?.get(player.guildId);
             if (panel) {
               const channel = client.channels.cache.get(panel.textChannelId);
               const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
@@ -83,12 +109,12 @@ export default {
         client.lavalink.on('trackError', async (player, track, payload) => {
           const reason = payload?.exception?.message || payload?.exception?.cause || payload?.error || 'unknown';
           logger.warn(`Track error in guild ${player.guildId}: "${track?.info?.title}" — ${reason} | uri: ${track?.info?.uri}`);
+          const panel = client.musicPanels?.get(player.guildId);
+          clearPanelInterval(panel);
           try {
             await player.skip();
           } catch {
-            // No next track — fall through to queueEnd or clean up
             client.musicVotes?.delete(player.guildId);
-            const panel = client.musicPanels?.get(player.guildId);
             if (panel) {
               panel.isPaused = false;
               const channel = client.channels.cache.get(panel.textChannelId);
@@ -102,6 +128,7 @@ export default {
         client.lavalink.on('queueEnd', async (player) => {
           client.musicVotes?.delete(player.guildId);
           const panel = client.musicPanels?.get(player.guildId);
+          clearPanelInterval(panel);
           if (panel) {
             panel.isPaused = false;
             const channel = client.channels.cache.get(panel.textChannelId);
@@ -111,6 +138,8 @@ export default {
           // Destroy player after 3 minutes if nothing is added
           setTimeout(() => {
             if (!player.playing) {
+              const p = client.musicPanels?.get(player.guildId);
+              clearPanelInterval(p);
               client.musicPanels?.delete(player.guildId);
               player.destroy().catch(() => {});
             }
@@ -124,5 +153,3 @@ export default {
     }
   },
 };
-
-

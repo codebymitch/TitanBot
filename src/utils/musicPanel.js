@@ -15,7 +15,25 @@ export function getVoteRequired(player, client) {
     return Math.min(3, Math.max(1, humanCount));
 }
 
-export function buildPanel(player, voteCount = 0, required = 3, isPaused = false) {
+const FX_META = {
+    null:       { emoji: '🎵', label: 'FX: Off',     style: ButtonStyle.Secondary },
+    bassboost:  { emoji: '🎸', label: 'Bass Boost',  style: ButtonStyle.Success },
+    nightcore:  { emoji: '⚡', label: 'Nightcore',   style: ButtonStyle.Success },
+    vaporwave:  { emoji: '🌊', label: 'Vaporwave',   style: ButtonStyle.Success },
+    '8d':       { emoji: '🔄', label: '8D Audio',    style: ButtonStyle.Success },
+};
+
+export const FILTER_CYCLE = [null, 'bassboost', 'nightcore', 'vaporwave', '8d'];
+
+export async function applyFilter(player, filterName) {
+    await player.filterManager.resetFilters();
+    if (filterName === 'nightcore')  await player.filterManager.toggleNightcore();
+    else if (filterName === 'vaporwave') await player.filterManager.toggleVaporwave();
+    else if (filterName === '8d')    await player.filterManager.toggleRotation().catch(() => {});
+    else if (filterName === 'bassboost') await player.filterManager.setEQPreset('BassboostMedium');
+}
+
+export function buildPanel(player, voteCount = 0, required = 3, isPaused = false, activeFilter = null) {
     const track = player.queue.current;
     const pos = player.position ?? 0;
     const dur = track.info.duration;
@@ -35,6 +53,7 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
     ];
     if (repeatMode === 'track') footerParts.push('🔂 Track loop');
     else if (repeatMode === 'queue') footerParts.push('🔁 Queue loop');
+    if (activeFilter) footerParts.push(FX_META[activeFilter]?.label ?? '');
 
     const embed = new EmbedBuilder()
         .setColor(0x5865F2)
@@ -48,6 +67,8 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
         .setFooter({ text: footerParts.join(' • ') });
 
     if (track.info.artworkUrl) embed.setThumbnail(track.info.artworkUrl);
+
+    const fxMeta = FX_META[activeFilter] ?? FX_META['null'];
 
     const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -86,13 +107,14 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
             .setEmoji('⏮️')
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
-            .setCustomId('music_voldown')
-            .setEmoji('🔉')
-            .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-            .setCustomId('music_volup')
+            .setCustomId('music_volume')
             .setEmoji('🔊')
             .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('music_filter')
+            .setEmoji(fxMeta.emoji)
+            .setLabel(fxMeta.label)
+            .setStyle(fxMeta.style),
     );
 
     return { embeds: [embed], components: [row1, row2] };

@@ -1,5 +1,5 @@
 import { EmbedBuilder, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
-import { buildPanel, buildQueueEmptyPanel, getVoteRequired, fmtDuration } from '../../utils/musicPanel.js';
+import { buildPanel, buildQueueEmptyPanel, getVoteRequired, fmtDuration, FILTER_CYCLE, applyFilter } from '../../utils/musicPanel.js';
 import { botConfig } from '../../config/botConfig.js';
 
 function getPlayer(interaction) {
@@ -22,6 +22,15 @@ function vcCheck(interaction, player) {
     return true;
 }
 
+function panelArgs(client, player, guildId) {
+    const panel = client.musicPanels?.get(guildId);
+    const votes = client.musicVotes?.get(guildId)?.size ?? 0;
+    const required = getVoteRequired(player, client);
+    const isPaused = panel?.isPaused ?? player.paused;
+    const activeFilter = panel?.activeFilter ?? null;
+    return { panel, votes, required, isPaused, activeFilter };
+}
+
 export default [
     {
         name: 'music_pause',
@@ -31,7 +40,7 @@ export default [
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
             if (!vcCheck(interaction, player)) return;
 
-            const panel = client.musicPanels?.get(interaction.guildId);
+            const { panel, votes, required, activeFilter } = panelArgs(client, player, interaction.guildId);
             const currentlyPaused = panel?.isPaused ?? player.paused;
             const newPaused = !currentlyPaused;
             try {
@@ -40,9 +49,7 @@ export default [
             } catch {}
             if (panel) panel.isPaused = newPaused;
 
-            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
-            const required = getVoteRequired(player, client);
-            await interaction.update(buildPanel(player, votes, required, newPaused));
+            await interaction.update(buildPanel(player, votes, required, newPaused, activeFilter));
         },
     },
     {
@@ -69,9 +76,7 @@ export default [
                 await interaction.deferUpdate();
                 try {
                     await player.skip();
-                    // trackStart or queueEnd event will update the panel
                 } catch {
-                    // Nothing left to skip to — show empty panel so user can add more
                     const panel = client.musicPanels?.get(interaction.guildId);
                     if (panel) panel.isPaused = false;
                     await interaction.editReply(buildQueueEmptyPanel());
@@ -83,7 +88,8 @@ export default [
                     }, 3 * 60_000);
                 }
             } else {
-                await interaction.update(buildPanel(player, votes.size, required));
+                const { activeFilter } = panelArgs(client, player, interaction.guildId);
+                await interaction.update(buildPanel(player, votes.size, required, false, activeFilter));
             }
         },
     },
@@ -99,6 +105,8 @@ export default [
                 return interaction.reply({ content: '❌ Only the person who started the music can stop it.', ephemeral: true });
             }
 
+            if (panel?.progressInterval) clearInterval(panel.progressInterval);
+            if (panel?.emptyVCTimeout) clearTimeout(panel.emptyVCTimeout);
             client.musicVotes?.delete(interaction.guildId);
             client.musicPanels?.delete(interaction.guildId);
             await player.destroy();
@@ -171,15 +179,11 @@ export default [
             if (!vcCheck(interaction, player)) return;
 
             const modes = ['off', 'track', 'queue'];
-            const current = player.repeatMode ?? 'off';
-            const next = modes[(modes.indexOf(current) + 1) % modes.length];
+            const next = modes[(modes.indexOf(player.repeatMode ?? 'off') + 1) % modes.length];
             await player.setRepeatMode(next);
 
-            const panel = client.musicPanels?.get(interaction.guildId);
-            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
-            const required = getVoteRequired(player, client);
-            const isPaused = panel?.isPaused ?? player.paused;
-            await interaction.update(buildPanel(player, votes, required, isPaused));
+            const { panel, votes, required, isPaused, activeFilter } = panelArgs(client, player, interaction.guildId);
+            await interaction.update(buildPanel(player, votes, required, isPaused, activeFilter));
         },
     },
     {
@@ -188,10 +192,7 @@ export default [
             const player = getPlayer(interaction);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
             if (!vcCheck(interaction, player)) return;
-
-            if (!player.queue.tracks.length) {
-                return interaction.reply({ content: '❌ No tracks in queue to shuffle.', ephemeral: true });
-            }
+            if (!player.queue.tracks.length) return interaction.reply({ content: '❌ No tracks in queue to shuffle.', ephemeral: true });
 
             await player.queue.shuffle();
             await interaction.reply({ content: '🔀 Queue shuffled!', ephemeral: true });
@@ -210,46 +211,51 @@ export default [
 
             const panel = client.musicPanels?.get(interaction.guildId);
             if (panel) panel.isPaused = false;
-
-            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
-            const required = getVoteRequired(player, client);
-            await interaction.update(buildPanel(player, votes, required, false));
+            const { votes, required, activeFilter } = panelArgs(client, player, interaction.guildId);
+            await interaction.update(buildPanel(player, votes, required, false, activeFilter));
         },
     },
     {
-        name: 'music_voldown',
+        name: 'music_volume',
+        async execute(interaction) {
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
+
+            const modal = new ModalBuilder()
+                .setCustomId('music_volume_modal')
+                .setTitle('Set Volume')
+                .addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('music_volume_value')
+                            .setLabel(`Volume 0–200  (current: ${player.volume ?? 100}%)`)
+                            .setStyle(TextInputStyle.Short)
+                            .setRequired(true)
+                            .setPlaceholder('e.g. 100')
+                    )
+                );
+
+            await interaction.showModal(modal);
+        },
+    },
+    {
+        name: 'music_filter',
         async execute(interaction) {
             const client = interaction.client;
             const player = getPlayer(interaction);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
             if (!vcCheck(interaction, player)) return;
 
-            const newVol = Math.max(0, (player.volume ?? 100) - 20);
-            await player.setVolume(newVol);
-
             const panel = client.musicPanels?.get(interaction.guildId);
-            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
-            const required = getVoteRequired(player, client);
-            const isPaused = panel?.isPaused ?? player.paused;
-            await interaction.update(buildPanel(player, votes, required, isPaused));
-        },
-    },
-    {
-        name: 'music_volup',
-        async execute(interaction) {
-            const client = interaction.client;
-            const player = getPlayer(interaction);
-            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-            if (!vcCheck(interaction, player)) return;
+            const current = panel?.activeFilter ?? null;
+            const next = FILTER_CYCLE[(FILTER_CYCLE.indexOf(current) + 1) % FILTER_CYCLE.length];
 
-            const newVol = Math.min(200, (player.volume ?? 100) + 20);
-            await player.setVolume(newVol);
+            await applyFilter(player, next);
+            if (panel) panel.activeFilter = next;
 
-            const panel = client.musicPanels?.get(interaction.guildId);
-            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
-            const required = getVoteRequired(player, client);
-            const isPaused = panel?.isPaused ?? player.paused;
-            await interaction.update(buildPanel(player, votes, required, isPaused));
+            const { votes, required, isPaused } = panelArgs(client, player, interaction.guildId);
+            await interaction.update(buildPanel(player, votes, required, isPaused, next));
         },
     },
 ];

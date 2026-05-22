@@ -8,7 +8,7 @@ import {
 } from '../utils/database.js';
 import { sanitizeInput } from '../utils/sanitization.js';
 import { logger } from '../utils/logger.js';
-import { buildPanel, getVoteRequired } from '../utils/musicPanel.js';
+import { buildPanel, buildQueueEmptyPanel, getVoteRequired } from '../utils/musicPanel.js';
 
 const channelCreationCooldown = new Map();
 const VOICE_CREATE_COOLDOWN_MS = 2000;
@@ -25,16 +25,37 @@ export default {
         // Update music panel skip button when VC membership changes
         const guildId = oldState.guild?.id ?? newState.guild?.id;
         const player = client.lavalink?.getPlayer(guildId);
-        if (player?.queue.current) {
+        if (player) {
             const botVC = player.voiceChannelId;
             if (oldState.channelId === botVC || newState.channelId === botVC) {
                 const panel = client.musicPanels?.get(guildId);
                 if (panel) {
-                    const votes = client.musicVotes?.get(guildId)?.size ?? 0;
-                    const required = getVoteRequired(player, client);
-                    const channel = client.channels.cache.get(panel.textChannelId);
-                    const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
-                    if (message) await message.edit(buildPanel(player, votes, required, panel.isPaused)).catch(() => {});
+                    // Update skip count when VC membership changes (only if a song is playing)
+                    if (player.queue.current) {
+                        const votes = client.musicVotes?.get(guildId)?.size ?? 0;
+                        const required = getVoteRequired(player, client);
+                        const channel = client.channels.cache.get(panel.textChannelId);
+                        const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
+                        if (message) await message.edit(buildPanel(player, votes, required, panel.isPaused, panel.activeFilter)).catch(() => {});
+                    }
+
+                    // Auto-disconnect: if VC is empty start a 2-min timer; cancel it if someone rejoins
+                    const vc = client.channels.cache.get(botVC);
+                    const humanCount = vc?.members?.filter(m => !m.user.bot)?.size ?? 0;
+                    if (humanCount === 0 && !panel.emptyVCTimeout) {
+                        panel.emptyVCTimeout = setTimeout(async () => {
+                            const ch = client.channels.cache.get(panel.textChannelId);
+                            const msg = await ch?.messages.fetch(panel.messageId).catch(() => null);
+                            if (msg) await msg.edit(buildQueueEmptyPanel()).catch(() => {});
+                            if (panel.progressInterval) clearInterval(panel.progressInterval);
+                            client.musicVotes?.delete(guildId);
+                            client.musicPanels?.delete(guildId);
+                            await player.destroy().catch(() => {});
+                        }, 2 * 60_000);
+                    } else if (humanCount > 0 && panel.emptyVCTimeout) {
+                        clearTimeout(panel.emptyVCTimeout);
+                        panel.emptyVCTimeout = null;
+                    }
                 }
             }
         }
