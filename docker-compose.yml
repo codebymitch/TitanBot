@@ -59,7 +59,6 @@ services:
       - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
     volumes:
       - ./lavalink/application.yml:/opt/Lavalink/application.yml
-      - ./lavalink/plugins:/opt/Lavalink/plugins
     networks:
       - titan-network
     healthcheck:

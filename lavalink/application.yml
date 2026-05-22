@@ -4,7 +4,7 @@ server:
 
 lavalink:
   plugins:
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.3"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.1"
       repository: "https://maven.lavalink.dev/releases"
   server:
     password: "${LAVALINK_SERVER_PASSWORD:youshallnotpass}"
@@ -47,7 +47,6 @@ plugins:
     clients:
       - MUSIC
       - WEB
-      - ANDROID
 
 metrics:
   prometheus:
