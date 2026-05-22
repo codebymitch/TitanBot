@@ -1,5 +1,6 @@
 import { Events } from "discord.js";
 import { logger, startupLog } from "../utils/logger.js";
+import { buildPanel, buildEndedPanel, getVoteRequired } from "../utils/musicPanel.js";
 import { syncFromGuild } from "../utils/presenceSync.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
@@ -48,9 +49,30 @@ export default {
         await client.lavalink.init(client.user);
         client.lavalink.nodeManager.on('connect', node => startupLog(`Lavalink node connected: ${node.id}`));
         client.lavalink.nodeManager.on('error', (node, err) => logger.error(`Lavalink [${node.id}]:`, err?.message));
-        client.lavalink.on('queueEnd', player => {
+
+        client.lavalink.on('trackStart', async (player) => {
+          client.musicVotes?.delete(player.guildId);
+          const panel = client.musicPanels?.get(player.guildId);
+          if (!panel) return;
+          const channel = client.channels.cache.get(panel.textChannelId);
+          const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
+          if (!message) return;
+          const required = getVoteRequired(player, client);
+          await message.edit(buildPanel(player, 0, required)).catch(() => {});
+        });
+
+        client.lavalink.on('queueEnd', async (player) => {
+          client.musicVotes?.delete(player.guildId);
+          const panel = client.musicPanels?.get(player.guildId);
+          if (panel) {
+            client.musicPanels.delete(player.guildId);
+            const channel = client.channels.cache.get(panel.textChannelId);
+            const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
+            if (message) await message.edit(buildEndedPanel()).catch(() => {});
+          }
           setTimeout(() => { if (!player.playing) player.destroy().catch(() => {}); }, 30_000);
         });
+
         startupLog('Lavalink manager initialized');
       }
     } catch (error) {

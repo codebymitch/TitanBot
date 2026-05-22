@@ -1,90 +1,123 @@
-import { EmbedBuilder } from 'discord.js';
-import { skipSong, stopMusic, togglePause, getQueue, buildControls } from '../../services/musicService.js';
+import { EmbedBuilder, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { buildPanel, buildEndedPanel, getVoteRequired, fmtDuration } from '../../utils/musicPanel.js';
+
+function getPlayer(interaction) {
+    return interaction.client.lavalink?.getPlayer(interaction.guildId);
+}
+
+function inVC(interaction, player) {
+    return interaction.member?.voice?.channelId === player.voiceChannelId;
+}
 
 export default [
     {
         name: 'music_pause',
         async execute(interaction) {
-            const queue = getQueue(interaction.guildId);
-            if (!queue?.current) {
-                return interaction.reply({ content: 'Nothing is playing right now.', ephemeral: true });
-            }
-            if (interaction.member?.voice?.channelId !== queue.voiceChannel.id) {
-                return interaction.reply({ content: 'You need to be in the same voice channel.', ephemeral: true });
-            }
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
 
-            const nowPaused = togglePause(interaction.guildId);
-            await interaction.update({ components: [buildControls(nowPaused)] });
+            await player.pause(!player.paused);
+            const votes = interaction.client.musicVotes?.get(interaction.guildId)?.size ?? 0;
+            const required = getVoteRequired(player, interaction.client);
+            await interaction.update(buildPanel(player, votes, required));
         },
     },
     {
         name: 'music_skip',
         async execute(interaction) {
-            const queue = getQueue(interaction.guildId);
-            if (!queue?.current) {
-                return interaction.reply({ content: 'Nothing is playing right now.', ephemeral: true });
-            }
-            if (interaction.member?.voice?.channelId !== queue.voiceChannel.id) {
-                return interaction.reply({ content: 'You need to be in the same voice channel.', ephemeral: true });
+            const client = interaction.client;
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+
+            if (!client.musicVotes.has(interaction.guildId)) client.musicVotes.set(interaction.guildId, new Set());
+            const votes = client.musicVotes.get(interaction.guildId);
+
+            if (votes.has(interaction.user.id)) {
+                return interaction.reply({ content: 'You already voted to skip.', ephemeral: true });
             }
 
-            skipSong(interaction.guildId);
+            votes.add(interaction.user.id);
+            const required = getVoteRequired(player, client);
 
-            await interaction.update({
-                embeds: [new EmbedBuilder().setColor(0xFEE75C).setDescription('⏭ Skipped.')],
-                components: [],
-            });
+            if (votes.size >= required) {
+                client.musicVotes.delete(interaction.guildId);
+                await interaction.deferUpdate();
+                await player.skip();
+                // trackStart or queueEnd event will update the panel
+            } else {
+                await interaction.update(buildPanel(player, votes.size, required));
+            }
         },
     },
     {
         name: 'music_stop',
         async execute(interaction) {
-            const queue = getQueue(interaction.guildId);
-            if (!queue) {
-                return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-            }
-            if (interaction.member?.voice?.channelId !== queue.voiceChannel.id) {
-                return interaction.reply({ content: 'You need to be in the same voice channel.', ephemeral: true });
-            }
+            const client = interaction.client;
+            const player = getPlayer(interaction);
+            if (!player) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
 
-            stopMusic(interaction.guildId);
+            client.musicVotes?.delete(interaction.guildId);
+            client.musicPanels?.delete(interaction.guildId);
+            await player.destroy();
 
             await interaction.update({
-                embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('⏹ Stopped and queue cleared.')],
+                embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('⏹️ Stopped and queue cleared.')],
                 components: [],
             });
         },
     },
     {
+        name: 'music_addtrack',
+        async execute(interaction) {
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+
+            const modal = new ModalBuilder()
+                .setCustomId('music_addtrack_modal')
+                .setTitle('Add Track to Queue')
+                .addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('music_track_query')
+                            .setLabel('Song name or URL')
+                            .setStyle(TextInputStyle.Short)
+                            .setRequired(true)
+                            .setPlaceholder('e.g. zombie the cranberries')
+                    )
+                );
+
+            await interaction.showModal(modal);
+        },
+    },
+    {
         name: 'music_queue',
         async execute(interaction) {
-            const queue = getQueue(interaction.guildId);
-            if (!queue) {
-                return interaction.reply({ content: 'No active queue for this server.', ephemeral: true });
-            }
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
 
-            const lines = [];
-            if (queue.current) {
-                lines.push(`**Now Playing:** [${queue.current.title}](${queue.current.url}) \`${queue.current.duration}\``);
-            }
-            if (queue.songs.length) {
-                lines.push('\n**Up Next:**');
-                queue.songs.slice(0, 10).forEach((s, i) => {
-                    lines.push(`**${i + 1}.** [${s.title}](${s.url}) \`${s.duration}\``);
-                });
-                if (queue.songs.length > 10) {
-                    lines.push(`*...and ${queue.songs.length - 10} more*`);
-                }
+            const current = player.queue.current;
+            const upcoming = player.queue.tracks.slice(0, 10);
+
+            let desc = `**Now Playing:**\n**[${current.info.title}](${current.info.uri})**\n┗ 🕒 \`${fmtDuration(current.info.duration)}\` • 📺 ${current.info.author}`;
+
+            if (upcoming.length) {
+                desc += '\n\n**Up Next:**\n' + upcoming.map((t, i) =>
+                    `**${i + 1}.** [${t.info.title}](${t.info.uri}) — \`${fmtDuration(t.info.duration)}\``
+                ).join('\n');
+                const rem = player.queue.tracks.length - upcoming.length;
+                if (rem > 0) desc += `\n*...and ${rem} more*`;
+            } else {
+                desc += '\n\n*Queue is empty — use Add Track to queue more songs*';
             }
 
             await interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor(0xFF0000)
-                        .setTitle('🎵 Music Queue')
-                        .setDescription(lines.join('\n') || 'The queue is empty.')
-                        .setTimestamp(),
-                ],
+                embeds: [new EmbedBuilder()
+                    .setColor(0x5865F2)
+                    .setTitle(`🎵 Queue — ${player.queue.tracks.length + 1} track${player.queue.tracks.length !== 0 ? 's' : ''}`)
+                    .setDescription(desc)],
                 ephemeral: true,
             });
         },

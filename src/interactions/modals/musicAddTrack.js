@@ -1,0 +1,31 @@
+const skipPattern = /remaster(?:ed)?|\blive\b|\bremix\b|\bkaraoke\b|\btribute\b|\bcover\b/i;
+
+export default {
+    name: 'music_addtrack_modal',
+    async execute(interaction) {
+        await interaction.deferReply({ ephemeral: true });
+
+        const query = interaction.fields.getTextInputValue('music_track_query');
+        const player = interaction.client.lavalink?.getPlayer(interaction.guildId);
+
+        if (!player?.queue.current) {
+            return interaction.editReply({ content: '❌ No active music session.' });
+        }
+
+        const result = await player.search({ query }, interaction.user);
+
+        if (!result.tracks.length || result.loadType === 'empty') {
+            return interaction.editReply({ content: `❌ No results found for: \`${query}\`` });
+        }
+        if (result.loadType === 'error') {
+            return interaction.editReply({ content: '❌ Search failed. Try a different query.' });
+        }
+
+        const track = result.tracks.find(t => !skipPattern.test(t.info.title)) ?? result.tracks[0];
+        await player.queue.add(track);
+
+        return interaction.editReply({
+            content: `✅ Added to queue: **${track.info.title}** by ${track.info.author}`,
+        });
+    },
+};
