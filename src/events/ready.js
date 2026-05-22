@@ -62,9 +62,27 @@ export default {
           await message.edit(buildPanel(player, 0, required, false)).catch(() => {});
         });
 
+        client.lavalink.on('trackEnd', async (player, track, payload) => {
+          const reason = payload?.reason ?? 'unknown';
+          if (reason !== 'finished' && reason !== 'replaced') {
+            logger.warn(`Track ended unexpectedly in guild ${player.guildId}: "${track?.info?.title}" — reason: ${reason}`);
+          }
+          if (reason === 'loadFailed') {
+            // Belt-and-suspenders: trackError should also fire, but handle here if it doesn't
+            const panel = client.musicPanels?.get(player.guildId);
+            if (panel) {
+              const channel = client.channels.cache.get(panel.textChannelId);
+              const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
+              if (message && !player.queue.tracks.length && !player.queue.current) {
+                await message.edit(buildQueueEmptyPanel()).catch(() => {});
+              }
+            }
+          }
+        });
+
         client.lavalink.on('trackError', async (player, track, payload) => {
-          const reason = payload?.exception?.message || payload?.error || 'unknown';
-          logger.warn(`Track error in guild ${player.guildId}: "${track?.info?.title}" — ${reason}`);
+          const reason = payload?.exception?.message || payload?.exception?.cause || payload?.error || 'unknown';
+          logger.warn(`Track error in guild ${player.guildId}: "${track?.info?.title}" — ${reason} | uri: ${track?.info?.uri}`);
           try {
             await player.skip();
           } catch {
