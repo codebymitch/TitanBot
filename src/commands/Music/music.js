@@ -69,8 +69,8 @@ export default {
             }
 
             const required = getVoteRequired(player, client);
-            const msg = await interaction.editReply(buildPanel(player, 0, required));
-            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, requesterId: interaction.user.id });
+            const msg = await interaction.editReply(buildPanel(player, 0, required, false));
+            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, requesterId: interaction.user.id, isPaused: false });
         }
 
         if (sub === 'panel') {

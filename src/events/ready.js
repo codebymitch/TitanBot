@@ -54,11 +54,12 @@ export default {
           client.musicVotes?.delete(player.guildId);
           const panel = client.musicPanels?.get(player.guildId);
           if (!panel) return;
+          panel.isPaused = false;
           const channel = client.channels.cache.get(panel.textChannelId);
           const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
           if (!message) return;
           const required = getVoteRequired(player, client);
-          await message.edit(buildPanel(player, 0, required)).catch(() => {});
+          await message.edit(buildPanel(player, 0, required, false)).catch(() => {});
         });
 
         client.lavalink.on('queueEnd', async (player) => {

@@ -13,14 +13,21 @@ export default [
     {
         name: 'music_pause',
         async execute(interaction) {
+            const client = interaction.client;
             const player = getPlayer(interaction);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
             if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
 
-            await player.pause(!player.paused);
-            const votes = interaction.client.musicVotes?.get(interaction.guildId)?.size ?? 0;
-            const required = getVoteRequired(player, interaction.client);
-            await interaction.update(buildPanel(player, votes, required));
+            const panel = client.musicPanels?.get(interaction.guildId);
+            const newPaused = !(panel?.isPaused ?? false);
+            try {
+                await player.pause(newPaused);
+            } catch { /* state already correct */ }
+            if (panel) panel.isPaused = newPaused;
+
+            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
+            const required = getVoteRequired(player, client);
+            await interaction.update(buildPanel(player, votes, required, newPaused));
         },
     },
     {

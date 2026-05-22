@@ -15,20 +15,20 @@ export function getVoteRequired(player, client) {
     return Math.max(1, Math.min(3, Math.ceil(humanCount / 2)));
 }
 
-export function buildPanel(player, voteCount = 0, required = 3) {
+export function buildPanel(player, voteCount = 0, required = 3, isPaused = false) {
     const track = player.queue.current;
     const embed = new EmbedBuilder()
         .setColor(0x5865F2)
         .setTitle('🎵 Now Playing')
         .setDescription(`**[${track.info.title}](${track.info.uri})**\n📺 ${track.info.author} • 🕒 \`${fmtDuration(track.info.duration)}\``)
-        .setFooter({ text: player.paused ? '⏸️ Paused' : '▶️ Playing' });
+        .setFooter({ text: isPaused ? '⏸️ Paused' : '▶️ Playing' });
 
     if (track.info.artworkUrl) embed.setThumbnail(track.info.artworkUrl);
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('music_pause')
-            .setEmoji(player.paused ? '▶️' : '⏸️')
+            .setEmoji(isPaused ? '▶️' : '⏸️')
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId('music_skip')
