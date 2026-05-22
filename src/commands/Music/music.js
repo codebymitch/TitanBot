@@ -80,8 +80,13 @@ export default {
                 });
             }
 
-            const track = result.tracks[0];
+            const skipPattern = /remaster(?:ed)?|\blive\b|\bremix\b|\bkaraoke\b|\btribute\b/i;
+            const track = result.tracks.find(t => !skipPattern.test(t.info.title)) ?? result.tracks[0];
             await player.queue.add(track);
+            // Guard against LavaSrc adding a duplicate resolved track behind the meta-track
+            if (player.queue.tracks.length > 1 && player.queue.tracks[0]?.info?.uri === track.info.uri) {
+                player.queue.tracks.shift();
+            }
             const wasPlaying = player.playing;
             if (!player.playing) await player.play({ paused: false });
 

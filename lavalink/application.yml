@@ -55,7 +55,7 @@ plugins:
   lavasrc:
     providers:
       - 'scsearch:"%ISRC%"'
-      - "scsearch:%QUERY%"
+      - 'scsearch:"%ARTIST% - %TITLE%"'
     sources:
       applemusic: true
     applemusic:
