@@ -12,7 +12,7 @@ export function fmtDuration(ms) {
 export function getVoteRequired(player, client) {
     const vc = client.channels.cache.get(player.voiceChannelId);
     const humanCount = vc?.members?.filter(m => !m.user.bot)?.size ?? 1;
-    return Math.max(1, Math.min(3, Math.ceil(humanCount / 2)));
+    return Math.min(3, Math.max(1, humanCount));
 }
 
 export function buildPanel(player, voteCount = 0, required = 3, isPaused = false) {
