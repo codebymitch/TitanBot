@@ -58,6 +58,10 @@ export default [
             const player = getPlayer(interaction);
             if (!player) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
             if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+            const panel = client.musicPanels?.get(interaction.guildId);
+            if (panel?.requesterId && interaction.user.id !== panel.requesterId) {
+                return interaction.reply({ content: '❌ Only the person who started the music can stop it.', ephemeral: true });
+            }
 
             client.musicVotes?.delete(interaction.guildId);
             client.musicPanels?.delete(interaction.guildId);

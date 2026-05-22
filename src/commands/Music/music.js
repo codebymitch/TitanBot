@@ -70,7 +70,7 @@ export default {
 
             const required = getVoteRequired(player, client);
             const msg = await interaction.editReply(buildPanel(player, 0, required));
-            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId });
+            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, requesterId: interaction.user.id });
         }
 
         if (sub === 'panel') {
