@@ -19,7 +19,8 @@ export default [
             if (!inVC(interaction, player)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
 
             const panel = client.musicPanels?.get(interaction.guildId);
-            const newPaused = !(panel?.isPaused ?? false);
+            const currentlyPaused = panel?.isPaused ?? player.paused;
+            const newPaused = !currentlyPaused;
             try {
                 if (newPaused) await player.pause();
                 else await player.resume();
