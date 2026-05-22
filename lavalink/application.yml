@@ -56,7 +56,7 @@ plugins:
     providers:
       - 'scsearch:"%ARTIST% - %TITLE%"'
     sources:
-      applemusic: true
+      applemusic: false
     applemusic:
       countryCode: "IL"
       playlistLoadLimit: 6
