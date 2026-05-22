@@ -83,6 +83,14 @@ export default {
                     }
                 });
 
+                await target.send({
+                    embeds: [createEmbed({
+                        title: `⚠️ Warning #${totalWarns}`,
+                        description: `You have received a warning in **${interaction.guild.name}**.\n\n**Reason:** ${reason}`,
+                        color: 'warning',
+                    })],
+                }).catch(() => {});
+
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(

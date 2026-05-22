@@ -1,5 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -82,7 +82,14 @@ export default {
         );
       }
 
-      
+      await targetUser.send({
+          embeds: [createEmbed({
+              title: '👢 You have been kicked',
+              description: `You were kicked from **${interaction.guild.name}**.\n\n**Reason:** ${reason}`,
+              color: 'error',
+          })],
+      }).catch(() => {});
+
       await member.kick(reason);
 
       

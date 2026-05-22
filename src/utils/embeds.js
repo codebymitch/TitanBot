@@ -129,10 +129,10 @@ export function errorEmbed(message, error = null, options = {}) {
   });
 }
 
-export function successEmbed(message, title = '✅ Success') {
+export function successEmbed(title, description = '') {
   return createEmbed({
     title,
-    description: message,
+    description,
     color: 'success',
     timestamp: true
   });

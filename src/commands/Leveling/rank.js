@@ -6,7 +6,7 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
-import { getUserLevelData, getLevelingConfig, getXpForLevel } from '../../services/leveling.js';
+import { getUserLevelData, getLevelingConfig, getXpForLevel, getLeaderboard } from '../../services/leveling.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -58,13 +58,19 @@ export default {
         );
       }
 
-      const userData = await getUserLevelData(client, interaction.guildId, targetUser.id);
+      const [userData, leaderboard] = await Promise.all([
+        getUserLevelData(client, interaction.guildId, targetUser.id),
+        getLeaderboard(client, interaction.guildId, 500).catch(() => []),
+      ]);
 
       const safeUserData = {
         level: userData?.level ?? 0,
         xp: userData?.xp ?? 0,
         totalXp: userData?.totalXp ?? 0
       };
+
+      const rankPosition = leaderboard.findIndex(u => u.userId === targetUser.id) + 1;
+      const rankDisplay = rankPosition > 0 ? `#${rankPosition}` : 'Unranked';
 
       const xpNeeded = getXpForLevel(safeUserData.level + 1);
       const progress = xpNeeded > 0 ? Math.floor((safeUserData.xp / xpNeeded) * 100) : 0;
@@ -75,18 +81,23 @@ export default {
         .setThumbnail(member.displayAvatarURL({ dynamic: true }))
         .addFields(
           {
+            name: '🏆 Server Rank',
+            value: rankDisplay,
+            inline: true
+          },
+          {
             name: '📊 Level',
             value: safeUserData.level.toString(),
             inline: true
           },
           {
-            name: '⭐ XP',
-            value: `${safeUserData.xp}/${xpNeeded}`,
+            name: '✨ Total XP',
+            value: safeUserData.totalXp.toString(),
             inline: true
           },
           {
-            name: '✨ Total XP',
-            value: safeUserData.totalXp.toString(),
+            name: '⭐ XP Progress',
+            value: `${safeUserData.xp}/${xpNeeded}`,
             inline: true
           },
           {

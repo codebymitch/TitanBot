@@ -1,5 +1,16 @@
 export const changelog = [
     {
+        version: '2.9.8',
+        date: '2026-05-22',
+        entries: [
+            { type: 'fix', text: '`successEmbed` — fixed title/description being swapped across all commands' },
+            { type: 'improve', text: '`/rank` — now shows server rank position (#X in server) alongside level and XP' },
+            { type: 'improve', text: '`/leaderboard` — now shows top 15 members and displays server icon' },
+            { type: 'improve', text: '`/ping` and `/stats` — now show bot uptime; `/stats` also shows active music sessions' },
+            { type: 'improve', text: 'Moderation: `/warn`, `/ban`, `/kick`, `/timeout` now DM the target user with reason and action details' },
+        ],
+    },
+    {
         version: '2.9.7',
         date: '2026-05-22',
         entries: [

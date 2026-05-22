@@ -1,5 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -100,6 +100,14 @@ export default {
             const durationDisplay =
                 durationChoices.find((c) => c.value === durationMinutes)
                     ?.name || `${durationMinutes} minutes`;
+
+            await targetUser.send({
+                embeds: [createEmbed({
+                    title: '⏳ You have been timed out',
+                    description: `You were timed out in **${interaction.guild.name}** for **${durationDisplay}**.\n\n**Reason:** ${reason}`,
+                    color: 'warning',
+                })],
+            }).catch(() => {});
 
             const caseId = await logModerationAction({
                 client,

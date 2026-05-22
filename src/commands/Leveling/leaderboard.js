@@ -40,7 +40,7 @@ export default {
         return;
       }
 
-      const leaderboard = await getLeaderboard(client, interaction.guildId, 10);
+      const leaderboard = await getLeaderboard(client, interaction.guildId, 15);
 
       if (leaderboard.length === 0) {
         throw new TitanBotError(
@@ -50,11 +50,13 @@ export default {
         );
       }
 
+      const guildIcon = interaction.guild.iconURL({ dynamic: true });
       const embed = new EmbedBuilder()
         .setTitle('🏆 Level Leaderboard')
         .setColor('#2ecc71')
-        .setDescription("Top 10 most active members in this server:")
+        .setDescription(`Top ${leaderboard.length} most active members in this server:`)
         .setTimestamp();
+      if (guildIcon) embed.setThumbnail(guildIcon);
 
       const leaderboardText = await Promise.all(
         leaderboard.map(async (user, index) => {

@@ -1,5 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -33,7 +33,14 @@ export default {
                 throw new Error("You cannot ban the bot.");
             }
 
-            
+            await user.send({
+                embeds: [createEmbed({
+                    title: '🚫 You have been banned',
+                    description: `You were banned from **${interaction.guild.name}**.\n\n**Reason:** ${reason}`,
+                    color: 'error',
+                })],
+            }).catch(() => {});
+
             const result = await ModerationService.banUser({
                 guild: interaction.guild,
                 user,
