@@ -17,15 +17,39 @@ export function getVoteRequired(player, client) {
 
 export function buildPanel(player, voteCount = 0, required = 3, isPaused = false) {
     const track = player.queue.current;
+    const pos = player.position ?? 0;
+    const dur = track.info.duration;
+    const repeatMode = player.repeatMode ?? 'off';
+    const queueLen = player.queue.tracks.length;
+    const vol = player.volume ?? 100;
+
+    // 13-segment progress bar
+    const pct = dur > 0 ? Math.min(pos / dur, 1) : 0;
+    const filled = Math.round(pct * 13);
+    const bar = '▬'.repeat(filled) + '🔘' + '▬'.repeat(13 - filled);
+
+    const footerParts = [
+        isPaused ? '⏸️ Paused' : '▶️ Playing',
+        `🔊 ${vol}%`,
+        queueLen ? `${queueLen} up next` : 'No queue',
+    ];
+    if (repeatMode === 'track') footerParts.push('🔂 Track loop');
+    else if (repeatMode === 'queue') footerParts.push('🔁 Queue loop');
+
     const embed = new EmbedBuilder()
         .setColor(0x5865F2)
         .setTitle('🎵 Now Playing')
-        .setDescription(`**[${track.info.title}](${track.info.uri})**\n📺 ${track.info.author} • 🕒 \`${fmtDuration(track.info.duration)}\``)
-        .setFooter({ text: isPaused ? '⏸️ Paused' : '▶️ Playing' });
+        .setDescription(
+            `**[${track.info.title}](${track.info.uri})**\n` +
+            `📺 ${track.info.author}\n\n` +
+            `${bar}\n` +
+            `\`${fmtDuration(pos)}\` / \`${fmtDuration(dur)}\``
+        )
+        .setFooter({ text: footerParts.join(' • ') });
 
     if (track.info.artworkUrl) embed.setThumbnail(track.info.artworkUrl);
 
-    const row = new ActionRowBuilder().addComponents(
+    const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('music_pause')
             .setEmoji(isPaused ? '▶️' : '⏸️')
@@ -48,7 +72,30 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
             .setStyle(ButtonStyle.Secondary),
     );
 
-    return { embeds: [embed], components: [row] };
+    const row2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('music_loop')
+            .setEmoji(repeatMode === 'track' ? '🔂' : '🔁')
+            .setStyle(repeatMode !== 'off' ? ButtonStyle.Success : ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('music_shuffle')
+            .setEmoji('🔀')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('music_restart')
+            .setEmoji('⏮️')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('music_voldown')
+            .setEmoji('🔉')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('music_volup')
+            .setEmoji('🔊')
+            .setStyle(ButtonStyle.Secondary),
+    );
+
+    return { embeds: [embed], components: [row1, row2] };
 }
 
 export function buildQueueEmptyPanel() {

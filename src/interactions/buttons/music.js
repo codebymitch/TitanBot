@@ -1,5 +1,5 @@
 import { EmbedBuilder, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
-import { buildPanel, buildEndedPanel, buildQueueEmptyPanel, getVoteRequired, fmtDuration } from '../../utils/musicPanel.js';
+import { buildPanel, buildQueueEmptyPanel, getVoteRequired, fmtDuration } from '../../utils/musicPanel.js';
 import { botConfig } from '../../config/botConfig.js';
 
 function getPlayer(interaction) {
@@ -14,31 +14,30 @@ function isOwner(interaction) {
     return botConfig.commands.owners.includes(interaction.user.id);
 }
 
+function vcCheck(interaction, player) {
+    if (!inVC(interaction, player) && !isOwner(interaction)) {
+        interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+        return false;
+    }
+    return true;
+}
+
 export default [
     {
         name: 'music_pause',
         async execute(interaction) {
             const client = interaction.client;
             const player = getPlayer(interaction);
-            console.log(`[music_pause] player=${!!player} current=${!!player?.queue.current} voiceChannelId=${player?.voiceChannelId} userVC=${interaction.member?.voice?.channelId}`);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-            if (!inVC(interaction, player) && !isOwner(interaction)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
 
             const panel = client.musicPanels?.get(interaction.guildId);
             const currentlyPaused = panel?.isPaused ?? player.paused;
             const newPaused = !currentlyPaused;
-            console.log(`[music_pause] player.paused=${player.paused} panel.isPaused=${panel?.isPaused} currentlyPaused=${currentlyPaused} newPaused=${newPaused}`);
             try {
-                if (newPaused) {
-                    await player.pause();
-                    console.log('[music_pause] called player.pause()');
-                } else {
-                    await player.resume();
-                    console.log('[music_pause] called player.resume()');
-                }
-            } catch (e) {
-                console.log('[music_pause] caught error:', e.message);
-            }
+                if (newPaused) await player.pause();
+                else await player.resume();
+            } catch {}
             if (panel) panel.isPaused = newPaused;
 
             const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
@@ -52,7 +51,7 @@ export default [
             const client = interaction.client;
             const player = getPlayer(interaction);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-            if (!inVC(interaction, player) && !isOwner(interaction)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
 
             if (!client.musicVotes.has(interaction.guildId)) client.musicVotes.set(interaction.guildId, new Set());
             const votes = client.musicVotes.get(interaction.guildId);
@@ -94,9 +93,9 @@ export default [
             const client = interaction.client;
             const player = getPlayer(interaction);
             if (!player) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-            if (!inVC(interaction, player) && !isOwner(interaction)) return interaction.reply({ content: 'Join the voice channel first.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
             const panel = client.musicPanels?.get(interaction.guildId);
-            if (panel?.requesterId && interaction.user.id !== panel.requesterId) {
+            if (panel?.requesterId && interaction.user.id !== panel.requesterId && !isOwner(interaction)) {
                 return interaction.reply({ content: '❌ Only the person who started the music can stop it.', ephemeral: true });
             }
 
@@ -161,6 +160,96 @@ export default [
                     .setDescription(desc)],
                 ephemeral: true,
             });
+        },
+    },
+    {
+        name: 'music_loop',
+        async execute(interaction) {
+            const client = interaction.client;
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
+
+            const modes = ['off', 'track', 'queue'];
+            const current = player.repeatMode ?? 'off';
+            const next = modes[(modes.indexOf(current) + 1) % modes.length];
+            await player.setRepeatMode(next);
+
+            const panel = client.musicPanels?.get(interaction.guildId);
+            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
+            const required = getVoteRequired(player, client);
+            const isPaused = panel?.isPaused ?? player.paused;
+            await interaction.update(buildPanel(player, votes, required, isPaused));
+        },
+    },
+    {
+        name: 'music_shuffle',
+        async execute(interaction) {
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
+
+            if (!player.queue.tracks.length) {
+                return interaction.reply({ content: '❌ No tracks in queue to shuffle.', ephemeral: true });
+            }
+
+            await player.queue.shuffle();
+            await interaction.reply({ content: '🔀 Queue shuffled!', ephemeral: true });
+        },
+    },
+    {
+        name: 'music_restart',
+        async execute(interaction) {
+            const client = interaction.client;
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
+
+            await player.seek(0);
+            if (player.paused) await player.resume().catch(() => {});
+
+            const panel = client.musicPanels?.get(interaction.guildId);
+            if (panel) panel.isPaused = false;
+
+            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
+            const required = getVoteRequired(player, client);
+            await interaction.update(buildPanel(player, votes, required, false));
+        },
+    },
+    {
+        name: 'music_voldown',
+        async execute(interaction) {
+            const client = interaction.client;
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
+
+            const newVol = Math.max(0, (player.volume ?? 100) - 20);
+            await player.setVolume(newVol);
+
+            const panel = client.musicPanels?.get(interaction.guildId);
+            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
+            const required = getVoteRequired(player, client);
+            const isPaused = panel?.isPaused ?? player.paused;
+            await interaction.update(buildPanel(player, votes, required, isPaused));
+        },
+    },
+    {
+        name: 'music_volup',
+        async execute(interaction) {
+            const client = interaction.client;
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
+
+            const newVol = Math.min(200, (player.volume ?? 100) + 20);
+            await player.setVolume(newVol);
+
+            const panel = client.musicPanels?.get(interaction.guildId);
+            const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
+            const required = getVoteRequired(player, client);
+            const isPaused = panel?.isPaused ?? player.paused;
+            await interaction.update(buildPanel(player, votes, required, isPaused));
         },
     },
 ];
