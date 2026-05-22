@@ -21,7 +21,8 @@ export default [
             const panel = client.musicPanels?.get(interaction.guildId);
             const newPaused = !(panel?.isPaused ?? false);
             try {
-                await player.pause(newPaused);
+                if (newPaused) await player.pause();
+                else await player.resume();
             } catch { /* state already correct */ }
             if (panel) panel.isPaused = newPaused;
 
