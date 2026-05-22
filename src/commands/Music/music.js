@@ -76,7 +76,7 @@ export default {
 
             const required = getVoteRequired(player, client);
             const msg = await interaction.editReply(buildPanel(player, 0, required, false, null));
-            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, requesterId: interaction.user.id, isPaused: false, activeFilter: null });
+            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, voiceChannelId: interaction.member.voice.channelId, requesterId: interaction.user.id, isPaused: false, activeFilter: null });
             await interaction.followUp({ content: '⚠️ **Music is in beta** — playback may be unstable or stop unexpectedly.', ephemeral: true });
         }
 
@@ -90,7 +90,7 @@ export default {
             const votes = client.musicVotes?.get(interaction.guildId)?.size ?? 0;
             const required = getVoteRequired(player, client);
             const msg = await interaction.editReply(buildPanel(player, votes, required, false, null));
-            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, activeFilter: null });
+            client.musicPanels.set(interaction.guildId, { messageId: msg.id, textChannelId: interaction.channelId, voiceChannelId: interaction.member.voice.channelId ?? null, activeFilter: null });
         }
     },
 };

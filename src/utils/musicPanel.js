@@ -128,6 +128,11 @@ export function buildQueueEmptyPanel() {
             .setLabel('Add Track')
             .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
+            .setCustomId('music_retry')
+            .setLabel('Retry Last')
+            .setEmoji('🔄')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
             .setCustomId('music_stop')
             .setEmoji('⏹️')
             .setStyle(ButtonStyle.Danger),

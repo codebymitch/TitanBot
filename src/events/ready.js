@@ -59,6 +59,8 @@ export default {
 
         client.lavalink.on('trackStart', async (player) => {
           client.musicVotes?.delete(player.guildId);
+          client.musicRetrying?.delete(player.guildId);
+          if (player.queue.current) client.musicLastTrack?.set(player.guildId, player.queue.current);
           const panel = client.musicPanels?.get(player.guildId);
           if (!panel) return;
           panel.isPaused = false;
@@ -111,6 +113,23 @@ export default {
           logger.warn(`Track error in guild ${player.guildId}: "${track?.info?.title}" — ${reason} | uri: ${track?.info?.uri}`);
           const panel = client.musicPanels?.get(player.guildId);
           clearPanelInterval(panel);
+
+          // Auto-retry once before giving up
+          if (track && !client.musicRetrying?.has(player.guildId)) {
+            client.musicRetrying?.add(player.guildId);
+            logger.info(`Auto-retrying track "${track?.info?.title}" in guild ${player.guildId}`);
+            await new Promise(r => setTimeout(r, 1500));
+            try {
+              await player.queue.add(track, 0);
+              await player.play({ paused: false });
+              return;
+            } catch (retryErr) {
+              logger.warn(`Auto-retry failed in guild ${player.guildId}:`, retryErr?.message);
+              client.musicRetrying?.delete(player.guildId);
+            }
+          }
+
+          client.musicRetrying?.delete(player.guildId);
           try {
             await player.skip();
           } catch {

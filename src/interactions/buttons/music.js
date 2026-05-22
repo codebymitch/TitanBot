@@ -240,6 +240,45 @@ export default [
         },
     },
     {
+        name: 'music_retry',
+        async execute(interaction) {
+            const client = interaction.client;
+            const guildId = interaction.guildId;
+
+            const lastTrack = client.musicLastTrack?.get(guildId);
+            if (!lastTrack) {
+                return interaction.reply({ content: '❌ No track to retry — play something first.', ephemeral: true });
+            }
+
+            const member = interaction.member;
+            if (!member?.voice?.channelId) {
+                return interaction.reply({ content: '❌ Join a voice channel first.', ephemeral: true });
+            }
+
+            await interaction.deferUpdate();
+
+            let player = client.lavalink?.getPlayer(guildId);
+            const panel = client.musicPanels?.get(guildId);
+
+            if (!player || !player.connected) {
+                player = client.lavalink.createPlayer({
+                    guildId,
+                    voiceChannelId: member.voice.channelId,
+                    textChannelId: panel?.textChannelId ?? interaction.channelId,
+                    selfDeaf: true,
+                    selfMute: false,
+                    volume: 80,
+                });
+                await player.connect();
+            }
+
+            await player.queue.add(lastTrack);
+            if (!player.playing) await player.play({ paused: false }).catch(() => {});
+
+            await interaction.followUp({ content: `🔄 Retrying **${lastTrack.info.title}**...`, ephemeral: true });
+        },
+    },
+    {
         name: 'music_filter',
         async execute(interaction) {
             const client = interaction.client;
