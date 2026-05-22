@@ -57,15 +57,11 @@ plugins:
       - 'scsearch:"%ISRC%"'
       - "scsearch:%QUERY%"
     sources:
-      spotify: true
-    spotify:
-      clientId: "${SPOTIFY_CLIENT_ID}"
-      clientSecret: "${SPOTIFY_CLIENT_SECRET}"
+      applemusic: true
+    applemusic:
       countryCode: "IL"
       playlistLoadLimit: 6
       albumLoadLimit: 6
-      resolveArtistsInSearch: true
-      localFiles: false
 
 metrics:
   prometheus:
