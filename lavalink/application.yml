@@ -6,6 +6,8 @@ lavalink:
   plugins:
     - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.1"
       repository: "https://maven.lavalink.dev/releases"
+    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.8.2"
+      repository: "https://maven.lavalink.dev/releases"
   server:
     password: "${LAVALINK_SERVER_PASSWORD:youshallnotpass}"
     sources:
@@ -45,9 +47,22 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
-      - TVHTML5EMBEDDED
+      - WEBEMBEDDED
+      - TVHTML5_SIMPLY
+      - TV
       - MUSIC
       - WEB
+  lavasrc:
+    providers:
+      - 'scsearch:"%ISRC%"'
+      - "scsearch:%QUERY%"
+    sources:
+      spotify:
+        clientId: "${SPOTIFY_CLIENT_ID}"
+        clientSecret: "${SPOTIFY_CLIENT_SECRET}"
+        countryCode: "IL"
+        playlistLoadLimit: 6
+        albumLoadLimit: 6
 
 metrics:
   prometheus:
