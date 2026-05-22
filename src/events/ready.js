@@ -140,7 +140,15 @@ export default {
               const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
               if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
             }
-            player.destroy().catch(() => {});
+            // Don't destroy immediately — give 3 min so user can retry
+            setTimeout(() => {
+              if (!player.playing) {
+                const p = client.musicPanels?.get(player.guildId);
+                clearPanelInterval(p);
+                client.musicPanels?.delete(player.guildId);
+                player.destroy().catch(() => {});
+              }
+            }, 3 * 60_000);
           }
         });
 

@@ -18,6 +18,10 @@ export default {
 
         if (!player) return interaction.editReply({ content: '❌ No active music session.' });
 
+        if (/youtube\.com|youtu\.be/.test(query)) {
+            return interaction.editReply({ content: '❌ YouTube is blocked on this server. Search by song name or use a SoundCloud URL.' });
+        }
+
         const result = await player.search({ query }, interaction.user);
 
         if (!result.tracks.length || result.loadType === 'empty') {
