@@ -5,6 +5,10 @@ import { buildPanel, getVoteRequired } from '../../utils/musicPanel.js';
 
 const skipPattern = /remaster(?:ed)?|\blive\b|\bremix\b|\bkaraoke\b|\btribute\b|\bcover\b/i;
 
+function isPreview(track) {
+    try { return Buffer.from(track.encoded, 'base64').includes('/preview/'); } catch { return false; }
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName('music')
@@ -52,7 +56,9 @@ export default {
                 return InteractionHelper.safeEditReply(interaction, { embeds: [errorEmbed('Search failed. Try a different query.')] });
             }
 
-            const track = result.tracks.find(t => !skipPattern.test(t.info.title)) ?? result.tracks[0];
+            const track = result.tracks.find(t => !skipPattern.test(t.info.title) && !isPreview(t))
+                ?? result.tracks.find(t => !isPreview(t))
+                ?? result.tracks[0];
             const wasPlaying = player.playing;
             await player.queue.add(track);
             if (!player.playing) await player.play({ paused: false });

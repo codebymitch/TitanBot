@@ -2,6 +2,10 @@ import { buildPanel, getVoteRequired } from '../../utils/musicPanel.js';
 
 const skipPattern = /remaster(?:ed)?|\blive\b|\bremix\b|\bkaraoke\b|\btribute\b|\bcover\b/i;
 
+function isPreview(track) {
+    try { return Buffer.from(track.encoded, 'base64').includes('/preview/'); } catch { return false; }
+}
+
 export default {
     name: 'music_addtrack_modal',
     async execute(interaction) {
@@ -24,7 +28,9 @@ export default {
             return interaction.editReply({ content: '❌ Search failed. Try a different query.' });
         }
 
-        const track = result.tracks.find(t => !skipPattern.test(t.info.title)) ?? result.tracks[0];
+        const track = result.tracks.find(t => !skipPattern.test(t.info.title) && !isPreview(t))
+            ?? result.tracks.find(t => !isPreview(t))
+            ?? result.tracks[0];
         await player.queue.add(track);
 
         const wasEmpty = !player.queue.current;
