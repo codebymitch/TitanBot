@@ -1,4 +1,4 @@
-import { buildPanel, getVoteRequired } from '../../utils/musicPanel.js';
+import { buildPanel, buildQueueEmptyPanel, getVoteRequired } from '../../utils/musicPanel.js';
 
 const skipPattern = /remaster(?:ed)?|\blive\b|\bremix\b|\bkaraoke\b|\btribute\b|\bcover\b/i;
 
@@ -37,6 +37,15 @@ export default {
         if (wasEmpty) {
             await player.connect();
             await player.play({ paused: false });
+            // Update the panel to show Now Playing (trackStart event may race on resume from idle)
+            setTimeout(async () => {
+                const panel = client.musicPanels?.get(interaction.guildId);
+                if (!panel || !player.queue.current) return;
+                const required = getVoteRequired(player, client);
+                const channel = client.channels.cache.get(panel.textChannelId);
+                const msg = await channel?.messages.fetch(panel.messageId).catch(() => null);
+                if (msg) await msg.edit(buildPanel(player, 0, required, false)).catch(() => {});
+            }, 500);
         }
 
         return interaction.editReply({
