@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '2.9.7',
+        date: '2026-05-22',
+        entries: [
+            { type: 'new', text: 'VC music via Lavalink: `/play`, `/skip`, `/stop`, `/pause`, `/queue`, `/nowplaying`' },
+        ],
+    },
+    {
         version: '2.9.6',
         date: '2026-05-20',
         entries: [

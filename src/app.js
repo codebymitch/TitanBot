@@ -44,6 +44,7 @@ import { checkGiveaways } from './services/giveawayService.js';
 import { checkTempRoles } from './services/tempRoleService.js';
 import { checkAndUpdateGorillaStatus, checkAndPostPatchNotes } from './services/gorillaService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
+import { LavalinkManager } from 'lavalink-client';
 
 class TitanBot extends Client {
   constructor() {
@@ -75,6 +76,7 @@ class TitanBot extends Client {
     this.modals = new Collection();
     this.cooldowns = new Collection();
     this.db = null;
+    this.lavalink = null;
     this.rest = new REST({ version: '10' }).setToken(config.bot.token);
   }
 
@@ -105,7 +107,28 @@ class TitanBot extends Client {
       
       startupLog('Starting web server...');
       this.startWebServer();
-      
+
+      startupLog('Initializing Lavalink manager...');
+      this.lavalink = new LavalinkManager({
+        nodes: [{
+          authorization: process.env.LAVALINK_PASSWORD || 'youshallnotpass',
+          host: process.env.LAVALINK_HOST || 'lavalink',
+          port: Number(process.env.LAVALINK_PORT || 2333),
+          id: 'main',
+          requestTimeout: 10000,
+        }],
+        sendToShard: (guildId, payload) => {
+          this.guilds.cache.get(guildId)?.shard?.send(payload);
+        },
+        client: { id: process.env.CLIENT_ID, username: 'TitanBot' },
+        autoSkip: true,
+        playerOptions: {
+          defaultSearchPlatform: 'ytsearch',
+          volumeDecrementer: 0.75,
+        },
+      });
+      this.on('raw', d => this.lavalink.sendRawData(d));
+
       startupLog('Loading commands...');
       await loadCommands(this);
       startupLog(`Commands loaded: ${this.commands.size}`);

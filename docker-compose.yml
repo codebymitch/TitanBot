@@ -21,9 +21,14 @@ services:
       - DASHBOARD_EMAIL=${DASHBOARD_EMAIL}
       - CLIENT_SECRET=${CLIENT_SECRET}
       - REDIRECT_URI=${REDIRECT_URI:-http://localhost:3000/auth/discord/callback}
+      - LAVALINK_HOST=lavalink
+      - LAVALINK_PORT=2333
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
     depends_on:
       db:
         condition: service_healthy
+      lavalink:
+        condition: service_started
     networks:
       - titan-network
 
@@ -44,6 +49,21 @@ services:
       retries: 5
     networks:
       - titan-network
+
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4
+    container_name: lavalink
+    restart: unless-stopped
+    environment:
+      - _JAVA_OPTIONS=-Xmx512m
+      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+    volumes:
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml
+      - ./lavalink/plugins:/opt/Lavalink/plugins
+    networks:
+      - titan-network
+    healthcheck:
+      disable: true
 
 networks:
   titan-network:

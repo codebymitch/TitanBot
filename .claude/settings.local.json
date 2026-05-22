@@ -24,7 +24,10 @@
       "Bash(Select-Object Name)",
       "PowerShell(docker run --rm -v \"c:/code/zen-bot:/app\" -w /app node:20-alpine npm install --save @discordjs/voice play-dl opusscript libsodium-wrappers 2>&1)",
       "PowerShell(docker compose up -d --build 2>&1)",
-      "Bash(git revert *)"
+      "Bash(git revert *)",
+      "PowerShell(Get-Command cloudflared -ErrorAction SilentlyContinue; Get-ChildItem \"C:\\\\Program Files\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:LOCALAPPDATA\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:ProgramFiles\\\\Cloudflare\\\\\" -ErrorAction SilentlyContinue)",
+      "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" --version)",
+      "PowerShell(Start-Process -FilePath \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" -ArgumentList \"tunnel --url http://localhost:3000\" -NoNewWindow -RedirectStandardOutput \"C:\\\\code\\\\zen-bot\\\\cloudflared.log\" -RedirectStandardError \"C:\\\\code\\\\zen-bot\\\\cloudflared_err.log\")"
     ]
   }
 }

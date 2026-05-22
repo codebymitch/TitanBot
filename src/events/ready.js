@@ -43,6 +43,16 @@ export default {
 
       await loadAndScheduleTempRoles(client);
       await loadAndScheduleTempBans(client);
+
+      if (client.lavalink) {
+        await client.lavalink.init(client.user);
+        client.lavalink.nodeManager.on('connect', node => startupLog(`Lavalink node connected: ${node.id}`));
+        client.lavalink.nodeManager.on('error', (node, err) => logger.error(`Lavalink [${node.id}]:`, err?.message));
+        client.lavalink.on('queueEnd', player => {
+          setTimeout(() => { if (!player.playing) player.destroy().catch(() => {}); }, 30_000);
+        });
+        startupLog('Lavalink manager initialized');
+      }
     } catch (error) {
       logger.error("Error in ready event:", error);
     }

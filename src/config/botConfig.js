@@ -24,7 +24,7 @@ export const botConfig = {
     // Rotates every 30 seconds. Add/remove entries here to customize.
     // type: 0=Playing, 2=Listening, 3=Watching, 5=Competing
     activities: [
-      { name: "In the Eternal Holy Night, all things sleep.", type: 0 },
+      { name: "system corrupted by the void.", type: 0 },
     ],
   },
 
