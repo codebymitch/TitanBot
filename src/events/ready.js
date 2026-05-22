@@ -62,6 +62,25 @@ export default {
           await message.edit(buildPanel(player, 0, required, false)).catch(() => {});
         });
 
+        client.lavalink.on('trackError', async (player, track, payload) => {
+          const reason = payload?.exception?.message || payload?.error || 'unknown';
+          logger.warn(`Track error in guild ${player.guildId}: "${track?.info?.title}" — ${reason}`);
+          try {
+            await player.skip();
+          } catch {
+            // No next track — fall through to queueEnd or clean up
+            client.musicVotes?.delete(player.guildId);
+            const panel = client.musicPanels?.get(player.guildId);
+            if (panel) {
+              panel.isPaused = false;
+              const channel = client.channels.cache.get(panel.textChannelId);
+              const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
+              if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
+            }
+            player.destroy().catch(() => {});
+          }
+        });
+
         client.lavalink.on('queueEnd', async (player) => {
           client.musicVotes?.delete(player.guildId);
           const panel = client.musicPanels?.get(player.guildId);
