@@ -30,9 +30,6 @@ export default [
                 } else {
                     await player.resume();
                     console.log('[music_pause] called player.resume()');
-                    // Reconnect voice to refresh the UDP session (may drop during silence)
-                    await player.connect();
-                    console.log('[music_pause] reconnected voice');
                 }
             } catch (e) {
                 console.log('[music_pause] caught error:', e.message);

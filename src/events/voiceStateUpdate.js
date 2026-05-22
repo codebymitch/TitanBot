@@ -1,13 +1,14 @@
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
 import {
-    getJoinToCreateConfig, 
-    registerTemporaryChannel, 
+    getJoinToCreateConfig,
+    registerTemporaryChannel,
     unregisterTemporaryChannel,
     getTemporaryChannelInfo,
     formatChannelName
 } from '../utils/database.js';
 import { sanitizeInput } from '../utils/sanitization.js';
 import { logger } from '../utils/logger.js';
+import { buildPanel, getVoteRequired } from '../utils/musicPanel.js';
 
 const channelCreationCooldown = new Map();
 const VOICE_CREATE_COOLDOWN_MS = 2000;
@@ -21,9 +22,25 @@ const MAX_TRACKED_COOLDOWNS = 10000;
 export default {
     name: 'voiceStateUpdate',
     async execute(oldState, newState, client) {
-        if (newState.member.user.bot) return;
+        // Update music panel skip button when VC membership changes
+        const guildId = oldState.guild?.id ?? newState.guild?.id;
+        const player = client.lavalink?.getPlayer(guildId);
+        if (player?.queue.current) {
+            const botVC = player.voiceChannelId;
+            if (oldState.channelId === botVC || newState.channelId === botVC) {
+                const panel = client.musicPanels?.get(guildId);
+                if (panel) {
+                    const votes = client.musicVotes?.get(guildId)?.size ?? 0;
+                    const required = getVoteRequired(player, client);
+                    const channel = client.channels.cache.get(panel.textChannelId);
+                    const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
+                    if (message) await message.edit(buildPanel(player, votes, required, panel.isPaused)).catch(() => {});
+                }
+            }
+        }
 
-        const guildId = newState.guild.id;
+        if (newState.member?.user?.bot) return;
+
         const userId = newState.member.id;
         const cooldownKey = `${guildId}-${userId}`;
         cleanupCooldownEntries();

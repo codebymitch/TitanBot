@@ -35,6 +35,7 @@ export default {
 
         const wasEmpty = !player.queue.current;
         if (wasEmpty) {
+            await player.connect();
             await player.play({ paused: false });
         }
 
