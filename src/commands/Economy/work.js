@@ -6,8 +6,8 @@ import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const WORK_COOLDOWN = 30 * 60 * 1000;
-const MIN_WORK_AMOUNT = 50;
-const MAX_WORK_AMOUNT = 300;
+const MIN_WORK_AMOUNT = 10,000,000,000;
+const MAX_WORK_AMOUNT = 100,000,000,000;
 const LAPTOP_MULTIPLIER = 1.5;
 const WORK_JOBS = [
     "Software Developer",
