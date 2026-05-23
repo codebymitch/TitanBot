@@ -114,8 +114,29 @@ export default {
           const panel = client.musicPanels?.get(player.guildId);
           clearPanelInterval(panel);
 
-          // Auto-retry once before giving up
-          if (track && !client.musicRetrying?.has(player.guildId)) {
+          // YouTube track failed → silently fall back to SoundCloud
+          const isYouTube = track?.info?.sourceName === 'youtube' || track?.info?.uri?.includes('youtube');
+          if (isYouTube && track?.info?.title) {
+            client.musicRetrying?.delete(player.guildId);
+            try {
+              const q = `scsearch:${track.info.title}${track.info.author ? ` ${track.info.author}` : ''}`;
+              const scResult = await player.search({ query: q }, null);
+              const scTrack = scResult.tracks?.find(t => {
+                try { return !Buffer.from(t.encoded, 'base64').includes('/preview/'); } catch { return true; }
+              });
+              if (scTrack) {
+                logger.info(`YouTube → SoundCloud fallback: "${scTrack.info.title}" in guild ${player.guildId}`);
+                await player.queue.add(scTrack, 0);
+                await player.play({ paused: false });
+                return;
+              }
+            } catch (fbErr) {
+              logger.warn(`SoundCloud fallback failed in guild ${player.guildId}:`, fbErr?.message);
+            }
+          }
+
+          // Non-YouTube: auto-retry once before giving up
+          if (track && !isYouTube && !client.musicRetrying?.has(player.guildId)) {
             client.musicRetrying?.add(player.guildId);
             logger.info(`Auto-retrying track "${track?.info?.title}" in guild ${player.guildId}`);
             await new Promise(r => setTimeout(r, 1500));

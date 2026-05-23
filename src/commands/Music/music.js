@@ -46,7 +46,9 @@ export default {
 
             await player.connect();
 
-            const query = interaction.options.getString('song');
+            const rawQuery = interaction.options.getString('song');
+            const isUrl = /^https?:\/\//i.test(rawQuery);
+            const query = isUrl ? rawQuery : `scsearch:${rawQuery}`;
             const result = await player.search({ query }, interaction.user);
 
             if (!result.tracks.length || result.loadType === 'empty') {

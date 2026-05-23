@@ -12,11 +12,14 @@ export default {
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
-        const query = interaction.fields.getTextInputValue('music_track_query');
+        const rawQuery = interaction.fields.getTextInputValue('music_track_query');
         const client = interaction.client;
         const player = client.lavalink?.getPlayer(interaction.guildId);
 
         if (!player) return interaction.editReply({ content: '❌ No active music session.' });
+
+        const isUrl = /^https?:\/\//i.test(rawQuery);
+        const query = isUrl ? rawQuery : `scsearch:${rawQuery}`;
 
 
         const result = await player.search({ query }, interaction.user);
