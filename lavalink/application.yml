@@ -47,11 +47,14 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
-      - WEBEMBEDDED
-      - TVHTML5_SIMPLY
-      - TV
       - MUSIC
+      - TV
+      - TVHTML5_SIMPLY
       - WEB
+      - WEBEMBEDDED
+    oauth:
+      enabled: true
+      refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
   lavasrc:
     providers:
       - 'scsearch:"%ARTIST% - %TITLE%"'

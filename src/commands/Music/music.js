@@ -47,13 +47,6 @@ export default {
             await player.connect();
 
             const query = interaction.options.getString('song');
-            const isYouTubeUrl = /youtube\.com|youtu\.be/.test(query);
-            if (isYouTubeUrl) {
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('YouTube is currently blocked on this server.\nSearch by **song name** instead, or use a **SoundCloud URL** (`soundcloud.com/...`).')],
-                });
-            }
-
             const result = await player.search({ query }, interaction.user);
 
             if (!result.tracks.length || result.loadType === 'empty') {
