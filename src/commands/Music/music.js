@@ -34,7 +34,7 @@ export default {
                 return interaction.reply({ embeds: [errorEmbed('Join a voice channel first.')], ephemeral: true });
             }
 
-            const useableNodes = client.lavalink?.nodeManager?.useableNodes;
+            const useableNodes = client.lavalink?.nodeManager?.leastUsedNodes();
             if (!client.lavalink || !useableNodes?.length) {
                 return interaction.reply({ embeds: [errorEmbed('Music service is currently unavailable. The audio server is not connected.')], ephemeral: true });
             }
