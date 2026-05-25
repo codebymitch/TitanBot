@@ -9,6 +9,16 @@ import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createInteractionTraceContext, runWithTraceContext } from '../utils/traceContext.js';
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
+import { aiConfig } from '../config/ai.js';
+
+// Commands allowed in ANY channel (admin/utility — not gated to #bot-commands)
+const UNGATED_COMMANDS = new Set([
+  'help', 'ping', 'uptime', 'stats', 'overview', 'bug', 'support',
+  'ban', 'unban', 'kick', 'timeout', 'untimeout', 'warn', 'warnings',
+  'cases', 'purge', 'lock', 'unlock', 'massban', 'masskick', 'dm',
+  'usernotes', 'verify', 'autoverify', 'verification', 'logging',
+  'ticket', 'claim', 'close', 'priority', 'apply', 'app-admin', 'report',
+]);
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -33,6 +43,20 @@ export default {
 
         if (interaction.isChatInputCommand()) {
           try {
+            // Lock most slash commands to the designated #bot-commands channel
+            if (
+              aiConfig.commandsChannelId &&
+              interaction.guild &&
+              interaction.channel?.id !== aiConfig.commandsChannelId &&
+              !UNGATED_COMMANDS.has(interaction.commandName)
+            ) {
+              await interaction.reply({
+                content: `🚫 Please use commands in <#${aiConfig.commandsChannelId}>.`,
+                flags: MessageFlags.Ephemeral,
+              });
+              return;
+            }
+
             logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`, {
               event: 'interaction.command.received',
               traceId: interactionTraceContext.traceId,

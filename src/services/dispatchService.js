@@ -15,14 +15,19 @@ End with ONE question that pushes the scene forward. Stay in character. Never me
 const CHAT_PROMPT = `You are T MO, the AI for a GTA V console RP car club. Street-smart, brief (1-2 sentences),
 always in character in the GTA V world. Never mention you are AI.`;
 
-// Returns true if this message should trigger T MO
+// Decide if T MO should respond based on channel + trigger
 export function shouldRespond(message, client) {
   if (!aiConfig.enabled) return false;
   if (message.author.bot || !message.guild) return false;
   if (!message.content) return false;
-  const mentioned = message.mentions.has(client.user);
-  const nameHit = message.content.toLowerCase().includes(aiConfig.triggerWord);
-  return mentioned || nameHit;
+
+  const channelId = message.channel.id;
+  const isRpChannel = channelId === aiConfig.rpChannelId;
+  const isDispatchChannel = channelId === aiConfig.dispatchChannelId;
+  if (!isRpChannel && !isDispatchChannel) return false;
+
+  // In RP/dispatch channels, every message triggers T MO (no @mention needed)
+  return true;
 }
 
 function cleanText(message, client) {
@@ -36,15 +41,24 @@ export async function handleMessage(message, client) {
   const text = cleanText(message, client);
   if (!text) return;
 
+  const channelId = message.channel.id;
+  const isDispatchChannel = channelId === aiConfig.dispatchChannelId;
+
   try {
     await message.channel.sendTyping().catch(() => {});
-    const intent = await classifyIntent(text);
-    logger.info(`T MO intent=${intent} | ${message.author.username}: ${text.slice(0, 80)}`);
 
-    let prompt = CHAT_PROMPT;
-    let prefix = '';
-    if (intent === 'dispatch') { prompt = DISPATCH_PROMPT; prefix = '📻 **Dispatch** — '; }
-    else if (intent === 'scene') { prompt = SCENE_PROMPT; prefix = '🎬 '; }
+    let prompt, prefix;
+    if (isDispatchChannel) {
+      // Dispatch channel: ALWAYS dispatch mode. No intent classification needed (saves $).
+      prompt = DISPATCH_PROMPT;
+      prefix = '📻 **Dispatch** — ';
+    } else {
+      // RP channel: classify between scene vs chat
+      const intent = await classifyIntent(text);
+      logger.info(`T MO intent=${intent} | ${message.author.username}: ${text.slice(0, 80)}`);
+      if (intent === 'scene') { prompt = SCENE_PROMPT; prefix = '🎬 '; }
+      else { prompt = CHAT_PROMPT; prefix = ''; }
+    }
 
     const reply = await chat(prompt, text);
     if (reply) await message.reply(`${prefix}${reply}`);
