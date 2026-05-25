@@ -5,7 +5,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("lock")
-        .setDescription("Lock the channel instantly")
+        .setDescription("Lock the channel for EVERYONE and all specific roles")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
     async execute(interaction, config, client) {
@@ -14,27 +14,21 @@ export default {
         const guild = interaction.guild;
 
         try {
-            // Lấy danh sách quyền hiện tại và tạo danh sách mới đã chặn SendMessages
-            const newOverwrites = channel.permissionOverwrites.cache.map(o => ({
-                id: o.id,
-                allow: o.allow.remove(PermissionFlagsBits.SendMessages),
-                deny: o.deny.add(PermissionFlagsBits.SendMessages)
-            }));
+            // Lấy tất cả các role/user đang có quyền trong kênh
+            const overwrites = channel.permissionOverwrites.cache;
 
-            // Đảm bảo @everyone luôn nằm trong danh sách chặn
-            if (!newOverwrites.find(o => o.id === guild.roles.everyone.id)) {
-                newOverwrites.push({
-                    id: guild.roles.everyone.id,
-                    deny: [PermissionFlagsBits.SendMessages]
-                });
-            }
+            // Chạy vòng lặp để khóa từng đối tượng một
+            const tasks = overwrites.map(o => 
+                channel.permissionOverwrites.edit(o.id, { SendMessages: false })
+            );
 
-            // Áp dụng tất cả thay đổi trong 1 lần gọi (Cực nhanh)
-            await channel.permissionOverwrites.set(newOverwrites);
+            // Đảm bảo @everyone cũng bị khóa
+            tasks.push(channel.permissionOverwrites.edit(guild.roles.everyone.id, { SendMessages: false }));
 
-            // Chỉ gửi 1 thông báo duy nhất (Ephemeral)
+            await Promise.all(tasks);
+
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [successEmbed("🔒 Channel locked successfully.")],
+                embeds: [successEmbed("🔒 Locked: Everyone and specific roles can no longer send messages.")],
                 flags: MessageFlags.Ephemeral,
             });
 
