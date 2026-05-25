@@ -59,14 +59,20 @@ export default {
 
             const cases = await getModerationCases(interaction.guild.id, filters);
 
-            // ĐỒNG BỘ TIẾNG ANH: Sửa thông báo kết quả trống thành "No cases found" chuẩn chỉ
             if (!cases || cases.length === 0) {
                 const noCaseMessage = targetUser 
                     ? `No cases found for user ${targetUser.tag} (ID: ${targetUser.id}).`
                     : `No cases found for filter "${filterType === 'all' ? 'All' : filterType}" in this server.`;
                 
+                // Dùng createEmbed thường để hiện màu xanh, không bị dính chữ ❌ Error ép buộc
+                const infoEmbed = createEmbed({
+                    title: '📋 No cases found',
+                    description: noCaseMessage,
+                    color: 0x3498db
+                });
+
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('📋 No cases found', noCaseMessage)],
+                    embeds: [infoEmbed],
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -172,17 +178,18 @@ export default {
                         components: [disabledRow]
                     });
                 } catch (error) {
-                    // Bỏ qua lỗi nếu tin nhắn bị xóa trước khi collector hết hạn
                 }
             });
 
         } catch (error) {
             logger.error('Error in cases command:', error);
+            
+            // ĐÃ SỬA: In thẳng chi tiết lỗi cụ thể ra Discord để bạn biết chính xác lý do gãy lệnh
             return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         'System Error',
-                        'An error occurred while retrieving moderation cases. Please try again later.'
+                        `An error occurred: \`${error.message || error}\`\nPlease check this error in your database configuration.`
                     )
                 ],
                 flags: MessageFlags.Ephemeral
