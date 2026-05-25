@@ -139,6 +139,82 @@ roleId: null,
             type: 'robbery_protection',
             protection: true
         }
+    },
+
+    // ─── GTA V RP: Drug Trade ────────────────────────────────────────────
+    {
+        id: 'weed_oz',
+        name: '🌿 Weed (1oz)',
+        price: 500,
+        description: 'A baggie of LS Kush. Move it on the block. Boosts `/work` payout.',
+        type: 'consumable',
+        maxQuantity: 50,
+        effect: { type: 'work_yield', multiplier: 1.3, uses: 1 }
+    },
+    {
+        id: 'meth_g',
+        name: '🧪 Meth (1g)',
+        price: 1500,
+        description: 'Sandy Shores special. Risky to move. Boosts `/crime` payout.',
+        type: 'consumable',
+        maxQuantity: 25,
+        effect: { type: 'crime_yield', multiplier: 1.5, uses: 1 }
+    },
+    {
+        id: 'coke_g',
+        name: '❄️ Cocaine (1g)',
+        price: 2500,
+        description: 'Vinewood nose candy. High demand, high heat. Big `/crime` boost.',
+        type: 'consumable',
+        maxQuantity: 25,
+        effect: { type: 'crime_yield', multiplier: 1.8, uses: 1 }
+    },
+    {
+        id: 'burner_phone',
+        name: '📱 Burner Phone',
+        price: 1500,
+        description: 'Untraceable. Reduces the chance of getting busted on `/crime`.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: { type: 'crime_safety', multiplier: 1.4, uses: 3 }
+    },
+    {
+        id: 'drug_stash',
+        name: '💼 Drug Kingpin Stash',
+        price: 50000,
+        description: 'A safehouse stash. Permanent +25% on all drug-related earnings.',
+        type: 'upgrade',
+        maxLevel: 3,
+        effect: { type: 'work_yield', multiplier: 1.25 }
+    },
+
+    // ─── GTA V RP: Black Market Guns ────────────────────────────────────
+    {
+        id: 'bm_pistol',
+        name: '🔫 Black Market Pistol',
+        price: 3000,
+        description: 'A cheap iron from the docks. Boosts `/rob` success.',
+        type: 'tool',
+        durability: 50,
+        effect: { type: 'robbery_yield', multiplier: 1.4 }
+    },
+    {
+        id: 'bm_smg',
+        name: '🔫 Black Market SMG',
+        price: 12000,
+        description: 'Spray and pray. Big boost on `/crime` and `/rob`.',
+        type: 'tool',
+        durability: 75,
+        effect: { type: 'robbery_yield', multiplier: 1.8 }
+    },
+    {
+        id: 'bm_rifle',
+        name: '💣 Black Market Assault Rifle',
+        price: 35000,
+        description: 'Heist-grade hardware. Max-tier robbery boost.',
+        type: 'tool',
+        durability: 100,
+        effect: { type: 'robbery_yield', multiplier: 2.5 }
     }
 ];
 
