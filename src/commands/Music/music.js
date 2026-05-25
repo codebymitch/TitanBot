@@ -30,6 +30,11 @@ export default {
         const sub = interaction.options.getSubcommand();
 
         if (sub === 'play') {
+            const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
+            if (!ownerIds.includes(interaction.user.id)) {
+                return interaction.reply({ embeds: [errorEmbed('Only bot owners can use this command.')], ephemeral: true });
+            }
+
             if (!interaction.member.voice.channelId) {
                 return interaction.reply({ embeds: [errorEmbed('Join a voice channel first.')], ephemeral: true });
             }
