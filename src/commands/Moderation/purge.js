@@ -10,9 +10,7 @@ export default {
         .setName("purge")
         .setDescription("Delete a specific amount of messages")
         .addIntegerOption((option) =>
-            option.setName("amount")
-                .setDescription("Number of messages (1-100)")
-                .setRequired(true)
+            option.setName("amount").setDescription("Number of messages (1-100)").setRequired(true)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
     category: "moderation",
@@ -23,39 +21,30 @@ export default {
         const amount = interaction.options.getInteger("amount");
         const channel = interaction.channel;
 
-        if (amount < 1 || amount > 100) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Invalid Amount", "Please specify a number between 1 and 100.")],
-            });
-        }
-
         try {
             let deletedCount = 0;
+            const fetched = await channel.messages.fetch({ limit: amount });
 
             if (amount === 1) {
-                // Xử lý riêng cho 1 tin nhắn: Fetch và xóa thủ công
-                const fetched = await channel.messages.fetch({ limit: 1 });
                 const messageToDelete = fetched.first();
                 if (messageToDelete) {
                     await messageToDelete.delete();
                     deletedCount = 1;
                 }
             } else {
-                // Xử lý cho 2-100 tin nhắn
-                const fetched = await channel.messages.fetch({ limit: amount });
-                // Cố gắng xóa, không lọc bỏ tin cũ (để xem nó có báo lỗi thật không)
-                const deleted = await channel.bulkDelete(fetched, false); 
+                const deleted = await channel.bulkDelete(fetched, true);
                 deletedCount = deleted.size;
             }
 
+            // CHỖ NÀY QUAN TRỌNG: Nếu không xóa được gì, dừng lại ngay và không Log
             if (deletedCount === 0) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [warningEmbed("No messages deleted", "Bot found no messages to delete. They might be older than 14 days or are system messages.")],
+                    embeds: [warningEmbed("No messages deleted", "Could not delete messages. They might be older than 14 days or are system messages.")],
                     flags: MessageFlags.Ephemeral,
                 });
             }
 
-            // Ghi log sự kiện
+            // Chỉ Log khi đã thực sự xóa được tin nhắn
             await logEvent({
                 client,
                 guild: interaction.guild,
@@ -72,7 +61,6 @@ export default {
                 flags: MessageFlags.Ephemeral,
             });
 
-            // Tự động xóa thông báo của bot sau 3 giây
             setTimeout(() => {
                 interaction.deleteReply().catch(() => {});
             }, 3000);
@@ -80,10 +68,9 @@ export default {
         } catch (error) {
             logger.error('Purge error:', error);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Error", `Failed to delete messages: ${error.message}`)],
+                embeds: [errorEmbed("Error", `Failed: ${error.message}`)],
                 flags: MessageFlags.Ephemeral,
             });
         }
     }
 };
-
