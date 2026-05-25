@@ -4,22 +4,6 @@ import { logger } from './logger.js';
 import { getFromDb, setInDb } from './database.js';
 import { getColor } from '../config/bot.js';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export async function logEvent({ client, guild, guildId, event }) {
   try {
     if (!guild && guildId) {
@@ -48,7 +32,6 @@ export async function logEvent({ client, guild, guildId, event }) {
       return;
     }
 
-    
     const actionStyles = {
       'Member Banned': { color: getColor('error'), icon: '🔨' },
       'Member Kicked': { color: getColor('warning'), icon: '👢' },
@@ -125,12 +108,6 @@ export async function logEvent({ client, guild, guildId, event }) {
   }
 }
 
-
-
-
-
-
-
 export async function generateCaseId(client, guildId) {
   try {
     const caseKey = `moderation_cases_${guildId}`;
@@ -140,7 +117,7 @@ export async function generateCaseId(client, guildId) {
     return nextCase;
   } catch (error) {
     logger.error("Error generating case ID:", error);
-return Date.now();
+    return Date.now();
   }
 }
 
@@ -179,29 +156,32 @@ export async function storeModerationCase({ guildId, caseId, caseData }) {
   }
 }
 
-
-
-
-
-
-
+/**
+ * Get filtered moderation cases
+ * @param {string} guildId - The guild ID
+ * @param {Object} filters - Search filters
+ * @returns {Promise<Array>} Filtered cases
+ */
 export async function getModerationCases(guildId, filters = {}) {
   try {
     const { userId, moderatorId, action, limit = 50, offset = 0 } = filters;
-    
-    const allCases = [];
     
     const caseListKey = `moderation_cases_list_${guildId}`;
     const caseList = await getFromDb(caseListKey, []);
     
     let filteredCases = caseList;
     
+    // TỐI ƯU HÓA: Tìm kiếm thông minh qua cả ID trực tiếp lẫn quét chuỗi text hiển thị 'target'
     if (userId) {
-      filteredCases = filteredCases.filter(case_ => case_.targetUserId === userId);
+      filteredCases = filteredCases.filter(case_ => {
+        return case_.targetUserId === userId || (case_.target && case_.target.includes(userId));
+      });
     }
     
     if (moderatorId) {
-      filteredCases = filteredCases.filter(case_ => case_.moderatorId === moderatorId);
+      filteredCases = filteredCases.filter(case_ => {
+        return case_.moderatorId === moderatorId || (case_.executor && case_.executor.includes(moderatorId));
+      });
     }
     
     if (action) {
@@ -251,6 +231,4 @@ export async function logModerationAction({ client, guild, event }) {
   
   return caseId;
 }
-
-
 
