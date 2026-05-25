@@ -1,7 +1,7 @@
 {
-  "name": "titanbot-custom",
+  "name": "starlight-security",
   "version": "1.1.1",
-  "description": "Modular Ultimate Community Bot by Touchpoint Support",
+  "description": "Starlight Security - Advanced Discord Bot",
   "main": "src/app.js",
   "type": "module",
   "scripts": {
