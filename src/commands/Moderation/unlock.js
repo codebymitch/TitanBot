@@ -5,7 +5,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unlock")
-        .setDescription("Unlock the channel for EVERYONE and all specific roles")
+        .setDescription("Unlock the channel for all roles")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
     async execute(interaction, config, client) {
@@ -15,25 +15,25 @@ export default {
 
         try {
             const overwrites = channel.permissionOverwrites.cache;
+            const roleIds = [...overwrites.keys(), guild.roles.everyone.id];
 
-            // Xóa quyền (set null) để trả về trạng thái mặc định cho từng đối tượng
-            const tasks = overwrites.map(o => 
-                channel.permissionOverwrites.edit(o.id, { SendMessages: null })
-            );
-
-            tasks.push(channel.permissionOverwrites.edit(guild.roles.everyone.id, { SendMessages: null }));
-
-            await Promise.all(tasks);
+            for (const id of roleIds) {
+                try {
+                    await channel.permissionOverwrites.edit(id, { SendMessages: null });
+                } catch (e) {
+                    console.log(`Skipping role ${id}:`, e.message);
+                }
+            }
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [successEmbed("🔓 Unlocked: All restrictions removed.")],
+                embeds: [successEmbed("🔓 Channel unlocked successfully.")],
                 flags: MessageFlags.Ephemeral,
             });
 
         } catch (error) {
-            console.error("Unlock error:", error);
+            console.error("Critical unlock error:", error);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Error", "Failed to unlock channel.")],
+                embeds: [errorEmbed("Error", "Failed to process unlock command.")],
             });
         }
     }
