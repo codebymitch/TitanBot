@@ -31,7 +31,7 @@ function findBestWeapon(inv = []) {
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('211')
+        .setName('robbery')
         .setDescription('Armed robbery (211 in progress). Payout scales with your weapon.')
         .addStringOption(o => o
             .setName('target')
@@ -58,7 +58,7 @@ export default {
             throw createError('Jailed', ErrorTypes.RATE_LIMIT, `You're locked up for ${m} more minutes.`);
         }
 
-        const last = userData.cooldowns?.['211'] || 0;
+        const last = userData.cooldowns?.robbery || 0;
         if (now < last + COOLDOWN) {
             const m = Math.ceil((last + COOLDOWN - now) / 60000);
             throw createError('Cooldown', ErrorTypes.RATE_LIMIT, `Cool it. Try again in ${m} minutes.`);
@@ -77,7 +77,7 @@ export default {
         const success = Math.random() > finalRisk;
 
         userData.cooldowns = userData.cooldowns || {};
-        userData.cooldowns['211'] = now;
+        userData.cooldowns.robbery = now;
 
         if (success) {
             const base = Math.floor(Math.random() * (target.max - target.min + 1)) + target.min;
@@ -102,5 +102,5 @@ export default {
                 )]
             });
         }
-    }, { command: '211' })
+    }, { command: 'robbery' })
 };
