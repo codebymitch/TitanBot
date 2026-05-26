@@ -24,7 +24,6 @@ const HELP_MENU_TIMEOUT_MS = 5 * 60 * 1000;
 const CATEGORY_ICONS = {
     Core: "ℹ️",
     Moderation: "🛡️",
-    Economy: "💰",
     Fun: "🎮",
     Leveling: "📊",
     Utility: "🔧",
@@ -77,7 +76,6 @@ export async function createInitialHelpMenu(client) {
 
     embed.addFields(
         { name: "🛡️ **Moderation**", value: "Server moderation, user management, and enforcement tools", inline: true },
-        { name: "💰 **Economy**", value: "Currency system, shops, and virtual economy", inline: true },
         { name: "🎮 **Fun**", value: "Games, entertainment, and interactive commands", inline: true },
         { name: "📊 **Leveling**", value: "User levels, XP system, and progression tracking", inline: true },
         { name: "🎫 **Tickets**", value: "Support ticket system for server management", inline: true },
