@@ -14,10 +14,22 @@ export default {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
     async execute(interaction, config, client) {
-        // [WAIT] Initial response to prevent "Interaction Failed"
-        await InteractionHelper.safeDefer(interaction);
+        // 1. Kiểm tra lệnh này là Slash hay Prefix
+        const isPrefix = !interaction.deferReply;
+        
+        if (!isPrefix) {
+            await InteractionHelper.safeDefer(interaction);
+        }
 
-        const amount = interaction.options.getInteger("amount");
+        // 2. Xử lý logic lấy amount (Prefix lấy từ args, Slash lấy từ options)
+        let amount = isPrefix 
+            ? parseInt(interaction.options.getInteger()) // Lấy từ context của prefixHandler
+            : interaction.options.getInteger("amount");
+
+        // 3. CHẶN LỖI 100 TIN NHẮN (Discord API limit)
+        if (amount > 100) amount = 100;
+        if (amount < 1) amount = 1;
+
         const channel = interaction.channel;
 
         try {
@@ -25,14 +37,11 @@ export default {
             const messagesToDelete = Array.from(fetched.values()).slice(1);
 
             if (messagesToDelete.length === 0) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed("No messages found", "There are no messages available to delete.")],
-                });
+                const err = errorEmbed("No messages found", "There are no messages available to delete.");
+                return isPrefix ? await channel.send({ embeds: [err] }) : await InteractionHelper.safeEditReply(interaction, { embeds: [err] });
             }
 
             let deletedCount = 0;
-
-            // [WAIT] Bot will pause here until the deletion is fully confirmed by Discord
             if (messagesToDelete.length === 1) {
                 await messagesToDelete[0].delete();
                 deletedCount = 1;
@@ -40,22 +49,21 @@ export default {
                 const deleted = await channel.bulkDelete(messagesToDelete, true);
                 deletedCount = deleted.size;
             }
-            // [AFTER THIS] Only now, the code proceeds to the next line
 
-            // [WAIT] Finally, send the success notification
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [successEmbed(`🗑️ Successfully deleted ${deletedCount} messages.`)],
-                flags: MessageFlags.Ephemeral,
-            });
-
-            // Auto-delete the success message after 3s
-            setTimeout(() => { interaction.deleteReply().catch(() => {}); }, 3000);
+            const success = successEmbed(`🗑️ Successfully deleted ${deletedCount} messages.`);
+            
+            if (isPrefix) {
+                const msg = await channel.send({ embeds: [success] });
+                setTimeout(() => msg.delete().catch(() => {}), 3000);
+            } else {
+                await InteractionHelper.safeEditReply(interaction, { embeds: [success], flags: MessageFlags.Ephemeral });
+                setTimeout(() => interaction.deleteReply().catch(() => {}), 3000);
+            }
 
         } catch (error) {
-            console.error(error);
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Error", "Failed to delete messages. (They might be older than 14 days or system messages.)")],
-            });
+            console.error("Purge error:", error);
+            const err = errorEmbed("Error", "Failed to delete messages. (Older than 14 days or system messages.)");
+            isPrefix ? await channel.send({ embeds: [err] }) : await InteractionHelper.safeEditReply(interaction, { embeds: [err] });
         }
     }
 };
