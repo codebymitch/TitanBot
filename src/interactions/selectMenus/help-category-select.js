@@ -1,24 +1,28 @@
-import { getCategoryEmbedAndPageCount, createHelpPaginationButtons } from '../../utils/helpMenuHelper.js';
+import { getCategoryEmbedAndPageCount, getAllCommandsEmbedAndPageCount, createHelpPaginationButtons } from '../../utils/helpMenuHelper.js';
 
 export default {
     name: 'help-category-select',
     async execute(interaction, client, args) {
         try {
-            // 1. Lấy category mà người dùng chọn
             const selectedCategory = interaction.values[0];
-            
-            // Nếu chọn "All Commands" (ID: help-all-commands) thì xử lý riêng hoặc ignore
-            if (selectedCategory === 'help-all-commands') {
-                return await interaction.editReply({ content: 'Coming soon: All commands view!' });
-            }
+            let embed, totalPages;
 
-            // 2. Lấy Embed trang đầu tiên (page 1) của category đó
-            const { embed, totalPages } = await getCategoryEmbedAndPageCount(selectedCategory, 1, client);
+            // Xử lý khi chọn "All Commands"
+            if (selectedCategory === 'help-all-commands') {
+                const result = await getAllCommandsEmbedAndPageCount(1, client);
+                embed = result.embed;
+                totalPages = result.totalPages;
+            } else {
+                // Xử lý các category bình thường
+                const result = await getCategoryEmbedAndPageCount(selectedCategory, 1, client);
+                embed = result.embed;
+                totalPages = result.totalPages;
+            }
             
-            // 3. Tạo nút bấm chuyển trang cho category này
+            // Tạo nút bấm chuyển trang
             const row = createHelpPaginationButtons(1, totalPages, selectedCategory);
             
-            // 4. Cập nhật tin nhắn
+            // Cập nhật tin nhắn
             await interaction.editReply({
                 embeds: [embed],
                 components: [row]
