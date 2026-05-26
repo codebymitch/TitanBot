@@ -1,5 +1,5 @@
 // file: delete_table.js
-import { pool } from './src/config/db.js'; // Trỏ đúng đường dẫn đến file config db của bạn
+import { db } from '../../utils/database.js';
 
 async function dropTable() {
     try {
