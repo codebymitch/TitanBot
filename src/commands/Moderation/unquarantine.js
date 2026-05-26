@@ -1,45 +1,39 @@
 import { SlashCommandBuilder } from 'discord.js';
-import fs from 'fs';
-
-const DB_PATH = './quarantine_data.json';
+import db from '../../Utility/src/config/db.js'; // Điều chỉnh đường dẫn này đến file db.js của bạn
 
 export default {
     data: new SlashCommandBuilder()
         .setName('unquarantine')
-        .setDescription('Remove quarantine role and restore previous roles')
+        .setDescription('Remove quarantine and restore roles')
         .addUserOption(option => option.setName('user').setDescription('Member to unquarantine').setRequired(true)),
     
     async execute(interaction) {
+        // Fix for Interaction expired
+        await interaction.deferReply({ ephemeral: true });
+
         const target = interaction.options.getMember('user');
+        if (!target) return interaction.editReply({ content: 'Member not found.' });
 
-        // Safety check: Ensure target exists
-        if (!target) {
-            return interaction.reply({ content: 'Error: Could not find that member.', ephemeral: true });
-        }
-
-        if (!fs.existsSync(DB_PATH)) {
-            return interaction.reply({ content: 'No quarantine data file found.', ephemeral: true });
-        }
-
-        const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-
-        if (!data[target.id]) {
-            return interaction.reply({ content: 'This user is not currently in quarantine or has no saved roles.', ephemeral: true });
-        }
-
-        const oldRoles = data[target.id];
-        
         try {
+            // Retrieve from DB
+            const res = await db.query('SELECT roles FROM quarantine_data WHERE user_id = $1', [target.id]);
+            
+            if (res.rows.length === 0) {
+                return interaction.editReply({ content: 'This user is not in quarantine database.' });
+            }
+
+            const oldRoles = JSON.parse(res.rows[0].roles);
+            
+            // Restore roles
             await target.roles.set(oldRoles);
+            
+            // Delete from DB
+            await db.query('DELETE FROM quarantine_data WHERE user_id = $1', [target.id]);
 
-            // Remove data after restoring roles
-            delete data[target.id];
-            fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-
-            await interaction.reply({ content: `Successfully unquarantined ${target.user.tag}.`, ephemeral: true });
+            await interaction.editReply({ content: `Successfully unquarantined ${target.user.tag}.` });
         } catch (error) {
             console.error(error);
-            await interaction.reply({ content: 'Failed to restore roles. Check bot permissions.', ephemeral: true });
+            await interaction.editReply({ content: 'Database error or missing permissions.' });
         }
     }
 };
