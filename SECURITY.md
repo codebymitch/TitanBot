@@ -1,16 +1,16 @@
-# Security Policy — TitanBot
+# Security Policy — NH_starlightsercurity
 
 We take security seriously. If you discover a vulnerability, please follow the policy below so we can triage and address it safely.
 
 ## Summary / Self-hosting clarity
-TitanBot is distributed as open-source software for self-hosting. We (the maintainers) do not operate self-hosted instances and do not have access to user data or configurations on third-party deployments. Self-hosters are responsible for securing and operating their instances. This policy describes how to report vulnerabilities affecting the project code and guidance for self-hosters who discover security issues in their deployment.
+NH_starlightsercurity is distributed as open-source software for self-hosting. We (the maintainers) do not operate self-hosted instances and do not have access to user data or configurations on third-party deployments. Self-hosters are responsible for securing and operating their instances. This policy describes how to report vulnerabilities affecting the project code and guidance for self-hosters who discover security issues in their deployment.
 
 ## Reporting a Vulnerability (preferred)
 - Preferred channel: Open a private GitHub Security Advisory for this repository (recommended).
 - If you cannot use GitHub Advisories, open a ticket: https:
 - Do NOT open a public issue with exploit details.
 
-If you found a problem in your self-hosted instance that appears to be due to misconfiguration, please contact the instance operator/host first. If you believe the issue is caused by a vulnerability in TitanBot code, follow the reporting steps above and indicate whether the report comes from a self-hosted deployment.
+If you found a problem in your self-hosted instance that appears to be due to misconfiguration, please contact the instance operator/host first. If you believe the issue is caused by a vulnerability in NH_starlightsercurity code, follow the reporting steps above and indicate whether the report comes from a self-hosted deployment.
 
 ## Response timelines (what to expect)
 - Acknowledgement: within 72 hours.
@@ -39,7 +39,7 @@ If you found a problem in your self-hosted instance that appears to be due to mi
 - Contact info for follow-up.
 
 ## Incident reporting from self-hosted deployments
-If you operate a self-hosted TitanBot instance and suffer a security incident:
+If you operate a self-hosted NH_starlightsercurity instance and suffer a security incident:
 - Immediately rotate any exposed secrets (bot token, DB credentials, API keys).
 - Take a snapshot of logs/configuration for investigation (avoid sharing secrets).
 - If you need upstream help, file a private security advisory and include sanitized reproduction steps and the TitanBot version/commit.
@@ -66,11 +66,8 @@ If you operate a self-hosted TitanBot instance and suffer a security incident:
 - We may assign a CVE or coordinate with CERT/other bodies for high-severity issues.
 
 ## Privacy & Telemetry
-- TitanBot does not phone home or collect usage data by default. (If you plan to add telemetry, it must be opt-in, documented, and transparent.)
+- NH_starlightsercurity does not phone home or collect usage data by default. (If you plan to add telemetry, it must be opt-in, documented, and transparent.)
 - Maintainers do not receive data from self-hosted instances. If you choose to enable any telemetry, document what is collected and how to opt out.
 
-## Contact
-- Preferred: GitHub Security Advisory for this repository
-- Ticket: https:
 
-Thank you for helping keep TitanBot safe.
+Thank you for helping keep the NH_starlightsercurity bot - safe.
