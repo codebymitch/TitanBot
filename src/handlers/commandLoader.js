@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { Collection } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { COMMAND_MAP } from '../config/aliases.js';
+import { registerPrefixAliases } from '../utils/commandAliases.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,19 +130,7 @@ export async function loadCommands(client) {
         }
     }
     
-    let aliasCount = 0;
-    for (const [alias, targetName] of Object.entries(COMMAND_MAP)) {
-        const targetCommand = client.commands.get(targetName);
-        if (!targetCommand) {
-            logger.warn(`Prefix alias "${alias}" points to unknown command "${targetName}"`);
-            continue;
-        }
-        if (!client.commands.has(alias)) {
-            client.commands.set(alias, targetCommand);
-            aliasCount++;
-        }
-    }
-
+    const aliasCount = registerPrefixAliases(client.commands);
     if (aliasCount > 0) {
         logger.info(`Registered ${aliasCount} prefix command aliases`);
     }

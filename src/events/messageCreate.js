@@ -2,7 +2,6 @@ import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { BotConfig } from '../config/bot.js';
-import { COMMAND_MAP } from '../config/aliases.js';
 import { createPrefixInteraction, parsePrefixContent } from '../utils/prefixCommandAdapter.js';
 
 const DEFAULT_PREFIX = BotConfig.prefix || 'nh!';
@@ -18,9 +17,10 @@ export default {
         const parsed = parsePrefixContent(message.content, prefix);
         if (!parsed) return;
 
-        const resolvedName = COMMAND_MAP[parsed.commandName] ?? parsed.commandName;
-        const command = client.commands.get(resolvedName);
+        const command = client.commands.get(parsed.commandName);
         if (!command) return;
+
+        const resolvedName = command.data?.name ?? parsed.commandName;
 
         const fakeInteraction = createPrefixInteraction(
             message,
