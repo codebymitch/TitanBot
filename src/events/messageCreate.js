@@ -1,64 +1,58 @@
-import { Events, PermissionsBitField } from 'discord.js';
+import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
+import { COMMAND_MAP } from '../../config/aliases.js';
 
 export default {
     name: Events.MessageCreate,
     async execute(message, client) {
+        // Configuration
         const PREFIX = "nh!";
+        
+        // Validation
         if (!message.content.startsWith(PREFIX) || message.author.bot || !message.guild) return;
 
+        // Parse command and arguments
         const args = message.content.slice(PREFIX.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
 
-        // --- COMMANDS LIST ---
-        const commandsList = {
-            // Utility Commands
-            'ping': (msg) => msg.reply('Pong! 🏓'),
-            'info': (msg) => msg.reply('Bot Starlight Security is online! 🚀'),
-            'uptime': (msg) => {
-                const up = process.uptime();
-                msg.reply(`Uptime: ${Math.floor(up/86400)}d ${Math.floor(up/3600)%24}h ${Math.floor(up/60)%60}m`);
-            },
+        // 1. Resolve alias or use direct command name
+        const realCommandName = COMMAND_MAP[commandName] || commandName;
+        
+        // 2. Try to find the command in the collection loaded by commandLoader
+        const command = client.commands.get(realCommandName);
 
-            // Security Commands (Admin only)
-            'lock': async (msg) => {
-                if (!msg.member.permissions.has(PermissionsBitField.Flags.ManageChannels)) return msg.reply('Missing permissions!');
-                await msg.channel.permissionOverwrites.edit(msg.guild.id, { SendMessages: false });
-                msg.reply('Channel locked 🔒');
-            },
-            'unlock': async (msg) => {
-                if (!msg.member.permissions.has(PermissionsBitField.Flags.ManageChannels)) return msg.reply('Missing permissions!');
-                await msg.channel.permissionOverwrites.edit(msg.guild.id, { SendMessages: true });
-                msg.reply('Channel unlocked 🔓');
-            },
-            'kick': async (msg) => {
-                if (!msg.member.permissions.has(PermissionsBitField.Flags.KickMembers)) return msg.reply('Missing permissions!');
-                const member = msg.mentions.members.first();
-                if (!member) return msg.reply('Mention a member to kick!');
-                await member.kick().catch(e => msg.reply('Failed to kick.'));
-                msg.reply(`Kicked ${member.user.tag}`);
-            },
-            'ban': async (msg) => {
-                if (!msg.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return msg.reply('Missing permissions!');
-                const member = msg.mentions.members.first();
-                if (!member) return msg.reply('Mention a member to ban!');
-                await member.ban().catch(e => msg.reply('Failed to ban.'));
-                msg.reply(`Banned ${member.user.tag}`);
-            },
+        if (command) {
+            // 3. Create a "Fake Interaction" object to bridge Message to Interaction
+            // This allows the existing code (designed for Slash) to run with Prefix
+            const fakeInteraction = {
+                member: message.member,
+                guild: message.guild,
+                channel: message.channel,
+                user: message.author,
+                // Mocking interaction methods
+                reply: (content) => message.reply(content),
+                editReply: (content) => message.channel.send(content), // Simplified
+                deferReply: async () => {}, // No-op for prefix
+                // Mocking options access
+                options: {
+                    getMember: (name) => message.mentions.members.first() || message.member,
+                    getString: (name) => args.join(' '),
+                    getUser: (name) => message.mentions.users.first(),
+                    getChannel: (name) => message.mentions.channels.first()
+                }
+            };
 
-            'help': (msg) => {
-                msg.reply('**Available nh! commands:**\n- `ping`, `info`, `uptime`\n- `lock`, `unlock` (Channel)\n- `kick`, `ban` (@user)');
-            }
-        };
-
-        // --- EXECUTION ---
-        if (commandsList[commandName]) {
             try {
-                await commandsList[commandName](message, args);
+                // Execute the command using the fake interaction
+                await command.execute(fakeInteraction);
             } catch (error) {
-                logger.error(`Error executing ${commandName}:`, error);
-                message.reply('An error occurred.');
+                logger.error(`Error executing ${realCommandName} via prefix:`, error);
+                message.reply('An error occurred while executing this command.');
             }
+            return;
         }
+
+        // Optional: Keep your legacy "non-slash" commands here if needed
+        // e.g., if you have hardcoded commands that aren't in the Command Loader
     }
 };
