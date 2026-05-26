@@ -1,12 +1,21 @@
-import { SlashCommandBuilder, PermissionsBitField } from 'discord.js';
-import fs from 'fs';
+import { SlashCommandBuilder, PermissionsBitField, Colors } from 'discord.js';
+import db from '../../Utility/src/config/db.js'; // Điều chỉnh đường dẫn này đến file db.js của bạn
 
-const DB_PATH = './quarantine_data.json';
-
-const loadData = () => {
-    if (!fs.existsSync(DB_PATH)) return {};
-    return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-};
+async function ensureQuarantineRole(guild, botMember) {
+    let role = guild.roles.cache.find(r => r.name === 'Quarantine');
+    if (!role) {
+        role = await guild.roles.create({
+            name: 'Quarantine',
+            color: Colors.Red,
+            reason: 'Auto-created Quarantine role'
+        });
+    }
+    const botTopRolePosition = botMember.roles.highest.position;
+    if (role.position < botTopRolePosition - 1) {
+        await role.setPosition(botTopRolePosition - 1).catch(console.error);
+    }
+    return role;
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -15,37 +24,34 @@ export default {
         .addUserOption(option => option.setName('user').setDescription('Member to quarantine').setRequired(true)),
     
     async execute(interaction) {
-        // Permission check
+        // Fix for Interaction expired
+        await interaction.deferReply({ ephemeral: true });
+
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
-            return interaction.reply({ content: 'You do not have permission to use this command.', ephemeral: true });
+            return interaction.editReply({ content: 'You do not have permission.' });
         }
 
         const member = interaction.options.getMember('user');
-        
-        // Safety check: Ensure member exists
-        if (!member) {
-            return interaction.reply({ content: 'Error: Could not find that member.', ephemeral: true });
-        }
+        if (!member) return interaction.editReply({ content: 'Member not found.' });
 
-        const quarantineRole = interaction.guild.roles.cache.find(r => r.name === 'Quarantine');
+        const botMember = await interaction.guild.members.fetch(interaction.client.user.id);
+        const quarantineRole = await ensureQuarantineRole(interaction.guild, botMember);
         
-        // Safety check: Ensure the role exists
-        if (!quarantineRole) {
-            return interaction.reply({ content: 'Error: Role "Quarantine" not found in this server.', ephemeral: true });
-        }
+        // Save roles: Filter out @everyone and the quarantine role itself
+        const rolesToSave = member.roles.cache.filter(r => r.id !== interaction.guild.id && r.id !== quarantineRole.id).map(r => r.id);
         
-        // Save previous roles
-        const data = loadData();
-        data[member.id] = member.roles.cache.filter(r => r.id !== interaction.guild.id && r.id !== quarantineRole.id).map(r => r.id);
-        
-        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-
         try {
+            // Save to DB
+            await db.query(
+                'INSERT INTO quarantine_data (user_id, roles) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET roles = $2',
+                [member.id, JSON.stringify(rolesToSave)]
+            );
+
             await member.roles.set([quarantineRole.id]);
-            await interaction.reply({ content: `Successfully quarantined ${member.user.tag}.`, ephemeral: true });
+            await interaction.editReply({ content: `Successfully quarantined ${member.user.tag}.` });
         } catch (error) {
             console.error(error);
-            await interaction.reply({ content: 'Failed to apply roles. Check bot permissions or role hierarchy.', ephemeral: true });
+            await interaction.editReply({ content: 'Failed to apply quarantine. Check role hierarchy.' });
         }
     }
 };
