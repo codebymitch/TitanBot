@@ -4,11 +4,8 @@ import {
     ButtonBuilder,
     ButtonStyle,
 } from "discord.js";
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { createEmbed } from "../../utils/embeds.js";
-import {
-    createSelectMenu,
-} from "../../utils/components.js";
+import { createSelectMenu } from "../../utils/components.js";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -121,14 +118,17 @@ export default {
         .setDescription("Displays the help menu with all available commands"),
 
     async execute(interaction, guildConfig, client) {
-        await InteractionHelper.safeDefer(interaction);
+        // Sử dụng native deferReply để tránh lỗi expired
+        await interaction.deferReply({ ephemeral: true }).catch(console.error);
+
         const { embeds, components } = await createInitialHelpMenu(client);
 
-        await InteractionHelper.safeEditReply(interaction, {
+        await interaction.editReply({
             embeds,
             components,
-        });
+        }).catch(console.error);
 
+        // Timeout để tự động đóng menu
         setTimeout(async () => {
             try {
                 const closedEmbed = createEmbed({
@@ -136,10 +136,10 @@ export default {
                     description: "Help menu has been closed, use /help again.",
                     color: "secondary",
                 });
-                await InteractionHelper.safeEditReply(interaction, {
+                await interaction.editReply({
                     embeds: [closedEmbed],
                     components: [],
-                });
+                }).catch(() => {});
             } catch (error) {}
         }, HELP_MENU_TIMEOUT_MS);
     },
