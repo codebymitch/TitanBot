@@ -4,25 +4,21 @@ export default {
     name: 'help-category-select',
     async execute(interaction, client, args) {
         try {
-            const selectedCategory = interaction.values[0];
-            let embed, totalPages;
-
-            // Xử lý khi chọn "All Commands"
-            if (selectedCategory === 'help-all-commands') {
-                const result = await getAllCommandsEmbedAndPageCount(1, client);
-                embed = result.embed;
-                totalPages = result.totalPages;
-            } else {
-                // Xử lý các category bình thường
-                const result = await getCategoryEmbedAndPageCount(selectedCategory, 1, client);
-                embed = result.embed;
-                totalPages = result.totalPages;
-            }
+            await interaction.deferUpdate(); // Quan trọng: Đánh dấu đã nhận tương tác
             
-            // Tạo nút bấm chuyển trang
+            const selectedCategory = interaction.values[0];
+            let result;
+
+            // Xử lý đúng cho All Commands
+            if (selectedCategory === 'help-all-commands') {
+                result = await getAllCommandsEmbedAndPageCount(1, client);
+            } else {
+                result = await getCategoryEmbedAndPageCount(selectedCategory, 1, client);
+            }
+
+            const { embed, totalPages } = result;
             const row = createHelpPaginationButtons(1, totalPages, selectedCategory);
             
-            // Cập nhật tin nhắn
             await interaction.editReply({
                 embeds: [embed],
                 components: [row]
