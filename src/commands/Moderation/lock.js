@@ -10,9 +10,7 @@ export default {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
     async execute(interaction, config, client) {
-        // KIỂM TRA ĐÂY LÀ PREFIX HAY SLASH
-        // Nếu không có deferReply, nghĩa là đây là lệnh Prefix (nh!lock)
-        const isPrefix = !interaction.deferReply;
+        const isPrefix = interaction._isPrefix === true;
 
         if (!isPrefix) {
             await InteractionHelper.safeDefer(interaction);

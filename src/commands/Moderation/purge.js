@@ -16,7 +16,7 @@ export default {
 
     async execute(interaction, config, client) {
         // 1. Kiểm tra lệnh này là Slash hay Prefix
-        const isPrefix = !interaction.deferReply;
+        const isPrefix = interaction._isPrefix === true;
         
         if (!isPrefix) {
             await InteractionHelper.safeDefer(interaction);
