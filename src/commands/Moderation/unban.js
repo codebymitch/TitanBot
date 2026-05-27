@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { PunishmentService } from '../../services/punishmentService.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unban")
@@ -45,6 +46,9 @@ export default {
                     moderator: interaction.member,
                     reason
                 });
+
+                PunishmentService.deactivate(interaction.guildId, targetUser.id, 'BAN')
+                    .catch(e => logger.warn('Failed to deactivate ban punishment:', e.message));
 
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [

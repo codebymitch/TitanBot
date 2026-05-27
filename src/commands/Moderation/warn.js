@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { PunishmentService } from '../../services/punishmentService.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -91,6 +92,15 @@ export default {
                     }
                 }
             });
+
+            PunishmentService.record({
+                guildId,
+                userId: target.id,
+                moderatorId: moderator.id,
+                action: 'WARN',
+                reason,
+                caseId: result.id
+            }).catch(e => logger.warn('Failed to record warn punishment:', e.message));
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [

@@ -4,6 +4,7 @@ import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { PunishmentService } from '../../services/punishmentService.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -110,6 +111,15 @@ export default {
       });
 
       
+      PunishmentService.record({
+        guildId: interaction.guildId,
+        userId: targetUser.id,
+        moderatorId: interaction.user.id,
+        action: 'KICK',
+        reason,
+        caseId
+      }).catch(e => logger.warn('Failed to record kick punishment:', e.message));
+
       await InteractionHelper.universalReply(interaction, {
         embeds: [
           successEmbed(

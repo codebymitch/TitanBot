@@ -405,6 +405,21 @@ class PostgreSQLDatabase {
                 value JSONB NOT NULL,
                 expires_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`,
+
+            `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.moderation_punishments} (
+                id SERIAL PRIMARY KEY,
+                guild_id VARCHAR(20) NOT NULL,
+                user_id VARCHAR(20) NOT NULL,
+                moderator_id VARCHAR(20) NOT NULL,
+                action VARCHAR(20) NOT NULL,
+                reason TEXT DEFAULT 'No reason provided',
+                duration_minutes INTEGER,
+                expires_at TIMESTAMP,
+                active BOOLEAN DEFAULT TRUE,
+                case_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`
         ];
 
@@ -442,6 +457,10 @@ class PostgreSQLDatabase {
             `CREATE INDEX IF NOT EXISTS idx_economy_guild_id ON ${pgConfig.tables.economy}(guild_id)`,
             `CREATE INDEX IF NOT EXISTS idx_verification_audit_guild_id ON ${pgConfig.tables.verification_audit}(guild_id)`,
             `CREATE INDEX IF NOT EXISTS idx_verification_audit_user_id ON ${pgConfig.tables.verification_audit}(user_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_punishments_guild_user ON ${pgConfig.tables.moderation_punishments}(guild_id, user_id)`,
+            `CREATE INDEX IF NOT EXISTS idx_punishments_active ON ${pgConfig.tables.moderation_punishments}(guild_id, user_id, active)`,
+            `CREATE INDEX IF NOT EXISTS idx_punishments_expires_at ON ${pgConfig.tables.moderation_punishments}(expires_at)`,
+            `CREATE INDEX IF NOT EXISTS idx_punishments_guild_action ON ${pgConfig.tables.moderation_punishments}(guild_id, action)`,
             `CREATE INDEX IF NOT EXISTS idx_verification_audit_created_at ON ${pgConfig.tables.verification_audit}(created_at)`,
             `CREATE INDEX IF NOT EXISTS idx_temp_data_expires_at ON ${pgConfig.tables.temp_data}(expires_at)`,
             `CREATE INDEX IF NOT EXISTS idx_cache_data_expires_at ON ${pgConfig.tables.cache_data}(expires_at)`

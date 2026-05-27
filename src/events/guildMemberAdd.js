@@ -4,9 +4,13 @@ import { getGuildConfig } from '../services/guildConfig.js';
 import { getWelcomeConfig } from '../utils/database.js';
 import { formatWelcomeMessage } from '../utils/welcome.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
+import { logEvent as logModEvent } from '../utils/moderation.js';
 import { getServerCounters, updateCounter } from '../services/serverstatsService.js';
 import { setBirthday as dbSetBirthday } from '../utils/database.js';
+import { PunishmentService } from '../services/punishmentService.js';
 import { logger } from '../utils/logger.js';
+
+const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000; // 28 days — Discord max
 
 export default {
   name: Events.GuildMemberAdd,
@@ -164,12 +168,114 @@ export default {
         } catch (error) {
             logger.debug('Error restoring birthday on member join:', error);
         }
-        
+
+        // Punishment evasion detection
+        checkPunishmentEvasion(member, guild).catch(err =>
+            logger.debug('Evasion check error:', err.message)
+        );
+
     } catch (error) {
         logger.error('Error in guildMemberAdd event:', error);
     }
   }
 };
+
+/**
+ * Check for punishment evasion when a member joins.
+ * - Re-applies active timeouts (user left during timeout).
+ * - Alerts moderators when previously banned/kicked users rejoin.
+ * - Flags accounts less than 7 days old.
+ */
+async function checkPunishmentEvasion(member, guild) {
+    const { user } = member;
+
+    // 1. Re-apply active timeouts
+    try {
+        const active = await PunishmentService.getActive(guild.id, user.id);
+        const activeTimeout = active.find(p => p.action === 'TIMEOUT');
+
+        if (activeTimeout && member.moderatable) {
+            const expiresAt = new Date(activeTimeout.expires_at || activeTimeout.expiresAt);
+            const remaining = expiresAt.getTime() - Date.now();
+
+            if (remaining > 0) {
+                const applyMs = Math.min(remaining, MAX_TIMEOUT_MS);
+                await member.timeout(applyMs, 'Auto-reapplied: timeout evasion prevention');
+                logger.info(`Timeout re-applied for ${user.tag} in ${guild.name} (evasion prevention)`);
+
+                await logModEvent({
+                    client: member.client,
+                    guild,
+                    event: {
+                        action: '⚠️ Timeout Evasion',
+                        target: `${user.tag} (${user.id})`,
+                        executor: 'TitanBot (Auto)',
+                        reason: `User rejoined during active timeout. Auto-reapplied.\nOriginal reason: ${activeTimeout.reason || 'No reason provided'}`,
+                        duration: `Expires <t:${Math.floor(expiresAt.getTime() / 1000)}:R>`,
+                        color: 0xff6b00,
+                    }
+                });
+            }
+        }
+    } catch (err) {
+        logger.debug('Timeout evasion check failed:', err.message);
+    }
+
+    // 2. Alert mods when a previously banned/kicked user rejoins
+    try {
+        const history = await PunishmentService.getUserHistory(guild.id, user.id, 10);
+        const severe = history.filter(p => p.action === 'BAN' || p.action === 'KICK');
+
+        if (severe.length > 0) {
+            const latest = severe[0];
+            const ts = Math.floor(
+                new Date(latest.created_at || latest.createdAt || Date.now()).getTime() / 1000
+            );
+
+            await logModEvent({
+                client: member.client,
+                guild,
+                event: {
+                    action: '⚠️ Previously Punished User Rejoined',
+                    target: `${user.tag} (${user.id})`,
+                    executor: 'TitanBot (Auto)',
+                    reason: `User has **${severe.length}** prior ban/kick record(s).\nMost recent: **${latest.action}** — <t:${ts}:R>\nReason: ${latest.reason || 'No reason provided'}`,
+                    color: 0xff0000,
+                    metadata: {
+                        totalRecords: `${severe.length} ban/kick(s)`,
+                        'Run /history': `Use \`/history @${user.username}\` to review their full history`,
+                    }
+                }
+            });
+        }
+    } catch (err) {
+        logger.debug('Punishment history check failed:', err.message);
+    }
+
+    // 3. Flag new accounts (less than 7 days old)
+    try {
+        const accountAgeDays = (Date.now() - user.createdTimestamp) / (1000 * 60 * 60 * 24);
+        if (accountAgeDays < 7) {
+            await logModEvent({
+                client: member.client,
+                guild,
+                event: {
+                    action: '🆕 New Account Alert',
+                    target: `${user.tag} (${user.id})`,
+                    executor: 'TitanBot (Auto)',
+                    reason: `Account is only **${accountAgeDays.toFixed(1)} days** old (under 7 days).`,
+                    color: 0xffcc00,
+                    metadata: {
+                        'Account Age': `${accountAgeDays.toFixed(1)} days`,
+                        'Created': `<t:${Math.floor(user.createdTimestamp / 1000)}:F>`,
+                    }
+                }
+            });
+        }
+    } catch (err) {
+        logger.debug('New account check failed:', err.message);
+    }
+}
 
 async function handleVerification(member, guild, verificationConfig, client) {
     const { autoVerifyOnJoin } = await import('../services/verificationService.js');

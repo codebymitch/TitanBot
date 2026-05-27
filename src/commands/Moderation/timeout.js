@@ -4,6 +4,7 @@ import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { PunishmentService } from '../../services/punishmentService.js';
 
 // Discord maximum timeout is 28 days
 const MAX_TIMEOUT_MINUTES = 28 * 24 * 60; // 40320
@@ -182,6 +183,16 @@ export default {
                     }
                 }
             });
+
+            PunishmentService.record({
+                guildId: interaction.guildId,
+                userId: targetUser.id,
+                moderatorId: interaction.user.id,
+                action: 'TIMEOUT',
+                reason,
+                durationMinutes,
+                caseId
+            }).catch(e => logger.warn('Failed to record timeout punishment:', e.message));
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
