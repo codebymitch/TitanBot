@@ -165,27 +165,29 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
 
                 logger.info(`Creating temporary channel for user ${member.id} with user limit: ${userLimit}`);
 
-const existingChannels = guild.channels.cache.filter(c =>
-    c.parentId === triggerChannel.parentId &&
-    c.name.startsWith(triggerChannel.name)
-).size;
+                const existingChannels = guild.channels.cache.filter(c =>
+                    c.parentId === triggerChannel.parentId &&
+                    c.name.startsWith(triggerChannel.name)
+                ).size;
 
-let finalName;
+                let finalName;
 
-if (
-    nameTemplate.includes('{username}') ||
-    nameTemplate.includes('{displayName}')
-) {
-    finalName = formatChannelName(nameTemplate, {
-        username: member.user.username,
-        userTag: member.user.tag,
-        displayName: member.displayName,
-        guildName: guild.name,
-        channelName: triggerChannel.name
-    });
-} else {
-    finalName = `${triggerChannel.name} ${existingChannels + 1}`;
-}
+                if (
+                    nameTemplate.includes('{username}') ||
+                    nameTemplate.includes('{displayName}')
+                ) {
+                    finalName = formatChannelName(nameTemplate, {
+                        username: member.user.username,
+                        userTag: member.user.tag,
+                        displayName: member.displayName,
+                        guildName: guild.name,
+                        channelName: triggerChannel.name
+                    });
+                } else {
+                    finalName = `${triggerChannel.name} ${existingChannels + 1}`;
+                }
+
+                const channelName = sanitizeVoiceChannelName(finalName);
 
 const channelName = sanitizeVoiceChannelName(finalName);
                 if (!member.voice?.channel || member.voice.channel.id !== triggerChannel.id) {

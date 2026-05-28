@@ -1,6 +1,6 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
@@ -68,6 +68,17 @@ export default {
 
             embed.addFields(warningFields);
 
+            const actionRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`warning_delete_specific:${target.id}:${interaction.user.id}`)
+                    .setLabel('Delete Specific Warning')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId(`warning_clear_all:${target.id}:${interaction.user.id}`)
+                    .setLabel('Clear All Warnings')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
             await logEvent({
                 client,
                 guild: interaction.guild,
@@ -84,7 +95,7 @@ export default {
                 }
             });
 
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed], components: [actionRow] });
         } catch (error) {
             logger.error('Warnings command error:', error);
             await handleInteractionError(interaction, error, { subtype: 'warnings_view_failed' });
