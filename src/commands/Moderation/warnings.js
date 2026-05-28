@@ -93,6 +93,9 @@ export default {
                         totalWarnings: totalWarns
                     }
                 }
+            }).catch(logErr => {
+                logger.warn('Failed to log warnings event:', logErr);
+                // Continue anyway - don't fail the command because of logging
             });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });

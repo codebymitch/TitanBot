@@ -5,7 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-// Duration parser for prefix commands
+// Duration parser for prefix commands - handles both "2d" and "2 days" formats
 function parseDurationFromText(text) {
     const durationMap = {
         'm': 1, 'minute': 1, 'minutes': 1,
@@ -16,7 +16,7 @@ function parseDurationFromText(text) {
         'y': 525600, 'year': 525600, 'years': 525600
     };
     
-    const match = text.toLowerCase().match(/(\d+)\s*([a-z]+)/i);
+    const match = text.toLowerCase().match(/^(\d+)\s*([a-z]+)$/);
     if (!match) return null;
     
     const amount = parseInt(match[1]);
@@ -24,6 +24,37 @@ function parseDurationFromText(text) {
     const multiplier = durationMap[unit];
     
     return multiplier ? amount * multiplier : null;
+}
+
+// Parse duration from multiple words (e.g., "2 days reason" -> 2880 minutes)
+function parseDurationFromMultipleWords(text) {
+    if (!text) return null;
+    const words = text.toLowerCase().split(/\s+/);
+    if (words.length < 2) return null;
+    
+    const firstWord = words[0];
+    const secondWord = words[1];
+    
+    // Check if first word is a number and second word is a time unit
+    if (/^\d+$/.test(firstWord)) {
+        const durationMap = {
+            'm': 1, 'minute': 1, 'minutes': 1,
+            'h': 60, 'hour': 60, 'hours': 60,
+            'd': 1440, 'day': 1440, 'days': 1440,
+            'w': 10080, 'week': 10080, 'weeks': 10080,
+            'M': 43200, 'month': 43200, 'months': 43200,
+            'y': 525600, 'year': 525600, 'years': 525600
+        };
+        
+        const multiplier = durationMap[secondWord];
+        if (multiplier) {
+            return {
+                minutes: parseInt(firstWord) * multiplier,
+                wordsUsed: 2
+            };
+        }
+    }
+    return null;
 }
 
 const durationChoices = [
@@ -35,10 +66,12 @@ const durationChoices = [
     { name: "6 hours (6h)", value: 360 },
     { name: "12 hours (12h)", value: 720 },
     { name: "1 day (1d)", value: 1440 },
+    { name: "2 days (2d)", value: 2880 },
     { name: "3 days (3d)", value: 4320 },
     { name: "1 week (1w)", value: 10080 },
     { name: "2 weeks (2w)", value: 20160 },
     { name: "1 month (1M)", value: 43200 },
+    { name: "1 year (1y)", value: 525600 },
 ];
 
 export default {
@@ -55,9 +88,15 @@ export default {
             (option) =>
                 option
                     .setName("duration")
-                    .setDescription("Duration of the mute")
-                    .setRequired(true)
+                    .setDescription("Duration of the mute (select from list)")
+                    .setRequired(false)
                     .addChoices(...durationChoices),
+        )
+        .addStringOption((option) =>
+            option
+                .setName("custom_duration")
+                .setDescription("Custom duration (e.g., 5m, 1h, 2d, 1w)")
+                .setRequired(false)
         )
         .addStringOption((option) =>
             option.setName("reason").setDescription("Reason for the mute"),
@@ -88,19 +127,43 @@ export default {
             const targetUser = interaction.options.getUser("target");
             const member = interaction.options.getMember("target");
             let durationMinutes = interaction.options.getInteger("duration");
+            const customDuration = interaction.options.getString("custom_duration");
             let reason = interaction.options.getString("reason") || "No reason";
             
-            // Handle prefix command: parse duration from text (e.g., "2d", "1h")
+            // Parse custom duration if provided (e.g., "5m", "1h", "2d")
+            if (!durationMinutes && customDuration) {
+                const parsed = parseDurationFromText(customDuration);
+                if (parsed) {
+                    durationMinutes = parsed;
+                } else {
+                    throw new TitanBotError(
+                        "Invalid duration format",
+                        ErrorTypes.VALIDATION,
+                        `Invalid duration format: "${customDuration}". Use format like 5m, 1h, 2d, 1w, 1M, 1y`
+                    );
+                }
+            }
+            
+            // Handle prefix command: parse duration from text (e.g., "2d", "1h", "2 days")
             if (interaction._isPrefix && !durationMinutes && reason) {
                 const reasonText = reason;
-                // Try to parse first word as duration
+                // First try compact format (2d, 1h)
                 const firstWord = reasonText.split(' ')[0];
-                const parsed = parseDurationFromText(firstWord);
+                let parsed = parseDurationFromText(firstWord);
                 if (parsed) {
                     durationMinutes = parsed;
                     // Remove duration from reason
                     const parts = reasonText.split(' ');
                     reason = parts.slice(1).join(' ') || "No reason";
+                } else {
+                    // Try spaced format (2 days, 1 hour)
+                    const multiWordParsed = parseDurationFromMultipleWords(reasonText);
+                    if (multiWordParsed) {
+                        durationMinutes = multiWordParsed.minutes;
+                        // Remove duration from reason
+                        const parts = reasonText.split(' ');
+                        reason = parts.slice(multiWordParsed.wordsUsed).join(' ') || "No reason";
+                    }
                 }
             }
             
@@ -109,7 +172,7 @@ export default {
                 throw new TitanBotError(
                     "Missing duration",
                     ErrorTypes.VALIDATION,
-                    "Please specify a duration (e.g., 2d, 1h, 30m) for the mute."
+                    "Please specify a duration using dropdown (e.g., 1 day), custom format (e.g., 5m, 1h, 2d), or prefix format."
                 );
             }
 

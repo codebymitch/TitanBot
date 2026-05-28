@@ -2,8 +2,10 @@ import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 import { getReactionRoleMessage, deleteReactionRoleMessage } from '../services/reactionRoleService.js';
+import { getFromDb, setInDb } from '../utils/database.js';
 
 const MAX_LOGGED_MESSAGE_CONTENT_LENGTH = 1024;
+const MAX_SNIPED_MESSAGES = 10; // Keep last 10 deleted messages
 
 export default {
   name: Events.MessageDelete,
@@ -12,6 +14,32 @@ export default {
   async execute(message) {
     try {
       if (!message.guild) return;
+
+      // Store for snipe command
+      try {
+        const snipeKey = `snipe:${message.guild.id}:${message.channelId}`;
+        const snipedMessages = (await getFromDb(snipeKey, [])) || [];
+        
+        if (Array.isArray(snipedMessages)) {
+          // Add new message to the beginning (most recent)
+          snipedMessages.unshift({
+            id: message.id,
+            author: message.author?.tag || "Unknown",
+            content: message.content || "(No content)",
+            timestamp: message.createdTimestamp,
+            attachments: message.attachments.map(a => a.url)
+          });
+          
+          // Keep only last MAX_SNIPED_MESSAGES
+          if (snipedMessages.length > MAX_SNIPED_MESSAGES) {
+            snipedMessages.pop();
+          }
+          
+          await setInDb(snipeKey, snipedMessages);
+        }
+      } catch (snipeErr) {
+        logger.warn('Failed to store snipe message:', snipeErr);
+      }
 
       try {
         const reactionRoleData = await getReactionRoleMessage(message.client, message.guild.id, message.id);
