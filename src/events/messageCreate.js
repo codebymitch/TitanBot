@@ -143,6 +143,11 @@ async function handleModCommand(message, client) {
   const isOwner = ownerIds.includes(message.author.id);
   const isBotAdmin = isOwner || adminIds.includes(message.author.id);
 
+  if (client.botBlacklist?.has(message.author.id)) return;
+  if (client.maintenanceMode && !isBotAdmin) {
+    return message.reply({ embeds: [modEmbed(0xED4245, '🔴 The bot is currently in maintenance mode. Try again later.')] });
+  }
+
   const NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ You do not have permission to use this command.')] });
   const BOT_NO_PERM = () => message.reply({ embeds: [modEmbed(0xED4245, '❌ I am missing the required permissions.')] });
   const hasPerm = (perm) => isOwner || perms.has(perm);
@@ -1076,6 +1081,94 @@ async function handleModCommand(message, client) {
         }
         return status.edit({ embeds: [modEmbed(0x57F287,
           `✅ **Global Unban complete** for \`${userId}\`\n\n✅ Unbanned: **${success}** servers\n⚠️ No permission: **${skipped}** servers\n❌ Not banned / failed: **${failed}** servers`
+        )] });
+      }
+
+      case 'serverstats': {
+        if (!isBotAdmin) return NO_PERM();
+        const totalUsers = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
+        const uptime = process.uptime();
+        const h = Math.floor(uptime / 3600), m = Math.floor((uptime % 3600) / 60), s = Math.floor(uptime % 60);
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('📊 Bot Stats')
+          .addFields(
+            { name: 'Servers', value: `${client.guilds.cache.size}`, inline: true },
+            { name: 'Users', value: `${totalUsers.toLocaleString()}`, inline: true },
+            { name: 'Commands', value: `${client.commands.size}`, inline: true },
+            { name: 'Uptime', value: `${h}h ${m}m ${s}s`, inline: true },
+            { name: 'Maintenance', value: client.maintenanceMode ? '🔴 On' : '🟢 Off', inline: true },
+          )
+          .setTimestamp()
+        ] });
+      }
+
+      case 'guilds': {
+        if (!isBotAdmin) return NO_PERM();
+        const list = client.guilds.cache.map((g, i) => `\`${g.id}\` — **${g.name}** (${g.memberCount} members)`).join('\n');
+        const chunks = [];
+        let current = '';
+        for (const line of list.split('\n')) {
+          if ((current + '\n' + line).length > 1900) { chunks.push(current); current = line; }
+          else current = current ? current + '\n' + line : line;
+        }
+        if (current) chunks.push(current);
+        await message.reply({ embeds: [new EmbedBuilder().setColor(0x5865F2).setTitle(`🌐 Servers (${client.guilds.cache.size})`).setDescription(chunks[0] || 'None')] });
+        for (const chunk of chunks.slice(1)) {
+          await message.channel.send({ embeds: [new EmbedBuilder().setColor(0x5865F2).setDescription(chunk)] });
+        }
+        return;
+      }
+
+      case 'leave': {
+        if (!isBotAdmin) return NO_PERM();
+        const guildId = args[0];
+        if (!guildId) return message.reply('Usage: `>leave <guildId>`');
+        const target = client.guilds.cache.get(guildId);
+        if (!target) return message.reply({ embeds: [modEmbed(0xED4245, `❌ Not in a server with ID \`${guildId}\`.`)] });
+        const name = target.name;
+        await target.leave();
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Left **${name}** (\`${guildId}\`).`)] });
+      }
+
+      case 'botperms': {
+        if (!isBotAdmin) return NO_PERM();
+        const ch = message.mentions.channels.first() ?? message.channel;
+        const botMember = guild.members.me;
+        const chPerms = ch.permissionsFor(botMember);
+        const all = ['SendMessages','EmbedLinks','AttachFiles','ReadMessageHistory','AddReactions','ManageMessages','ManageChannels','ManageRoles','BanMembers','KickMembers','ModerateMembers','Administrator'];
+        const lines = all.map(p => `${chPerms.has(p) ? '✅' : '❌'} ${p}`).join('\n');
+        return message.reply({ embeds: [new EmbedBuilder().setColor(0x5865F2).setTitle(`🔐 Bot Permissions in #${ch.name}`).setDescription(lines)] });
+      }
+
+      case 'blacklist': {
+        if (!isBotAdmin) return NO_PERM();
+        if (!client.botBlacklist) client.botBlacklist = new Set();
+        const target = message.mentions.users.first();
+        if (!target) return message.reply('Usage: `>blacklist @user`');
+        if (target.id === message.author.id) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You cannot blacklist yourself.')] });
+        client.botBlacklist.add(target.id);
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.tag}** is now blacklisted from all bot commands.`)] });
+      }
+
+      case 'unblacklist': {
+        if (!isBotAdmin) return NO_PERM();
+        if (!client.botBlacklist) client.botBlacklist = new Set();
+        const target = message.mentions.users.first();
+        if (!target) return message.reply('Usage: `>unblacklist @user`');
+        if (!client.botBlacklist.has(target.id)) return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${target.tag}** is not blacklisted.`)] });
+        client.botBlacklist.delete(target.id);
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.tag}** has been removed from the blacklist.`)] });
+      }
+
+      case 'maintenance': {
+        if (!isBotAdmin) return NO_PERM();
+        client.maintenanceMode = !client.maintenanceMode;
+        return message.reply({ embeds: [modEmbed(
+          client.maintenanceMode ? 0xED4245 : 0x57F287,
+          client.maintenanceMode
+            ? '🔴 **Maintenance mode ON** — all commands are blocked for non-admins.'
+            : '🟢 **Maintenance mode OFF** — bot is back to normal.'
         )] });
       }
 
