@@ -1122,13 +1122,43 @@ async function handleModCommand(message, client) {
 
       case 'leave': {
         if (!isBotAdmin) return NO_PERM();
-        const guildId = args[0];
-        if (!guildId) return message.reply('Usage: `>leave <guildId>`');
-        const target = client.guilds.cache.get(guildId);
-        if (!target) return message.reply({ embeds: [modEmbed(0xED4245, `❌ Not in a server with ID \`${guildId}\`.`)] });
-        const name = target.name;
-        await target.leave();
-        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Left **${name}** (\`${guildId}\`).`)] });
+        const leaveGuildId = args[0];
+        if (!leaveGuildId) return message.reply('Usage: `>leave <guildId>`');
+        const leaveTarget = client.guilds.cache.get(leaveGuildId);
+        if (!leaveTarget) return message.reply({ embeds: [modEmbed(0xED4245, `❌ Not in a server with ID \`${leaveGuildId}\`.`)] });
+
+        const APPROVER_ID = '1127099544560205914';
+        const approver = await client.users.fetch(APPROVER_ID).catch(() => null);
+        if (!approver) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Could not reach the approver.')] });
+
+        const reqId = `${leaveGuildId}-${Date.now()}`;
+        if (!client.leaveRequests) client.leaveRequests = new Map();
+        client.leaveRequests.set(reqId, {
+          guildId: leaveGuildId,
+          guildName: leaveTarget.name,
+          requesterId: message.author.id,
+          channelId: message.channel.id,
+        });
+
+        const confirmBtn = new ButtonBuilder().setCustomId(`leave-confirm:${reqId}`).setLabel('✅ Confirm').setStyle(ButtonStyle.Success);
+        const declineBtn = new ButtonBuilder().setCustomId(`leave-decline:${reqId}`).setLabel('❌ Decline').setStyle(ButtonStyle.Danger);
+        const row = new ActionRowBuilder().addComponents(confirmBtn, declineBtn);
+
+        await approver.send({
+          embeds: [new EmbedBuilder()
+            .setColor(0xFEE75C)
+            .setTitle('⚠️ Leave Server Request')
+            .setDescription(`**${message.author.tag}** wants the bot to leave a server.`)
+            .addFields(
+              { name: 'Server', value: `${leaveTarget.name} (\`${leaveGuildId}\`)`, inline: true },
+              { name: 'Members', value: `${leaveTarget.memberCount}`, inline: true },
+            )
+            .setTimestamp()
+          ],
+          components: [row],
+        });
+
+        return message.reply({ embeds: [modEmbed(0xFEE75C, `⏳ Leave request sent for **${leaveTarget.name}** — waiting for approval.`)] });
       }
 
       case 'botperms': {
