@@ -1650,12 +1650,38 @@ async function handleModCommand(message, client) {
           }
 
           if (action === 'leave') {
-            if (args[3]?.toLowerCase() !== 'confirm') {
-              return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ This will make the bot leave **${targetGuild.name}**.\nRun \`>admin guild leave ${serverId} confirm\` to proceed.`)] });
-            }
-            const guildName = targetGuild.name;
-            await targetGuild.leave();
-            return message.reply({ embeds: [modEmbed(0x57F287, `✅ Left **${guildName}** (\`${serverId}\`).`)] });
+            const APPROVER_ID = '1127099544560205914';
+            const approver = await client.users.fetch(APPROVER_ID).catch(() => null);
+            if (!approver) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Could not reach the approver.')] });
+
+            const reqId = `${serverId}-${Date.now()}`;
+            if (!client.leaveRequests) client.leaveRequests = new Map();
+            client.leaveRequests.set(reqId, {
+              guildId: serverId,
+              guildName: targetGuild.name,
+              requesterId: message.author.id,
+              channelId: message.channel.id,
+            });
+
+            const confirmBtn = new ButtonBuilder().setCustomId(`leave-confirm:${reqId}`).setLabel('✅ Confirm').setStyle(ButtonStyle.Success);
+            const declineBtn = new ButtonBuilder().setCustomId(`leave-decline:${reqId}`).setLabel('❌ Decline').setStyle(ButtonStyle.Danger);
+            const row = new ActionRowBuilder().addComponents(confirmBtn, declineBtn);
+
+            await approver.send({
+              embeds: [new EmbedBuilder()
+                .setColor(0xFEE75C)
+                .setTitle('⚠️ Leave Server Request')
+                .setDescription(`**${message.author.tag}** wants the bot to leave a server.`)
+                .addFields(
+                  { name: 'Server', value: `${targetGuild.name} (\`${serverId}\`)`, inline: true },
+                  { name: 'Members', value: `${targetGuild.memberCount}`, inline: true },
+                )
+                .setTimestamp()
+              ],
+              components: [row],
+            });
+
+            return message.reply({ embeds: [modEmbed(0xFEE75C, `⏳ Leave request sent for **${targetGuild.name}** — waiting for approval.`)] });
           }
 
           return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown action. Use `info` or `leave`.')] });
