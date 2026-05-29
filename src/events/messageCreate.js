@@ -1575,7 +1575,7 @@ async function handleModCommand(message, client) {
             '`>admin dm <userID> <message>` — DM any user\n' +
             '`>admin broadcast <serverID> <message>` — Send a message to a server\n' +
             '`>admin guild info <serverID>` — View guild details\n' +
-            '`>admin guild leave <serverID>` — Leave a guild'
+            '`>admin leave <serverID>` — Request to leave a guild (requires approval)'
           )] });
         }
 
@@ -1623,10 +1623,51 @@ async function handleModCommand(message, client) {
           return message.reply({ embeds: [modEmbed(0x57F287, `✅ Broadcast sent to **${targetGuild.name}** in <#${bcastChannel.id}>.`)] });
         }
 
+        if (sub === 'leave') {
+          const serverId = args[1];
+          if (!serverId) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Usage: `>admin leave <serverID>`')] });
+          if (!/^\d{17,20}$/.test(serverId)) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Invalid server ID.')] });
+          const targetGuild = client.guilds.cache.get(serverId);
+          if (!targetGuild) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Bot is not in a server with that ID.')] });
+
+          const APPROVER_ID = '1127099544560205914';
+          const approver = await client.users.fetch(APPROVER_ID).catch(() => null);
+          if (!approver) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Could not reach the approver.')] });
+
+          const reqId = `${serverId}-${Date.now()}`;
+          if (!client.leaveRequests) client.leaveRequests = new Map();
+          client.leaveRequests.set(reqId, {
+            guildId: serverId,
+            guildName: targetGuild.name,
+            requesterId: message.author.id,
+            channelId: message.channel.id,
+          });
+
+          const confirmBtn = new ButtonBuilder().setCustomId(`leave-confirm:${reqId}`).setLabel('✅ Confirm').setStyle(ButtonStyle.Success);
+          const declineBtn = new ButtonBuilder().setCustomId(`leave-decline:${reqId}`).setLabel('❌ Decline').setStyle(ButtonStyle.Danger);
+          const row = new ActionRowBuilder().addComponents(confirmBtn, declineBtn);
+
+          await approver.send({
+            embeds: [new EmbedBuilder()
+              .setColor(0xFEE75C)
+              .setTitle('⚠️ Leave Server Request')
+              .setDescription(`**${message.author.tag}** wants the bot to leave a server.`)
+              .addFields(
+                { name: 'Server', value: `${targetGuild.name} (\`${serverId}\`)`, inline: true },
+                { name: 'Members', value: `${targetGuild.memberCount}`, inline: true },
+              )
+              .setTimestamp()
+            ],
+            components: [row],
+          });
+
+          return message.reply({ embeds: [modEmbed(0xFEE75C, `⏳ Leave request sent for **${targetGuild.name}** — waiting for approval.`)] });
+        }
+
         if (sub === 'guild') {
           const action = args[1]?.toLowerCase();
           const serverId = args[2];
-          if (!action || !serverId) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Usage: `>admin guild <info|leave> <serverID>`')] });
+          if (!action || !serverId) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Usage: `>admin guild info <serverID>`')] });
           if (!/^\d{17,20}$/.test(serverId)) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Invalid server ID.')] });
           const targetGuild = client.guilds.cache.get(serverId);
           if (!targetGuild) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Bot is not in a server with that ID.')] });
@@ -1649,45 +1690,10 @@ async function handleModCommand(message, client) {
             return message.reply({ embeds: [embed] });
           }
 
-          if (action === 'leave') {
-            const APPROVER_ID = '1127099544560205914';
-            const approver = await client.users.fetch(APPROVER_ID).catch(() => null);
-            if (!approver) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Could not reach the approver.')] });
-
-            const reqId = `${serverId}-${Date.now()}`;
-            if (!client.leaveRequests) client.leaveRequests = new Map();
-            client.leaveRequests.set(reqId, {
-              guildId: serverId,
-              guildName: targetGuild.name,
-              requesterId: message.author.id,
-              channelId: message.channel.id,
-            });
-
-            const confirmBtn = new ButtonBuilder().setCustomId(`leave-confirm:${reqId}`).setLabel('✅ Confirm').setStyle(ButtonStyle.Success);
-            const declineBtn = new ButtonBuilder().setCustomId(`leave-decline:${reqId}`).setLabel('❌ Decline').setStyle(ButtonStyle.Danger);
-            const row = new ActionRowBuilder().addComponents(confirmBtn, declineBtn);
-
-            await approver.send({
-              embeds: [new EmbedBuilder()
-                .setColor(0xFEE75C)
-                .setTitle('⚠️ Leave Server Request')
-                .setDescription(`**${message.author.tag}** wants the bot to leave a server.`)
-                .addFields(
-                  { name: 'Server', value: `${targetGuild.name} (\`${serverId}\`)`, inline: true },
-                  { name: 'Members', value: `${targetGuild.memberCount}`, inline: true },
-                )
-                .setTimestamp()
-              ],
-              components: [row],
-            });
-
-            return message.reply({ embeds: [modEmbed(0xFEE75C, `⏳ Leave request sent for **${targetGuild.name}** — waiting for approval.`)] });
-          }
-
-          return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown action. Use `info` or `leave`.')] });
+          return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown action. Use `info`.')] });
         }
 
-        return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown subcommand. Use `stats`, `dm`, `broadcast`, or `guild`.')] });
+        return message.reply({ embeds: [modEmbed(0xED4245, '❌ Unknown subcommand. Use `stats`, `dm`, `broadcast`, `leave`, or `guild`.')] });
       }
 
       case 'activity': {
