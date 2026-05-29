@@ -149,7 +149,7 @@ const CATEGORIES = {
             ['`>admin dm <userID> <message>`', 'DM any user by ID'],
             ['`>admin broadcast <serverID> <message>`', "Send a message to a server's system/first channel"],
             ['`>admin guild info <serverID>`', 'View details about any guild the bot is in'],
-            ['`>admin guild leave <serverID>`', 'Make the bot leave a guild (prompts for `confirm`)'],
+            ['`>admin leave <serverID>`', 'Request to leave a guild (requires approval via DM)'],
         ],
     },
     dangers: {
