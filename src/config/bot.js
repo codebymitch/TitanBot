@@ -12,7 +12,7 @@ export const botConfig = {
   // - "invisible" = appears offline
   presence: {
     // Current online state shown on Discord.
-    status: "online",
+    status: "dnd",
 
     // Activity lines shown under the bot name.
     // `type` number mapping from Discord:
@@ -25,9 +25,9 @@ export const botConfig = {
     activities: [
       {
         // Text users will see (example: "Playing /help | Titan Bot").
-        name: "Made with ❤️",
+        name: "Competing with /help",
         // Activity type number (0 = Playing).
-        type: 0, 
+        type: 5, 
       },
     ],
   },
@@ -59,6 +59,8 @@ export const botConfig = {
       { question: "What is your name?", required: true },
       { question: "How old are you?", required: true },
       { question: "Why do you want to join?", required: true },
+      { question: "How Long have you been in the Server", required: true },
+      { question: "What role do you want?", required: true },
     ],
 
     // Embed colors by application status.
@@ -136,7 +138,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: "VoidXZ",
       // Footer icon URL (null = no icon).
       icon: null,
     },
