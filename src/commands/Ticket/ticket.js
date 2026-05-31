@@ -1,38 +1,163 @@
-i.addSubcommand((subcommand) =>
-    subcommand
-        .setName("setup")
-        .setDescription("Sets up the ticket creation panel.")
+```js
+import { getColor } from '../../config/bot.js';
+import {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    ChannelType,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    MessageFlags
+} from 'discord.js';
 
-        .addChannelOption((option) =>
-            option.setName("panel_channel")
-                .setDescription("Channel for the panel")
-                .addChannelTypes(ChannelType.GuildText)
-                .setRequired(true)
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { logger } from '../../utils/logger.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+
+import ticketConfig from './modules/ticket_dashboard.js';
+
+export default {
+    data: new SlashCommandBuilder()
+        .setName("ticket")
+        .setDescription("Manages the server's ticket system.")
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("setup")
+                .setDescription("Sets up the ticket panel")
+
+                .addChannelOption(option =>
+                    option.setName("panel_channel")
+                        .setDescription("Channel for the panel")
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setRequired(true)
+                )
+
+                .addStringOption(option =>
+                    option.setName("panel_message")
+                        .setDescription("Message for the panel")
+                        .setRequired(true)
+                )
+
+                .addStringOption(option =>
+                    option.setName("button_label")
+                        .setDescription("Button label")
+                        .setRequired(false)
+                )
+
+                .addChannelOption(option =>
+                    option.setName("category")
+                        .setDescription("Ticket category")
+                        .addChannelTypes(ChannelType.GuildCategory)
+                        .setRequired(false)
+                )
         )
 
-        .addStringOption((option) =>
-            option.setName("panel_message")
-                .setDescription("Panel message")
-                .setRequired(true)
-        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("dashboard")
+                .setDescription("Open dashboard")
+        ),
 
-        // BUTTON 1 (REQUIRED)
-        .addStringOption(o => o.setName("button_1_label").setDescription("Button 1 label").setRequired(true))
-        .addChannelOption(o => o.setName("button_1_category").setDescription("Button 1 category").addChannelTypes(ChannelType.GuildCategory).setRequired(true))
+    category: "ticket",
 
-        // BUTTON 2
-        .addStringOption(o => o.setName("button_2_label").setDescription("Button 2 label"))
-        .addChannelOption(o => o.setName("button_2_category").setDescription("Button 2 category").addChannelTypes(ChannelType.GuildCategory))
+    async execute(interaction, config, client) {
+        try {
+            const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            if (!deferred) return;
 
-        // BUTTON 3
-        .addStringOption(o => o.setName("button_3_label").setDescription("Button 3 label"))
-        .addChannelOption(o => o.setName("button_3_category").setDescription("Button 3 category").addChannelTypes(ChannelType.GuildCategory))
+            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        errorEmbed(
+                            "Permission Denied",
+                            "You need Manage Channels permission."
+                        )
+                    ]
+                });
+            }
 
-        // BUTTON 4
-        .addStringOption(o => o.setName("button_4_label").setDescription("Button 4 label"))
-        .addChannelOption(o => o.setName("button_4_category").setDescription("Button 4 category").addChannelTypes(ChannelType.GuildCategory))
+            const subcommand = interaction.options.getSubcommand();
 
-        // BUTTON 5
-        .addStringOption(o => o.setName("button_5_label").setDescription("Button 5 label"))
-        .addChannelOption(o => o.setName("button_5_category").setDescription("Button 5 category").addChannelTypes(ChannelType.GuildCategory))
-)
+            if (subcommand === "dashboard") {
+                return ticketConfig.execute(interaction, config, client);
+            }
+
+            if (subcommand === "setup") {
+
+                const existingConfig = await getGuildConfig(client, interaction.guildId);
+
+                if (existingConfig?.ticketPanelChannelId) {
+                    return await InteractionHelper.safeEditReply(interaction, {
+                        embeds: [
+                            errorEmbed(
+                                "Already Setup",
+                                `Panel already exists in <#${existingConfig.ticketPanelChannelId}>`
+                            )
+                        ]
+                    });
+                }
+
+                const panelChannel = interaction.options.getChannel("panel_channel");
+                const categoryChannel = interaction.options.getChannel("category");
+
+                const panelMessage = interaction.options.getString("panel_message");
+                const buttonLabel = interaction.options.getString("button_label") || "Create Ticket";
+
+                const embed = createEmbed({
+                    title: "🎫 Support Tickets",
+                    description: panelMessage,
+                    color: getColor('info')
+                });
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId("create_ticket")
+                        .setLabel(buttonLabel)
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji("📩")
+                );
+
+                await panelChannel.send({
+                    embeds: [embed],
+                    components: [row]
+                });
+
+                if (client.db) {
+                    const currentConfig = existingConfig || {};
+
+                    currentConfig.ticketCategoryId = categoryChannel ? categoryChannel.id : null;
+                    currentConfig.ticketPanelChannelId = panelChannel.id;
+                    currentConfig.ticketPanelMessage = panelMessage;
+
+                    const { getGuildConfigKey } = await import('../../utils/database.js');
+                    const key = getGuildConfigKey(interaction.guildId);
+
+                    await client.db.set(key, currentConfig);
+                }
+
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        successEmbed(
+                            "Setup Complete",
+                            `Panel sent to ${panelChannel}`
+                        )
+                    ]
+                });
+            }
+
+        } catch (error) {
+            logger.error('Ticket command error', {
+                error: error.message,
+                stack: error.stack
+            });
+
+            await handleInteractionError(interaction, error);
+        }
+    }
+};
+```
+
