@@ -57,7 +57,7 @@ export const botConfig = {
     // Default questions shown when someone fills out an application.
     defaultQuestions: [
       { question: "What is your name?", required: true },
-      { question: "How old are you?", required: true },
+      { question: "How old are you?", required: false },
       { question: "Why do you want to join?", required: true },
       { question: "How Long have you been in the Server", required: true },
       { question: "What role do you want?", required: true },
