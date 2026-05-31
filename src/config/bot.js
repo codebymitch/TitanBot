@@ -25,9 +25,9 @@ export const botConfig = {
     activities: [
       {
         // Text users will see (example: "Playing /help | Titan Bot").
-        name: "Officiële Pixel Lounge bot",
+        name: "Officiële Pixel Lounge bot | /help | Moderatie, Tickets, Minigames en meer |",
         // Activity type number (0 = Playing).
-        type: 0, 
+        type: 4, 
       },
     ],
   },
