@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
@@ -88,6 +88,9 @@ class TitanBot extends Client {
       await this.registerCommands();
       startupLog('Slash commands registration complete');
       
+      // Set bot presence after login
+      this.setInitialPresence();
+      
       const databaseMode = dbStatus.isDegraded
         ? 'Optional in-memory mode (data resets after restart)'
         : 'Connected (persistent data enabled)';
@@ -100,6 +103,25 @@ class TitanBot extends Client {
     } catch (error) {
       logger.error('Failed to start bot:', error);
       process.exit(1);
+    }
+  }
+
+  setInitialPresence() {
+    try {
+      this.user.setPresence({
+        activities: [
+          {
+            name: 'Playing Solo',
+            type: 'PLAYING',
+            state: 'Competitive'
+          }
+        ],
+        status: 'online'
+      }).catch(error => {
+        logger.error('Failed to set initial presence:', error);
+      });
+    } catch (error) {
+      logger.error('Error setting initial presence:', error);
     }
   }
 
@@ -231,6 +253,29 @@ class TitanBot extends Client {
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
     cron.schedule('*/15 * * * *', () => this.updateAllCounters());
+    
+    // Update presence every 30 seconds with rotating statuses
+    this.presenceIndex = 0;
+    const presences = [
+      { name: 'Playing Solo', type: 'PLAYING', state: 'Competitive' },
+      { name: 'Over Your Server', type: 'WATCHING', state: 'Ready to help!' },
+      { name: 'Your Commands', type: 'LISTENING', state: 'Always online' }
+    ];
+    
+    setInterval(() => {
+      try {
+        const presence = presences[this.presenceIndex % presences.length];
+        this.user.setPresence({
+          activities: [presence],
+          status: 'online'
+        }).catch(error => {
+          logger.error('Failed to update presence:', error);
+        });
+        this.presenceIndex++;
+      } catch (error) {
+        logger.error('Error updating presence:', error);
+      }
+    }, 30000);
   }
 
   async updateAllCounters() {
@@ -381,6 +426,4 @@ try {
 }
 
 export default TitanBot;
-
-
 
