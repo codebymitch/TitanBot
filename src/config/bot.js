@@ -28,8 +28,6 @@ export const botConfig = {
         name: "Officiële Pixel Lounge bot",
         // Activity type number (0 = Playing).
         type: 0, 
-        "Moderation, Minigames, Tickets & meer", 
-        type: 1
       },
     ],
   },
