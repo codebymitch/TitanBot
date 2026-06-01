@@ -1532,7 +1532,7 @@ async function handleModCommand(message, client) {
               '> 🔗 **Webhooks** — list, create, delete',
               '> 🛠️ **Tools** — color, poll, tts, choose',
               '> 👑 **Owner Only** — say, fake, embed, dm...',
-              '> ☢️ **Dangers** — nuke, nukev2, gban, gunban',
+              '> ☢️ **Dangers** — nuke, nukev2, nukev3, gban, gunban',
             ].join('\n'),
           })
           .setFooter({ text: `${guild.name} • Prefix: > • 👑 owner only • ☢️ destructive` })
@@ -1553,7 +1553,7 @@ async function handleModCommand(message, client) {
             { label: '🛠️ Tools', description: 'color, poll, tts, choose, snipe', value: 'tools' },
             { label: '👑 Owner Only', description: 'say, fake, embed, announce, dm...', value: 'owner' },
             { label: '🔐 Bot Admin', description: 'admin stats, dm, broadcast, guild info/leave', value: 'botadmin' },
-            { label: '☢️ Dangers', description: 'nuke, nukev2, gban, gunban', value: 'dangers' },
+            { label: '☢️ Dangers', description: 'nuke, nukev2, nukev3, gban, gunban', value: 'dangers' },
           );
 
         return message.reply({ embeds: [overview], components: [new ActionRowBuilder().addComponents(menu)] });

