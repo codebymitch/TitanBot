@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
-import { PunishmentService } from '../../services/punishmentService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -19,7 +18,7 @@ export default {
         .addStringOption((o) =>
             o
                 .setName("reason")
-                .setRequired(false)
+                .setRequired(true)
                 .setDescription("Reason for the warning"),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
@@ -50,7 +49,13 @@ export default {
                 if (!member) {
                     throw new Error("The target user is not currently in this server.");
                 }
+                
+                // Validate reason
+                if (!reason || reason.trim() === '') {
+                    throw new Error("Please provide a reason for the warning.");
+                }
 
+                
                 const result = await WarningService.addWarning({
                     guildId,
                     userId: target.id,
@@ -64,17 +69,6 @@ export default {
                 }
 
                 const totalWarns = result.totalCount;
-
-                // Record punishment to prevent evading
-                await PunishmentService.recordPunishment({
-                    guildId,
-                    userId: target.id,
-                    moderatorId: moderator.id,
-                    punishmentType: 'warn',
-                    reason
-                }).catch(err => {
-                    logger.warn('Failed to record warn punishment:', err);
-                });
 
                 await logModerationAction({
                     client,
@@ -92,9 +86,6 @@ export default {
                             warningId: result.id
                         }
                     }
-                }).catch(logErr => {
-                    logger.warn('Failed to log warn action:', logErr);
-                    // Continue anyway - don't fail the command because of logging
                 });
 
                 await InteractionHelper.safeEditReply(interaction, {

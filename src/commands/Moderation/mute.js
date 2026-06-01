@@ -3,10 +3,9 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
-import { PunishmentService } from '../../services/punishmentService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-// Duration parser for prefix commands - handles both "2d" and "2 days" formats
+// Duration parser for prefix commands
 function parseDurationFromText(text) {
     const durationMap = {
         'm': 1, 'minute': 1, 'minutes': 1,
@@ -17,7 +16,7 @@ function parseDurationFromText(text) {
         'y': 525600, 'year': 525600, 'years': 525600
     };
     
-    const match = text.toLowerCase().match(/^(\d+)\s*([a-z]+)$/);
+    const match = text.toLowerCase().match(/(\d+)\s*([a-z]+)/i);
     if (!match) return null;
     
     const amount = parseInt(match[1]);
@@ -25,37 +24,6 @@ function parseDurationFromText(text) {
     const multiplier = durationMap[unit];
     
     return multiplier ? amount * multiplier : null;
-}
-
-// Parse duration from multiple words (e.g., "2 days reason" -> 2880 minutes)
-function parseDurationFromMultipleWords(text) {
-    if (!text) return null;
-    const words = text.toLowerCase().split(/\s+/);
-    if (words.length < 2) return null;
-    
-    const firstWord = words[0];
-    const secondWord = words[1];
-    
-    // Check if first word is a number and second word is a time unit
-    if (/^\d+$/.test(firstWord)) {
-        const durationMap = {
-            'm': 1, 'minute': 1, 'minutes': 1,
-            'h': 60, 'hour': 60, 'hours': 60,
-            'd': 1440, 'day': 1440, 'days': 1440,
-            'w': 10080, 'week': 10080, 'weeks': 10080,
-            'M': 43200, 'month': 43200, 'months': 43200,
-            'y': 525600, 'year': 525600, 'years': 525600
-        };
-        
-        const multiplier = durationMap[secondWord];
-        if (multiplier) {
-            return {
-                minutes: parseInt(firstWord) * multiplier,
-                wordsUsed: 2
-            };
-        }
-    }
-    return null;
 }
 
 const durationChoices = [
@@ -67,12 +35,10 @@ const durationChoices = [
     { name: "6 hours (6h)", value: 360 },
     { name: "12 hours (12h)", value: 720 },
     { name: "1 day (1d)", value: 1440 },
-    { name: "2 days (2d)", value: 2880 },
     { name: "3 days (3d)", value: 4320 },
     { name: "1 week (1w)", value: 10080 },
     { name: "2 weeks (2w)", value: 20160 },
     { name: "1 month (1M)", value: 43200 },
-    { name: "1 year (1y)", value: 525600 },
 ];
 
 export default {
@@ -145,26 +111,17 @@ export default {
                 }
             }
             
-            // Handle prefix command: parse duration from text (e.g., "2d", "1h", "2 days")
+            // Handle prefix command: parse duration from text (e.g., "2d", "1h")
             if (interaction._isPrefix && !durationMinutes && reason) {
                 const reasonText = reason;
-                // First try compact format (2d, 1h)
+                // Try to parse first word as duration
                 const firstWord = reasonText.split(' ')[0];
-                let parsed = parseDurationFromText(firstWord);
+                const parsed = parseDurationFromText(firstWord);
                 if (parsed) {
                     durationMinutes = parsed;
                     // Remove duration from reason
                     const parts = reasonText.split(' ');
                     reason = parts.slice(1).join(' ') || "No reason";
-                } else {
-                    // Try spaced format (2 days, 1 hour)
-                    const multiWordParsed = parseDurationFromMultipleWords(reasonText);
-                    if (multiWordParsed) {
-                        durationMinutes = multiWordParsed.minutes;
-                        // Remove duration from reason
-                        const parts = reasonText.split(' ');
-                        reason = parts.slice(multiWordParsed.wordsUsed).join(' ') || "No reason";
-                    }
                 }
             }
             
@@ -209,20 +166,6 @@ export default {
 
             const durationMs = durationMinutes * 60 * 1000;
             await member.timeout(durationMs, reason);
-
-            // Record punishment to prevent evading
-            const expiresAt = new Date(Date.now() + durationMs);
-            await PunishmentService.recordPunishment({
-                guildId: interaction.guildId,
-                userId: targetUser.id,
-                moderatorId: interaction.user.id,
-                punishmentType: 'mute',
-                reason,
-                durationMinutes,
-                expiresAt
-            }).catch(err => {
-                logger.warn('Failed to record mute punishment:', err);
-            });
 
             const durationDisplay =
                 durationChoices.find((c) => c.value === durationMinutes)

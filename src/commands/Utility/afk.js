@@ -29,17 +29,7 @@ export default {
                 return;
             }
 
-            // Get message from slash or prefix command
-            let message = interaction.options?.getString("message");
-            
-            // For prefix commands, get message from args
-            if (interaction._isPrefix && !message) {
-                const args = interaction.options?.getString?.('reason');
-                message = args;
-            }
-            
-            message = message || "I'm AFK right now!";
-            
+            const message = interaction.options.getString("message") || "I'm AFK right now!";
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { successEmbed, errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -8,20 +8,13 @@ import { getFromDb, setInDb } from '../../utils/database.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("editafk")
-        .setDescription("Edit or remove AFK status")
+        .setDescription("Edit or remove your AFK status")
         .addStringOption((option) =>
             option
                 .setName("message")
                 .setDescription("New AFK message (leave empty to remove AFK)")
                 .setRequired(false)
-        )
-        .addUserOption((option) =>
-            option
-                .setName("target")
-                .setDescription("Target user (admin only)")
-                .setRequired(false)
-        )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+        ),
     category: "utility",
 
     async execute(interaction) {
@@ -37,59 +30,34 @@ export default {
             }
 
             const newMessage = interaction.options.getString("message");
-            const targetUser = interaction.options.getUser("target");
+            const userId = interaction.user.id;
             const guildId = interaction.guildId;
-            
-            // Determine which user to edit
-            let userId = interaction.user.id;
-            let targetMember = interaction.member;
-            let targetUsername = interaction.user.username;
-            
-            // If target is specified, check if user has permission
-            if (targetUser) {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                    return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Insufficient Permissions', 'Only admins can edit other users\' AFK status.')]
-                    });
-                }
-                
-                userId = targetUser.id;
-                try {
-                    targetMember = await interaction.guild.members.fetch(targetUser.id);
-                    targetUsername = targetUser.username;
-                } catch (err) {
-                    return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('User Not Found', 'That user is not in this server.')]
-                    });
-                }
-            }
-            
             const afkKey = `afk:${guildId}:${userId}`;
 
             // Check if user is AFK
             const currentAFK = await getFromDb(afkKey);
             if (!currentAFK) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Not AFK', `${targetUsername} is not currently AFK.`)]
+                    embeds: [errorEmbed('Not AFK', 'You are not currently AFK. Use /afk to set your status.')]
                 });
             }
 
             if (!newMessage) {
                 // Remove AFK status
-                await setInDb(afkKey, null);
+                await InteractionHelper.delete(afkKey);
 
                 // Remove [AFK] from nickname
                 try {
-                    if (targetMember?.nickname?.includes('[AFK]')) {
-                        const newNick = targetMember.nickname.replace('[AFK] ', '');
-                        await targetMember.setNickname(newNick);
+                    if (interaction.member?.nickname?.includes('[AFK]')) {
+                        const newNick = interaction.member.nickname.replace('[AFK] ', '');
+                        await interaction.member.setNickname(newNick);
                     }
                 } catch (err) {
                     logger.warn('Could not update nickname for AFK removal:', err.message);
                 }
 
                 await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed('💤 AFK Removed', `${targetUsername}'s AFK status has been removed!`)]
+                    embeds: [successEmbed('💤 AFK Removed', 'You are no longer AFK!')]
                 });
             } else {
                 // Update AFK message
@@ -98,7 +66,7 @@ export default {
                     guildId,
                     message: newMessage,
                     timestamp: Date.now(),
-                    username: targetUsername
+                    username: interaction.user.username
                 };
 
                 await setInDb(afkKey, afkData);
@@ -107,17 +75,15 @@ export default {
                     embeds: [
                         successEmbed(
                             '💤 AFK Updated',
-                            `${targetUsername}'s AFK message: **${newMessage}**`
+                            `New message: **${newMessage}**`
                         )
                     ]
                 });
             }
 
-            logger.info(`AFK status edited`, {
+            logger.info(`User edited AFK status`, {
                 userId,
-                targetUsername,
                 guildId,
-                editorId: interaction.user.id,
                 newMessage: newMessage || 'REMOVED'
             });
         } catch (error) {

@@ -24,7 +24,7 @@ export default {
                 name: 'Quarantine',
                 color: Colors.Red,
                 reason: 'Automated setup for Quarantine system',
-                position: botTopRolePosition - 1 // Place it 1 position below the bot's top role
+                position: botTopRolePosition - 2 // Place it 2 positions below the bot's top role
             });
 
             // Iterate through channels and deny viewing permissions

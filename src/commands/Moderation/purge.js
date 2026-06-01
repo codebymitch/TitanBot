@@ -42,25 +42,19 @@ export default {
             // Purge in batches to handle more than 100 messages
             while (remaining > 0) {
                 const batchSize = Math.min(remaining, 100);
-                // Fetch batchSize + 1 to account for the command message itself
                 const fetched = await channel.messages.fetch({ limit: batchSize + 1 });
-                const messagesToDelete = Array.from(fetched.values()).slice(0, batchSize);
+                const messagesToDelete = Array.from(fetched.values()).slice(1);
 
                 if (messagesToDelete.length === 0) {
                     break;
                 }
 
                 if (messagesToDelete.length === 1) {
-                    await messagesToDelete[0].delete().catch(() => {});
+                    await messagesToDelete[0].delete();
                     deletedCount += 1;
                 } else {
-                    const deleted = await channel.bulkDelete(messagesToDelete, true).catch(() => {
-                        // Fallback to deleting one by one if bulk delete fails
-                        return Promise.all(
-                            messagesToDelete.map(m => m.delete().catch(() => {}))
-                        ).then(() => ({ size: messagesToDelete.length }));
-                    });
-                    deletedCount += deleted?.size || 0;
+                    const deleted = await channel.bulkDelete(messagesToDelete, true);
+                    deletedCount += deleted.size;
                 }
                 
                 remaining -= messagesToDelete.length;
