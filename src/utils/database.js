@@ -319,6 +319,18 @@ export async function setGuildConfig(client, guildId, config, context = {}) {
     }
 }
 
+/**
+ * Get a PostgreSQL client from the pool
+ * @returns {Promise<Client>} PostgreSQL client
+ * @throws {Error} If database is not available or in degraded mode
+ */
+export async function getClient() {
+    if (!db.isAvailable() || !pgDb.pool) {
+        throw new Error('PostgreSQL database is not available. Cannot get client.');
+    }
+    return pgDb.pool.connect();
+}
+
 export { DatabaseWrapper, pgDb };
 
 export const getMessage = (key, replacements = {}) => {

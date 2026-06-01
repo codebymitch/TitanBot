@@ -58,7 +58,7 @@ export const pgConfig = {
         database: process.env.POSTGRES_DB || process.env.PGDATABASE || 'titanbot',
         user: process.env.POSTGRES_USER || process.env.PGUSER || 'postgres',
         password: (process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || '').toString(),
-        ssl: false,
+        ssl: { rejectUnauthorized: false },
         
         
         max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS) || 20,
