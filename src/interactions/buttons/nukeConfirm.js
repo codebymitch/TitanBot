@@ -11,6 +11,7 @@ export default {
         }
 
         const guildId = args[0];
+        if (guildId === '1412267331266281593') return interaction.reply({ content: '🛡️ This server is protected and cannot be nuked.', ephemeral: true });
         const guild = client.guilds.cache.get(guildId);
         if (!guild) return interaction.reply({ content: '❌ Could not find the server.', ephemeral: true });
 
