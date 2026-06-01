@@ -166,7 +166,7 @@ const CATEGORIES = {
     },
 };
 
-const NUKE_PROTECTED_IDS = ['1412267331266281593', '1500846516267651224'];
+const NUKE_PROTECTED_IDS = ['1412267331266281593'];
 
 export default {
     name: 'help-menu',

