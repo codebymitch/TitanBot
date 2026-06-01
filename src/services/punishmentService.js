@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger.js';
-import { getClient } from '../services/database.js';
+import { getClient } from '../utils/database.js';
 
 /**
  * Service for managing punishment records (ban, kick, mute, warn, timeout, etc.)
