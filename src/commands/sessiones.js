@@ -4,44 +4,46 @@ if (!global.mapaVotos) {
     global.mapaVotos = new Map();
 }
 
-const command = {
-    name: 'sesiones_00y4n',
-    description: 'Gestión de sesiones de Roleplay y Car Meets',
-    options: [
-        {
-            name: 'startup_rp',
-            description: 'Lanza un inicio de sesión de Roleplay convencional.',
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [
-                { name: 'reacciones', description: 'Cantidad de reacciones necesarias.', type: ApplicationCommandOptionType.Integer, required: true },
-                { name: 'limite', description: 'Ejemplo: 80 MPH', type: ApplicationCommandOptionType.String, required: false },
-                { name: 'peacetime', description: '¿Peacetime activo? (On / Off)', type: ApplicationCommandOptionType.String, required: false },
-                { name: 'imagen', description: 'Link de la foto/banner para el Roleplay (opcional).', type: ApplicationCommandOptionType.String, required: false }
-            ]
-        },
-        {
-            name: 'startup_meet',
-            description: 'Lanza un inicio de sesión para un Car Meet.',
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [
-                { name: 'reacciones', description: 'Cantidad de reacciones necesarias.', type: ApplicationCommandOptionType.Integer, required: true },
-                { name: 'tematica', description: 'Ejemplo: JDM, Exóticos', type: ApplicationCommandOptionType.String, required: true },
-                { name: 'spots', description: 'Ejemplo: 2-3 SPOTS + BOTM', type: ApplicationCommandOptionType.String, required: true },
-                { name: 'ubicacion', description: 'Lugar de inicio (Ej: Spawn)', type: ApplicationCommandOptionType.String, required: true },
-                { name: 'imagen', description: 'Link de la foto/banner para el Car Meet (opcional).', type: ApplicationCommandOptionType.String, required: false }
-            ]
-        },
-        {
-            name: 'release',
-            description: 'Lanza el botón del link vinculándolo al inicio.',
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [
-                { name: 'id_inicio', description: 'Copia el ID del mensaje de Startup.', type: ApplicationCommandOptionType.String, required: true },
-                { name: 'tipo', description: '¿RP o Meet?', type: ApplicationCommandOptionType.String, required: true, choices: [{ name: 'Roleplay', value: 'rp' }, { name: 'Car Meet', value: 'meet' }] },
-                { name: 'imagen', description: 'Link de la foto/banner para la apertura (opcional).', type: ApplicationCommandOptionType.String, required: false }
-            ]
-        }
-    ],
+export default {
+    data: {
+        name: 'sesiones_00y4n',
+        description: 'Gestión de sesiones de Roleplay y Car Meets',
+        options: [
+            {
+                name: 'startup_rp',
+                description: 'Lanza un inicio de sesión de Roleplay convencional.',
+                type: ApplicationCommandOptionType.Subcommand,
+                options: [
+                    { name: 'reacciones', description: 'Cantidad de reacciones necesarias.', type: ApplicationCommandOptionType.Integer, required: true },
+                    { name: 'limite', description: 'Ejemplo: 80 MPH', type: ApplicationCommandOptionType.String, required: false },
+                    { name: 'peacetime', description: '¿Peacetime activo? (On / Off)', type: ApplicationCommandOptionType.String, required: false },
+                    { name: 'imagen', description: 'Link de la foto/banner para el Roleplay (opcional).', type: ApplicationCommandOptionType.String, required: false }
+                ]
+            },
+            {
+                name: 'startup_meet',
+                description: 'Lanza un inicio de sesión para un Car Meet.',
+                type: ApplicationCommandOptionType.Subcommand,
+                options: [
+                    { name: 'reacciones', description: 'Cantidad de reacciones necesarias.', type: ApplicationCommandOptionType.Integer, required: true },
+                    { name: 'tematica', description: 'Ejemplo: JDM, Exóticos', type: ApplicationCommandOptionType.String, required: true },
+                    { name: 'spots', description: 'Ejemplo: 2-3 SPOTS + BOTM', type: ApplicationCommandOptionType.String, required: true },
+                    { name: 'ubicacion', description: 'Lugar de inicio (Ej: Spawn)', type: ApplicationCommandOptionType.String, required: true },
+                    { name: 'imagen', description: 'Link de la foto/banner para el Car Meet (opcional).', type: ApplicationCommandOptionType.String, required: false }
+                ]
+            },
+            {
+                name: 'release',
+                description: 'Lanza el botón del link vinculándolo al inicio.',
+                type: ApplicationCommandOptionType.Subcommand,
+                options: [
+                    { name: 'id_inicio', description: 'Copia el ID del mensaje de Startup.', type: ApplicationCommandOptionType.String, required: true },
+                    { name: 'tipo', description: '¿RP o Meet?', type: ApplicationCommandOptionType.String, required: true, choices: [{ name: 'Roleplay', value: 'rp' }, { name: 'Car Meet', value: 'meet' }] },
+                    { name: 'imagen', description: 'Link de la foto/banner para la apertura (opcional).', type: ApplicationCommandOptionType.String, required: false }
+                ]
+            }
+        ]
+    },
 
     async execute(interaction) {
         const sub = interaction.options.getSubcommand();
@@ -125,5 +127,3 @@ const command = {
         }
     }
 };
-
-export default command;
