@@ -38,6 +38,7 @@ class PostgreSQLDatabase {
                 await new Promise(resolve => setTimeout(resolve, 100));
 
                 this.pool = new pg.Pool({
+                    connectionString: pgConfig.url,
                     
                     host: pgConfig.options.host,
                     port: pgConfig.options.port,

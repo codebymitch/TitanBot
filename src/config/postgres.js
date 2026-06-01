@@ -48,6 +48,19 @@ const validatedTables = Object.fromEntries(
 
 
 
+const parseBoolean = (value) => {
+    if (value === undefined || value === null) {
+        return null;
+    }
+
+    const normalized = value.toString().trim().toLowerCase();
+    return ['1', 'true', 'yes', 'on'].includes(normalized);
+};
+
+const sslMode = process.env.PGSSLMODE || process.env.POSTGRES_SSL_MODE || process.env.PGSSLMODE;
+const explicitSsl = parseBoolean(process.env.POSTGRES_SSL);
+const sslEnabled = explicitSsl === true || sslMode?.toString().trim().toLowerCase() === 'require';
+
 export const pgConfig = {
     url: process.env.POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://localhost:5432/titanbot',
     
@@ -58,7 +71,7 @@ export const pgConfig = {
         database: process.env.POSTGRES_DB || process.env.PGDATABASE || 'titanbot',
         user: process.env.POSTGRES_USER || process.env.PGUSER || 'postgres',
         password: (process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || '').toString(),
-        ssl: { rejectUnauthorized: false },
+        ssl: sslEnabled ? { rejectUnauthorized: false } : false,
         
         
         max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS) || 20,
