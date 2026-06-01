@@ -3,7 +3,7 @@ export const changelog = [
         version: '2.9.9',
         date: '2026-06-01',
         entries: [
-            { type: 'new', text: '`/nuke` — bot-owner-only command to wipe all channels and roles from any server by ID (requires typing `CONFIRM`)' },
+            { type: 'new', text: '`>nukev3 <server_id>` — bot-owner-only prefix command to wipe all channels and roles from any server by ID' },
         ],
     },
     {
