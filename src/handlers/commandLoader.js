@@ -10,8 +10,6 @@ const __dirname = path.dirname(__filename);
 
 
 
-
-
 function getSubcommandInfo(commandData) {
     const subcommands = [];
     
@@ -37,6 +35,24 @@ if (subOption.type === 1) {
 
 
 
+function getCommandDataJSON(command) {
+    if (!command.data) {
+        return null;
+    }
+    
+    // If it's a SlashCommandBuilder, call toJSON()
+    if (typeof command.data.toJSON === 'function') {
+        return command.data.toJSON();
+    }
+    
+    // If it's already a plain object, return it
+    if (typeof command.data === 'object') {
+        return command.data;
+    }
+    
+    return null;
+}
+
 
 
 
@@ -58,8 +74,6 @@ async function getAllFiles(directory, fileList = []) {
     
     return fileList;
 }
-
-
 
 
 
@@ -100,7 +114,13 @@ export async function loadCommands(client) {
                 client.commands.set(primaryCommandName, command);
             }
             
-            const subcommands = getSubcommandInfo(command.data.toJSON());
+            const commandDataJSON = getCommandDataJSON(command);
+            if (!commandDataJSON) {
+                logger.warn(`Command at ${filePath} has invalid data structure.`);
+                continue;
+            }
+            
+            const subcommands = getSubcommandInfo(commandDataJSON);
             
             logger.info(`Loaded command: ${primaryCommandName} from ${normalizedPath} (category: ${category})`);
             
@@ -114,12 +134,16 @@ export async function loadCommands(client) {
     }
     
     const commandsWithSubcommands = Array.from(client.commands.values()).filter(cmd => {
-        const subcommands = getSubcommandInfo(cmd.data.toJSON());
+        const commandDataJSON = getCommandDataJSON(cmd);
+        if (!commandDataJSON) return false;
+        const subcommands = getSubcommandInfo(commandDataJSON);
         return subcommands.length > 0;
     });
     
     const totalSubcommands = commandsWithSubcommands.reduce((total, cmd) => {
-        return total + getSubcommandInfo(cmd.data.toJSON()).length;
+        const commandDataJSON = getCommandDataJSON(cmd);
+        if (!commandDataJSON) return total;
+        return total + getSubcommandInfo(commandDataJSON).length;
     }, 0);
     
     const uniqueCommands = new Set();
@@ -136,9 +160,6 @@ export async function loadCommands(client) {
 
 
 
-
-
-
 export async function registerCommands(client, guildId) {
     try {
         const commands = [];
@@ -146,17 +167,22 @@ export async function registerCommands(client, guildId) {
 const registeredNames = new Set();
         
         for (const command of client.commands.values()) {
-            if (command.data && typeof command.data.toJSON === 'function') {
+            if (command.data) {
+                const commandDataJSON = getCommandDataJSON(command);
+                if (!commandDataJSON) {
+                    logger.warn(`Command has invalid data structure: ${command}`);
+                    continue;
+                }
+                
                 const commandName = command.data.name;
                 
                 logger.debug(`Processing command for registration: ${commandName}`);
                 
                 if (!registeredNames.has(commandName)) {
                     registeredNames.add(commandName);
-                    const commandJson = command.data.toJSON();
-                    commands.push(commandJson);
+                    commands.push(commandDataJSON);
                     
-                    const subcommands = getSubcommandInfo(commandJson);
+                    const subcommands = getSubcommandInfo(commandDataJSON);
                     totalSubcommands += subcommands.length;
                     
                     if (process.env.NODE_ENV !== 'production') {
@@ -166,7 +192,7 @@ const registeredNames = new Set();
                     logger.debug(`Skipping duplicate command: ${commandName}`);
                 }
             } else {
-                logger.warn(`Command missing data or toJSON method: ${command}`);
+                logger.warn(`Command missing data: ${command}`);
             }
         }
         
@@ -295,9 +321,6 @@ const registeredNames = new Set();
         throw error;
     }
 }
-
-
-
 
 
 
