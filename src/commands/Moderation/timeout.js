@@ -1,11 +1,10 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
-
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 const durationChoices = [
     { name: "5 minutes", value: 5 },
     { name: "10 minutes", value: 10 },
@@ -15,6 +14,7 @@ const durationChoices = [
     { name: "1 day", value: 1440 },
     { name: "1 week", value: 10080 },
 ];
+
 export default {
     data: new SlashCommandBuilder()
         .setName("timeout")
@@ -25,18 +25,17 @@ export default {
                 .setDescription("User to timeout")
                 .setRequired(true),
         )
-        .addIntegerOption(
-            (option) =>
-                option
-                    .setName("duration")
-                    .setDescription("Duration of the timeout")
-                    .setRequired(true)
-.addChoices(...durationChoices),
+        .addIntegerOption((option) =>
+            option
+                .setName("duration")
+                .setDescription("Duration of the timeout")
+                .setRequired(true)
+                .addChoices(...durationChoices),
         )
         .addStringOption((option) =>
             option.setName("reason").setDescription("Reason for the timeout"),
         )
-.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     category: "moderation",
 
     async execute(interaction, config, client) {
@@ -64,6 +63,14 @@ export default {
             const durationMinutes = interaction.options.getInteger("duration");
             const reason = interaction.options.getString("reason") || "No reason provided";
 
+            if (!targetUser) {
+                throw new TitanBotError(
+                    "Target not found",
+                    ErrorTypes.USER_INPUT,
+                    "Could not find the target user."
+                );
+            }
+
             if (targetUser.id === interaction.user.id) {
                 throw new TitanBotError(
                     "Cannot timeout self",
@@ -71,6 +78,7 @@ export default {
                     "You cannot timeout yourself."
                 );
             }
+
             if (targetUser.id === client.user.id) {
                 throw new TitanBotError(
                     "Cannot timeout bot",
@@ -78,6 +86,7 @@ export default {
                     "You cannot timeout the bot."
                 );
             }
+
             if (!member) {
                 throw new TitanBotError(
                     "Target not found",
@@ -132,13 +141,12 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        error.userMessage || "An unexpected error occurred during the timeout action. Please check my role permissions.",
+                        "Timeout Failed",
+                        error.userMessage || "An unexpected error occurred during the timeout action. Please check my role permissions."
                     ),
                 ],
             });
         }
     }
 };
-
-
 
