@@ -1,9 +1,32 @@
+async execute(message, client) {
+  try {
+
+    // ModMail DM's
+    if (message.author.bot) return;
+
+    if (!message.guild) {
+      // modmail code hier
+      return;
+    }
+
+    // normale serverberichten
+    await handleLeveling(message, client);
+
+  } catch (error) {
+    logger.error('Error in messageCreate event:', error);
+  }
+}
 
 
 
 
-
-import { Events } from 'discord.js';
+import {
+  Events,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder
+} from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -16,28 +39,12 @@ export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
-      // MODMAIL DM HANDLER
-if (message.author.bot) return;
-
-if (!message.guild) {
-
-  const guild = client.guilds.cache.get(client.config.bot.guildId);
-  if (!guild) return;
-
-  const existingTicket = guild.channels.cache.find(
-    c => c.topic === message.author.id
-  );
-
-  if (existingTicket) {
-    await existingTicket.send(
-      `👤 ${message.author.tag}: ${message.content}`
-    );
-    return;
-  }
-
-  // Hier stuur je de bevestigingsknoppen
-  return;
-}
+   import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder
+} from 'discord.js';
       if (message.author.bot || !message.guild) return;
 
       await handleLeveling(message, client);
