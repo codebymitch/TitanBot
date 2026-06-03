@@ -1,24 +1,67 @@
-async execute(message, client) {
-  try {
+// MODMAIL
+if (message.author.bot) return;
 
-    // ModMail DM's
-    if (message.author.bot) return;
+if (!message.guild) {
 
-    if (!message.guild) {
-      // modmail code hier
-      return;
-    }
+  const guild = client.guilds.cache.get(
+    client.config.bot.guildId
+  );
 
-    // normale serverberichten
-    await handleLeveling(message, client);
+  if (!guild) return;
 
-  } catch (error) {
-    logger.error('Error in messageCreate event:', error);
+  const ticket = guild.channels.cache.find(
+    c => c.topic === message.author.id
+  );
+
+  if (ticket) {
+    await ticket.send(
+      `👤 ${message.author.tag}: ${message.content}`
+    );
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle('📩 ModMail')
+    .setDescription(
+      'Weet je zeker dat je een ticket wilt openen?'
+    );
+
+  const row = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId(`modmail_yes:${message.author.id}`)
+        .setLabel('Ja')
+        .setStyle(ButtonStyle.Success),
+
+      new ButtonBuilder()
+        .setCustomId(`modmail_no:${message.author.id}`)
+        .setLabel('Nee')
+        .setStyle(ButtonStyle.Danger)
+    );
+
+  await message.author.send({
+    embeds: [embed],
+    components: [row]
+  });
+
+  return;
+}
+if (
+  message.guild &&
+  message.channel.topic &&
+  message.channel.parentId === 'JOUW_CATEGORIE_ID'
+) {
+
+  const user = await client.users.fetch(
+    message.channel.topic
+  ).catch(() => null);
+
+  if (user) {
+    await user.send(
+      `📨 Staff: ${message.content}`
+    ).catch(() => {});
   }
 }
-
-
-
 
 import {
   Events,
