@@ -20,9 +20,10 @@ export default {
 
   async execute(client) {
     try {
-      // Seed persistent blacklist from env
-      const blacklistedUsers = process.env.BLACKLISTED_USERS?.split(',').map(id => id.trim()).filter(Boolean) ?? [];
-      client.botBlacklist = new Set(blacklistedUsers);
+      // Seed persistent blacklist — merge .env baseline with DB-persisted changes
+      const envIds = process.env.BLACKLISTED_USERS?.split(',').map(id => id.trim()).filter(Boolean) ?? [];
+      const dbIds = (await client.db.get('blacklist:users').catch(() => null)) ?? [];
+      client.botBlacklist = new Set([...envIds, ...dbIds]);
 
       const { status, activities } = config.bot.presence;
       let activityIndex = 0;

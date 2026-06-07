@@ -1211,6 +1211,7 @@ async function handleModCommand(message, client) {
         if (!target) return message.reply('Usage: `>blacklist @user`');
         if (target.id === message.author.id) return message.reply({ embeds: [modEmbed(0xED4245, '❌ You cannot blacklist yourself.')] });
         client.botBlacklist.add(target.id);
+        await client.db.set('blacklist:users', [...client.botBlacklist]);
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.tag}** is now blacklisted from all bot commands.`)] });
       }
 
@@ -1221,6 +1222,7 @@ async function handleModCommand(message, client) {
         if (!target) return message.reply('Usage: `>unblacklist @user`');
         if (!client.botBlacklist.has(target.id)) return message.reply({ embeds: [modEmbed(0xFEE75C, `⚠️ **${target.tag}** is not blacklisted.`)] });
         client.botBlacklist.delete(target.id);
+        await client.db.set('blacklist:users', [...client.botBlacklist]);
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.tag}** has been removed from the blacklist.`)] });
       }
 
