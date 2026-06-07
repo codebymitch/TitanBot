@@ -20,6 +20,10 @@ export default {
 
   async execute(client) {
     try {
+      // Seed persistent blacklist from env
+      const blacklistedUsers = process.env.BLACKLISTED_USERS?.split(',').map(id => id.trim()).filter(Boolean) ?? [];
+      client.botBlacklist = new Set(blacklistedUsers);
+
       const { status, activities } = config.bot.presence;
       let activityIndex = 0;
 

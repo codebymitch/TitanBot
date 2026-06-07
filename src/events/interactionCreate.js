@@ -31,6 +31,8 @@ export default {
       try {
         InteractionHelper.patchInteractionResponses(interaction);
 
+        if (client.botBlacklist?.has(interaction.user.id)) return;
+
         if (interaction.isChatInputCommand()) {
           try {
             logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`, {
