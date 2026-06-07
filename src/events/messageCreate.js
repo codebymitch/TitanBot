@@ -1224,6 +1224,21 @@ async function handleModCommand(message, client) {
         return message.reply({ embeds: [modEmbed(0x57F287, `✅ **${target.tag}** has been removed from the blacklist.`)] });
       }
 
+      case 'banlist': {
+        if (!isBotAdmin) return NO_PERM();
+        const ids = [...(client.botBlacklist ?? [])];
+        if (!ids.length) return message.reply({ embeds: [modEmbed(0x57F287, '✅ No users are currently blacklisted.')] });
+        const lines = await Promise.all(ids.map(async (id, i) => {
+          const user = await client.users.fetch(id).catch(() => null);
+          return `**${i + 1}.** ${user ? `${user.tag} (\`${id}\`)` : `\`${id}\``}`;
+        }));
+        return message.reply({ embeds: [new EmbedBuilder()
+          .setColor(0xED4245)
+          .setTitle(`🚫 Bot Blacklist — ${ids.length} user${ids.length !== 1 ? 's' : ''}`)
+          .setDescription(lines.join('\n'))
+          .setTimestamp()] });
+      }
+
       case 'maintenance': {
         if (!isBotAdmin) return NO_PERM();
         client.maintenanceMode = !client.maintenanceMode;
