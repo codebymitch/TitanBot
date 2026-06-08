@@ -47,11 +47,11 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
-      - ANDROID_TESTSUITE
+      - MUSIC
       - TV
       - TVHTML5_SIMPLY
       - WEB
-      - IOS
+      - WEBEMBEDDED
     oauth:
       enabled: true
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
