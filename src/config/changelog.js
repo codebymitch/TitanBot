@@ -1,5 +1,12 @@
 export const changelog = [
     {
+        version: '3.0.1',
+        date: '2026-06-08',
+        entries: [
+            { type: 'new', text: 'Auto scam detection — bot automatically deletes crypto casino promos, fake giveaways, and Andrew Tate scam links from all servers' },
+        ],
+    },
+    {
         version: '3.0.0',
         date: '2026-06-08',
         entries: [

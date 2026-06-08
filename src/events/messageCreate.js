@@ -13,6 +13,7 @@ import { addXp } from '../services/xpSystem.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { AutoresponderService } from '../services/autoresponderService.js';
 import { AntiNsfwService } from '../services/antiNsfwService.js';
+import { ScamDetectionService } from '../services/scamDetectionService.js';
 import { snipeCache } from '../utils/snipeCache.js';
 import VoiceService from '../services/voiceService.js';
 
@@ -60,6 +61,9 @@ export default {
         await handlePrefixCommand(message, client);
         return;
       }
+
+      const scam = await ScamDetectionService.check(client, message);
+      if (scam) return;
 
       const flagged = await AntiNsfwService.checkMessage(client, message);
       if (flagged) return;
