@@ -21,7 +21,7 @@ const HELP_MENU_TIMEOUT_MS = 5 * 60 * 1000;
 
 const CATEGORY_INFO = {
     Core:           { icon: "ℹ️",  desc: "Core bot commands and information" },
-    Moderation:     { icon: "🛡️",  desc: "Server moderation, user management, role assignment, enforcement tools, and NSFW content detection" },
+    Moderation:     { icon: "🛡️",  desc: "Server moderation, user management, role assignment, enforcement tools, NSFW detection, and auto scam/image blocking" },
     Fun:            { icon: "🎮",  desc: "8-ball, RPS, roast, snipe, memes, jokes, ship, fight, and more fun commands" },
     Leveling:       { icon: "📊",  desc: "User levels, XP system, and progression tracking" },
     Utility:        { icon: "🔧",  desc: "Useful tools and server utilities" },
@@ -37,7 +37,7 @@ const CATEGORY_INFO = {
     Serverstats:    { icon: "📈",  desc: "Server statistics and display counters" },
     Logging:        { icon: "📋",  desc: "Server event logging and audit trails" },
     Voice:          { icon: "🔊",  desc: "Voice channel commands and activities" },
-    Music:          { icon: "🎵",  desc: "Play music in voice channels, queue songs, and control playback" },
+    Music:          { icon: "🎵",  desc: "Play music in voice channels, queue songs, and control playback (works via user-installed app in DMs and group DMs too)" },
     Gorilla:        { icon: "🦍",  desc: "Gorilla Tag server status, cosmetics browser, and auto-update channel" },
     Starrail:       { icon: "🌌",  desc: "Honkai: Star Rail — path assignment, character rolls, quotes, and Penacony dreamscapes" },
 };

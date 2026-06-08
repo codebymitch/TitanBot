@@ -1,9 +1,18 @@
 export const changelog = [
     {
+        version: '3.0.2',
+        date: '2026-06-08',
+        entries: [
+            { type: 'improve', text: '`/help` and `>help` menus updated — Bot Admin category now shows scam image commands, user-install info added to Music description' },
+        ],
+    },
+    {
         version: '3.0.1',
         date: '2026-06-08',
         entries: [
-            { type: 'new', text: 'Auto scam detection — bot automatically deletes crypto casino promos, fake giveaways, and Andrew Tate scam links from all servers' },
+            { type: 'new', text: 'Auto scam detection — bot automatically deletes crypto casino promos, fake giveaways, and Andrew Tate scam links from all servers, DMs, and group channels' },
+            { type: 'new', text: '`>addscamimage` / `>removescamimage` — register scam screenshots by hash; any exact copy gets auto-deleted everywhere the bot can see' },
+            { type: 'new', text: 'User-installable app support — install the bot on your account to use slash commands in any DM or group DM (enable in Developer Portal first)' },
         ],
     },
     {

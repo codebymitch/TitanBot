@@ -150,6 +150,10 @@ const CATEGORIES = {
             ['`>admin broadcast <serverID> <message>`', "Send a message to a server's system/first channel"],
             ['`>admin guild info <serverID>`', 'View details about any guild the bot is in'],
             ['`>admin leave <serverID>`', 'Request to leave a guild (requires approval via DM)'],
+            ['`>blacklist @user` / `>unblacklist @user`', 'Block or unblock a user from all bot commands (persists across restarts)'],
+            ['`>banlist`', 'View all currently blacklisted users'],
+            ['`>addscamimage` *(reply to image)*', 'Register a scam image — any exact copy will be auto-deleted everywhere the bot can see'],
+            ['`>removescamimage` *(reply to image)*', 'Remove a scam image from the blocklist'],
         ],
     },
     dangers: {

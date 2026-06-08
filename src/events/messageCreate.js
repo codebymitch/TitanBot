@@ -1574,10 +1574,11 @@ async function handleModCommand(message, client) {
               '> 🔗 **Webhooks** — list, create, delete',
               '> 🛠️ **Tools** — color, poll, tts, choose',
               '> 👑 **Owner Only** — say, fake, embed, dm...',
+              '> 🔐 **Bot Admin** — blacklist, addscamimage, admin...',
               '> ☢️ **Dangers** — nuke, nukev2, nukev3, gban, gunban',
             ].join('\n'),
           })
-          .setFooter({ text: `${guild.name} • Prefix: > • 👑 owner only • ☢️ destructive` })
+          .setFooter({ text: `${guild.name} • Prefix: > • 👑 owner only • 🔐 bot admin • ☢️ destructive` })
           .setTimestamp();
 
         const menu = new StringSelectMenuBuilder()
