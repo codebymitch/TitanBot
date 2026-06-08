@@ -142,7 +142,7 @@ export default {
           if (isYouTube && track?.info?.title && !client.musicRetrying?.has(player.guildId)) {
             client.musicRetrying?.add(player.guildId);
             try {
-              const q = `ytsearch:${track.info.title}${track.info.author ? ` ${track.info.author}` : ''}`;
+              const q = `ytmsearch:${track.info.title}${track.info.author ? ` ${track.info.author}` : ''}`;
               const ytResult = await player.search({ query: q }, null);
               const ytTrack = ytResult.tracks?.find(t => t.info.uri !== track.info.uri);
               if (ytTrack) {

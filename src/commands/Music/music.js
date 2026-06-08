@@ -60,7 +60,7 @@ export default {
 
                 const rawQuery = interaction.options.getString('song');
                 const isUrl = /^https?:\/\//i.test(rawQuery);
-                const query = isUrl ? rawQuery : `ytsearch:${rawQuery}`;
+                const query = isUrl ? rawQuery : `ytmsearch:${rawQuery}`;
                 const result = await player.search({ query }, interaction.user);
 
                 if (!result.tracks.length || result.loadType === 'empty') {
