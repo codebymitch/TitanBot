@@ -154,6 +154,9 @@ const registeredNames = new Set();
                 if (!registeredNames.has(commandName)) {
                     registeredNames.add(commandName);
                     const commandJson = command.data.toJSON();
+                    // Allow user-installed app usage in servers (0), bot DMs (1), and group DMs (2)
+                    commandJson.integration_types = [0, 1];
+                    commandJson.contexts = [0, 1, 2];
                     commands.push(commandJson);
                     
                     const subcommands = getSubcommandInfo(commandJson);
