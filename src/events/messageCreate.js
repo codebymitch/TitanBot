@@ -39,6 +39,10 @@ export default {
       _processed.add(message.id);
       setTimeout(() => _processed.delete(message.id), 5000);
 
+      // Scam detection runs everywhere (DMs, groups, and servers)
+      const scamDm = await ScamDetectionService.check(client, message);
+      if (scamDm) return;
+
       // Relay DM replies back to the staff member who sent the original DM
       if (!message.guild) {
         await handleDmReply(message, client);
@@ -61,9 +65,6 @@ export default {
         await handlePrefixCommand(message, client);
         return;
       }
-
-      const scam = await ScamDetectionService.check(client, message);
-      if (scam) return;
 
       const flagged = await AntiNsfwService.checkMessage(client, message);
       if (flagged) return;
@@ -1243,6 +1244,26 @@ async function handleModCommand(message, client) {
           .setTitle(`🚫 Bot Blacklist — ${ids.length} user${ids.length !== 1 ? 's' : ''}`)
           .setDescription(lines.join('\n'))
           .setTimestamp()] });
+      }
+
+      case 'addscamimage': {
+        if (!isBotAdmin) return NO_PERM();
+        const ref = message.reference ? await message.channel.messages.fetch(message.reference.messageId).catch(() => null) : null;
+        const target = ref ?? message;
+        const added = await ScamDetectionService.registerImages(client, target);
+        if (!added) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ No images found. Reply to a message containing the scam image.')] });
+        ScamDetectionService.clearCache();
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Registered **${added}** scam image${added !== 1 ? 's' : ''}. They will now be auto-deleted everywhere.`)] });
+      }
+
+      case 'removescamimage': {
+        if (!isBotAdmin) return NO_PERM();
+        const ref2 = message.reference ? await message.channel.messages.fetch(message.reference.messageId).catch(() => null) : null;
+        const target2 = ref2 ?? message;
+        const removed = await ScamDetectionService.unregisterImages(client, target2);
+        if (!removed) return message.reply({ embeds: [modEmbed(0xFEE75C, '⚠️ No matching registered images found.')] });
+        ScamDetectionService.clearCache();
+        return message.reply({ embeds: [modEmbed(0x57F287, `✅ Removed **${removed}** scam image${removed !== 1 ? 's' : ''} from the blocklist.`)] });
       }
 
       case 'maintenance': {

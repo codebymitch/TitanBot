@@ -1,4 +1,7 @@
-// Detects and deletes crypto/gambling scam messages (fake giveaways, casino promos, etc.)
+import { createHash } from 'crypto';
+import axios from 'axios';
+
+// ── Text-based detection ─────────────────────────────────────────────────────
 
 const SCAM_DOMAINS = [
   'cobratate', 'tatespeech', 'hustlersuniversity', 'cobracasino',
@@ -8,7 +11,6 @@ const SCAM_DOMAINS = [
   'csgopolygon', 'clash.gg', 'thunderpick',
 ];
 
-// Keyword combos — must match ≥2 from a group to trigger, or ≥1 from HIGH_CONFIDENCE
 const KEYWORD_GROUPS = [
   ['promo code', 'promocode', 'promo-code'],
   ['claim your reward', 'claim reward', 'claim your bonus'],
@@ -21,7 +23,6 @@ const KEYWORD_GROUPS = [
   ['andrew tate', 'cobratate', 'tate'],
 ];
 
-// Any single match here is enough to flag
 const HIGH_CONFIDENCE = [
   'cobratate.com', 'tatespeech.com', 'cryptofire.io',
   'enter the promo code', 'use code launch', 'use code: launch',
@@ -31,60 +32,139 @@ const HIGH_CONFIDENCE = [
   'connect your wallet to claim',
 ];
 
-function containsScamDomain(text) {
-  const lower = text.toLowerCase();
-  return SCAM_DOMAINS.some(d => lower.includes(d));
-}
-
-function matchedKeywordGroups(text) {
-  const lower = text.toLowerCase();
-  let matched = 0;
-  for (const group of KEYWORD_GROUPS) {
-    if (group.some(kw => lower.includes(kw))) matched++;
-  }
-  return matched;
-}
-
-function isHighConfidence(text) {
-  const lower = text.toLowerCase();
-  return HIGH_CONFIDENCE.some(kw => lower.includes(kw));
-}
-
-function isScam(content, embeds = []) {
+function isTextScam(content, embeds = []) {
   const allText = [
     content,
     ...embeds.map(e => [e.title, e.description, e.url, ...(e.fields?.map(f => f.value) ?? [])].join(' ')),
-  ].join(' ');
+  ].join(' ').toLowerCase();
 
-  if (isHighConfidence(allText)) return true;
-  if (containsScamDomain(allText)) return true;
-  if (matchedKeywordGroups(allText) >= 3) return true;
+  if (HIGH_CONFIDENCE.some(kw => allText.includes(kw))) return true;
+  if (SCAM_DOMAINS.some(d => allText.includes(d))) return true;
 
-  return false;
+  let matched = 0;
+  for (const group of KEYWORD_GROUPS) {
+    if (group.some(kw => allText.includes(kw))) matched++;
+  }
+  return matched >= 3;
 }
 
+// ── Image hash detection ─────────────────────────────────────────────────────
+
+// In-memory cache loaded from DB on first use
+let _hashCache = null;
+
+async function loadHashes(db) {
+  if (_hashCache) return _hashCache;
+  const stored = await db.get('scam:image-hashes').catch(() => null);
+  _hashCache = new Set(stored ?? []);
+  return _hashCache;
+}
+
+async function hashImageUrl(url) {
+  try {
+    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 8000 });
+    return createHash('md5').update(Buffer.from(res.data)).digest('hex');
+  } catch {
+    return null;
+  }
+}
+
+const IMAGE_TYPES = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
+
+function imageAttachments(message) {
+  return [...message.attachments.values()].filter(a => {
+    const ext = a.name?.split('.').pop()?.toLowerCase();
+    return IMAGE_TYPES.has(ext) || a.contentType?.startsWith('image/');
+  });
+}
+
+// ── Public API ───────────────────────────────────────────────────────────────
+
 export const ScamDetectionService = {
+  /** Returns true and removes the message if it matches scam text or a registered scam image. */
   async check(client, message) {
-    if (!message.guild) return false;
     if (!message.deletable) return false;
 
     const content = message.content ?? '';
     const embeds = message.embeds ?? [];
+    const isGuild = !!message.guild;
 
-    if (!isScam(content, embeds)) return false;
+    const textScam = isTextScam(content, embeds);
+    let imageScam = false;
+
+    const images = imageAttachments(message);
+    if (images.length && client.db?.isAvailable?.()) {
+      const hashes = await loadHashes(client.db);
+      for (const img of images) {
+        const hash = await hashImageUrl(img.url);
+        if (hash && hashes.has(hash)) { imageScam = true; break; }
+      }
+    }
+
+    if (!textScam && !imageScam) return false;
 
     try {
       await message.delete();
-
-      const channel = message.channel;
-      const warn = await channel.send({
-        content: `🚨 <@${message.author.id}> A message was automatically removed for containing scam/gambling content.`,
-      });
-      setTimeout(() => warn.delete().catch(() => {}), 8000);
-
-      return true;
     } catch {
-      return false;
+      // Can't delete (e.g. DM) — just warn
     }
+
+    try {
+      const warn = await message.channel.send({
+        content: `🚨 <@${message.author.id}> A message was automatically removed for containing scam content.`,
+      });
+      if (isGuild) setTimeout(() => warn.delete().catch(() => {}), 8000);
+    } catch {}
+
+    return true;
+  },
+
+  /** Register all image attachments in a message as scam images. Returns count added. */
+  async registerImages(client, message) {
+    if (!client.db?.isAvailable?.()) return 0;
+
+    const images = imageAttachments(message);
+    if (!images.length) return 0;
+
+    const hashes = await loadHashes(client.db);
+    let added = 0;
+
+    for (const img of images) {
+      const hash = await hashImageUrl(img.url);
+      if (hash && !hashes.has(hash)) {
+        hashes.add(hash);
+        added++;
+      }
+    }
+
+    if (added) await client.db.set('scam:image-hashes', [...hashes]);
+    return added;
+  },
+
+  /** Remove all image attachments in a message from the scam hash list. Returns count removed. */
+  async unregisterImages(client, message) {
+    if (!client.db?.isAvailable?.()) return 0;
+
+    const images = imageAttachments(message);
+    if (!images.length) return 0;
+
+    const hashes = await loadHashes(client.db);
+    let removed = 0;
+
+    for (const img of images) {
+      const hash = await hashImageUrl(img.url);
+      if (hash && hashes.has(hash)) {
+        hashes.delete(hash);
+        removed++;
+      }
+    }
+
+    if (removed) await client.db.set('scam:image-hashes', [...hashes]);
+    return removed;
+  },
+
+  /** Wipe the in-memory cache (call after DB changes from another process). */
+  clearCache() {
+    _hashCache = null;
   },
 };
