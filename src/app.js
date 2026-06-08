@@ -126,9 +126,9 @@ class TitanBot extends Client {
           this.guilds.cache.get(guildId)?.shard?.send(payload);
         },
         client: { id: process.env.CLIENT_ID, username: 'TitanBot' },
-        autoSkip: true,
+        autoSkip: false,
         playerOptions: {
-          defaultSearchPlatform: 'scsearch',
+          defaultSearchPlatform: 'ytmsearch',
           volumeDecrementer: 0.75,
         },
       });

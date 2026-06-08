@@ -124,37 +124,41 @@ export default {
 
         client.lavalink.on('trackEnd', async (player, track, payload) => {
           const reason = payload?.reason ?? 'unknown';
-          if (reason !== 'finished' && reason !== 'replaced') {
-            logger.warn(`Track ended unexpectedly in guild ${player.guildId}: "${track?.info?.title}" — reason: ${reason}`);
-          }
           const panel = client.musicPanels?.get(player.guildId);
           clearPanelInterval(panel);
 
-          if (reason === 'loadFailed') {
-            // Try ytmsearch retry, then yt-dlp fallback before giving up
-            if (track?.info?.title && !client.musicRetrying?.has(player.guildId)) {
-              client.musicRetrying?.add(player.guildId);
-              let retryTrack = null;
-              try {
-                const q = `ytmsearch:${track.info.title}${track.info.author ? ` ${track.info.author}` : ''}`;
-                const res = await player.search({ query: q }, null);
-                retryTrack = res.tracks?.find(t => t.info.uri !== track.info.uri);
-              } catch {}
-              if (!retryTrack) retryTrack = await ytDlpFallback(player, track);
-              client.musicRetrying?.delete(player.guildId);
-              if (retryTrack) {
-                await player.queue.add(retryTrack, 0);
-                try { await player.play({ paused: false }); return; } catch {}
-              }
+          // Normal finish: manually advance queue (autoSkip is disabled)
+          if (reason === 'finished') {
+            if (player.queue.current) {
+              try { await player.play({ paused: false }); } catch {}
             }
-            const channel = client.channels.cache.get(panel?.textChannelId);
-            await channel?.send({ content: `⚠️ Failed to load **${track?.info?.title ?? 'a track'}** — skipping.` }).catch(() => {});
-            if (player.queue.tracks.length) {
-              try { await player.play({ paused: false }); return; } catch {}
-            }
-            const message = await channel?.messages.fetch(panel?.messageId).catch(() => null);
-            if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
+            return;
           }
+
+          // replaced / stopped / cleanup: the triggering action handles advancement
+          if (reason !== 'loadFailed') return;
+
+          // loadFailed: try yt-dlp, then skip
+          if (track?.info?.identifier && !client.musicRetrying?.has(player.guildId)) {
+            client.musicRetrying?.add(player.guildId);
+            const retryTrack = await ytDlpFallback(player, track);
+            client.musicRetrying?.delete(player.guildId);
+            if (retryTrack) {
+              try {
+                await player.queue.add(retryTrack, 0);
+                await player.play({ paused: false });
+                return;
+              } catch {}
+            }
+          }
+
+          const channel = client.channels.cache.get(panel?.textChannelId);
+          await channel?.send({ content: `⚠️ Failed to load **${track?.info?.title ?? 'a track'}** — skipping.` }).catch(() => {});
+          if (player.queue.current) {
+            try { await player.play({ paused: false }); return; } catch {}
+          }
+          const message = await channel?.messages.fetch(panel?.messageId).catch(() => null);
+          if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
         });
 
         client.lavalink.on('trackStuck', async (player, track) => {
@@ -177,75 +181,41 @@ export default {
 
         client.lavalink.on('trackError', async (player, track, payload) => {
           const reason = payload?.exception?.message || payload?.exception?.cause || payload?.error || 'unknown';
-          logger.warn(`Track error in guild ${player.guildId}: "${track?.info?.title}" — ${reason} | uri: ${track?.info?.uri}`);
+          logger.warn(`Track error in guild ${player.guildId}: "${track?.info?.title}" — ${reason}`);
           const panel = client.musicPanels?.get(player.guildId);
           clearPanelInterval(panel);
 
-          // YouTube track failed → retry search so a different YouTube client/result is used
-          const isYouTube = track?.info?.sourceName === 'youtube' || track?.info?.uri?.includes('youtube');
-          if (isYouTube && track?.info?.title && !client.musicRetrying?.has(player.guildId)) {
-            client.musicRetrying?.add(player.guildId);
-            try {
-              const q = `ytmsearch:${track.info.title}${track.info.author ? ` ${track.info.author}` : ''}`;
-              const ytResult = await player.search({ query: q }, null);
-              const ytTrack = ytResult.tracks?.find(t => t.info.uri !== track.info.uri);
-              if (ytTrack) {
-                logger.info(`YouTube retry fallback: "${ytTrack.info.title}" in guild ${player.guildId}`);
-                await player.queue.add(ytTrack, 0);
-                await player.play({ paused: false });
-                return;
-              }
-            } catch (fbErr) {
-              logger.warn(`YouTube retry fallback failed in guild ${player.guildId}:`, fbErr?.message);
-            }
-            // yt-dlp last resort
-            const ytdlpTrack = await ytDlpFallback(player, track);
-            client.musicRetrying?.delete(player.guildId);
-            if (ytdlpTrack) {
-              await player.queue.add(ytdlpTrack, 0);
-              try { await player.play({ paused: false }); return; } catch {}
-            }
-          }
-
-          // Non-YouTube: auto-retry once before giving up
-          if (track && !isYouTube && !client.musicRetrying?.has(player.guildId)) {
-            client.musicRetrying?.add(player.guildId);
-            logger.info(`Auto-retrying track "${track?.info?.title}" in guild ${player.guildId}`);
-            await new Promise(r => setTimeout(r, 1500));
-            try {
-              await player.queue.add(track, 0);
-              await player.play({ paused: false });
-              return;
-            } catch (retryErr) {
-              logger.warn(`Auto-retry failed in guild ${player.guildId}:`, retryErr?.message);
+          // Don't retry again if we already tried
+          if (!client.musicRetrying?.has(player.guildId)) {
+            const isYouTube = track?.info?.sourceName === 'youtube' || track?.info?.uri?.includes('youtube');
+            if (isYouTube && track?.info?.identifier) {
+              client.musicRetrying?.add(player.guildId);
+              const ytdlpTrack = await ytDlpFallback(player, track);
               client.musicRetrying?.delete(player.guildId);
+              if (ytdlpTrack) {
+                logger.info(`yt-dlp fallback succeeded for "${track.info.title}" in guild ${player.guildId}`);
+                try {
+                  await player.queue.add(ytdlpTrack, 0);
+                  await player.play({ paused: false });
+                  return;
+                } catch (err) {
+                  logger.warn(`Failed to play yt-dlp track in guild ${player.guildId}:`, err?.message);
+                }
+              }
             }
           }
 
           client.musicRetrying?.delete(player.guildId);
-          if (panel) {
-            const channel = client.channels.cache.get(panel.textChannelId);
-            await channel?.send({ content: `⚠️ **${track?.info?.title ?? 'A track'}** failed to play and was skipped.` }).catch(() => {});
+          const channel = client.channels.cache.get(panel?.textChannelId);
+          await channel?.send({ content: `⚠️ **${track?.info?.title ?? 'A track'}** failed to play — skipping.` }).catch(() => {});
+          if (player.queue.current) {
+            try { await player.play({ paused: false }); return; } catch {}
           }
-          try {
-            await player.skip();
-          } catch {
-            client.musicVotes?.delete(player.guildId);
-            if (panel) {
-              panel.isPaused = false;
-              const channel = client.channels.cache.get(panel.textChannelId);
-              const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
-              if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
-            }
-            // Don't destroy immediately — give 3 min so user can retry
-            setTimeout(() => {
-              if (!player.playing) {
-                const p = client.musicPanels?.get(player.guildId);
-                clearPanelInterval(p);
-                client.musicPanels?.delete(player.guildId);
-                player.destroy().catch(() => {});
-              }
-            }, 3 * 60_000);
+          client.musicVotes?.delete(player.guildId);
+          if (panel) {
+            panel.isPaused = false;
+            const message = await channel?.messages.fetch(panel?.messageId).catch(() => null);
+            if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
           }
         });
 
