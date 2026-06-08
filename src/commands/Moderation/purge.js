@@ -22,7 +22,9 @@ export default {
     category: 'moderation',
 
     async execute(interaction, config, client) {
-        if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+        const inServer = !!interaction.guild;
+
+        if (inServer && !interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
             return InteractionHelper.safeReply(interaction, {
                 embeds: [errorEmbed('Permission Denied', 'You need the `Manage Messages` permission to purge messages.')],
                 flags: [MessageFlags.Ephemeral],
@@ -31,11 +33,11 @@ export default {
 
         const modal = new ModalBuilder()
             .setCustomId('purge_count')
-            .setTitle('Delete Messages');
+            .setTitle(inServer ? 'Delete Messages' : 'Delete Bot Messages');
 
         const amountInput = new TextInputBuilder()
             .setCustomId('amount')
-            .setLabel('How many messages to delete? (1–100)')
+            .setLabel(inServer ? 'How many messages to delete? (1–100)' : 'How many bot messages to delete? (1–100)')
             .setStyle(TextInputStyle.Short)
             .setPlaceholder('e.g. 10')
             .setMinLength(1)
@@ -75,38 +77,61 @@ export default {
         const channel = interaction.channel;
 
         try {
-            const fetched = await channel.messages.fetch({ limit: amount });
-            const deleted = await channel.bulkDelete(fetched, true);
-            const deletedCount = deleted.size;
+            if (inServer) {
+                // ── Server: bulk delete (up to 100, max 14 days old) ──────
+                const fetched = await channel.messages.fetch({ limit: amount });
+                const deleted = await channel.bulkDelete(fetched, true);
+                const deletedCount = deleted.size;
 
-            await logEvent({
-                client,
-                guild: interaction.guild,
-                event: {
-                    action: 'Messages Purged',
-                    target: `${channel} (${deletedCount} messages)`,
-                    executor: `${interaction.user.username} (${interaction.user.id})`,
-                    reason: `Deleted ${deletedCount} messages`,
-                    metadata: {
-                        channelId: channel.id,
-                        messageCount: deletedCount,
-                        requestedAmount: amount,
-                        moderatorId: interaction.user.id,
+                await logEvent({
+                    client,
+                    guild: interaction.guild,
+                    event: {
+                        action: 'Messages Purged',
+                        target: `${channel} (${deletedCount} messages)`,
+                        executor: `${interaction.user.username} (${interaction.user.id})`,
+                        reason: `Deleted ${deletedCount} messages`,
+                        metadata: {
+                            channelId: channel.id,
+                            messageCount: deletedCount,
+                            requestedAmount: amount,
+                            moderatorId: interaction.user.id,
+                        },
                     },
-                },
-            });
+                });
 
-            await modalSubmit.editReply({
-                embeds: [successEmbed('Messages Deleted', `Deleted **${deletedCount}** messages in ${channel}.`)],
-            });
+                await modalSubmit.editReply({
+                    embeds: [successEmbed('Messages Deleted', `Deleted **${deletedCount}** messages in ${channel}.`)],
+                });
 
-            setTimeout(() => modalSubmit.deleteReply().catch(() => {}), 4000);
+                setTimeout(() => modalSubmit.deleteReply().catch(() => {}), 4000);
+                logger.info(`Purge: ${deletedCount} messages deleted in ${channel.id} by ${interaction.user.id}`);
+            } else {
+                // ── DM / Group DM: can only delete the bot's own messages ──
+                const fetched = await channel.messages.fetch({ limit: 100 });
+                const botMessages = fetched
+                    .filter(m => m.author.id === client.user.id)
+                    .first(amount);
 
-            logger.info(`Purge: ${deletedCount} messages deleted in ${channel.id} by ${interaction.user.id}`);
+                let deleted = 0;
+                for (const msg of botMessages) {
+                    await msg.delete().catch(() => {});
+                    deleted++;
+                }
+
+                await modalSubmit.editReply({
+                    embeds: [successEmbed('Bot Messages Deleted',
+                        deleted > 0
+                            ? `Deleted **${deleted}** of my recent messages.\n*Note: in DMs/groups bots can only delete their own messages.*`
+                            : 'No recent bot messages found to delete.')],
+                });
+
+                setTimeout(() => modalSubmit.deleteReply().catch(() => {}), 5000);
+            }
         } catch (error) {
             logger.error('Purge command error:', error);
             await modalSubmit.editReply({
-                embeds: [errorEmbed('Delete Failed', 'Could not delete messages. Note: messages older than 14 days cannot be bulk deleted.')],
+                embeds: [errorEmbed('Delete Failed', 'Could not delete messages. Messages older than 14 days cannot be bulk deleted in servers.')],
             });
         }
     },
