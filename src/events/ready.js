@@ -127,19 +127,22 @@ export default {
           const panel = client.musicPanels?.get(player.guildId);
           clearPanelInterval(panel);
 
-          // Normal finish: manually advance queue (autoSkip is disabled)
-          if (reason === 'finished') {
+          // Normal finish or skip: manually advance queue (autoSkip is disabled)
+          if (reason === 'finished' || reason === 'stopped') {
             if (player.queue.current) {
               try { await player.play({ paused: false }); } catch {}
             }
             return;
           }
 
-          // replaced / stopped / cleanup: the triggering action handles advancement
+          // replaced / cleanup: the triggering action handles advancement
           if (reason !== 'loadFailed') return;
 
+          // loadFailed: skip if trackError is already handling this via yt-dlp
+          if (client.musicRetrying?.has(player.guildId)) return;
+
           // loadFailed: try yt-dlp, then skip
-          if (track?.info?.identifier && !client.musicRetrying?.has(player.guildId)) {
+          if (track?.info?.identifier) {
             client.musicRetrying?.add(player.guildId);
             const retryTrack = await ytDlpFallback(player, track);
             client.musicRetrying?.delete(player.guildId);
