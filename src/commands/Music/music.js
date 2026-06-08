@@ -31,8 +31,9 @@ export default {
 
         if (sub === 'play') {
             const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
-            if (!ownerIds.includes(interaction.user.id)) {
-                return interaction.reply({ embeds: [errorEmbed('Only bot owners can use this command.')], ephemeral: true });
+            const musicUsers = process.env.MUSIC_USERS?.split(',').map(id => id.trim()) ?? [];
+            if (!ownerIds.includes(interaction.user.id) && !musicUsers.includes(interaction.user.id)) {
+                return interaction.reply({ embeds: [errorEmbed('You do not have permission to use music commands.')], ephemeral: true });
             }
 
             if (!interaction.member.voice.channelId) {
