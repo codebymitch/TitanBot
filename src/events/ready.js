@@ -1,4 +1,6 @@
 import { Events } from "discord.js";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { logger, startupLog } from "../utils/logger.js";
 import { buildPanel, buildQueueEmptyPanel, getVoteRequired } from "../utils/musicPanel.js";
 import { syncFromGuild } from "../utils/presenceSync.js";
@@ -6,6 +8,33 @@ import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { loadAndScheduleTempRoles } from "../services/tempRoleService.js";
 import { loadAndScheduleTempBans } from "../services/tempbanService.js";
+
+const execAsync = promisify(exec);
+
+async function ytDlpFallback(player, track) {
+  try {
+    const identifier = track?.info?.identifier;
+    if (!identifier) return null;
+    const { stdout } = await execAsync(
+      `yt-dlp --format "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio" --get-url "https://www.youtube.com/watch?v=${identifier}"`,
+      { timeout: 20000 }
+    );
+    const streamUrl = stdout.trim().split('\n')[0];
+    if (!streamUrl?.startsWith('http')) return null;
+    const result = await player.search({ query: streamUrl }, null);
+    const fallback = result.tracks?.[0];
+    if (!fallback) return null;
+    // Preserve original metadata so the music panel shows the right title
+    fallback.info.title = track.info.title ?? fallback.info.title;
+    fallback.info.author = track.info.author ?? fallback.info.author;
+    fallback.info.artworkUrl = track.info.artworkUrl ?? fallback.info.artworkUrl;
+    fallback.info.duration = track.info.duration ?? fallback.info.duration;
+    return fallback;
+  } catch (err) {
+    logger.warn(`yt-dlp fallback failed for ${track?.info?.identifier}:`, err?.message);
+    return null;
+  }
+}
 
 function clearPanelInterval(panel) {
     if (panel?.progressInterval) {
@@ -102,9 +131,24 @@ export default {
           clearPanelInterval(panel);
 
           if (reason === 'loadFailed') {
+            // Try ytmsearch retry, then yt-dlp fallback before giving up
+            if (track?.info?.title && !client.musicRetrying?.has(player.guildId)) {
+              client.musicRetrying?.add(player.guildId);
+              let retryTrack = null;
+              try {
+                const q = `ytmsearch:${track.info.title}${track.info.author ? ` ${track.info.author}` : ''}`;
+                const res = await player.search({ query: q }, null);
+                retryTrack = res.tracks?.find(t => t.info.uri !== track.info.uri);
+              } catch {}
+              if (!retryTrack) retryTrack = await ytDlpFallback(player, track);
+              client.musicRetrying?.delete(player.guildId);
+              if (retryTrack) {
+                await player.queue.add(retryTrack, 0);
+                try { await player.play({ paused: false }); return; } catch {}
+              }
+            }
             const channel = client.channels.cache.get(panel?.textChannelId);
             await channel?.send({ content: `⚠️ Failed to load **${track?.info?.title ?? 'a track'}** — skipping.` }).catch(() => {});
-            // Advance to next track if queued, otherwise show empty panel
             if (player.queue.tracks.length) {
               try { await player.play({ paused: false }); return; } catch {}
             }
@@ -154,7 +198,13 @@ export default {
             } catch (fbErr) {
               logger.warn(`YouTube retry fallback failed in guild ${player.guildId}:`, fbErr?.message);
             }
+            // yt-dlp last resort
+            const ytdlpTrack = await ytDlpFallback(player, track);
             client.musicRetrying?.delete(player.guildId);
+            if (ytdlpTrack) {
+              await player.queue.add(ytdlpTrack, 0);
+              try { await player.play({ paused: false }); return; } catch {}
+            }
           }
 
           // Non-YouTube: auto-retry once before giving up
