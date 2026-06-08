@@ -19,7 +19,7 @@ export default {
         if (!player) return interaction.editReply({ content: '❌ No active music session.' });
 
         const isUrl = /^https?:\/\//i.test(rawQuery);
-        const query = isUrl ? rawQuery : `ytmsearch:${rawQuery}`;
+        const query = isUrl ? rawQuery : `ytsearch:${rawQuery}`;
 
 
         const result = await player.search({ query }, interaction.user);

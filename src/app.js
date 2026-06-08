@@ -129,7 +129,7 @@ class TitanBot extends Client {
         client: { id: process.env.CLIENT_ID, username: 'TitanBot' },
         autoSkip: false,
         playerOptions: {
-          defaultSearchPlatform: 'ytmsearch',
+          defaultSearchPlatform: 'ytsearch',
           volumeDecrementer: 0.75,
         },
       });
