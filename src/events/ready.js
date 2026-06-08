@@ -92,9 +92,9 @@ export default {
 
           // Restore original metadata for yt-dlp fallback tracks (which load as "Unknown title")
           const override = client.musicTrackOverride?.get(player.guildId);
+          client.musicTrackOverride?.delete(player.guildId); // always clear — prevents stale override on next track
           if (override && player.queue.current?.info) {
             Object.assign(player.queue.current.info, override);
-            client.musicTrackOverride.delete(player.guildId);
           }
 
           if (player.queue.current) client.musicLastTrack?.set(player.guildId, player.queue.current);
@@ -166,6 +166,7 @@ export default {
             }
           }
 
+          client.musicTrackOverride?.delete(player.guildId);
           const channel = client.channels.cache.get(panel?.textChannelId);
           await channel?.send({ content: `⚠️ Failed to load **${track?.info?.title ?? 'a track'}** — skipping.` }).catch(() => {});
           if (player.queue.current) {
@@ -226,6 +227,7 @@ export default {
           }
 
           client.musicRetrying?.delete(player.guildId);
+          client.musicTrackOverride?.delete(player.guildId);
           const channel = client.channels.cache.get(panel?.textChannelId);
           await channel?.send({ content: `⚠️ **${track?.info?.title ?? 'A track'}** failed to play — skipping.` }).catch(() => {});
           if (player.queue.current) {
