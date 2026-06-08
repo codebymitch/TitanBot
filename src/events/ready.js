@@ -137,25 +137,24 @@ export default {
           const panel = client.musicPanels?.get(player.guildId);
           clearPanelInterval(panel);
 
-          // YouTube track failed → silently fall back to SoundCloud
+          // YouTube track failed → retry search so a different YouTube client/result is used
           const isYouTube = track?.info?.sourceName === 'youtube' || track?.info?.uri?.includes('youtube');
-          if (isYouTube && track?.info?.title) {
-            client.musicRetrying?.delete(player.guildId);
+          if (isYouTube && track?.info?.title && !client.musicRetrying?.has(player.guildId)) {
+            client.musicRetrying?.add(player.guildId);
             try {
-              const q = `scsearch:${track.info.title}${track.info.author ? ` ${track.info.author}` : ''}`;
-              const scResult = await player.search({ query: q }, null);
-              const scTrack = scResult.tracks?.find(t => {
-                try { return !Buffer.from(t.encoded, 'base64').includes('/preview/'); } catch { return true; }
-              });
-              if (scTrack) {
-                logger.info(`YouTube → SoundCloud fallback: "${scTrack.info.title}" in guild ${player.guildId}`);
-                await player.queue.add(scTrack, 0);
+              const q = `ytsearch:${track.info.title}${track.info.author ? ` ${track.info.author}` : ''}`;
+              const ytResult = await player.search({ query: q }, null);
+              const ytTrack = ytResult.tracks?.find(t => t.info.uri !== track.info.uri);
+              if (ytTrack) {
+                logger.info(`YouTube retry fallback: "${ytTrack.info.title}" in guild ${player.guildId}`);
+                await player.queue.add(ytTrack, 0);
                 await player.play({ paused: false });
                 return;
               }
             } catch (fbErr) {
-              logger.warn(`SoundCloud fallback failed in guild ${player.guildId}:`, fbErr?.message);
+              logger.warn(`YouTube retry fallback failed in guild ${player.guildId}:`, fbErr?.message);
             }
+            client.musicRetrying?.delete(player.guildId);
           }
 
           // Non-YouTube: auto-retry once before giving up
