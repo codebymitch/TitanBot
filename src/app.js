@@ -82,6 +82,7 @@ class TitanBot extends Client {
     this.musicSearchResults = new Map(); // guildId:userId -> Track[]
     this.musicLastTrack = new Map();    // guildId -> Track (last successfully started track, for retry button)
     this.musicRetrying = new Set();     // guildId — guilds currently in auto-retry (prevents infinite retry loops)
+    this.musicTrackOverride = new Map(); // guildId -> {title,author,artworkUrl,duration} — metadata for yt-dlp fallback tracks
     this.rest = new REST({ version: '10' }).setToken(config.bot.token);
   }
 

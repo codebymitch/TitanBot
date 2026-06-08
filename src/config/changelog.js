@@ -1,5 +1,13 @@
 export const changelog = [
     {
+        version: '3.0.0',
+        date: '2026-06-08',
+        entries: [
+            { type: 'fix', text: 'Music — fixed all YouTube tracks showing "Unknown title" in the panel when played via yt-dlp fallback; original song title/author/artwork now preserved correctly' },
+            { type: 'fix', text: 'Music — removed debug log noise from track error handling' },
+        ],
+    },
+    {
         version: '2.9.9',
         date: '2026-06-01',
         entries: [

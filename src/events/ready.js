@@ -24,11 +24,6 @@ async function ytDlpFallback(player, track) {
     const result = await player.search({ query: streamUrl }, null);
     const fallback = result.tracks?.[0];
     if (!fallback) return null;
-    // Preserve original metadata so the music panel shows the right title
-    fallback.info.title = track.info.title ?? fallback.info.title;
-    fallback.info.author = track.info.author ?? fallback.info.author;
-    fallback.info.artworkUrl = track.info.artworkUrl ?? fallback.info.artworkUrl;
-    fallback.info.duration = track.info.duration ?? fallback.info.duration;
     return fallback;
   } catch (err) {
     logger.warn(`yt-dlp fallback failed for ${track?.info?.identifier}:`, err?.message);
@@ -94,6 +89,14 @@ export default {
         client.lavalink.on('trackStart', async (player) => {
           client.musicVotes?.delete(player.guildId);
           client.musicRetrying?.delete(player.guildId);
+
+          // Restore original metadata for yt-dlp fallback tracks (which load as "Unknown title")
+          const override = client.musicTrackOverride?.get(player.guildId);
+          if (override && player.queue.current?.info) {
+            Object.assign(player.queue.current.info, override);
+            client.musicTrackOverride.delete(player.guildId);
+          }
+
           if (player.queue.current) client.musicLastTrack?.set(player.guildId, player.queue.current);
           const panel = client.musicPanels?.get(player.guildId);
           if (!panel) return;
@@ -147,11 +150,19 @@ export default {
             const retryTrack = await ytDlpFallback(player, track);
             client.musicRetrying?.delete(player.guildId);
             if (retryTrack) {
+              client.musicTrackOverride?.set(player.guildId, {
+                title: track.info.title,
+                author: track.info.author,
+                artworkUrl: track.info.artworkUrl,
+                duration: track.info.duration,
+              });
               try {
                 await player.queue.add(retryTrack, 0);
                 await player.play({ paused: false });
                 return;
-              } catch {}
+              } catch {
+                client.musicTrackOverride?.delete(player.guildId);
+              }
             }
           }
 
@@ -196,12 +207,18 @@ export default {
               const ytdlpTrack = await ytDlpFallback(player, track);
               client.musicRetrying?.delete(player.guildId);
               if (ytdlpTrack) {
-                logger.info(`yt-dlp fallback succeeded for "${track.info.title}" in guild ${player.guildId}`);
+                client.musicTrackOverride?.set(player.guildId, {
+                  title: track.info.title,
+                  author: track.info.author,
+                  artworkUrl: track.info.artworkUrl,
+                  duration: track.info.duration,
+                });
                 try {
                   await player.queue.add(ytdlpTrack, 0);
                   await player.play({ paused: false });
                   return;
                 } catch (err) {
+                  client.musicTrackOverride?.delete(player.guildId);
                   logger.warn(`Failed to play yt-dlp track in guild ${player.guildId}:`, err?.message);
                 }
               }
