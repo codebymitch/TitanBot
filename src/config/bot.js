@@ -25,7 +25,7 @@ export const botConfig = {
     activities: [
       {
         // Text users will see (example: "Playing /help | Titan Bot").
-        name: "Made with ❤️",
+        name: "h. jack is cool trust",
         // Activity type number (0 = Playing).
         type: 0, 
       },
@@ -63,9 +63,9 @@ export const botConfig = {
 
     // Embed colors by application status.
     statusColors: {
-      pending: "#FFA500",
-      approved: "#00FF00",
-      denied: "#FF0000",
+      pending: "#D98A00",
+approved: "#00CC00",
+denied: "#CC0000",
     },
 
     // How long users must wait before submitting another application (hours).
@@ -85,70 +85,66 @@ export const botConfig = {
   // EMBED COLORS & BRANDING
   // =========================
   // IMPORTANT: This is the SINGLE SOURCE OF TRUTH for all bot colors
-  embeds: {
-    colors: {
-      // Main brand colors.
-      primary: "#336699", 
-      secondary: "#2F3136", 
+embeds: {
+  colors: {
+    // Main brand colors.
+    primary: "#336699", 
+    secondary: "#2F3136", 
 
-      // Standard status colors for success/error/warning/info messages.
-      success: "#57F287", 
-      error: "#ED4245", 
-      warning: "#FEE75C", 
-      info: "#3498DB", 
+    // Standard status colors for success/error/warning/info messages.
+    success: "#57F287", 
+    error: "#ED4245", 
+    warning: "#FEE75C", 
+    info: "#3498DB", 
 
-      // Neutral utility colors.
-      light: "#FFFFFF",
-      dark: "#202225",
-      gray: "#99AAB5",
+    // Neutral utility colors.
+    light: "#FFFFFF",
+    dark: "#202225",
+    gray: "#99AAB5",
 
-      // Discord-style palette shortcuts.
-      blurple: "#5865F2",
-      green: "#57F287",
-      yellow: "#FEE75C",
-      fuchsia: "#EB459E",
-      red: "#ED4245",
-      black: "#000000",
+    // Discord-style palette shortcuts.
+    blurple: "#5865F2",
+    green: "#57F287",
+    yellow: "#FEE75C",
+    fuchsia: "#EB459E",
+    red: "#ED4245",
+    black: "#000000",
 
-      // Feature-specific colors.
-      giveaway: {
-        active: "#57F287",
-        ended: "#ED4245",
-      },
-      ticket: {
-        open: "#57F287",
-        claimed: "#FAA61A",
-        closed: "#ED4245",
-        pending: "#99AAB5",
-      },
-      economy: "#F1C40F",
-      birthday: "#E91E63",
-      moderation: "#9B59B6",
-
-      // Ticket priority color mapping.
-      priority: {
-        none: "#95A5A6",
-        low: "#3498db",
-        medium: "#2ecc71",
-        high: "#f1c40f",
-        urgent: "#e74c3c",
-      },
+    // Feature-specific colors.
+    giveaway: {
+      active: "#57F287",
+      ended: "#ED4245",
     },
-    footer: {
-      // Default footer text used in bot embeds.
-      text: "Titan Bot",
-      // Footer icon URL (null = no icon).
-      icon: null,
+    ticket: {
+      open: "#57F287",
+      claimed: "#FAA61A",
+      closed: "#ED4245",
+      pending: "#D98A00",    // was #FFA500
     },
-    // Default thumbnail URL for embeds (null = no thumbnail).
-    thumbnail: null,
-    author: {
-      // Optional default embed author block.
-      name: null,
-      icon: null,
-      url: null,
+    economy: "#F1C40F",
+    birthday: "#E91E63",
+    moderation: "#9B59B6",
+
+    // Ticket priority color mapping.
+    priority: {
+      none: "#95A5A6",
+      low: "#3498db",
+      medium: "#2ecc71",
+      high: "#f1c40f",
+      urgent: "#e74c3c",
     },
   },
+  footer: {
+    text: "Titan Bot",
+    icon: null,
+  },
+  thumbnail: null,
+  author: {
+    name: null,
+    icon: null,
+    url: null,
+  },
+},
 
   // =========================
   // ECONOMY SETTINGS
@@ -156,9 +152,9 @@ export const botConfig = {
   economy: {
     currency: {
       // Currency display name.
-      name: "coins",
+      name: "jackcoin",
       // Plural display name.
-      namePlural: "coins",
+      namePlural: "jackcoins",
       // Currency symbol shown in balances.
       symbol: "$",
     },
@@ -421,13 +417,13 @@ export const botConfig = {
   // GENERIC BOT MESSAGES
   // =========================
   messages: {
-    noPermission: "You do not have permission to use this command.",
-    cooldownActive: "Please wait {time} before using this command again.",
-    errorOccurred: "An error occurred while executing this command.",
+    noPermission: "Uh-oh! You do not have permission to use this command.",
+    cooldownActive: "Whoa, You're too fast! Please wait {time} before using this command again.",
+    errorOccurred: "Uh-oh! An error occurred while executing this command.",
     missingPermissions:
-      "I am missing required permissions to perform this action.",
-    commandDisabled: "This command has been disabled.",
-    maintenanceMode: "The bot is currently in maintenance mode.",
+      "Aw man... I am missing required permissions to perform this action!",
+    commandDisabled: "Too bad! This command has been disabled.",
+    maintenanceMode: "Hey the bot is currently in maintenance mode. (sleeping)",
   },
 
   // =========================
@@ -436,14 +432,14 @@ export const botConfig = {
   // Set any feature to `false` to disable it globally.
   features: {
     // Core systems.
-    economy: true,
+    economy: false,
     leveling: true,
     moderation: true,
     logging: true,
     welcome: true,
 
     // Community engagement systems.
-    tickets: true,
+    tickets: false,
     giveaways: true,
     birthday: true,
     counter: true,
