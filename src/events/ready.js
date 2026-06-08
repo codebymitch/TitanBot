@@ -98,17 +98,35 @@ export default {
           if (reason !== 'finished' && reason !== 'replaced') {
             logger.warn(`Track ended unexpectedly in guild ${player.guildId}: "${track?.info?.title}" — reason: ${reason}`);
           }
-          // Clear progress interval on any track end
           const panel = client.musicPanels?.get(player.guildId);
           clearPanelInterval(panel);
 
           if (reason === 'loadFailed') {
+            const channel = client.channels.cache.get(panel?.textChannelId);
+            await channel?.send({ content: `⚠️ Failed to load **${track?.info?.title ?? 'a track'}** — skipping.` }).catch(() => {});
+            // Advance to next track if queued, otherwise show empty panel
+            if (player.queue.tracks.length) {
+              try { await player.play({ paused: false }); return; } catch {}
+            }
+            const message = await channel?.messages.fetch(panel?.messageId).catch(() => null);
+            if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
+          }
+        });
+
+        client.lavalink.on('trackStuck', async (player, track) => {
+          logger.warn(`Track stuck in guild ${player.guildId}: "${track?.info?.title}"`);
+          const panel = client.musicPanels?.get(player.guildId);
+          clearPanelInterval(panel);
+          const channel = client.channels.cache.get(panel?.textChannelId);
+          await channel?.send({ content: `⚠️ **${track?.info?.title ?? 'A track'}** got stuck and was skipped.` }).catch(() => {});
+          try {
+            await player.skip();
+          } catch {
+            client.musicVotes?.delete(player.guildId);
             if (panel) {
-              const channel = client.channels.cache.get(panel.textChannelId);
+              panel.isPaused = false;
               const message = await channel?.messages.fetch(panel.messageId).catch(() => null);
-              if (message && !player.queue.tracks.length && !player.queue.current) {
-                await message.edit(buildQueueEmptyPanel()).catch(() => {});
-              }
+              if (message) await message.edit(buildQueueEmptyPanel()).catch(() => {});
             }
           }
         });
@@ -156,6 +174,10 @@ export default {
           }
 
           client.musicRetrying?.delete(player.guildId);
+          if (panel) {
+            const channel = client.channels.cache.get(panel.textChannelId);
+            await channel?.send({ content: `⚠️ **${track?.info?.title ?? 'A track'}** failed to play and was skipped.` }).catch(() => {});
+          }
           try {
             await player.skip();
           } catch {
