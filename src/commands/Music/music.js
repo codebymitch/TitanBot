@@ -29,6 +29,10 @@ export default {
     async execute(interaction, guildConfig, client) {
         const sub = interaction.options.getSubcommand();
 
+        if (!interaction.guild) {
+            return interaction.reply({ embeds: [errorEmbed('Music only works in a server — bots cannot join group DM voice calls.')], ephemeral: true });
+        }
+
         if (sub === 'play') {
             const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
             const musicUsers = process.env.MUSIC_USERS?.split(',').map(id => id.trim()) ?? [];
