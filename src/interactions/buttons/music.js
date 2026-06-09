@@ -313,9 +313,17 @@ export default [
 
             const { title, author } = player.queue.current.info;
             try {
-                const res = await fetch(
-                    `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(author)}`
-                );
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 5000);
+                let res;
+                try {
+                    res = await fetch(
+                        `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(author)}`,
+                        { signal: controller.signal }
+                    );
+                } finally {
+                    clearTimeout(timer);
+                }
                 const data = await res.json();
                 const match = Array.isArray(data) ? (data.find(t => t.plainLyrics) ?? data[0]) : null;
 
@@ -335,8 +343,11 @@ export default [
                         .setFooter({ text: `${match.artistName ?? author} • via LRCLIB` })
                     ],
                 });
-            } catch {
-                return interaction.editReply({ content: '❌ Failed to fetch lyrics. Try again later.', ephemeral: true });
+            } catch (err) {
+                const msg = err?.name === 'AbortError'
+                    ? '❌ Lyrics request timed out. Try again.'
+                    : '❌ Failed to fetch lyrics. Try again later.';
+                return interaction.editReply({ content: msg, ephemeral: true });
             }
         },
     },
