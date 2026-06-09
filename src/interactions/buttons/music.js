@@ -309,7 +309,7 @@ export default [
             const player = getPlayer(interaction);
             if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
 
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const { title, author } = player.queue.current.info;
             try {
@@ -320,7 +320,7 @@ export default [
                 const match = Array.isArray(data) ? (data.find(t => t.plainLyrics) ?? data[0]) : null;
 
                 if (!match?.plainLyrics) {
-                    return interaction.editReply({ content: `❌ No lyrics found for **${title}**.` });
+                    return interaction.editReply({ content: `❌ No lyrics found for **${title}**.`, ephemeral: true });
                 }
 
                 const lyrics = match.plainLyrics.length > 3900
@@ -336,7 +336,7 @@ export default [
                     ],
                 });
             } catch {
-                return interaction.editReply({ content: '❌ Failed to fetch lyrics. Try again later.' });
+                return interaction.editReply({ content: '❌ Failed to fetch lyrics. Try again later.', ephemeral: true });
             }
         },
     },
