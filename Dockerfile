@@ -9,7 +9,10 @@ COPY package*.json ./
 
 # Install only production dependencies
 RUN apk add --no-cache ffmpeg python3 py3-pip && \
-    pip3 install yt-dlp --break-system-packages --quiet
+    pip3 install yt-dlp --break-system-packages --quiet && \
+    mkdir -p /root/.config/yt-dlp && \
+    echo '--js-runtimes node' > /root/.config/yt-dlp/config && \
+    yt-dlp --js-runtimes node --remote-components ejs:github --simulate "https://www.youtube.com/watch?v=jNQXAC9IVRw" 2>/dev/null || true
 
 RUN npm ci --omit=dev
 
