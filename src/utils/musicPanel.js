@@ -46,11 +46,27 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
     const filled = Math.round(pct * 13);
     const bar = '▬'.repeat(filled) + '🔘' + '▬'.repeat(13 - filled);
 
+    // Requester
+    const requester = track.requester;
+    const requesterName = requester?.displayName ?? requester?.globalName ?? requester?.username ?? null;
+
+    // Next track
+    const nextTrack = player.queue.tracks[0] ?? null;
+
+    let desc =
+        `**[${track.info.title}](${track.info.uri})**\n` +
+        `📺 ${track.info.author}`;
+    if (requesterName) desc += `\n👤 Requested by **${requesterName}**`;
+    desc += `\n\n${bar}\n\`${fmtDuration(pos)}\` / \`${fmtDuration(dur)}\``;
+    desc += nextTrack
+        ? `\n\n⏭️ **Up Next:** [${nextTrack.info.title}](${nextTrack.info.uri})`
+        : '\n\n⏭️ *Queue is empty*';
+
     const footerParts = [
         '⚠️ Beta',
         isPaused ? '⏸️ Paused' : '▶️ Playing',
         `🔊 ${vol}%`,
-        queueLen ? `${queueLen} up next` : 'No queue',
+        queueLen ? `${queueLen} in queue` : 'No queue',
     ];
     if (repeatMode === 'track') footerParts.push('🔂 Track loop');
     else if (repeatMode === 'queue') footerParts.push('🔁 Queue loop');
@@ -59,12 +75,7 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
     const embed = new EmbedBuilder()
         .setColor(0x5865F2)
         .setTitle('🎵 Now Playing')
-        .setDescription(
-            `**[${track.info.title}](${track.info.uri})**\n` +
-            `📺 ${track.info.author}\n\n` +
-            `${bar}\n` +
-            `\`${fmtDuration(pos)}\` / \`${fmtDuration(dur)}\``
-        )
+        .setDescription(desc)
         .setFooter({ text: footerParts.join(' • ') });
 
     if (track.info.artworkUrl) embed.setThumbnail(track.info.artworkUrl);
@@ -118,7 +129,20 @@ export function buildPanel(player, voteCount = 0, required = 3, isPaused = false
             .setStyle(fxMeta.style),
     );
 
-    return { embeds: [embed], components: [row1, row2] };
+    const row3 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('music_seek')
+            .setEmoji('⏩')
+            .setLabel('Seek')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('music_lyrics')
+            .setEmoji('📝')
+            .setLabel('Lyrics')
+            .setStyle(ButtonStyle.Secondary),
+    );
+
+    return { embeds: [embed], components: [row1, row2, row3] };
 }
 
 export function buildQueueEmptyPanel() {

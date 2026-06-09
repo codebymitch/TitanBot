@@ -279,6 +279,68 @@ export default [
         },
     },
     {
+        name: 'music_seek',
+        async execute(interaction) {
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+            if (!vcCheck(interaction, player)) return;
+
+            const dur = player.queue.current.info.duration;
+            const modal = new ModalBuilder()
+                .setCustomId('music_seek_modal')
+                .setTitle('Seek to Position')
+                .addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('music_seek_value')
+                            .setLabel(`Position (max: ${fmtDuration(dur)})`)
+                            .setStyle(TextInputStyle.Short)
+                            .setRequired(true)
+                            .setPlaceholder('e.g. 1:30 or 90')
+                    )
+                );
+
+            await interaction.showModal(modal);
+        },
+    },
+    {
+        name: 'music_lyrics',
+        async execute(interaction) {
+            const player = getPlayer(interaction);
+            if (!player?.queue.current) return interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+
+            await interaction.deferReply({ ephemeral: true });
+
+            const { title, author } = player.queue.current.info;
+            try {
+                const res = await fetch(
+                    `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(author)}`
+                );
+                const data = await res.json();
+                const match = Array.isArray(data) ? (data.find(t => t.plainLyrics) ?? data[0]) : null;
+
+                if (!match?.plainLyrics) {
+                    return interaction.editReply({ content: `❌ No lyrics found for **${title}**.` });
+                }
+
+                const lyrics = match.plainLyrics.length > 3900
+                    ? match.plainLyrics.slice(0, 3900) + '\n...(truncated)'
+                    : match.plainLyrics;
+
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder()
+                        .setColor(0x5865F2)
+                        .setTitle(`📝 ${match.trackName ?? title}`)
+                        .setDescription(lyrics)
+                        .setFooter({ text: `${match.artistName ?? author} • via LRCLIB` })
+                    ],
+                });
+            } catch {
+                return interaction.editReply({ content: '❌ Failed to fetch lyrics. Try again later.' });
+            }
+        },
+    },
+    {
         name: 'music_filter',
         async execute(interaction) {
             const client = interaction.client;

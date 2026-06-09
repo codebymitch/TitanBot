@@ -1,5 +1,14 @@
 export const changelog = [
     {
+        version: '3.0.3',
+        date: '2026-06-09',
+        entries: [
+            { type: 'improve', text: 'Music panel — now shows who requested the current song and what\'s up next in the queue' },
+            { type: 'new', text: 'Music panel — ⏩ Seek button: jump to any timestamp in the current track (e.g. `1:30`)' },
+            { type: 'new', text: 'Music panel — 📝 Lyrics button: fetch and display lyrics for the current song via LRCLIB' },
+        ],
+    },
+    {
         version: '3.0.2',
         date: '2026-06-08',
         entries: [
