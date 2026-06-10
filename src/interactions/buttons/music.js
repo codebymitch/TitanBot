@@ -311,40 +311,44 @@ export default [
 
             await interaction.deferReply();
 
-            const { title, author } = player.queue.current.info;
             try {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 5000);
-                let res;
-                try {
-                    res = await fetch(
-                        `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(author)}`,
-                        { signal: controller.signal }
-                    );
-                } finally {
-                    clearTimeout(timer);
-                }
-                const data = await res.json();
-                const match = Array.isArray(data) ? (data.find(t => t.plainLyrics) ?? data[0]) : null;
+                const { title, author } = player.queue.current.info;
+
+                // Strip common YouTube title suffixes that break lyrics search
+                const cleanTitle = title
+                    .replace(/\s*[-|]\s*(official\s*)?(music\s*)?(video|audio|lyrics?|visualizer|hd|4k|mv)\b.*/i, '')
+                    .replace(/\s*\(.*?(official|audio|video|lyrics?|remaster|version|live|feat\.?|ft\.?)[^)]*\)/gi, '')
+                    .replace(/\s*\[.*?(official|audio|video|lyrics?|remaster|version|live|feat\.?|ft\.?)[^\]]*\]/gi, '')
+                    .trim();
+                const cleanAuthor = author.replace(/\s*-\s*Topic$/i, '').trim();
+
+                const res = await fetch(
+                    `https://lrclib.net/api/search?q=${encodeURIComponent(`${cleanTitle} ${cleanAuthor}`)}`,
+                    { signal: AbortSignal.timeout(8000) }
+                );
+
+                const data = res.ok ? await res.json() : [];
+                const match = Array.isArray(data) ? (data.find(t => t.plainLyrics) ?? null) : null;
 
                 if (!match?.plainLyrics) {
                     return interaction.editReply({ content: `❌ No lyrics found for **${title}**.`, ephemeral: true });
                 }
 
                 const lyrics = match.plainLyrics.length > 3900
-                    ? match.plainLyrics.slice(0, 3900) + '\n...(truncated)'
+                    ? match.plainLyrics.slice(0, 3900) + '\n*(truncated)*'
                     : match.plainLyrics;
 
                 return interaction.editReply({
                     embeds: [new EmbedBuilder()
                         .setColor(0x5865F2)
-                        .setTitle(`📝 ${match.trackName ?? title}`)
+                        .setTitle(`📝 ${(match.trackName ?? title).slice(0, 256)}`)
                         .setDescription(lyrics)
-                        .setFooter({ text: `${match.artistName ?? author} • via LRCLIB` })
+                        .setFooter({ text: `${(match.artistName ?? author).slice(0, 200)} • via LRCLIB` })
                     ],
                 });
             } catch (err) {
-                const msg = err?.name === 'AbortError'
+                console.error('[lyrics] error:', err?.name, err?.message);
+                const msg = err?.name === 'TimeoutError' || err?.name === 'AbortError'
                     ? '❌ Lyrics request timed out. Try again.'
                     : '❌ Failed to fetch lyrics. Try again later.';
                 return interaction.editReply({ content: msg, ephemeral: true });
