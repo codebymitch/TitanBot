@@ -1,5 +1,14 @@
 export const changelog = [
     {
+        version: '3.0.4',
+        date: '2026-06-10',
+        entries: [
+            { type: 'fix', text: 'Fixed broken primary embed color (#00008 → #5865F2) — all info embeds now show correct Discord blurple' },
+            { type: 'improve', text: '`/userinfo` — now shows display name, nickname, banner image, user badges, role mentions with count, and both absolute + relative timestamps' },
+            { type: 'improve', text: '`/serverinfo` — now shows channel breakdown, emojis, stickers, boost tier, verification level, explicit filter, server banner, and both timestamps' },
+        ],
+    },
+    {
         version: '3.0.3',
         date: '2026-06-09',
         entries: [
