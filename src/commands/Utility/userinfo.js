@@ -27,9 +27,9 @@ export default {
             const nickname = member?.nickname;
 
             // Roles: exclude @everyone, sort by position
-            const roles = member?.roles.cache
-                .filter(r => r.id !== interaction.guildId)
-                .sort((a, b) => b.position - a.position);
+            const roles = member?.roles?.cache
+                ?.filter(r => r.id !== interaction.guildId)
+                ?.sort((a, b) => b.position - a.position);
             const roleCount = roles?.size ?? 0;
             const roleDisplay = roleCount
                 ? roles.first(8).map(r => `<@&${r.id}>`).join(' ') + (roleCount > 8 ? ` +${roleCount - 8} more` : '')

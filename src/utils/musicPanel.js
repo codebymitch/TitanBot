@@ -35,6 +35,7 @@ export async function applyFilter(player, filterName) {
 
 export function buildPanel(player, voteCount = 0, required = 3, isPaused = false, activeFilter = null) {
     const track = player.queue.current;
+    if (!track) return buildQueueEmptyPanel();
     const pos = player.position ?? 0;
     const dur = track.info.duration;
     const repeatMode = player.repeatMode ?? 'off';
