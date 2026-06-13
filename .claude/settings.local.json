@@ -27,7 +27,10 @@
       "Bash(git revert *)",
       "PowerShell(Get-Command cloudflared -ErrorAction SilentlyContinue; Get-ChildItem \"C:\\\\Program Files\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:LOCALAPPDATA\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:ProgramFiles\\\\Cloudflare\\\\\" -ErrorAction SilentlyContinue)",
       "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" --version)",
-      "PowerShell(Start-Process -FilePath \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" -ArgumentList \"tunnel --url http://localhost:3000\" -NoNewWindow -RedirectStandardOutput \"C:\\\\code\\\\zen-bot\\\\cloudflared.log\" -RedirectStandardError \"C:\\\\code\\\\zen-bot\\\\cloudflared_err.log\")"
+      "PowerShell(Start-Process -FilePath \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" -ArgumentList \"tunnel --url http://localhost:3000\" -NoNewWindow -RedirectStandardOutput \"C:\\\\code\\\\zen-bot\\\\cloudflared.log\" -RedirectStandardError \"C:\\\\code\\\\zen-bot\\\\cloudflared_err.log\")",
+      "Bash(docker exec *)",
+      "WebFetch(domain:maven.lavalink.dev)",
+      "PowerShell(docker exec titanbot sed -n '2785,2840p' /usr/src/app/node_modules/lavalink-client/dist/index.js 2>&1)"
     ]
   }
 }

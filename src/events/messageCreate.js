@@ -49,6 +49,9 @@ export default {
         return;
       }
 
+      // AFK: welcome back if returning, notify if pinging an AFK user
+      await handleAfk(message, client);
+
       // Relay messages typed in a DM relay thread to the target user
       const threadRelay = getTargetByThread(message.channel.id);
       if (threadRelay) {
@@ -84,6 +87,36 @@ export default {
 
 
 
+
+async function handleAfk(message, client) {
+  try {
+    // Author returning from AFK
+    const afkData = await client.db.get(`afk:${message.author.id}`).catch(() => null);
+    if (afkData) {
+      await client.db.del(`afk:${message.author.id}`).catch(() => {});
+      const since = afkData.since ? `<t:${Math.floor(afkData.since / 1000)}:R>` : 'recently';
+      await message.reply({
+        content: `👋 Welcome back, <@${message.author.id}>! Your AFK has been removed (you were away ${since}).`,
+        allowedMentions: { repliedUser: false },
+      }).catch(() => {});
+    }
+
+    // Mentions of AFK users
+    if (message.mentions.users.size > 0) {
+      for (const [userId] of message.mentions.users) {
+        if (userId === message.author.id) continue;
+        const mentionAfk = await client.db.get(`afk:${userId}`).catch(() => null);
+        if (!mentionAfk) continue;
+        const since = mentionAfk.since ? `<t:${Math.floor(mentionAfk.since / 1000)}:R>` : 'recently';
+        await message.reply({
+          content: `💤 <@${userId}> is AFK ${since}: **${mentionAfk.reason}**`,
+          allowedMentions: { repliedUser: false },
+        }).catch(() => {});
+        break; // only reply once even if multiple AFK users are mentioned
+      }
+    }
+  } catch {}
+}
 
 function parseDuration(str) {
   const match = str?.match(/^(\d+)(s|m|h|d)$/i);

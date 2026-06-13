@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -100,13 +100,29 @@ export default {
                     description
                 );
                 
-                const message = await interaction.channel.send({ embeds: [embed] });
-                
+                const endRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`poll_end:${interaction.user.id}`)
+                        .setLabel('End Poll & Show Results')
+                        .setEmoji('📊')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                const message = await interaction.channel.send({ embeds: [embed], components: [endRow] });
+
+                // Store poll options for result calculation
+                await interaction.client.db.set(`poll:${message.id}`, {
+                    question,
+                    options,
+                    creatorId: interaction.user.id,
+                    anonymous: isAnonymous,
+                }).catch(() => {});
+
                 for (let i = 0; i < options.length; i++) {
                     await message.react(EMOJIS[i]);
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
-                
+
                 await InteractionHelper.safeEditReply(interaction, {
                     content: '✅ Poll created successfully!',
                 });

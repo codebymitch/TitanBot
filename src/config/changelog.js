@@ -1,5 +1,15 @@
 export const changelog = [
     {
+        version: '3.1.0',
+        date: '2026-06-11',
+        entries: [
+            { type: 'new', text: '`/afk [reason]` — set yourself AFK; bot auto-notifies people who ping you and removes AFK when you next speak' },
+            { type: 'new', text: '`/starboard setup` — popular messages (⭐ reactions) get pinned to a dedicated channel; configurable threshold' },
+            { type: 'new', text: '`/autorole set` — automatically assign a role to every new member who joins the server' },
+            { type: 'new', text: 'Polls now have an **End Poll** button — shows a bar-chart results embed with vote counts and winner' },
+        ],
+    },
+    {
         version: '3.0.4',
         date: '2026-06-10',
         entries: [
