@@ -254,16 +254,14 @@ export default {
           const button = client.buttons.get(customId);
 
           if (!button) {
-            if (!interaction.customId.includes(':')) {
-              return;
-            }
-
-            throw createError(
-              `No button handler found for ${customId}`,
-              ErrorTypes.CONFIGURATION,
-              'This button is not available.',
-              withTraceContext({ customId }, interactionTraceContext)
-            );
+            logger.warn(`No button handler found for customId: ${customId}`, {
+              event: 'interaction.button.unhandled',
+              customId: interaction.customId,
+              guildId: interaction.guildId,
+              userId: interaction.user?.id,
+              traceId: interactionTraceContext.traceId
+            });
+            return;
           }
 
           try {
