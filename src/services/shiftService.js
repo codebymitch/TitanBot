@@ -52,6 +52,11 @@ async function ensureTables() {
             ADD COLUMN IF NOT EXISTS shift_break_role_id VARCHAR(20),
             ADD COLUMN IF NOT EXISTS shift_stop_role_id VARCHAR(20)
     `);
+
+    // Drop NOT NULL constraint on shift_role_id for tables created with the old schema
+    await pgDb.pool.query(`
+        ALTER TABLE shift_config ALTER COLUMN shift_role_id DROP NOT NULL
+    `);
 }
 
 /**
