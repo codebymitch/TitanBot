@@ -129,8 +129,8 @@ export async function getShiftStopRoleId(guildId) {
 export async function setShiftStartRole(guildId, roleId) {
     await ensureTables();
     await pgDb.pool.query(
-        `INSERT INTO shift_config (guild_id, shift_start_role_id, updated_at)
-         VALUES ($1, $2, CURRENT_TIMESTAMP)
+        `INSERT INTO shift_config (guild_id, shift_start_role_id, shift_role_id, updated_at)
+         VALUES ($1, $2, NULL, CURRENT_TIMESTAMP)
          ON CONFLICT (guild_id)
          DO UPDATE SET shift_start_role_id = $2, updated_at = CURRENT_TIMESTAMP`,
         [guildId, roleId]
@@ -146,8 +146,8 @@ export async function setShiftStartRole(guildId, roleId) {
 export async function setShiftBreakRole(guildId, roleId) {
     await ensureTables();
     await pgDb.pool.query(
-        `INSERT INTO shift_config (guild_id, shift_break_role_id, updated_at)
-         VALUES ($1, $2, CURRENT_TIMESTAMP)
+        `INSERT INTO shift_config (guild_id, shift_break_role_id, shift_role_id, updated_at)
+         VALUES ($1, $2, NULL, CURRENT_TIMESTAMP)
          ON CONFLICT (guild_id)
          DO UPDATE SET shift_break_role_id = $2, updated_at = CURRENT_TIMESTAMP`,
         [guildId, roleId]
@@ -163,8 +163,8 @@ export async function setShiftBreakRole(guildId, roleId) {
 export async function setShiftStopRole(guildId, roleId) {
     await ensureTables();
     await pgDb.pool.query(
-        `INSERT INTO shift_config (guild_id, shift_stop_role_id, updated_at)
-         VALUES ($1, $2, CURRENT_TIMESTAMP)
+        `INSERT INTO shift_config (guild_id, shift_stop_role_id, shift_role_id, updated_at)
+         VALUES ($1, $2, NULL, CURRENT_TIMESTAMP)
          ON CONFLICT (guild_id)
          DO UPDATE SET shift_stop_role_id = $2, updated_at = CURRENT_TIMESTAMP`,
         [guildId, roleId]
