@@ -6,6 +6,7 @@ import { getColor } from '../../config/bot.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
+    disabled: true,
     data: new SlashCommandBuilder()
         .setName('google')
         .setDescription('Search Google')

@@ -89,6 +89,11 @@ export async function loadCommands(client) {
                 continue;
             }
             
+            if (command.disabled === true) {
+                logger.info(`Skipping disabled command at ${filePath}`);
+                continue;
+            }
+            
             command.category = category;
             command.filePath = normalizedPath;
             

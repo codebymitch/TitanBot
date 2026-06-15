@@ -13,6 +13,7 @@ const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 const MAX_RESULTS = 5;
 
 export default {
+    disabled: true,
     data: new SlashCommandBuilder()
         .setName("movie")
         .setDescription("Search for a movie or TV show")
