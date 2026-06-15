@@ -57,11 +57,11 @@ export default {
 
         try {
             // Admin-only
-            if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+            if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
                 return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            'You need **Manage Server** permissions to configure the shift system.'
+                            'You need **Administrator** permissions to configure the shift system.'
                         ),
                     ],
                 });
