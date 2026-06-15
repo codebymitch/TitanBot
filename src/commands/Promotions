@@ -1,1 +1,43 @@
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('promote')
+    .setDescription('Promote a member to a higher rank')
+    .addUserOption(option => 
+      option.setName('user')
+            .setDescription('The user to promote')
+            .setRequired(true))
+    .addStringOption(option => 
+      option.setName('oldrank')
+            .setDescription('The user’s current rank')
+            .setRequired(true))
+    .addStringOption(option => 
+      option.setName('newrank')
+            .setDescription('The user’s new rank')
+            .setRequired(true))
+    .addStringOption(option => 
+      option.setName('reason')
+            .setDescription('Reason for promotion')
+            .setRequired(true)),
+
+  async execute(interaction) {
+    const user = interaction.options.getUser('user');
+    const oldRank = interaction.options.getString('oldrank');
+    const newRank = interaction.options.getString('newrank');
+    const reason = interaction.options.getString('reason');
+
+    const embed = new EmbedBuilder()
+      .setTitle('Promotion')
+      .addFields([
+        { name: 'User', value: user.tag, inline: true },
+        { name: 'Old Rank', value: oldRank, inline: true },
+        { name: 'New Rank', value: newRank, inline: true },
+        { name: 'Reason', value: reason, inline: false },
+      ])
+      .setColor('BLUE')
+      .setFooter({ text: `Promoted by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  },
+};
