@@ -19,6 +19,16 @@ export default {
       
       if (message.author.bot || !message.guild) return;
 
+      const msg = message.content.toLowerCase();
+
+      if (msg === 'xin chào') {
+        await message.reply('lẹ lên em nứng rỉ nước rồi anh ơi á á');
+      }
+
+      if (msg.includes('bot')) {
+        await message.reply('Mình đang nghe đây 😄');
+      }
+
       await handleLeveling(message, client);
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
