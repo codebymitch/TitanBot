@@ -7,6 +7,7 @@ import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { getServerCounters, updateCounter } from '../services/serverstatsService.js';
 import { setBirthday as dbSetBirthday } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
+import { handleMemberJoin as antiRaidHandleMemberJoin } from '../services/antiRaid.js';
 
 export default {
   name: Events.GuildMemberAdd,
@@ -17,6 +18,14 @@ export default {
         const { guild, user } = member;
         
         const config = await getGuildConfig(member.client, guild.id);
+
+        // ── Anti-Raid check ───────────────────────────────────────────────
+        // Run before welcome/role logic so raiders can be actioned immediately.
+        try {
+            await antiRaidHandleMemberJoin(member);
+        } catch (error) {
+            logger.debug('Error in anti-raid member join handler:', error);
+        }
         
         const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
         
