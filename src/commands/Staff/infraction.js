@@ -51,24 +51,23 @@ export default {
             const infractionRole = interaction.options.getString('infraction_role');
             const reason = interaction.options.getString('reason');
 
-            const date = new Date().toLocaleDateString('en-US', {
+            const now = new Date();
+            const issuedAt = now.toLocaleString('en-US', {
                 year: 'numeric',
                 month: 'long',
-                day: 'numeric'
-            });
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            }).replace(',', '').replace(/(\d{4}),/, '$1 at');
 
             const description = [
-                `**Supervisor:** ${supervisor}`,
-                `**Staff Member:** ${staffMember}`,
-                `**Infraction:** ${infractionRole}`,
-                `**Reason:** ${reason}`,
-                `**Date Issued:** ${date}`,
-                ``,
-                `An infraction has been issued to **${staffMember.username}** for failing to meet the standards and expectations of the California State Roleplay Staff Team.`,
-                ``,
-                `This infraction has been documented and added to the staff member's record. Further disciplinary action may be taken if additional violations occur.`,
-                ``,
-                `*Issued by California State Roleplay Management.*`
+                `The following user has recieved a infraction!`,
+                `:divider: Staff Member: ${staffMember}`,
+                `:divider: Infraction: ${infractionRole}`,
+                `:divider: Reason: ${reason}`,
+                `:divider: Issued By: ${supervisor}`,
+                `:divider: Issued At: ${issuedAt}`
             ].join('\n');
 
             const bannerEmbed = createEmbed({

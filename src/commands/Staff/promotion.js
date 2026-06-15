@@ -58,16 +58,23 @@ export default {
             const newRank = interaction.options.getString('new_rank');
             const reason = interaction.options.getString('reason');
 
+            const now = new Date();
+            const issuedAt = now.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            }).replace(',', '').replace(/(\d{4}),/, '$1 at');
+
             const description = [
-                `**Supervisor:** ${supervisor}`,
-                `**Staff Member:** ${staffMember}`,
-                `**Previous Rank:** ${oldRank}`,
-                `**New Rank:** ${newRank}`,
-                `**Reason:** ${reason}`,
-                ``,
-                `Congratulations to **${staffMember.username}** on their promotion! Thank you for your dedication and contributions to California State Roleplay. We look forward to seeing your continued success in your new position.`,
-                ``,
-                `*Issued by California State Roleplay Management.*`
+                `Congratulations, ${staffMember}! you've been promoted for the hard work you brought inside of California State Roleplay!`,
+                `:divider: Staff Member: ${staffMember}`,
+                `:divider: Promoted To: ${newRank}`,
+                `:divider: Reason: ${reason}`,
+                `:divider: Issued By: ${supervisor}`,
+                `:divider: Issued At: ${issuedAt}`
             ].join('\n');
 
             const bannerEmbed = createEmbed({
