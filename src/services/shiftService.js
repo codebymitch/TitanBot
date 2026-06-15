@@ -126,18 +126,18 @@ export async function stopShift(shiftId) {
 
     let extraBreakMs = 0;
     if (shift.on_break && shift.break_started_at) {
-        extraBreakMs = Date.now() - new Date(shift.break_started_at).getTime();
+        extraBreakMs = Math.floor(Date.now() - new Date(shift.break_started_at).getTime());
     }
 
-    const totalBreakMs = Number(shift.break_time) + extraBreakMs;
+    const totalBreakMs = Math.floor(Number(shift.break_time) + extraBreakMs);
 
     const result = await pgDb.pool.query(
         `UPDATE shifts
          SET end_time = CURRENT_TIMESTAMP,
              on_break = FALSE,
              break_started_at = NULL,
-             break_time = $2,
-             total_duration = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - start_time)) * 1000 - $2
+             break_time = $2::BIGINT,
+             total_duration = (EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - start_time)) * 1000)::BIGINT - $2::BIGINT
          WHERE id = $1
          RETURNING *`,
         [shiftId, totalBreakMs]
