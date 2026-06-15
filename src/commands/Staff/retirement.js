@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -6,30 +6,31 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('infraction')
-        .setDescription('Issue a staff infraction notice')
-        .addStringOption(option =>
-            option
-                .setName('supervisor')
-                .setDescription('The supervisor issuing the infraction')
-                .setRequired(true)
-        )
+        .setName('retirement')
+        .setDescription('Issue a staff retirement notice')
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addUserOption(option =>
             option
                 .setName('staff_member')
-                .setDescription('The staff member receiving the infraction')
+                .setDescription('The staff member retiring')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
-                .setName('infraction_role')
-                .setDescription('The type of infraction')
+                .setName('final_rank')
+                .setDescription('Their final rank/position')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName('reason')
-                .setDescription('Reason for the infraction')
+                .setDescription('Reason for retirement')
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName('supervisor')
+                .setDescription('Who approved the retirement')
                 .setRequired(true)
         ),
     category: 'Staff',
@@ -37,19 +38,19 @@ export default {
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
         if (!deferSuccess) {
-            logger.warn('Infraction interaction defer failed', {
+            logger.warn('Retirement interaction defer failed', {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                commandName: 'infraction'
+                commandName: 'retirement'
             });
             return;
         }
 
         try {
-            const supervisor = interaction.options.getString('supervisor');
             const staffMember = interaction.options.getUser('staff_member');
-            const infractionRole = interaction.options.getString('infraction_role');
+            const finalRank = interaction.options.getString('final_rank');
             const reason = interaction.options.getString('reason');
+            const supervisor = interaction.options.getString('supervisor');
 
             const date = new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -58,35 +59,34 @@ export default {
             });
 
             const description = [
-                `**Supervisor:** ${supervisor}`,
                 `**Staff Member:** ${staffMember}`,
-                `**Infraction:** ${infractionRole}`,
+                `**Final Rank:** ${finalRank}`,
                 `**Reason:** ${reason}`,
-                `**Date Issued:** ${date}`,
+                `**Date Retired:** ${date}`,
                 ``,
-                `An infraction has been issued to **${staffMember.username}** for failing to meet the standards and expectations of the California State Roleplay Staff Team.`,
+                `We would like to thank **${staffMember.username}** for their dedication and service to California State Roleplay. We wish them all the best in their future endeavors.`,
                 ``,
-                `This infraction has been documented and added to the staff member's record. Further disciplinary action may be taken if additional violations occur.`,
+                `**Retirement Approved By:** ${supervisor}`,
                 ``,
                 `*Issued by California State Roleplay Management.*`
             ].join('\n');
 
             const embed = createEmbed({
-                title: '⚠️ STAFF INFRACTION NOTICE ⚠️',
+                title: '🏖️ STAFF RETIREMENT NOTICE 🏖️',
                 description,
-                color: 'warning',
-                image: 'https://cdn.discordapp.com/attachments/1493023004802679007/1516162356617547937/Copy_of_Copy_of_Free_Release_Banner_1.png?ex=6a31a3ba&is=6a30523a&hm=57a86c8192b237d4bd4a4492d752c96fc555d3b7f15e46dbfcb2e72e14a1593d',
+                color: 'primary',
+                image: 'https://cdn.discordapp.com/attachments/1493023004802679007/1516162282663710730/Copy_of_Copy_of_Copy_of_Free_Release_Banner.png?ex=6a31a3a9&is=6a305229&hm=80d58b0354ff30b5d39c47d68b2cb2c8f965546929a9797b3de92cc7666a622b',
                 timestamp: true
             });
 
             await interaction.channel.send({ embeds: [embed] });
 
             await InteractionHelper.safeEditReply(interaction, {
-                content: '✅ Infraction notice posted successfully!'
+                content: '✅ Retirement notice posted successfully!'
             });
         } catch (error) {
-            logger.error('Infraction command error:', error);
-            await handleInteractionError(interaction, error, { subtype: 'infraction_failed' });
+            logger.error('Retirement command error:', error);
+            await handleInteractionError(interaction, error, { subtype: 'retirement_failed' });
         }
     }
 };
