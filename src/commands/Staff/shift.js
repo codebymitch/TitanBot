@@ -4,7 +4,9 @@ import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import {
-    getShiftRoleId,
+    getShiftStartRoleId,
+    getShiftBreakRoleId,
+    getShiftStopRoleId,
     getActiveShift,
     formatDuration,
 } from '../../services/shiftService.js';
@@ -76,9 +78,13 @@ export function buildShiftEmbed(user, shift) {
 /**
  * Build the three shift action buttons.
  * @param {Object|null} shift  Active shift row, or null if none.
+ * @param {{ canStart: boolean, canBreak: boolean, canStop: boolean }} [perms]
+ *   Whether the viewing member has each action's role. Defaults to all true
+ *   so the panel still works when called from button handlers (which do their
+ *   own role check before acting).
  * @returns {ActionRowBuilder}
  */
-export function buildShiftButtons(shift) {
+export function buildShiftButtons(shift, perms = { canStart: true, canBreak: true, canStop: true }) {
     const hasActiveShift = !!shift;
     const onBreak = hasActiveShift && shift.on_break;
 
@@ -87,21 +93,24 @@ export function buildShiftButtons(shift) {
         .setLabel('Start Shift')
         .setEmoji('🟢')
         .setStyle(ButtonStyle.Success)
-        .setDisabled(hasActiveShift); // disabled when a shift is already running
+        // Disabled when a shift is already running OR the user lacks the start role
+        .setDisabled(hasActiveShift || !perms.canStart);
 
     const breakButton = new ButtonBuilder()
         .setCustomId('shift_break')
         .setLabel(onBreak ? 'Resume Shift' : 'Break')
         .setEmoji(onBreak ? '▶️' : '⏸️')
         .setStyle(ButtonStyle.Secondary)
-        .setDisabled(!hasActiveShift); // disabled when no shift is active
+        // Disabled when no shift is active OR the user lacks the break role
+        .setDisabled(!hasActiveShift || !perms.canBreak);
 
     const stopButton = new ButtonBuilder()
         .setCustomId('shift_stop')
         .setLabel('Stop Shift')
         .setEmoji('🔴')
         .setStyle(ButtonStyle.Danger)
-        .setDisabled(!hasActiveShift); // disabled when no shift is active
+        // Disabled when no shift is active OR the user lacks the stop role
+        .setDisabled(!hasActiveShift || !perms.canStop);
 
     return new ActionRowBuilder().addComponents(startButton, breakButton, stopButton);
 }
@@ -127,23 +136,31 @@ export default {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            // --- Role check ---
-            const shiftRoleId = await getShiftRoleId(guildId);
+            // --- Per-action role check ---
+            const [startRoleId, breakRoleId, stopRoleId] = await Promise.all([
+                getShiftStartRoleId(guildId),
+                getShiftBreakRoleId(guildId),
+                getShiftStopRoleId(guildId),
+            ]);
 
-            if (!shiftRoleId) {
+            // At least one action role must be configured before the panel is usable
+            if (!startRoleId && !breakRoleId && !stopRoleId) {
                 return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            'Shift system has not been configured yet. An administrator must run `/shiftconfig setrole` first.'
+                            'The shift system has not been configured yet. An administrator must run `/shiftconfig setstartrole`, `/shiftconfig setbreakrole`, and `/shiftconfig setstoprole` first.'
                         ),
                     ],
                 });
             }
 
             const member = interaction.member;
-            const hasShiftRole = member.roles.cache.has(shiftRoleId);
+            const canStart = !!startRoleId && member.roles.cache.has(startRoleId);
+            const canBreak = !!breakRoleId && member.roles.cache.has(breakRoleId);
+            const canStop = !!stopRoleId && member.roles.cache.has(stopRoleId);
 
-            if (!hasShiftRole) {
+            // User must have at least one action role to open the panel
+            if (!canStart && !canBreak && !canStop) {
                 return InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
@@ -156,7 +173,7 @@ export default {
             // --- Build and send the management panel ---
             const shift = await getActiveShift(userId, guildId);
             const embed = buildShiftEmbed(interaction.user, shift);
-            const row = buildShiftButtons(shift);
+            const row = buildShiftButtons(shift, { canStart, canBreak, canStop });
 
             return InteractionHelper.safeEditReply(interaction, {
                 embeds: [embed],
