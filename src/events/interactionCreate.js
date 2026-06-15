@@ -1,8 +1,6 @@
 import { Events, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { handleApplicationModal } from '../commands/Community/apply.js';
-import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
 import { MessageTemplates } from '../utils/messageTemplates.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
@@ -99,58 +97,7 @@ export default {
           // Handle autocomplete interactions
           const focusedOption = interaction.options.getFocused(true);
           
-          if (interaction.commandName === 'apply' && focusedOption.name === 'application') {
-            try {
-              const { getApplicationRoles } = await import('../utils/database.js');
-              const roles = await getApplicationRoles(client, interaction.guildId);
-              const roleName = interaction.options.getString('application', false);
-              
-              // Filter: only show enabled applications
-              const filtered = roles.filter(role =>
-                role.enabled !== false && 
-                role.name.toLowerCase().startsWith(roleName?.toLowerCase() || '')
-              );
-              
-              await interaction.respond(
-                filtered.slice(0, 25).map(role => ({
-                  name: `${role.name}${role.enabled === false ? ' (disabled)' : ''}`,
-                  value: role.name
-                }))
-              );
-            } catch (error) {
-              logger.error('Error handling autocomplete:', {
-                error: error.message,
-                guildId: interaction.guildId,
-                commandName: interaction.commandName
-              });
-              await interaction.respond([]);
-            }
-          } else if (interaction.commandName === 'app-admin' && focusedOption.name === 'application') {
-            try {
-              const { getApplicationRoles } = await import('../utils/database.js');
-              const roles = await getApplicationRoles(client, interaction.guildId);
-              const appName = interaction.options.getString('application', false);
-              
-              // Show all applications (enabled and disabled), but mark disabled ones
-              const filtered = roles.filter(role =>
-                role.name.toLowerCase().startsWith(appName?.toLowerCase() || '')
-              );
-              
-              await interaction.respond(
-                filtered.slice(0, 25).map(role => ({
-                  name: `${role.name}${role.enabled === false ? ' (disabled)' : ''}`,
-                  value: role.name
-                }))
-              );
-            } catch (error) {
-              logger.error('Error handling app-admin autocomplete:', {
-                error: error.message,
-                guildId: interaction.guildId,
-                commandName: interaction.commandName
-              });
-              await interaction.respond([]);
-            }
-          } else if (interaction.commandName === 'reactroles' && focusedOption.name === 'panel') {
+          if (interaction.commandName === 'reactroles' && focusedOption.name === 'panel') {
             try {
               const { getAllReactionRoleMessages, deleteReactionRoleMessage } = await import('../services/reactionRoleService.js');
               const guildId = interaction.guildId;
@@ -302,32 +249,6 @@ export default {
             }, interactionTraceContext));
           }
         } else if (interaction.isModalSubmit()) {
-          if (interaction.customId.startsWith('app_modal_')) {
-            try {
-              await handleApplicationModal(interaction);
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'modal',
-                customId: interaction.customId,
-                handler: 'application'
-              }, interactionTraceContext));
-            }
-            return;
-          }
-
-          if (interaction.customId.startsWith('app_review_')) {
-            try {
-              await handleApplicationReviewModal(interaction);
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'modal',
-                customId: interaction.customId,
-                handler: 'application_review'
-              }, interactionTraceContext));
-            }
-            return;
-          }
-
           if (interaction.customId.startsWith('jtc_')) {
             logger.debug(`Skipping modal handler lookup for inline-awaited modal: ${interaction.customId}`, {
               event: 'interaction.modal.inline_skipped',
