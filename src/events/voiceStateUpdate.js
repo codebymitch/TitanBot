@@ -61,7 +61,7 @@ export default {
             const now = Date.now();
             if (channelCreationCooldown.has(cooldownKey)) {
                 const lastCreation = channelCreationCooldown.get(cooldownKey);
-if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
+                if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
                     logger.warn(`User ${member.id} is on cooldown for channel creation`);
                     return;
                 }
@@ -189,7 +189,6 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
 
                 const channelName = sanitizeVoiceChannelName(finalName);
 
-const channelName = sanitizeVoiceChannelName(finalName);
                 if (!member.voice?.channel || member.voice.channel.id !== triggerChannel.id) {
                     logger.debug(`Member ${member.id} no longer in trigger channel ${triggerChannel.id}, aborting temporary channel creation`);
                     channelCreationCooldown.delete(cooldownKey);
@@ -198,9 +197,9 @@ const channelName = sanitizeVoiceChannelName(finalName);
 
                 const tempChannel = await guild.channels.create({
                     name: channelName,
-type: ChannelType.GuildVoice,
+                    type: ChannelType.GuildVoice,
                     parent: triggerChannel.parentId,
-userLimit: userLimit === 0 ? undefined : userLimit,
+                    userLimit: userLimit === 0 ? undefined : userLimit,
                     bitrate: bitrate,
                     permissionOverwrites: [
                         {
