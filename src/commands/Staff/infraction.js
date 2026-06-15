@@ -62,16 +62,17 @@ export default {
             }).replace(',', '').replace(/(\d{4}),/, '$1 at');
 
             const description = [
-                `The following user has recieved a infraction!`,
-                `<:arrow:1516172552592949350> Staff Member: ${staffMember}`,
-                `<:arrow:1516172552592949350> Infraction: ${infractionRole}`,
-                `<:arrow:1516172552592949350> Reason: ${reason}`,
-                `<:arrow:1516172552592949350> Issued By: ${supervisor}`,
-                `<:arrow:1516172552592949350> Issued At: ${issuedAt}`
+                `━━━━━━━━━━━━━━━━━━`,
+                `Staff Member: ${staffMember}`,
+                `Infraction: ${infractionRole}`,
+                `Reason: ${reason}`,
+                `Issued By: ${supervisor}`,
+                `Issued At: ${issuedAt}`,
+                `━━━━━━━━━━━━━━━━━━`
             ].join('\n');
 
             const embed = createEmbed({
-                title: '⚠️ STAFF INFRACTION NOTICE ⚠️',
+                title: 'The following user has received an infraction!',
                 description,
                 color: 'warning',
                 image: 'https://cdn.discordapp.com/attachments/1493023004802679007/1516162356617547937/Copy_of_Copy_of_Free_Release_Banner_1.png?ex=6a31a3ba&is=6a30523a&hm=57a86c8192b237d4bd4a4492d752c96fc555d3b7f15e46dbfcb2e72e14a1593d',
