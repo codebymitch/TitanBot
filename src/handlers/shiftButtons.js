@@ -4,7 +4,9 @@ import { logger } from '../utils/logger.js';
 import { handleInteractionError } from '../utils/errorHandler.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import {
-    getShiftRoleId,
+    getShiftStartRoleId,
+    getShiftBreakRoleId,
+    getShiftStopRoleId,
     getActiveShift,
     startShift,
     stopShift,
@@ -18,35 +20,56 @@ import { buildShiftEmbed, buildShiftButtons } from '../commands/Staff/shift.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Verify the user has the configured shift role.
- * Returns the shiftRoleId on success, or null after replying with an error.
+ * Verify the user has the role configured for the given shift action.
+ * @param {import('discord.js').Interaction} interaction
+ * @param {'start'|'break'|'stop'} action
+ * @returns {Promise<string|null>} The role ID on success, or null after replying with an error.
  */
-async function checkShiftRole(interaction) {
+async function checkShiftRole(interaction, action) {
     const guildId = interaction.guildId;
-    const shiftRoleId = await getShiftRoleId(guildId);
 
-    if (!shiftRoleId) {
+    const getRoleId = {
+        start: getShiftStartRoleId,
+        break: getShiftBreakRoleId,
+        stop: getShiftStopRoleId,
+    }[action];
+
+    const actionLabel = {
+        start: 'start shifts',
+        break: 'use break/resume',
+        stop: 'stop shifts',
+    }[action];
+
+    const configSubcommand = {
+        start: '`/shiftconfig setstartrole`',
+        break: '`/shiftconfig setbreakrole`',
+        stop: '`/shiftconfig setstoprole`',
+    }[action];
+
+    const roleId = await getRoleId(guildId);
+
+    if (!roleId) {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 errorEmbed(
-                    'Shift system has not been configured yet. An administrator must run `/shiftconfig setrole` first.'
+                    `The shift system has not been fully configured yet. An administrator must run ${configSubcommand} first.`
                 ),
             ],
         });
         return null;
     }
 
-    const hasShiftRole = interaction.member.roles.cache.has(shiftRoleId);
-    if (!hasShiftRole) {
+    const hasRole = interaction.member.roles.cache.has(roleId);
+    if (!hasRole) {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
-                errorEmbed('You do not have the required role to use shift commands.'),
+                errorEmbed(`You do not have the required role to ${actionLabel}.`),
             ],
         });
         return null;
     }
 
-    return shiftRoleId;
+    return roleId;
 }
 
 /**
@@ -82,7 +105,7 @@ export const shiftStartHandler = {
             const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
             if (!deferSuccess) return;
 
-            const roleId = await checkShiftRole(interaction);
+            const roleId = await checkShiftRole(interaction, 'start');
             if (!roleId) return;
 
             const userId = interaction.user.id;
@@ -129,7 +152,7 @@ export const shiftBreakHandler = {
             const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
             if (!deferSuccess) return;
 
-            const roleId = await checkShiftRole(interaction);
+            const roleId = await checkShiftRole(interaction, 'break');
             if (!roleId) return;
 
             const userId = interaction.user.id;
@@ -186,7 +209,7 @@ export const shiftStopHandler = {
             const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
             if (!deferSuccess) return;
 
-            const roleId = await checkShiftRole(interaction);
+            const roleId = await checkShiftRole(interaction, 'stop');
             if (!roleId) return;
 
             const userId = interaction.user.id;

@@ -36,40 +36,132 @@ async function ensureTables() {
     await pgDb.pool.query(`
         CREATE TABLE IF NOT EXISTS shift_config (
             guild_id VARCHAR(20) PRIMARY KEY,
-            shift_role_id VARCHAR(20) NOT NULL,
+            shift_role_id VARCHAR(20),
+            shift_start_role_id VARCHAR(20),
+            shift_break_role_id VARCHAR(20),
+            shift_stop_role_id VARCHAR(20),
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     `);
+
+    // Migrate existing tables: add per-action columns if they don't exist yet
+    await pgDb.pool.query(`
+        ALTER TABLE shift_config
+            ADD COLUMN IF NOT EXISTS shift_start_role_id VARCHAR(20),
+            ADD COLUMN IF NOT EXISTS shift_break_role_id VARCHAR(20),
+            ADD COLUMN IF NOT EXISTS shift_stop_role_id VARCHAR(20)
+    `);
 }
 
 /**
- * Get the configured shift role ID for a guild.
+ * Get the configured shift role ID for a guild (legacy / backward-compat).
+ * Returns the first non-null role found across start/break/stop, or the old
+ * catch-all shift_role_id, so callers that only need "any configured role"
+ * still work without changes.
  * @param {string} guildId
  * @returns {Promise<string|null>}
  */
 export async function getShiftRoleId(guildId) {
     await ensureTables();
     const result = await pgDb.pool.query(
-        'SELECT shift_role_id FROM shift_config WHERE guild_id = $1',
+        'SELECT shift_role_id, shift_start_role_id, shift_break_role_id, shift_stop_role_id FROM shift_config WHERE guild_id = $1',
         [guildId]
     );
-    return result.rows.length > 0 ? result.rows[0].shift_role_id : null;
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+    return row.shift_start_role_id ?? row.shift_break_role_id ?? row.shift_stop_role_id ?? row.shift_role_id ?? null;
 }
 
 /**
- * Set the shift role for a guild.
+ * Get the role ID allowed to start shifts for a guild.
+ * @param {string} guildId
+ * @returns {Promise<string|null>}
+ */
+export async function getShiftStartRoleId(guildId) {
+    await ensureTables();
+    const result = await pgDb.pool.query(
+        'SELECT shift_start_role_id FROM shift_config WHERE guild_id = $1',
+        [guildId]
+    );
+    return result.rows.length > 0 ? result.rows[0].shift_start_role_id : null;
+}
+
+/**
+ * Get the role ID allowed to use break/resume for a guild.
+ * @param {string} guildId
+ * @returns {Promise<string|null>}
+ */
+export async function getShiftBreakRoleId(guildId) {
+    await ensureTables();
+    const result = await pgDb.pool.query(
+        'SELECT shift_break_role_id FROM shift_config WHERE guild_id = $1',
+        [guildId]
+    );
+    return result.rows.length > 0 ? result.rows[0].shift_break_role_id : null;
+}
+
+/**
+ * Get the role ID allowed to stop shifts for a guild.
+ * @param {string} guildId
+ * @returns {Promise<string|null>}
+ */
+export async function getShiftStopRoleId(guildId) {
+    await ensureTables();
+    const result = await pgDb.pool.query(
+        'SELECT shift_stop_role_id FROM shift_config WHERE guild_id = $1',
+        [guildId]
+    );
+    return result.rows.length > 0 ? result.rows[0].shift_stop_role_id : null;
+}
+
+/**
+ * Set the role that can start shifts for a guild.
  * @param {string} guildId
  * @param {string} roleId
  * @returns {Promise<void>}
  */
-export async function setShiftRole(guildId, roleId) {
+export async function setShiftStartRole(guildId, roleId) {
     await ensureTables();
     await pgDb.pool.query(
-        `INSERT INTO shift_config (guild_id, shift_role_id, updated_at)
+        `INSERT INTO shift_config (guild_id, shift_start_role_id, updated_at)
          VALUES ($1, $2, CURRENT_TIMESTAMP)
          ON CONFLICT (guild_id)
-         DO UPDATE SET shift_role_id = $2, updated_at = CURRENT_TIMESTAMP`,
+         DO UPDATE SET shift_start_role_id = $2, updated_at = CURRENT_TIMESTAMP`,
+        [guildId, roleId]
+    );
+}
+
+/**
+ * Set the role that can use break/resume for a guild.
+ * @param {string} guildId
+ * @param {string} roleId
+ * @returns {Promise<void>}
+ */
+export async function setShiftBreakRole(guildId, roleId) {
+    await ensureTables();
+    await pgDb.pool.query(
+        `INSERT INTO shift_config (guild_id, shift_break_role_id, updated_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (guild_id)
+         DO UPDATE SET shift_break_role_id = $2, updated_at = CURRENT_TIMESTAMP`,
+        [guildId, roleId]
+    );
+}
+
+/**
+ * Set the role that can stop shifts for a guild.
+ * @param {string} guildId
+ * @param {string} roleId
+ * @returns {Promise<void>}
+ */
+export async function setShiftStopRole(guildId, roleId) {
+    await ensureTables();
+    await pgDb.pool.query(
+        `INSERT INTO shift_config (guild_id, shift_stop_role_id, updated_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (guild_id)
+         DO UPDATE SET shift_stop_role_id = $2, updated_at = CURRENT_TIMESTAMP`,
         [guildId, roleId]
     );
 }
