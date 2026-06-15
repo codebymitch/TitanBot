@@ -33,7 +33,6 @@ const CATEGORY_ICONS = {
     Giveaway: "🎉",
     Counter: "🔢",
     Tools: "🛠️",
-    Search: "🔍",
     Reaction_Roles: "🎭",
     Community: "👥",
     Birthday: "🎂",
