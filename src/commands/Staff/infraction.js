@@ -72,7 +72,7 @@ export default {
 
             const embed = createEmbed({
                 description,
-                color: 0x0f0f0f,
+                color: 0x1a1a1a,
                 image: 'https://cdn.discordapp.com/attachments/1493023004802679007/1516162356617547937/Copy_of_Copy_of_Free_Release_Banner_1.png?ex=6a31a3ba&is=6a30523a&hm=57a86c8192b237d4bd4a4492d752c96fc555d3b7f15e46dbfcb2e72e14a1593d',
                 timestamp: true
             });
