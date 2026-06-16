@@ -79,8 +79,33 @@ export default {
 
             await interaction.channel.send({ embeds: [embed] });
 
+            // Assign the infraction role to the staff member
+            try {
+                const staffMemberGuildMember = await interaction.guild.members.fetch(staffMember.id);
+                await staffMemberGuildMember.roles.add(infractionRole);
+                logger.info('Infraction role assigned to staff member', {
+                    staffMemberId: staffMember.id,
+                    staffMemberTag: staffMember.tag,
+                    roleId: infractionRole.id,
+                    roleName: infractionRole.name,
+                    issuedBy: interaction.user.id,
+                    guildId: interaction.guildId
+                });
+            } catch (roleError) {
+                logger.error('Failed to assign infraction role to staff member', {
+                    staffMemberId: staffMember.id,
+                    roleId: infractionRole.id,
+                    guildId: interaction.guildId,
+                    error: roleError
+                });
+                await InteractionHelper.safeEditReply(interaction, {
+                    content: '⚠️ Infraction notice posted, but the infraction role could not be assigned. Please check my permissions and role hierarchy.'
+                });
+                return;
+            }
+
             await InteractionHelper.safeEditReply(interaction, {
-                content: '✅ Infraction notice posted successfully!'
+                content: '✅ Infraction notice posted and role assigned successfully!'
             });
         } catch (error) {
             logger.error('Infraction command error:', error);
