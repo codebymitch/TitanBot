@@ -69,15 +69,17 @@ export default {
             }).replace(',', '').replace(/(\d{4}),/, '$1 at');
 
             const description = [
-                `### 〔 🎖️ 〕 Staff Promotion`,
+                `### 〔 🎖️ 〕 Congratulations on your Promotion!`,
+                ``,
+                `${staffMember} has demonstrated outstanding dedication and performance within the Califirnia State Roleplay Staff Division. It is with great pleasure that we announce the following promotion.`,
+                ``,
+                `**— Promotion Details —**`,
                 ``,
                 `> <:arrow:1516172552592949350> **Staff Member** ・ ${staffMember}`,
                 `> <:arrow:1516172552592949350> **Previous Rank** ・ ${oldRank}`,
                 `> <:arrow:1516172552592949350> **Promoted To** ・ ${newRank}`,
-                ``,
                 `> <:arrow:1516172552592949350> **Reason** ・ ${reason}`,
-                ``,
-                `> <:arrow:1516172552592949350> **Authorised By** ・ ${supervisor}`,
+                `> <:arrow:1516172552592949350> **Issued By** ・ ${supervisor}`,
                 `> <:arrow:1516172552592949350> **Issued At** ・ ${issuedAt}`,
             ].join('\n');
 
