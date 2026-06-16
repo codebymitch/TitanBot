@@ -8,7 +8,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName('promotion')
         .setDescription('Issue a staff promotion')
-        .addStringOption(option =>
+        .addUserOption(option =>
             option
                 .setName('supervisor')
                 .setDescription('The supervisor issuing the promotion')
@@ -20,13 +20,13 @@ export default {
                 .setDescription('The staff member being promoted')
                 .setRequired(true)
         )
-        .addStringOption(option =>
+        .addRoleOption(option =>
             option
                 .setName('old_rank')
                 .setDescription('Their previous rank')
                 .setRequired(true)
         )
-        .addStringOption(option =>
+        .addRoleOption(option =>
             option
                 .setName('new_rank')
                 .setDescription('Their new rank')
@@ -52,10 +52,10 @@ export default {
         }
 
         try {
-            const supervisor = interaction.options.getString('supervisor');
+            const supervisor = interaction.options.getUser('supervisor');
             const staffMember = interaction.options.getUser('staff_member');
-            const oldRank = interaction.options.getString('old_rank');
-            const newRank = interaction.options.getString('new_rank');
+            const oldRank = interaction.options.getRole('old_rank');
+            const newRank = interaction.options.getRole('new_rank');
             const reason = interaction.options.getString('reason');
 
             const now = new Date();

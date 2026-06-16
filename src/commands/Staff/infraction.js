@@ -8,7 +8,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName('infraction')
         .setDescription('Issue a staff infraction notice')
-        .addStringOption(option =>
+        .addUserOption(option =>
             option
                 .setName('supervisor')
                 .setDescription('The supervisor issuing the infraction')
@@ -20,7 +20,7 @@ export default {
                 .setDescription('The staff member receiving the infraction')
                 .setRequired(true)
         )
-        .addStringOption(option =>
+        .addRoleOption(option =>
             option
                 .setName('infraction_role')
                 .setDescription('The type of infraction')
@@ -46,9 +46,9 @@ export default {
         }
 
         try {
-            const supervisor = interaction.options.getString('supervisor');
+            const supervisor = interaction.options.getUser('supervisor');
             const staffMember = interaction.options.getUser('staff_member');
-            const infractionRole = interaction.options.getString('infraction_role');
+            const infractionRole = interaction.options.getRole('infraction_role');
             const reason = interaction.options.getString('reason');
 
             const now = new Date();

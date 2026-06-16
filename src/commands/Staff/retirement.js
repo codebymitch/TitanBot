@@ -15,7 +15,7 @@ export default {
                 .setDescription('The staff member retiring')
                 .setRequired(true)
         )
-        .addStringOption(option =>
+        .addRoleOption(option =>
             option
                 .setName('final_rank')
                 .setDescription('Their final rank/position')
@@ -27,7 +27,7 @@ export default {
                 .setDescription('Reason for retirement')
                 .setRequired(true)
         )
-        .addStringOption(option =>
+        .addUserOption(option =>
             option
                 .setName('supervisor')
                 .setDescription('Who approved the retirement')
@@ -48,9 +48,9 @@ export default {
 
         try {
             const staffMember = interaction.options.getUser('staff_member');
-            const finalRank = interaction.options.getString('final_rank');
+            const finalRank = interaction.options.getRole('final_rank');
             const reason = interaction.options.getString('reason');
-            const supervisor = interaction.options.getString('supervisor');
+            const supervisor = interaction.options.getUser('supervisor');
 
             const date = new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
