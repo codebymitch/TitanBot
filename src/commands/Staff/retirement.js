@@ -62,7 +62,7 @@ export default {
                 `> <:arrow:1516172552592949350> **Staff Member:** ${staffMember}`,
                 `> <:arrow:1516172552592949350> **Final Rank:** ${finalRank}`,
                 `> <:arrow:1516172552592949350> **Reason:** ${reason}`,
-                `> <:arrow:1516172552592949350> **Issued By:** ${supervisor}`,
+                `> <:arrow:1516172552592949350> **Issued By:** *Califirnia State Roleplay Management*`,
                 `> <:arrow:1516172552592949350> **Issued At:** ${date}`
             ].join('\n');
 
