@@ -69,16 +69,22 @@ export default {
             }).replace(',', '').replace(/(\d{4}),/, '$1 at');
 
             const description = [
-                `> <:arrow:1516172552592949350> **Staff Member:** ${staffMember}`,
-                `> <:arrow:1516172552592949350> **Promoted To:** ${newRank}`,
-                `> <:arrow:1516172552592949350> **Reason:** ${reason}`,
-                `> <:arrow:1516172552592949350> **Issued By:** ${supervisor}`,
-                `> <:arrow:1516172552592949350> **Issued At:** ${issuedAt}`
+                `### 〔 🎖️ 〕 Staff Promotion`,
+                ``,
+                `> <:arrow:1516172552592949350> **Staff Member** ・ ${staffMember}`,
+                `> <:arrow:1516172552592949350> **Previous Rank** ・ ${oldRank}`,
+                `> <:arrow:1516172552592949350> **Promoted To** ・ ${newRank}`,
+                ``,
+                `> <:arrow:1516172552592949350> **Reason** ・ ${reason}`,
+                ``,
+                `> <:arrow:1516172552592949350> **Authorised By** ・ ${supervisor}`,
+                `> <:arrow:1516172552592949350> **Issued At** ・ ${issuedAt}`,
             ].join('\n');
 
             const embed = createEmbed({
                 description,
                 color: 0x2C2F33,
+                footer: '⭐ Califirnia State Roleplay  •  Staff Division',
                 image: 'https://cdn.discordapp.com/attachments/1493023004802679007/1516161046790930554/Copy_of_Free_Release_Banner_1.png?ex=6a31a282&is=6a305102&hm=2c65693227f03abed5e168f188d8cc0ae0dde1716245cd6e37dc0892866430b7',
                 timestamp: true
             });
