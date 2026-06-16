@@ -67,6 +67,7 @@ export default {
                 `> <:arrow:1516172552592949350> **Reason:** ${reason}`,
                 `> <:arrow:1516172552592949350> **Issued By:** ${supervisor}`,
                 `> <:arrow:1516172552592949350> **Issued At:** ${issuedAt}`
+                `-# Find the infraction invalid? Please contact us in the Internal Affairs Support.`
             ].join('\n');
 
             const embed = createEmbed({
