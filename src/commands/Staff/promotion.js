@@ -85,9 +85,44 @@ export default {
 
             await interaction.channel.send({ embeds: [embed] });
 
-            await InteractionHelper.safeEditReply(interaction, {
-                content: '✅ Promotion notice posted successfully!'
-            });
+            // Fetch the staff member as a GuildMember to perform role operations
+            const staffMemberGuildMember = await interaction.guild.members.fetch(staffMember.id);
+
+            try {
+                await staffMemberGuildMember.roles.remove(oldRank, `Promotion: removed old rank by ${interaction.user.tag}`);
+                logger.info('Promotion: removed old rank role', {
+                    userId: staffMember.id,
+                    roleId: oldRank.id,
+                    roleName: oldRank.name,
+                    issuedBy: interaction.user.id,
+                    guildId: interaction.guildId
+                });
+
+                await staffMemberGuildMember.roles.add(newRank, `Promotion: added new rank by ${interaction.user.tag}`);
+                logger.info('Promotion: added new rank role', {
+                    userId: staffMember.id,
+                    roleId: newRank.id,
+                    roleName: newRank.name,
+                    issuedBy: interaction.user.id,
+                    guildId: interaction.guildId
+                });
+
+                await InteractionHelper.safeEditReply(interaction, {
+                    content: `✅ Promotion notice posted and roles updated — removed **${oldRank.name}** and assigned **${newRank.name}** to ${staffMember}.`
+                });
+            } catch (roleError) {
+                logger.error('Promotion: failed to update roles', {
+                    userId: staffMember.id,
+                    oldRoleId: oldRank.id,
+                    newRoleId: newRank.id,
+                    error: roleError.message,
+                    guildId: interaction.guildId
+                });
+
+                await InteractionHelper.safeEditReply(interaction, {
+                    content: `⚠️ Promotion notice posted, but role update failed: ${roleError.message}. Please update the roles manually.`
+                });
+            }
         } catch (error) {
             logger.error('Promotion command error:', error);
             await handleInteractionError(interaction, error, { subtype: 'promotion_failed' });
