@@ -79,7 +79,6 @@ export default {
             const embed = createEmbed({
                 description,
                 image: 'https://cdn.discordapp.com/attachments/1493023004802679007/1516161046790930554/Copy_of_Free_Release_Banner_1.png?ex=6a31a282&is=6a305102&hm=2c65693227f03abed5e168f188d8cc0ae0dde1716245cd6e37dc0892866430b7',
-                thumbnail: 'https://cdn.discordapp.com/attachments/1516147294708170923/1516170857456603178/image.png?ex=6a31aba5&is=6a305a25&hm=30778fe62ec9c53307bcc806ceb494d75ba1333787b2bfccb6bea208dd372d45',
                 timestamp: true
             });
 
