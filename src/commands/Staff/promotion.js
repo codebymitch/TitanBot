@@ -69,16 +69,15 @@ export default {
             }).replace(',', '').replace(/(\d{4}),/, '$1 at');
 
             const description = [
-                `<:arrow:1516172552592949350> **Staff Member:** ${staffMember}`,
-                `<:arrow:1516172552592949350> **Promoted To:** ${newRank}`,
-                `<:arrow:1516172552592949350> **Reason:** ${reason}`,
-                `<:arrow:1516172552592949350> **Issued By:** ${supervisor}`,
-                `<:arrow:1516172552592949350> **Issued At:** ${issuedAt}`
+                `> <:arrow:1516172552592949350> **Staff Member:** ${staffMember}`,
+                `> <:arrow:1516172552592949350> **Promoted To:** ${newRank}`,
+                `> <:arrow:1516172552592949350> **Reason:** ${reason}`,
+                `> <:arrow:1516172552592949350> **Issued By:** ${supervisor}`,
+                `> <:arrow:1516172552592949350> **Issued At:** ${issuedAt}`
             ].join('\n');
 
             const embed = createEmbed({
                 description,
-                color: 'success',
                 image: 'https://cdn.discordapp.com/attachments/1493023004802679007/1516161046790930554/Copy_of_Free_Release_Banner_1.png?ex=6a31a282&is=6a305102&hm=2c65693227f03abed5e168f188d8cc0ae0dde1716245cd6e37dc0892866430b7',
                 thumbnail: 'https://cdn.discordapp.com/attachments/1516147294708170923/1516170857456603178/image.png?ex=6a31aba5&is=6a305a25&hm=30778fe62ec9c53307bcc806ceb494d75ba1333787b2bfccb6bea208dd372d45',
                 timestamp: true
