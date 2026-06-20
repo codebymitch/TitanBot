@@ -1,26 +1,17 @@
-// src/buttons/punish_reviewed.js
-// Handles punishment log status buttons
-// Place this file in src/buttons/ — your bot will auto-register it via client.buttons
-
 import { EmbedBuilder } from 'discord.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../../utils/logger.js';
 
 const BUTTON_LABELS = {
   punish_reviewed: '✅ Reviewed by IA/HC',
-  punish_processed: '🏢 Department Hub Processed',
-  punish_roster: '🔄 Roles & Roster Updated',
-  punish_rosterlink: '📋 Roster',
 };
 
-async function execute(interaction, client, args) {
+async function execute(interaction, client) {
   try {
     const customId = interaction.customId;
-
-    // Find which button type this is
     const buttonType = Object.keys(BUTTON_LABELS).find(key => customId.startsWith(key));
     if (!buttonType) return;
 
-    const caseCode = customId.replace(`${buttonType}_`, '');
+    const caseCode = customId.slice(buttonType.length + 1);
     const label = BUTTON_LABELS[buttonType];
 
     const originalEmbed = interaction.message.embeds[0];
@@ -28,10 +19,9 @@ async function execute(interaction, client, args) {
 
     const updatedEmbed = EmbedBuilder.from(originalEmbed);
 
-    // Prevent double-marking
     const alreadySet = (updatedEmbed.data.fields || []).some(f => f.name === label);
     if (alreadySet) {
-      await interaction.reply({ content: 'This status has already been marked.', ephemeral: true });
+      await interaction.reply({ content: 'This status has already been marked.', flags: 64 });
       return;
     }
 
@@ -49,15 +39,17 @@ async function execute(interaction, client, args) {
     await interaction.message.edit({ embeds: [updatedEmbed] });
     await interaction.reply({
       content: `✅ Marked **${label}** for case \`${caseCode}\`.`,
-      ephemeral: true,
+      flags: 64,
     });
   } catch (error) {
     logger.error('Error handling punishment button:', error);
-    await interaction.reply({
-      content: 'An error occurred while updating the punishment log.',
-      ephemeral: true,
-    }).catch(() => {});
+    await interaction.reply({ content: 'An error occurred.', flags: 64 }).catch(() => {});
   }
 }
 
-export default { customId: 'punish_reviewed', execute };
+export default [
+  { name: 'punish_reviewed', execute },
+  { name: 'punish_processed', execute },
+  { name: 'punish_roster', execute },
+  { name: 'punish_rosterlink', execute },
+];
