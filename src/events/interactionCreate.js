@@ -266,6 +266,25 @@ export default {
             return;
           }
 
+          if (interaction.customId.startsWith('punish_')) {
+            const parts = interaction.customId.split('_');
+            const buttonType = `${parts[0]}_${parts[1]}`; // e.g. "punish_reviewed"
+            const button = client.buttons.get(buttonType);
+
+            if (button) {
+              try {
+                await button.execute(interaction, client, []);
+              } catch (error) {
+                await handleInteractionError(interaction, error, withTraceContext({
+                  type: 'button',
+                  customId: interaction.customId,
+                  handler: 'punishment'
+                }, interactionTraceContext));
+              }
+            }
+            return;
+          }
+
           const [customId, ...args] = interaction.customId.split(':');
           const button = client.buttons.get(customId);
 
@@ -361,7 +380,6 @@ export default {
 
           if (!modal) {
             if (!interaction.customId.includes(':')) {
-
               return;
             }
 
