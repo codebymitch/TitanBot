@@ -15,7 +15,7 @@ export default {
 
         const existing = await client.db.get(`afk:${interaction.user.id}`).catch(() => null);
         if (existing) {
-            await client.db.del(`afk:${interaction.user.id}`).catch(() => {});
+            await client.db.delete(`afk:${interaction.user.id}`).catch(() => {});
             const since = existing.since ? `<t:${Math.floor(existing.since / 1000)}:R>` : 'recently';
             return interaction.reply({
                 embeds: [successEmbed('Welcome Back', `Your AFK has been removed. You were away ${since}.`)],

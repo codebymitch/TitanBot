@@ -93,7 +93,7 @@ async function handleAfk(message, client) {
     // Author returning from AFK
     const afkData = await client.db.get(`afk:${message.author.id}`).catch(() => null);
     if (afkData) {
-      await client.db.del(`afk:${message.author.id}`).catch(() => {});
+      await client.db.delete(`afk:${message.author.id}`).catch(() => {});
       const since = afkData.since ? `<t:${Math.floor(afkData.since / 1000)}:R>` : 'recently';
       await message.reply({
         content: `👋 Welcome back, <@${message.author.id}>! Your AFK has been removed (you were away ${since}).`,
