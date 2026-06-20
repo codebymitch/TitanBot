@@ -1,4 +1,4 @@
-import { Events } from 'discord.js';
+﻿import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -56,16 +56,70 @@ async function handleFAQ(message) {
     "who made this bot": "This bot was built with TeamSyne — a powerful all-in-one Discord assistant!",
   };
 
-  const content = message.content.toLowerCase();
+  const content = message.content;
 
   for (const [keyword, reply] of Object.entries(faqs)) {
-    if (content.includes(keyword.toLowerCase())) {
+    if (isFaqMatch(content, keyword)) {
       await message.reply(reply);
       return true;
     }
   }
 
   return false;
+}
+
+function normalizeText(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^\u0000-\u007F]+/g, '')
+    .replace(/[^\\n\\w\\s]/g, ' ')
+    .replace(/\\s+/g, ' ')
+    .trim();
+}
+
+function getLevenshteinDistance(a, b) {
+  const matrix = Array.from({ length: b.length + 1 }, () => []);
+  for (let i = 0; i <= b.length; i += 1) {
+    matrix[i][0] = i;
+  }
+  for (let j = 0; j <= a.length; j += 1) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i += 1) {
+    for (let j = 1; j <= a.length; j += 1) {
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + (a[j - 1] === b[i - 1] ? 0 : 1),
+      );
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+function isFaqMatch(messageContent, keyword) {
+  const normalizedContent = normalizeText(messageContent);
+  const normalizedKeyword = normalizeText(keyword);
+
+  if (normalizedContent.includes(normalizedKeyword)) {
+    return true;
+  }
+
+  const messageWords = normalizedContent.split(' ').filter(Boolean);
+  const keywordWords = normalizedKeyword.split(' ').filter(Boolean);
+  let matchedWords = 0;
+
+  for (const keywordWord of keywordWords) {
+    const maxDistance = Math.max(1, Math.floor(keywordWord.length * 0.25));
+    const bestDistance = messageWords.reduce((best, word) => Math.min(best, getLevenshteinDistance(keywordWord, word)), Infinity);
+    if (bestDistance <= maxDistance) {
+      matchedWords += 1;
+    }
+  }
+
+  return matchedWords >= Math.ceil(keywordWords.length * 0.75);
 }
 
 async function handlePrefixCommand(message, client) {
