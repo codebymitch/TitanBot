@@ -5,10 +5,10 @@ import { logger } from '../../utils/logger.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('play')
-    .setDescription('Play a song from Spotify or search by name')
+    .setDescription('Play a song from Spotify or SoundCloud')
     .addStringOption(option =>
       option.setName('query')
-        .setDescription('Song name or Spotify URL')
+        .setDescription('Song name, Spotify URL, or SoundCloud URL')
         .setRequired(true)
     ),
   category: 'music',
@@ -25,9 +25,12 @@ export default {
     const player = useMainPlayer();
 
     try {
-      // Detect if it's a Spotify URL or a plain search
-      const isSpotifyUrl = query.includes('spotify.com');
-      const searchEngine = isSpotifyUrl ? QueryType.SPOTIFY_SONG : QueryType.AUTO;
+      // Detect query type
+      let searchEngine = QueryType.AUTO;
+      if (query.includes('spotify.com/track')) searchEngine = QueryType.SPOTIFY_SONG;
+      else if (query.includes('spotify.com/playlist')) searchEngine = QueryType.SPOTIFY_PLAYLIST;
+      else if (query.includes('spotify.com/album')) searchEngine = QueryType.SPOTIFY_ALBUM;
+      else if (query.includes('soundcloud.com')) searchEngine = QueryType.SOUNDCLOUD_TRACK;
 
       const { track } = await player.play(voiceChannel, query, {
         searchEngine,
@@ -59,7 +62,9 @@ export default {
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       logger.error('Play command error:', error);
-      await interaction.editReply({ content: `❌ Could not play that track. Try using a direct Spotify link or a different search term.` });
+      await interaction.editReply({
+        content: `❌ Could not find that track. Try:\n• A SoundCloud URL: \`https://soundcloud.com/...\`\n• A Spotify track URL: \`https://open.spotify.com/track/...\`\n• A different search term`,
+      });
     }
   },
 };

@@ -55,8 +55,10 @@ class TitanBot extends Client {
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
       });
 
-      // Load all default extractors including YouTube for search fallback
-      await this.player.extractors.loadDefault();
+      // Load default extractors, prioritizing SoundCloud over YouTube
+      await this.player.extractors.loadDefault((ext) => {
+        return ext !== 'YouTubeExtractor';
+      });
 
       this.player.events.on('playerStart', (queue, track) => {
         queue.metadata?.channel?.send({
