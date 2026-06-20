@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
@@ -55,9 +55,8 @@ class TitanBot extends Client {
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
       });
 
-      await this.player.extractors.loadDefault((ext) =>
-        !['YouTubeExtractor'].includes(ext)
-      );
+      // Load all default extractors including YouTube for search fallback
+      await this.player.extractors.loadDefault();
 
       this.player.events.on('playerStart', (queue, track) => {
         queue.metadata?.channel?.send({

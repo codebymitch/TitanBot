@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { useMainPlayer } from 'discord-player';
+import { useMainPlayer, QueryType } from 'discord-player';
 import { logger } from '../../utils/logger.js';
 
 export default {
@@ -25,7 +25,12 @@ export default {
     const player = useMainPlayer();
 
     try {
+      // Detect if it's a Spotify URL or a plain search
+      const isSpotifyUrl = query.includes('spotify.com');
+      const searchEngine = isSpotifyUrl ? QueryType.SPOTIFY_SONG : QueryType.AUTO;
+
       const { track } = await player.play(voiceChannel, query, {
+        searchEngine,
         nodeOptions: {
           metadata: {
             channel: interaction.channel,
@@ -54,7 +59,7 @@ export default {
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       logger.error('Play command error:', error);
-      await interaction.editReply({ content: `❌ Could not play that track: ${error.message}` });
+      await interaction.editReply({ content: `❌ Could not play that track. Try using a direct Spotify link or a different search term.` });
     }
   },
 };
