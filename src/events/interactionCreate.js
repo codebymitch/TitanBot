@@ -285,6 +285,25 @@ export default {
             return;
           }
 
+          if (interaction.customId.startsWith('loa_')) {
+            const parts = interaction.customId.split('_');
+            const buttonType = `${parts[0]}_${parts[1]}`; // e.g. "loa_approve"
+            const button = client.buttons.get(buttonType);
+
+            if (button) {
+              try {
+                await button.execute(interaction, client, []);
+              } catch (error) {
+                await handleInteractionError(interaction, error, withTraceContext({
+                  type: 'button',
+                  customId: interaction.customId,
+                  handler: 'loa'
+                }, interactionTraceContext));
+              }
+            }
+            return;
+          }
+
           const [customId, ...args] = interaction.customId.split(':');
           const button = client.buttons.get(customId);
 
