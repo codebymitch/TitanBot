@@ -34,6 +34,8 @@ export default {
         return;
       }
 
+      await handleFAQ(message);
+
       await handlePrefixCommand(message, client);
 
       await handleLeveling(message, client);
@@ -42,6 +44,29 @@ export default {
     }
   }
 };
+
+async function handleFAQ(message) {
+  const faqs = {
+    "how do i get started": "Welcome! Check out our rules and grab your roles to get started!",
+    "how do i make a ticket": "Use the `/ticket` command to open a support ticket!",
+    "what are the rules": "Please check the rules channel for our server rules!",
+    "how do i level up": "Send messages in the server to earn XP and level up!",
+    "what commands are available": "Type `/` to see all available commands!",
+    "how do i get roles": "Head over to the roles channel and pick the ones you want!",
+    "who made this bot": "This bot was built with TeamSyne — a powerful all-in-one Discord assistant!",
+  };
+
+  const content = message.content.toLowerCase();
+
+  for (const [keyword, reply] of Object.entries(faqs)) {
+    if (content.includes(keyword)) {
+      await message.reply(reply);
+      return true;
+    }
+  }
+
+  return false;
+}
 
 async function handlePrefixCommand(message, client) {
   try {
