@@ -72,8 +72,8 @@ function normalizeText(text) {
   return text
     .toLowerCase()
     .replace(/[^\u0000-\u007F]+/g, '')
-    .replace(/[^\\n\\w\\s]/g, ' ')
-    .replace(/\\s+/g, ' ')
+    .replace(/[^\n\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -109,6 +109,9 @@ function isFaqMatch(messageContent, keyword) {
 
   const messageWords = normalizedContent.split(' ').filter(Boolean);
   const keywordWords = normalizedKeyword.split(' ').filter(Boolean);
+  if (messageWords.length > keywordWords.length + 2) {
+    return false;
+  }
   let matchedWords = 0;
 
   for (const keywordWord of keywordWords) {
@@ -119,7 +122,7 @@ function isFaqMatch(messageContent, keyword) {
     }
   }
 
-  return matchedWords >= Math.ceil(keywordWords.length * 0.75);
+  return matchedWords >= Math.max(2, keywordWords.length - 1);
 }
 
 async function handlePrefixCommand(message, client) {
