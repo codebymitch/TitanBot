@@ -47,7 +47,7 @@ export default {
 
 async function handleFAQ(message) {
   const faqs = {
-    "how do i get started": "Welcome! Check out our rules and grab your roles to get started!",
+    "How do I join": "Welcome! Create a ticket to register in a team! https://discord.com/channels/1382512078585200642/1514857141125644429",
     "how do i make a ticket": "Use the `/ticket` command to open a support ticket!",
     "what are the rules": "Please check the rules channel for our server rules!",
     "how do i level up": "Send messages in the server to earn XP and level up!",
