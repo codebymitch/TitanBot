@@ -3,8 +3,6 @@ import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
-import { Player } from 'discord-player';
-import { SpotifyExtractor } from '@discord-player/extractor';
 
 import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
@@ -41,54 +39,6 @@ class TitanBot extends Client {
     this.cooldowns = new Collection();
     this.db = null;
     this.rest = new REST({ version: '10' }).setToken(config.bot.token);
-    this.player = null;
-  }
-
-  async initializePlayer() {
-    try {
-      this.player = new Player(this, {
-        skipFFmpeg: false,
-      });
-
-      await this.player.extractors.register(SpotifyExtractor, {
-        clientId: process.env.SPOTIFY_CLIENT_ID,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-      });
-
-      // Load default extractors, prioritizing SoundCloud over YouTube
-      await this.player.extractors.loadDefault((ext) => {
-        return ext !== 'YouTubeExtractor';
-      });
-
-      this.player.events.on('playerStart', (queue, track) => {
-        queue.metadata?.channel?.send({
-          content: `🎵 Now playing **${track.title}** by **${track.author}**`,
-        }).catch(() => {});
-      });
-
-      this.player.events.on('emptyQueue', (queue) => {
-        queue.metadata?.channel?.send({
-          content: '✅ Queue finished! Add more songs with `/play`.',
-        }).catch(() => {});
-      });
-
-      this.player.events.on('emptyChannel', (queue) => {
-        queue.metadata?.channel?.send({
-          content: '👋 Left the voice channel as it was empty.',
-        }).catch(() => {});
-      });
-
-      this.player.events.on('error', (queue, error) => {
-        logger.error('Player error:', error);
-        queue.metadata?.channel?.send({
-          content: `❌ An error occurred: ${error.message}`,
-        }).catch(() => {});
-      });
-
-      startupLog('✅ Music player initialized');
-    } catch (error) {
-      logger.error('Failed to initialize music player:', error);
-    }
   }
 
   async start() {
@@ -117,9 +67,6 @@ class TitanBot extends Client {
       
       startupLog('Starting web server...');
       this.startWebServer();
-
-      startupLog('Initializing music player...');
-      await this.initializePlayer();
       
       startupLog('Loading commands...');
       await loadCommands(this);
@@ -181,7 +128,7 @@ class TitanBot extends Client {
     });
 
     const requestCounts = new Map();
-    const windowMs = 60000; 
+    const windowMs = 60000;
     const maxRequests = this.config.api?.rateLimit?.max || 100;
     
     app.use((req, res, next) => {
@@ -387,11 +334,6 @@ class TitanBot extends Client {
       logger.info('Stopping cron jobs...');
       cron.getTasks().forEach(task => task.stop());
       logger.info('✅ Cron jobs stopped');
-
-      if (this.player) {
-        this.player.destroy();
-        logger.info('✅ Music player destroyed');
-      }
 
       if (this.db && this.db.db) {
         logger.info('Closing database connection...');
