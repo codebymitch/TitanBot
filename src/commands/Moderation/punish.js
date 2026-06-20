@@ -212,28 +212,31 @@ export default {
           .setStyle(ButtonStyle.Secondary),
       );
 
-      // Send to punishment log channel
+      // Send to punishment log forum channel
       let logChannel = interaction.guild.channels.cache.get(PUNISHMENT_LOG_CHANNEL_ID);
-      logger.info(`Cache lookup: ${logChannel ? logChannel.name : 'not in cache'}`);
       if (!logChannel) {
         logChannel = await interaction.guild.channels.fetch(PUNISHMENT_LOG_CHANNEL_ID).catch((err) => {
           logger.error(`Fetch failed: ${err.message}`);
           return null;
         });
-        logger.info(`Fetch result: ${logChannel ? logChannel.name : 'null'}`);
       }
-      logger.info(`isTextBased: ${logChannel?.isTextBased()}`);
-      if (!logChannel || !logChannel.isTextBased()) {
+      if (!logChannel) {
         throw new TitanBotError('Log channel not found', ErrorTypes.CONFIGURATION, 'Punishment log channel not found. Please check the channel ID.', { subtype: 'missing_channel' });
       }
 
-      const logMessage = await logChannel.send({
-        embeds: [embed],
-        components: [buttons],
-        files: evidenceAttachments.length > 1
-          ? evidenceAttachments.slice(1).map(att => att.url)
-          : [],
+      // Create a new forum post for this punishment case
+      const forumPost = await logChannel.threads.create({
+        name: `Case ${caseCode} — ${user.username} — ${punishmentType}`,
+        message: {
+          embeds: [embed],
+          components: [buttons],
+          files: evidenceAttachments.length > 0
+            ? evidenceAttachments.map(att => att.url)
+            : [],
+        },
       });
+
+      const logMessage = forumPost.messages.cache.first() || { id: forumPost.id };
 
       // Store the case in the database
       await storeModerationCase({
