@@ -26,10 +26,25 @@ async function saveConfig(client, guildId, config) {
   await setInDb(CONFIG_KEY(guildId), config);
 }
 
+function formatAnnouncementMessage(message) {
+  const cleaned = String(message || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && !/^[\s\-_=·]{3,}$/.test(line))
+    .map(line => line.replace(/^[-*]\s+/, '• '))
+    .map(line => line.replace(/·/g, '•'))
+    .map(line => line.replace(/\s*—\s*/g, ' — '))
+    .map(line => line.replace(/\s{2,}/g, ' '))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n');
+
+  return cleaned;
+}
+
 function buildAnnouncementEmbed(title, message, color, image) {
   const embed = new EmbedBuilder()
     .setTitle(title)
-    .setDescription(message)
+    .setDescription(formatAnnouncementMessage(message))
     .setColor(color);
 
   if (image) {
