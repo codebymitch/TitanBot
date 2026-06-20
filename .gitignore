@@ -151,3 +151,4 @@ lavalink/plugins/
 # Cloudflare tunnel logs
 cloudflared.log
 cloudflared_err.log
+Modelfile
