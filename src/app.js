@@ -3,6 +3,8 @@ import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
+import { Player } from 'discord-player';
+import { SpotifyExtractor } from '@discord-player/extractor';
 
 import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
@@ -19,18 +21,14 @@ class TitanBot extends Client {
   constructor() {
     super({
       intents: [
-        
-        GatewayIntentBits.Guilds,                        
-        GatewayIntentBits.GuildMembers,                 
-
-        GatewayIntentBits.GuildMessages,                
-        GatewayIntentBits.GuildMessageReactions,        
-        GatewayIntentBits.MessageContent,               
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
-
-        GatewayIntentBits.GuildVoiceStates,             
-
-        GatewayIntentBits.GuildBans,                    
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildBans,
       ],
     });
 
@@ -43,6 +41,53 @@ class TitanBot extends Client {
     this.cooldowns = new Collection();
     this.db = null;
     this.rest = new REST({ version: '10' }).setToken(config.bot.token);
+    this.player = null;
+  }
+
+  async initializePlayer() {
+    try {
+      this.player = new Player(this, {
+        skipFFmpeg: false,
+      });
+
+      await this.player.extractors.register(SpotifyExtractor, {
+        clientId: process.env.SPOTIFY_CLIENT_ID,
+        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+      });
+
+      await this.player.extractors.loadDefault((ext) =>
+        !['YouTubeExtractor'].includes(ext)
+      );
+
+      this.player.events.on('playerStart', (queue, track) => {
+        queue.metadata?.channel?.send({
+          content: `🎵 Now playing **${track.title}** by **${track.author}**`,
+        }).catch(() => {});
+      });
+
+      this.player.events.on('emptyQueue', (queue) => {
+        queue.metadata?.channel?.send({
+          content: '✅ Queue finished! Add more songs with `/play`.',
+        }).catch(() => {});
+      });
+
+      this.player.events.on('emptyChannel', (queue) => {
+        queue.metadata?.channel?.send({
+          content: '👋 Left the voice channel as it was empty.',
+        }).catch(() => {});
+      });
+
+      this.player.events.on('error', (queue, error) => {
+        logger.error('Player error:', error);
+        queue.metadata?.channel?.send({
+          content: `❌ An error occurred: ${error.message}`,
+        }).catch(() => {});
+      });
+
+      startupLog('✅ Music player initialized');
+    } catch (error) {
+      logger.error('Failed to initialize music player:', error);
+    }
   }
 
   async start() {
@@ -54,7 +99,6 @@ class TitanBot extends Client {
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
 
-      // Check database status and report
       const dbStatus = this.db.getStatus();
       if (dbStatus.isDegraded) {
         logger.warn('');
@@ -72,6 +116,9 @@ class TitanBot extends Client {
       
       startupLog('Starting web server...');
       this.startWebServer();
+
+      startupLog('Initializing music player...');
+      await this.initializePlayer();
       
       startupLog('Loading commands...');
       await loadCommands(this);
@@ -278,8 +325,6 @@ class TitanBot extends Client {
           }
         }
         
-        // Save cleaned counters if any were orphaned
-        // Save cleaned counters if any were orphaned
         if (orphanedCounters.length > 0) {
           await saveServerCounters(this, guildId, validCounters);
           logger.info(`Cleaned up ${orphanedCounters.length} orphaned counter(s) from guild ${guildId} during scheduled update`);
@@ -338,13 +383,15 @@ class TitanBot extends Client {
     logger.info(`${'='.repeat(60)}`);
 
     try {
-      
       logger.info('Stopping cron jobs...');
       cron.getTasks().forEach(task => task.stop());
       logger.info('✅ Cron jobs stopped');
 
-      // Close database connection
-      // Close database connection
+      if (this.player) {
+        this.player.destroy();
+        logger.info('✅ Music player destroyed');
+      }
+
       if (this.db && this.db.db) {
         logger.info('Closing database connection...');
         try {
@@ -363,13 +410,12 @@ class TitanBot extends Client {
           this.destroy();
           logger.info('✅ Discord client destroyed');
         } catch (error) {
-
           logger.warn('Discord client destroy warning (non-critical):', error.message);
         }
       }
 
       logger.info('✅ Graceful shutdown complete');
-  shutdownLog('Bot stopped successfully.');
+      shutdownLog('Bot stopped successfully.');
       process.exit(0);
     } catch (error) {
       logger.error('Error during graceful shutdown:', error);
