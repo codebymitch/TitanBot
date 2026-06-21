@@ -158,7 +158,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     const priorityInfo = PRIORITY_MAP[priority] || PRIORITY_MAP.none;
     const embedTitle = actualOptions.embedTitle || `Ticket #${ticketNumber} - ${usernameOrTag(member)}`;
     const embedDescription = actualOptions.embedDescription ||
-      `${member.toString()}, thanks for creating a ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`;
+      `${member.toString()}, Please wait while a staff member reviews your ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`;
     
     const embed = createEmbed({
       title: embedTitle,
