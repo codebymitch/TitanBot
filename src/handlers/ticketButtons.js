@@ -703,9 +703,10 @@ const createPanelTicketHandler = {
         return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets before creating a new one.\n\n**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}` });
       }
 
+      const truncatedPanelTitle = (panel.panelTitle || 'Ticket').substring(0, 36); // Max 45 chars total, "Create a " = 9 chars
       const modal = new ModalBuilder()
         .setCustomId(`create_ticket_modal_${panelId}`)
-        .setTitle(`Create a ${panel.panelTitle || 'Ticket'}`);
+        .setTitle(`Create a ${truncatedPanelTitle}`);
 
       const reasonInput = new TextInputBuilder()
         .setCustomId('reason')

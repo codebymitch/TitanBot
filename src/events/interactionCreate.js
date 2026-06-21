@@ -319,9 +319,10 @@ export default {
               }
 
               const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder: ARB } = await import('discord.js');
+              const truncatedPanelTitle = (panel.panelTitle || 'Ticket').substring(0, 36); // Max 45 chars total, "Create a " = 9 chars
               const modal = new ModalBuilder()
                 .setCustomId(`create_ticket_modal_${panelId}`)
-                .setTitle(`Create a ${panel.panelTitle || 'Ticket'}`);
+                .setTitle(`Create a ${truncatedPanelTitle}`);
 
               const reasonInput = new TextInputBuilder()
                 .setCustomId('reason')
