@@ -125,8 +125,8 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
             PermissionFlagsBits.ReadMessageHistory,
           ],
         },
-        ...(config.ticketStaffRoleId ? [{
-          id: config.ticketStaffRoleId,
+        ...((panelStaffRoleId || config.ticketStaffRoleId) ? [{
+          id: panelStaffRoleId || config.ticketStaffRoleId,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
@@ -180,7 +180,8 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       );
     }
     
-    const staffMention = config.ticketStaffRoleId ? ` <@&${config.ticketStaffRoleId}>` : '';
+    const effectiveStaffRoleId = panelStaffRoleId || config.ticketStaffRoleId;
+    const staffMention = effectiveStaffRoleId ? ` <@&${effectiveStaffRoleId}>` : '';
     const messageContent = `${member.toString()}${staffMention}`;
     
     const ticketMessage = await channel.send({ 
