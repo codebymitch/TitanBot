@@ -12,6 +12,11 @@ import { isCommandEnabled } from '../services/commandAccessService.js';
 import { resolveSlashAccessKey } from '../utils/messageAdapter.js';
 import { isCollectorManagedComponent } from '../utils/collectorComponents.js';
 import { ResponseCoordinator } from '../utils/responseCoordinator.js';
+import { getPanels } from '../commands/Ticket/modules/ticket_panels.js';
+import { createTicket } from '../services/ticket.js';
+import { successEmbed } from '../utils/embeds.js';
+import { replyUserError } from '../utils/errorHandler.js';
+import { checkRateLimit } from '../utils/rateLimiter.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -286,18 +291,54 @@ export default {
           }
 
           if (interaction.customId.startsWith('create_ticket_') && !interaction.customId.startsWith('create_ticket_modal')) {
-            // Multi-panel ticket button (create_ticket_PANELID)
-            const button = client.buttons.get('create_ticket_panel');
-            if (button) {
-              try {
-                await button.execute(interaction, client, []);
-              } catch (error) {
-                await handleInteractionError(interaction, error, withTraceContext({
-                  type: 'button',
-                  customId: interaction.customId,
-                  handler: 'ticket_panel'
-                }, interactionTraceContext));
+            // Multi-panel ticket button — handle inline
+            try {
+              const panelId = interaction.customId.replace('create_ticket_', '');
+              const panels = await getPanels(interaction.guildId);
+              const panel = panels.find(p => p.panelId === panelId);
+
+              if (!panel) {
+                await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This ticket panel no longer exists. Please contact staff.' });
+                return;
               }
+
+              const { checkRateLimit: rl } = await import('../utils/rateLimiter.js');
+              const allowed = await rl(`${interaction.user.id}:create_ticket`, 3, 60000);
+              if (!allowed) {
+                await replyUserError(interaction, { type: ErrorTypes.RATE_LIMIT, message: 'You are creating tickets too quickly. Please wait a minute and try again.' });
+                return;
+              }
+
+              const { getUserTicketCount } = await import('../services/ticket.js');
+              const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
+              const maxTicketsPerUser = panel.maxTicketsPerUser || 3;
+
+              if (currentTicketCount >= maxTicketsPerUser) {
+                await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets before creating a new one.\n\n**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}` });
+                return;
+              }
+
+              const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder: ARB } = await import('discord.js');
+              const modal = new ModalBuilder()
+                .setCustomId(`create_ticket_modal_${panelId}`)
+                .setTitle(`Create a ${panel.panelTitle || 'Ticket'}`);
+
+              const reasonInput = new TextInputBuilder()
+                .setCustomId('reason')
+                .setLabel('Why are you creating this ticket?')
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Describe your issue...')
+                .setRequired(true)
+                .setMaxLength(1000);
+
+              modal.addComponents(new ARB().addComponents(reasonInput));
+              await interaction.showModal(modal);
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'button',
+                customId: interaction.customId,
+                handler: 'ticket_panel'
+              }, interactionTraceContext));
             }
             return;
           }
@@ -373,18 +414,45 @@ export default {
           }
         } else if (interaction.isModalSubmit()) {
           if (interaction.customId.startsWith('create_ticket_modal_')) {
-            // Multi-panel ticket modal submission
-            const modal = client.buttons.get('create_ticket_modal_panel');
-            if (modal) {
-              try {
-                await modal.execute(interaction, client, []);
-              } catch (error) {
-                await handleInteractionError(interaction, error, withTraceContext({
-                  type: 'modal',
-                  customId: interaction.customId,
-                  handler: 'ticket_panel_modal'
-                }, interactionTraceContext));
+            // Multi-panel ticket modal submission — handle inline
+            try {
+              const { MessageFlags: MF } = await import('discord.js');
+              const { InteractionHelper: IH } = await import('../utils/interactionHelper.js');
+              const deferSuccess = await IH.safeDefer(interaction, { flags: MF.Ephemeral });
+              if (!deferSuccess) return;
+
+              const panelId = interaction.customId.replace('create_ticket_modal_', '');
+              const panels = await getPanels(interaction.guildId);
+              const panel = panels.find(p => p.panelId === panelId);
+
+              if (!panel) {
+                await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This ticket panel no longer exists.' });
+                return;
               }
+
+              const reason = interaction.fields.getTextInputValue('reason');
+              const { createTicket: ct } = await import('../services/ticket.js');
+              const result = await ct(
+                interaction.guild,
+                interaction.member,
+                panel.categoryId || null,
+                reason,
+                { staffRoleId: panel.staffRoleId, panelId, panelTitle: panel.panelTitle }
+              );
+
+              if (result.success) {
+                await interaction.editReply({
+                  embeds: [(await import('../utils/embeds.js')).successEmbed('Ticket Created', `Your ticket has been created in ${result.channel}!`)]
+                });
+              } else {
+                await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to create ticket.' });
+              }
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'modal',
+                customId: interaction.customId,
+                handler: 'ticket_panel_modal'
+              }, interactionTraceContext));
             }
             return;
           }
