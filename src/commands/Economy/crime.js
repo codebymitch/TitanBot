@@ -58,7 +58,7 @@ export default {
             }
 
             if (now < lastCrime + CRIME_COOLDOWN) {
-                const timeLeft = Math.ceil((lastCrime + CRIME_COOLDOWN - now) / (1000 * 60));
+                const timeLeft = Math.ceil((lastCrime + CRIME_COOLDOWN - now) / (1000 * 1));
                 throw createError(
                     "Crime cooldown active",
                     ErrorTypes.RATE_LIMIT,
