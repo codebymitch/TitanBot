@@ -40,7 +40,16 @@ export default {
                 const messageContent = welcomeConfig.welcomePing ? user.toString() : null;
 
                 const embedTitle = formatWelcomeMessage(
-                    welcomeConfig.welcomeEmbed?.title || '🎉 Welcome!',
+                    welcomeConfig.welcomeEmbed?.title || '🎨 Welcome to **The Spectrum World**!
+
+You have entered a color-coded dystopia where every district fights for power and survival.
+
+📜 Read the rules in #rules
+🎭 Pick your roles in #roles
+💬 Introduce yourself in #introductions
+❓ Need help? Ask a staff member.
+
+May your color guide you.',
                     formatData
                 );
                 const embedFooter = welcomeConfig.welcomeEmbed?.footer
