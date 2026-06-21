@@ -61,10 +61,15 @@ export async function getUserTicketCount(guildId, userId) {
   }
 }
 
-export async function createTicket(guild, member, categoryId, reason = 'No reason provided', priority = 'none') {
+export async function createTicket(guild, member, categoryId, reason = 'No reason provided', options = {}) {
   try {
     const config = await getGuildConfig(guild.client, guild.id);
     const ticketConfig = config.tickets || {};
+    
+    // Handle backwards compatibility: 5th param can be a string (priority) or object (options)
+    const actualOptions = typeof options === 'string' ? { priority: options } : (options || {});
+    const priority = actualOptions.priority || 'none';
+    const staffRoleIdFromOptions = actualOptions.staffRoleId || null;
     
     const maxTicketsPerUser = config.maxTicketsPerUser ?? 3;
     const currentTicketCount = await getUserTicketCount(guild.id, member.id);
@@ -125,8 +130,8 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
             PermissionFlagsBits.ReadMessageHistory,
           ],
         },
-        ...((panelStaffRoleId || config.ticketStaffRoleId) ? [{
-          id: panelStaffRoleId || config.ticketStaffRoleId,
+        ...((staffRoleIdFromOptions || config.ticketStaffRoleId) ? [{
+          id: staffRoleIdFromOptions || config.ticketStaffRoleId,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
@@ -180,7 +185,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       );
     }
     
-    const effectiveStaffRoleId = panelStaffRoleId || config.ticketStaffRoleId;
+    const effectiveStaffRoleId = staffRoleIdFromOptions || config.ticketStaffRoleId;
     const staffMention = effectiveStaffRoleId ? ` <@&${effectiveStaffRoleId}>` : '';
     const messageContent = `${member.toString()}${staffMention}`;
     
