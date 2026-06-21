@@ -138,7 +138,12 @@ const createTicketHandler = {
 
       await interaction.showModal(modal);
     } catch (error) {
-      logger.error('Error creating ticket modal:', error);
+      logger.error('Error creating ticket modal:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Could not open ticket creation form.' });
       }
@@ -177,7 +182,12 @@ const createTicketModalHandler = {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to create ticket.' });
       }
     } catch (error) {
-      logger.error('Error creating ticket:', error);
+      logger.error('Error creating ticket:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      });
       await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while creating your ticket.' });
     }
   }
@@ -219,7 +229,13 @@ const closeTicketHandler = {
 
       await interaction.showModal(modal);
     } catch (error) {
-      logger.error('Error closing ticket:', error);
+      logger.error('Error closing ticket:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId
+      });
 
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Could not open ticket close form.' });
@@ -264,7 +280,13 @@ const closeTicketModalHandler = {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to close ticket.' });
       }
     } catch (error) {
-      logger.error('Error submitting close ticket modal:', error);
+      logger.error('Error submitting close ticket modal:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while closing the ticket.' });
       } else if (interaction.deferred) {
@@ -307,7 +329,13 @@ const claimTicketHandler = {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to claim ticket.' });
       }
     } catch (error) {
-      logger.error('Error claiming ticket:', error);
+      logger.error('Error claiming ticket:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while claiming the ticket.' });
       } else if (interaction.deferred) {
@@ -356,7 +384,13 @@ const priorityTicketHandler = {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to update priority.' });
       }
     } catch (error) {
-      logger.error('Error updating ticket priority:', error);
+      logger.error('Error updating ticket priority:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while updating the priority.' });
       } else if (interaction.deferred) {
@@ -463,7 +497,13 @@ const pinTicketHandler = {
       });
 
     } catch (error) {
-      logger.error('Error pinning/unpinning ticket:', error);
+      logger.error('Error pinning/unpinning ticket:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Failed to pin/unpin the ticket.' });
       } else if (interaction.deferred) {
@@ -507,7 +547,13 @@ const unclaimTicketHandler = {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to unclaim ticket.' });
       }
     } catch (error) {
-      logger.error('Error unclaiming ticket:', error);
+      logger.error('Error unclaiming ticket:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while unclaiming the ticket.' });
       } else if (interaction.deferred) {
@@ -556,7 +602,13 @@ const reopenTicketHandler = {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to reopen ticket.' });
       }
     } catch (error) {
-      logger.error('Error reopening ticket:', error);
+      logger.error('Error reopening ticket:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while reopening the ticket.' });
       } else if (interaction.deferred) {
@@ -600,7 +652,13 @@ const deleteTicketHandler = {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to delete ticket.' });
       }
     } catch (error) {
-      logger.error('Error deleting ticket:', error);
+      logger.error('Error deleting ticket:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while deleting the ticket.' });
       } else if (interaction.deferred) {
@@ -660,7 +718,12 @@ const createPanelTicketHandler = {
       modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
       await interaction.showModal(modal);
     } catch (error) {
-      logger.error('Error creating panel ticket modal:', error);
+      logger.error('Error creating panel ticket modal:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      });
       if (!interaction.replied && !interaction.deferred) {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Could not open ticket creation form.' });
       }
@@ -711,7 +774,12 @@ const createPanelTicketModalHandler = {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to create ticket.' });
       }
     } catch (error) {
-      logger.error('Error creating panel ticket:', error);
+      logger.error('Error creating panel ticket:', {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      });
       await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while creating your ticket.' });
     }
   }
