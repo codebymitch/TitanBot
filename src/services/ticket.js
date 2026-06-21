@@ -156,10 +156,13 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     await saveTicketData(guild.id, channel.id, ticketData);
     
     const priorityInfo = PRIORITY_MAP[priority] || PRIORITY_MAP.none;
+    const embedTitle = actualOptions.embedTitle || `Ticket #${ticketNumber} - ${usernameOrTag(member)}`;
+    const embedDescription = actualOptions.embedDescription ||
+      `${member.toString()}, thanks for creating a ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`;
     
     const embed = createEmbed({
-      title: `Ticket #${ticketNumber}`,
-      description: `${member.toString()}, thanks for creating a ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`,
+      title: embedTitle,
+      description: embedDescription,
       color: priorityInfo.color,
       fields: [
         { name: 'Status', value: '🟢 Open', inline: true },
