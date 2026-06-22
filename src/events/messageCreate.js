@@ -55,10 +55,25 @@ export default {
   }
 };
 
+// Track cooldowns per channel to avoid sticky spam
+const stickyCooldowns = new Map();
+const STICKY_COOLDOWN_MS = 3000;
+
 async function handleSticky(message) {
   try {
     const sticky = await getSticky(message.guild.id, message.channel.id);
     if (!sticky) return;
+
+    // Skip if the message sent IS the sticky itself (prevent loops)
+    if (message.id === sticky.messageId) return;
+
+    // Cooldown check — only repost once every 3 seconds per channel
+    const cooldownKey = `${message.guild.id}_${message.channel.id}`;
+    const lastRepost = stickyCooldowns.get(cooldownKey) || 0;
+    const now = Date.now();
+
+    if (now - lastRepost < STICKY_COOLDOWN_MS) return;
+    stickyCooldowns.set(cooldownKey, now);
 
     // Delete the old sticky message
     if (sticky.messageId) {
