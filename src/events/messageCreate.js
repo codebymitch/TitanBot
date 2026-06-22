@@ -1,4 +1,4 @@
-﻿import { Events } from 'discord.js';
+import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -17,6 +17,8 @@ import {
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
+import { getSticky, saveSticky } from '../commands/utility/sticky.js';
+import { EmbedBuilder } from 'discord.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -39,90 +41,66 @@ export default {
       await handlePrefixCommand(message, client);
 
       await handleLeveling(message, client);
+
+      await handleSticky(message);
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
     }
   }
 };
 
+async function handleSticky(message) {
+  try {
+    const sticky = await getSticky(message.guild.id, message.channel.id);
+    if (!sticky) return;
+
+    // Delete the old sticky message
+    if (sticky.messageId) {
+      const oldMsg = await message.channel.messages.fetch(sticky.messageId).catch(() => null);
+      if (oldMsg) await oldMsg.delete().catch(() => {});
+    }
+
+    // Repost the sticky at the bottom
+    const embed = new EmbedBuilder()
+      .setTitle(sticky.title || '📌 Sticky Message')
+      .setDescription(sticky.message)
+      .setColor(parseInt(sticky.color || '0xF1C40F', 16))
+      .setFooter({ text: '📌 Sticky Message' })
+      .setTimestamp();
+
+    const newMsg = await message.channel.send({ embeds: [embed] });
+
+    // Update the stored message ID
+    await saveSticky(message.guild.id, message.channel.id, {
+      ...sticky,
+      messageId: newMsg.id,
+    });
+  } catch (error) {
+    logger.error('Error handling sticky message:', error);
+  }
+}
+
 async function handleFAQ(message) {
   const faqs = {
-    "How do I join team syne": "Create a ticket https://discord.com/channels/1382512078585200642/1396618369209340084",
-    "how do i make a ticket": "To join team syne click here https://discord.com/channels/1382512078585200642/1514857141125644429",
-    "what are the rules": "Please check the rules channel for our server rules! https://discord.com/channels/1382512078585200642/1382512079486845073",
+    "how do i get started": "Welcome! Check out our rules and grab your roles to get started!",
+    "how do i make a ticket": "Use the `/ticket` command to open a support ticket!",
+    "what are the rules": "Please check the rules channel for our server rules!",
     "how do i level up": "Send messages in the server to earn XP and level up!",
     "what commands are available": "Type `/` to see all available commands!",
-    "how do i get roles": "Head over to the roles channel and pick the ones you want! https://discord.com/channels/1382512078585200642/1514096776100053172",
+    "how do i get roles": "Head over to the roles channel and pick the ones you want!",
     "who made this bot": "This bot was built with TeamSyne — a powerful all-in-one Discord assistant!",
   };
 
-  const content = message.content;
+  const content = message.content.toLowerCase();
 
   for (const [keyword, reply] of Object.entries(faqs)) {
-    if (isFaqMatch(content, keyword)) {
+    if (content.includes(keyword)) {
       await message.reply(reply);
       return true;
     }
   }
 
   return false;
-}
-
-function normalizeText(text) {
-  return text
-    .toLowerCase()
-    .replace(/[^\u0000-\u007F]+/g, '')
-    .replace(/[^\n\w\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getLevenshteinDistance(a, b) {
-  const matrix = Array.from({ length: b.length + 1 }, () => []);
-  for (let i = 0; i <= b.length; i += 1) {
-    matrix[i][0] = i;
-  }
-  for (let j = 0; j <= a.length; j += 1) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= b.length; i += 1) {
-    for (let j = 1; j <= a.length; j += 1) {
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + (a[j - 1] === b[i - 1] ? 0 : 1),
-      );
-    }
-  }
-
-  return matrix[b.length][a.length];
-}
-
-function isFaqMatch(messageContent, keyword) {
-  const normalizedContent = normalizeText(messageContent);
-  const normalizedKeyword = normalizeText(keyword);
-
-  if (normalizedContent.includes(normalizedKeyword)) {
-    return true;
-  }
-
-  const messageWords = normalizedContent.split(' ').filter(Boolean);
-  const keywordWords = normalizedKeyword.split(' ').filter(Boolean);
-  if (messageWords.length > keywordWords.length + 2) {
-    return false;
-  }
-  let matchedWords = 0;
-
-  for (const keywordWord of keywordWords) {
-    const maxDistance = Math.max(1, Math.floor(keywordWord.length * 0.25));
-    const bestDistance = messageWords.reduce((best, word) => Math.min(best, getLevenshteinDistance(keywordWord, word)), Infinity);
-    if (bestDistance <= maxDistance) {
-      matchedWords += 1;
-    }
-  }
-
-  return matchedWords >= Math.max(2, keywordWords.length - 1);
 }
 
 async function handlePrefixCommand(message, client) {
