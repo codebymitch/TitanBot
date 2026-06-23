@@ -181,7 +181,7 @@ class TitanBot extends Client {
     // Parse JSON for most endpoints
     app.use(express.json({ limit: '16kb' }));
     
-    // Parse URL-encoded form data for form submissions
+    // Parse URL-encoded form data
     app.use(express.urlencoded({ limit: '16kb', extended: true }));
 
     const requestCounts = new Map();
@@ -205,6 +205,39 @@ class TitanBot extends Client {
       
       times.push(now);
       requestCounts.set(ip, times);
+      next();
+    });
+
+    // Middleware to parse multipart/form-data manually for PvP endpoint
+    app.post('/api/pvp-event', express.raw({ type: 'multipart/form-data', limit: '16kb' }), (req, res, next) => {
+      const contentType = req.headers['content-type'];
+      
+      // If it's multipart/form-data, parse it manually
+      if (contentType && contentType.includes('multipart/form-data')) {
+        const boundary = contentType.split('boundary=')[1];
+        if (boundary && req.body) {
+          const bodyStr = req.body.toString('utf-8');
+          const parts = bodyStr.split(`--${boundary}`);
+          const fields = {};
+          
+          for (const part of parts) {
+            if (part.includes('Content-Disposition')) {
+              const nameMatch = part.match(/name="([^"]+)"/);
+              const valueMatch = part.match(/\r\n\r\n([\s\S]*?)\r\n/);
+              
+              if (nameMatch && valueMatch) {
+                const name = nameMatch[1];
+                const value = valueMatch[1];
+                fields[name] = value;
+              }
+            }
+          }
+          
+          req.body = fields;
+          logger.warn(`[PVP] Parsed multipart form data: ${JSON.stringify(fields)}`);
+        }
+      }
+      
       next();
     });
 
