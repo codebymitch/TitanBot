@@ -10,7 +10,7 @@ const MAX_COMMANDS = 100;
 const COMMAND_COUNT_WARN_THRESHOLD = 90;
 
 // Public commands that should be visible to all users (not restricted to admin)
-const PUBLIC_COMMANDS = new Set(['fight', 'trade', 'balance']);
+const PUBLIC_COMMANDS = new Set(['fight', 'trade', 'balance', 'profile']);
 
 function getSubcommandInfo(commandData) {
     const subcommands = [];

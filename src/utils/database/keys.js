@@ -76,3 +76,11 @@ export function getPvpStatsKey(guildId, playerName) {
 export function getPvpRecentKey(guildId) {
     return `guild:${guildId}:pvp:recent`;
 }
+
+export function getOsrsLinksKey(guildId, userId) {
+    return `guild:${guildId}:osrs:links:${userId}`;
+}
+
+export function getOsrsLinksPrefix(guildId) {
+    return `guild:${guildId}:osrs:links:`;
+}

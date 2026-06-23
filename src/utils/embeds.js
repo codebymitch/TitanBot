@@ -85,7 +85,7 @@ function isImportantFooter(footerText) {
   }
 
   const normalized = footerText.toLowerCase();
-  return /\b(close|closes|closed|expire|expires|available in|page\s+\d+|dashboard closes|ticket id)\b/.test(normalized);
+  return /\b(close|closes|closed|expire|expires|available in|page\s+\d+|dashboard closes|ticket id|last updated)\b/.test(normalized);
 }
 
 const originalSetDescription = EmbedBuilder.prototype.setDescription;
