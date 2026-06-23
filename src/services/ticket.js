@@ -62,6 +62,8 @@ export async function getUserTicketCount(guildId, userId) {
 }
 
 export async function createTicket(guild, member, categoryId, reason = 'No reason provided', priority = 'none') {
+  let channel = null;
+  
   try {
     const config = await getGuildConfig(guild.client, guild.id);
     const ticketConfig = config.tickets || {};
@@ -76,24 +78,61 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       };
     }
     
-    let category = categoryId ? 
-      guild.channels.cache.get(categoryId) :
-      guild.channels.cache.find(c => 
+    logger.debug('Creating ticket:', {
+      guildId: guild.id,
+      userId: member.id,
+      configuredCategoryId: categoryId,
+      reason: reason.substring(0, 50)
+    });
+    
+    // Get or create the category
+    let category = null;
+    
+    if (categoryId) {
+      // Try to fetch the configured category
+      try {
+        category = guild.channels.cache.get(categoryId) || 
+                  await guild.channels.fetch(categoryId).catch(() => null);
+        
+        if (category && category.type !== ChannelType.GuildCategory) {
+          logger.warn(`Configured category ID ${categoryId} is not a category, creating new one`, {
+            guildId: guild.id
+          });
+          category = null;
+        }
+      } catch (err) {
+        logger.warn(`Failed to fetch configured category ${categoryId}: ${err.message}`, {
+          guildId: guild.id
+        });
+        category = null;
+      }
+    }
+    
+    // If no configured category or it doesn't exist, try to find or create default
+    if (!category) {
+      category = guild.channels.cache.find(c => 
         c.type === ChannelType.GuildCategory && 
         c.name.toLowerCase().includes('tickets')
       );
+      
+      if (!category) {
+        logger.info('Creating default Tickets category', { guildId: guild.id });
+        category = await guild.channels.create({
+          name: 'Tickets',
+          type: ChannelType.GuildCategory,
+          permissionOverwrites: [
+            {
+              id: guild.id,
+              deny: [PermissionFlagsBits.ViewChannel],
+            },
+          ],
+        });
+        logger.info('Default Tickets category created', { guildId: guild.id, categoryId: category.id });
+      }
+    }
     
-    if (!category && !categoryId) {
-      category = await guild.channels.create({
-        name: 'Tickets',
-        type: ChannelType.GuildCategory,
-        permissionOverwrites: [
-          {
-            id: guild.id,
-            deny: [PermissionFlagsBits.ViewChannel],
-          },
-        ],
-      });
+    if (!category) {
+      throw new Error('Could not create or find a category for the ticket');
     }
     
     const ticketNumber = await getNextTicketNumber(guild.id);
@@ -107,10 +146,18 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       }
     }
     
+    logger.info('Creating ticket channel', {
+      guildId: guild.id,
+      userId: member.id,
+      channelName,
+      categoryId: category.id,
+      categoryName: category.name
+    });
+    
     const channel = await guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
-      parent: category?.id,
+      parent: category.id,
       permissionOverwrites: [
         {
           id: guild.id,
@@ -137,6 +184,13 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       ],
     });
     
+    logger.info('Ticket channel created successfully', {
+      guildId: guild.id,
+      channelId: channel.id,
+      channelName: channel.name,
+      parentId: channel.parentId
+    });
+    
     const ticketData = {
       id: channel.id,
       userId: member.id,
@@ -149,6 +203,11 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     };
     
     await saveTicketData(guild.id, channel.id, ticketData);
+    logger.info('Ticket data saved to database', {
+      guildId: guild.id,
+      channelId: channel.id,
+      userId: member.id
+    });
     
     const priorityInfo = PRIORITY_MAP[priority] || PRIORITY_MAP.none;
     
@@ -209,6 +268,13 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       }
     });
     
+    logger.info('Ticket created successfully', {
+      guildId: guild.id,
+      channelId: channel.id,
+      userId: member.id,
+      ticketNumber
+    });
+    
     return { success: true, channel, ticketData };
     
   } catch (error) {
@@ -219,12 +285,16 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       userMessage: 'Failed to create ticket. Please try again in a moment.',
       context: { guildId: guild?.id, userId: member?.id }
     });
+    
     logger.error('Error creating ticket:', {
       guildId: guild?.id,
       userId: member?.id,
+      channelId: channel?.id,
       error: typedError.message,
-      errorCode: typedError.context?.errorCode
+      errorCode: typedError.context?.errorCode,
+      stack: error.stack
     });
+    
     return { 
       success: false, 
       error: typedError.userMessage || typedError.message,
@@ -274,7 +344,7 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
         if (ticketCreator) {
           const dmEmbed = createEmbed({
             title: '🎫 Your Ticket Has Been Closed',
-            description: `Your ticket **${channel.name}** has been closed.\n\n**Reason:** ${reason}\n**Closed by:** ${closer.tag}\n**Closed at:** <t:${Math.floor(Date.now() / 1000)}:F>\n\nThank you for using our support system! If you have any further questions, feel free to create a new ticket.`,
+            description: `Your ticket **${channel.name}** has been closed.\n\n**Reason:** ${reason}\n**Closed by:** ${closer.tag}\n**Closed at:** <t:${Math.floor(Date.now() / 1000)}:F>\n\nThank you for using our support system!`,
             color: '#e74c3c',
             footer: { text: `Ticket ID: ${ticketData.id}` }
           });
@@ -367,7 +437,7 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
       
       await ticketMessage.edit({ 
         embeds: [updatedEmbed],
-components: []
+        components: []
       });
     }
     
