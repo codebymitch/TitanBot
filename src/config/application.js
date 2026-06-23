@@ -63,11 +63,19 @@ const appConfig = {
     cors: {
       origin: process.env.CORS_ORIGIN?.split(",") || "*",
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
     },
     rateLimit: {
       windowMs: 15 * 60 * 1000,
       max: 100,
+    },
+    pvpEvent: {
+      token: process.env.PVP_EVENT_API_TOKEN || process.env.PVP_WEBHOOK_TOKEN || null,
+      defaultGuildId: process.env.PVP_EVENT_GUILD_ID || process.env.GUILD_ID || null,
+      rateLimit: {
+        windowMs: 60 * 1000,
+        max: 30,
+      },
     },
   },
 

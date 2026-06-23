@@ -2,6 +2,7 @@
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import cron from 'node-cron';
 
 import config from './config/application.js';
@@ -12,6 +13,8 @@ import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
+import { createPvpEventHandler } from './api/pvpEventRoute.js';
+import { recordPvpKill } from './utils/database/pvp.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/schemaVersion.js';
 
@@ -154,6 +157,7 @@ class TitanBot extends Client {
     const maxPortRetryAttempts = Number(process.env.PORT_RETRY_ATTEMPTS || 5);
     const host = process.env.WEB_HOST || '0.0.0.0';
     const corsOrigin = this.config.api?.cors?.origin || '*';
+    const allowedHeaders = this.config.api?.cors?.allowedHeaders || ['Content-Type', 'Authorization'];
     
     app.use((req, res, next) => {
       const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
@@ -163,7 +167,7 @@ class TitanBot extends Client {
         res.header('Access-Control-Allow-Origin', origin || '*');
       }
       res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.header('Access-Control-Allow-Headers', allowedHeaders.join(', '));
       
       if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
@@ -194,6 +198,30 @@ class TitanBot extends Client {
       requestCounts.set(ip, times);
       next();
     });
+
+    app.post(
+      '/api/pvp-event',
+      express.json({ limit: '16kb' }),
+      rateLimit({
+        windowMs: this.config.api?.pvpEvent?.rateLimit?.windowMs || 60_000,
+        limit: this.config.api?.pvpEvent?.rateLimit?.max || 30,
+        standardHeaders: true,
+        legacyHeaders: false,
+        handler: (req, res, _next, options) => {
+          logger.warn('[PVP] PvP webhook rate limit exceeded', {
+            event: 'api.pvp_event.rate_limited',
+            ip: req.ip ?? 'unknown',
+          });
+          return res.status(options.statusCode).json({ error: 'Too many requests' });
+        },
+      }),
+      createPvpEventHandler({
+        recordKill: recordPvpKill,
+        logger,
+        token: this.config.api?.pvpEvent?.token,
+        defaultGuildId: this.config.api?.pvpEvent?.defaultGuildId,
+      }),
+    );
 
     app.get('/health', (req, res) => {
       const dbStatus = this.db?.getStatus?.() || { isDegraded: 'unknown' };
