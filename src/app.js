@@ -205,6 +205,16 @@ class TitanBot extends Client {
       next();
     });
 
+    // Debug logging middleware for PvP endpoint
+    app.use('/api/pvp-event', (req, res, next) => {
+      logger.warn(`[PVP] Received incoming request to /api/pvp-event`);
+      logger.warn(`[PVP] Method: ${req.method}`);
+      logger.warn(`[PVP] Body (before parsing): ${JSON.stringify(req.body)}`);
+      logger.warn(`[PVP] Content-Type: ${req.headers['content-type']}`);
+      logger.warn(`[PVP] Raw body size: ${req.get('content-length')} bytes`);
+      next();
+    });
+
     app.post(
       '/api/pvp-event',
       rateLimit({
