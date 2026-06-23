@@ -57,45 +57,38 @@ export default {
         const wallet = typeof userData.wallet === 'number' ? userData.wallet : 0;
         const bank = typeof userData.bank === 'number' ? userData.bank : 0;
 
-            const embed = createEmbed({
-                title: `${MONEY_EMOJI} ${targetUser.username}'s Balance`,
-                description: `Here is the current financial status for ${targetUser.username}.`,
-            })
-                .addFields(
-                    {
-                        name: "💵 Cash",
-                        value: `${MONEY_EMOJI} ${formatCurrency(wallet, { short: true, noSymbol: true })} gp`,
-                        inline: true,
-                    },
-                    {
-                        name: "🏦 Bank",
-                        value: `${MONEY_EMOJI} ${formatCurrency(bank, { short: true, noSymbol: true })} gp / ${formatCurrency(maxBank, { short: true, noSymbol: true })} gp`,
-                        inline: true,
-                    },
-                    {
-                        name: "💰 Total",
-                        value: `${MONEY_EMOJI} ${formatCurrency(wallet + bank, { short: true, noSymbol: true })} gp`,
-                        inline: true,
-                    }
-                )
-                .setFooter({
-                    text: `Requested by ${interaction.user.tag}`,
-                    iconURL: interaction.user.displayAvatarURL(),
-                });
+        // Only show Total (wallet + bank) as requested
+        const total = wallet + bank;
 
-            logger.info(`[ECONOMY] Balance retrieved`, { userId: targetUser.id, wallet, bank });
+        const embed = createEmbed({
+            title: `${MONEY_EMOJI} ${targetUser.username}'s Balance`,
+            description: `Here is the current financial status for ${targetUser.username}.`,
+        })
+            .addFields(
+                {
+                    name: "💰 Total",
+                    value: `${MONEY_EMOJI} ${formatCurrency(total, { short: true, noSymbol: true })} gp`,
+                    inline: true,
+                }
+            )
+            .setFooter({
+                text: `Requested by ${interaction.user.tag}`,
+                iconURL: interaction.user.displayAvatarURL(),
+            });
 
-            // Clear any thumbnail/image and log the embed JSON for debugging
-            try {
-                const json = embed.toJSON ? embed.toJSON() : {};
-                delete json.thumbnail;
-                delete json.image;
-                const cleaned = new EmbedBuilder(json);
-                logger.debug('Sending embed (balance)', cleaned.toJSON());
-                await InteractionHelper.safeEditReply(interaction, { embeds: [cleaned] });
-            } catch (err) {
-                logger.error('Failed to send cleaned embed for balance', err);
-                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-            }
+        logger.info(`[ECONOMY] Balance retrieved`, { userId: targetUser.id, wallet, bank, total });
+
+        // Clear any thumbnail/image and log the embed JSON for debugging
+        try {
+            const json = embed.toJSON ? embed.toJSON() : {};
+            delete json.thumbnail;
+            delete json.image;
+            const cleaned = new EmbedBuilder(json);
+            logger.debug('Sending embed (balance)', cleaned.toJSON());
+            await InteractionHelper.safeEditReply(interaction, { embeds: [cleaned] });
+        } catch (err) {
+            logger.error('Failed to send cleaned embed for balance', err);
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+        }
     }, { command: 'balance' })
 };
