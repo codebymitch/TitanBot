@@ -1,4 +1,4 @@
-import { Events } from 'discord.js';
+﻿import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -29,12 +29,6 @@ export default {
     try {
       if (!message.guild) return;
 
-      // Handle sticky BEFORE bot check so non-bot messages trigger repost
-      // But skip if the message author is the bot itself to prevent loops
-      if (!message.author.bot) {
-        await handleSticky(message);
-      }
-
       if (message.author.bot) return;
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
@@ -49,6 +43,8 @@ export default {
       await handlePrefixCommand(message, client);
 
       await handleLeveling(message, client);
+
+      await handleSticky(message);
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
     }
