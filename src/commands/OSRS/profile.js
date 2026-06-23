@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getEconomyData } from '../../utils/economy.js';
 import { getPvpStats, getRecentPvpEvents } from '../../utils/database/pvp.js';
-import { getOsrsLinksKey, getOsrsLinksPrefix } from '../../utils/database/keys.js';
+import { getOsrsLinkKey, getOsrsLinksPrefix } from '../../utils/database/keys.js';
 import {
     normalizeLinkedOsrsUsernames,
     formatProfileCurrency,
@@ -75,7 +75,7 @@ export default {
             );
         }
 
-        const rawLinks = await client.db.get(getOsrsLinksKey(guildId, targetUser.id), []);
+        const rawLinks = await client.db.get(getOsrsLinkKey(guildId, targetUser.id), []);
         const linkedUsernames = normalizeLinkedOsrsUsernames(rawLinks);
         const economyData = await getEconomyData(client, guildId, targetUser.id);
         const recentEvents = await getRecentPvpEvents(guildId);
