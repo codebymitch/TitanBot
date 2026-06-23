@@ -35,6 +35,7 @@ export default {
 
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
+        await handleSticky(message);
         return;
       }
 
