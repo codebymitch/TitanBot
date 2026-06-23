@@ -26,31 +26,33 @@ const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
+    if (!message.guild) return;
+    if (message.author.bot) return;
+
+    logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
+
+    let stickyReposted = false;
+
     try {
-      if (!message.guild) return;
-
-      if (message.author.bot) return;
-
-      logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
-
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
-        await handleSticky(message);
         return;
       }
 
       await handleFAQ(message);
-
       await handlePrefixCommand(message, client);
-
       await handleLeveling(message, client);
-
-      const stickyReposted = await handleSticky(message);
-      if (stickyReposted) {
-        logger.info(`Sticky message reposted in ${message.channel.id} after message ${message.id}`);
-      }
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
+    } finally {
+      try {
+        stickyReposted = await handleSticky(message);
+        if (stickyReposted) {
+          logger.info(`Sticky message reposted in ${message.channel.id} after message ${message.id}`);
+        }
+      } catch (stickyError) {
+        logger.error('Error reposting sticky message in finally block:', stickyError);
+      }
     }
   }
 };
@@ -73,7 +75,7 @@ async function handleSticky(message) {
       return false;
     }
 
-    // Cooldown check — only repost once every 3 seconds per channel
+    // Cooldown check — only repost once every few seconds per channel
     const cooldownKey = `${message.guild.id}_${message.channel.id}`;
     const lastRepost = stickyCooldowns.get(cooldownKey) || 0;
     const now = Date.now();
@@ -84,18 +86,27 @@ async function handleSticky(message) {
     }
     stickyCooldowns.set(cooldownKey, now);
 
-    // Permissions check
-    const botMember = await message.guild.members.fetch(message.client.user.id).catch(() => null);
-    const channelPerms = message.channel.permissionsFor(botMember);
-    if (!channelPerms || !channelPerms.has([PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageMessages])) {
-      logger.warn(`Missing sticky permissions in channel ${message.channel.id}. CanSend: ${channelPerms?.has(PermissionsBitField.Flags.SendMessages)}, CanManage: ${channelPerms?.has(PermissionsBitField.Flags.ManageMessages)}`);
+    const channelPerms = message.channel.permissionsFor(message.guild.members.me || message.client.user);
+    if (!channelPerms || !channelPerms.has(PermissionsBitField.Flags.SendMessages)) {
+      logger.warn(`Missing send permission for sticky in channel ${message.channel.id}.`);
       return false;
     }
 
-    // Delete the old sticky message
+    let oldMsgDeleted = false;
     if (sticky.messageId) {
-      const oldMsg = await message.channel.messages.fetch(sticky.messageId).catch(() => null);
-      if (oldMsg) await oldMsg.delete().catch(() => {});
+      const oldMsg = await message.channel.messages.fetch(sticky.messageId, { cache: false, force: true }).catch(() => null);
+      if (oldMsg) {
+        if (oldMsg.deletable) {
+          await oldMsg.delete().catch(error => {
+            logger.warn(`Failed to delete old sticky message ${sticky.messageId} in ${message.channel.id}:`, error);
+          });
+          oldMsgDeleted = true;
+        } else {
+          logger.warn(`Old sticky message ${sticky.messageId} in ${message.channel.id} is not deletable.`);
+        }
+      } else {
+        logger.debug(`Old sticky message ${sticky.messageId} not found in ${message.channel.id}.`);
+      }
     }
 
     // Repost the sticky at the bottom
