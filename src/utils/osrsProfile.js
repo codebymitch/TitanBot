@@ -1,6 +1,6 @@
 const RSN_INDICATORS = ['🟢', '🔹', '🔸', '⭐', '⚔️', '🛡️'];
 
-function normalizeUsername(value) {
+export function normalizeUsername(value) {
     if (typeof value !== 'string') {
         return null;
     }
@@ -151,6 +151,7 @@ function formatStreakLabel(streakType, streakCount) {
 }
 
 function resolveStakeAmount(event) {
+    // PvP events can come from persisted fights or webhook payloads that used different stake field names.
     const candidateKeys = ['amount', 'stake', 'wager', 'value'];
 
     for (const key of candidateKeys) {

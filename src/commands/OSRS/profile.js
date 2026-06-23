@@ -29,6 +29,7 @@ async function getMemberForProfile(interaction, targetUser) {
 
 async function getAllLinkedRsnMappings(client, guildId) {
     if (!client?.db || typeof client.db.list !== 'function' || typeof client.db.get !== 'function') {
+        logger.warn('[OSRS] Profile lookup unavailable: database list/get methods are missing', { guildId });
         return {};
     }
 
