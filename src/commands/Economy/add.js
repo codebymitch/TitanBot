@@ -37,6 +37,13 @@ export default {
       throw createError('Unauthorized', ErrorTypes.AUTH, 'You do not have permission to use this command.');
     }
 
+    // Prevent mutating operations when the database is degraded/unavailable
+    if (!client.db || typeof client.db.isAvailable !== 'function' || !client.db.isAvailable()) {
+      await InteractionHelper.safeDefer(interaction);
+      await InteractionHelper.safeEditReply(interaction, { embeds: [errorEmbed('Database is degraded — write operations are disabled. Please fix PostgreSQL or enable a persistent DB and restart the bot.')] });
+      return;
+    }
+
     const deferred = await InteractionHelper.safeDefer(interaction);
     if (!deferred) return;
 

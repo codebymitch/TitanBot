@@ -19,6 +19,12 @@ export default {
     const deferred = await InteractionHelper.safeDefer(interaction);
     if (!deferred) return;
 
+    // Prevent mutating operations when the database is degraded/unavailable
+    if (!client.db || typeof client.db.isAvailable !== 'function' || !client.db.isAvailable()) {
+      await InteractionHelper.safeEditReply(interaction, { embeds: [errorEmbed('Database is degraded — write operations are disabled. Please fix PostgreSQL or enable a persistent DB and restart the bot.')] });
+      return;
+    }
+
     const target = interaction.options.getUser('to', true);
     const amountStr = interaction.options.getString('amount', true);
     const guildId = interaction.guildId;
