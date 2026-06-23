@@ -82,7 +82,7 @@ export function createPvpEventHandler({
   return async function handlePvpEventWebhook(req, res) {
     const ip = req.ip ?? 'unknown';
 
-    // Log incoming payload for debugging (using info level so it shows)
+    // Log incoming payload for debugging
     logger.info(`[PVP] Webhook received payload:`, JSON.stringify(req.body));
     logger.info(`[PVP] Webhook body keys:`, Object.keys(req.body || {}));
 
@@ -93,32 +93,65 @@ export function createPvpEventHandler({
       if (!pvpEventTokensMatch(token, providedToken)) {
         logger.warn('[PVP] Rejected PvP webhook request due to failed authentication', {
           event: 'api.pvp_event.auth_failed',
-          guildId: normalizePvpEventGuildId(req.body?.guildId) ?? normalizePvpEventGuildId(defaultGuildId),
           ip,
         });
         return res.status(401).json({ error: 'Unauthorized' });
       }
     }
 
-    // Support multiple payload formats (Dink might use different field names)
-    const killer = normalizePvpEventName(
-      req.body?.killer || 
-      req.body?.attacker || 
-      req.body?.opponent ||
-      req.body?.playerOne
-    );
-    const victim = normalizePvpEventName(
-      req.body?.victim || 
-      req.body?.defender || 
-      req.body?.player ||
-      req.body?.playerTwo
-    );
-    const guildId = normalizePvpEventGuildId(
-      req.body?.guildId || 
-      req.body?.serverId ||
-      req.body?.clanId ||
-      defaultGuildId
-    );
+    let killer = null;
+    let victim = null;
+    let guildId = null;
+
+    // Handle Dink plugin format (payload_json)
+    if (req.body?.payload_json) {
+      try {
+        const payload = JSON.parse(req.body.payload_json);
+        
+        // Dink sends: type, playerName (victim), extra.pker (killer), extra.isPvp
+        if (payload.type === 'DEATH' && payload.extra?.isPvp) {
+          victim = normalizePvpEventName(payload.playerName);
+          killer = normalizePvpEventName(payload.extra.pker || payload.extra.killerName);
+          
+          // Try to get guild ID from various sources
+          guildId = normalizePvpEventGuildId(
+            payload.guildId || 
+            payload.serverId ||
+            payload.clanId ||
+            defaultGuildId
+          );
+        }
+        
+        logger.info(`[PVP] Parsed Dink payload: killer=${killer}, victim=${victim}, guildId=${guildId}`);
+      } catch (error) {
+        logger.warn('[PVP] Failed to parse payload_json:', error.message);
+      }
+    }
+
+    // Fallback: Support direct field names if not Dink format
+    if (!killer || !victim) {
+      killer = normalizePvpEventName(
+        req.body?.killer || 
+        req.body?.attacker || 
+        req.body?.opponent ||
+        req.body?.playerOne
+      );
+      victim = normalizePvpEventName(
+        req.body?.victim || 
+        req.body?.defender || 
+        req.body?.player ||
+        req.body?.playerTwo
+      );
+    }
+
+    if (!guildId) {
+      guildId = normalizePvpEventGuildId(
+        req.body?.guildId || 
+        req.body?.serverId ||
+        req.body?.clanId ||
+        defaultGuildId
+      );
+    }
 
     if (!killer || !victim || !guildId) {
       logger.warn('[PVP] Rejected PvP webhook request due to invalid payload', {
