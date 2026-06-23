@@ -239,7 +239,7 @@ export function createFightDisputeEmbed(fight, ticketChannelId) {
 export function createFightDisputeTicketEmbed(fight) {
     return createEmbed({
         title: `⚠️ Fight Dispute — ${fight.challengerOsrsUsername || 'Challenger'} vs ${fight.opponentOsrsUsername || 'Opponent'}`,
-        description: 'Both fighters submitted conflicting results. Staff will review the dispute and resolve the escrowed pot.',
+        description: 'Both fighters submitted conflicting results. Staff will review the dispute and decide how to distribute the escrowed funds.',
         color: 'error',
         fields: [
             { name: 'Fight ID', value: fight.id, inline: true },

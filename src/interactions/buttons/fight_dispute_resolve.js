@@ -63,7 +63,12 @@ export default {
 
             await interaction.message.edit({
                 components: [createFightDisputeResolutionRow(fight.id, true)],
-            }).catch(() => {});
+            }).catch((error) => {
+                logger.warn('[FIGHT_DISPUTE_RESOLVE] Failed to disable dispute resolution buttons', {
+                    fightId: fight.id,
+                    error: error.message,
+                });
+            });
 
             if (interaction.channel) {
                 await interaction.channel.send({
