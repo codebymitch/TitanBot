@@ -145,6 +145,7 @@ const db = new DatabaseWrapper();
 
 async function initializeDatabase() {
     if (!db.initialized) await db.initialize();
+    return db;
 }
 
 async function getFromDb(key, defaultValue = null) {
