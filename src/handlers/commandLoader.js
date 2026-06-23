@@ -12,6 +12,7 @@ const COMMAND_COUNT_WARN_THRESHOLD = 90;
 // Public commands that should be visible to all users (not restricted to admin)
 const PUBLIC_COMMANDS = new Set([
     'fight',
+    'fight-sim',
     'accept-fight',
     'decline-fight',
     'fight-status',
@@ -21,6 +22,7 @@ const PUBLIC_COMMANDS = new Set([
     'unlink-osrs',
     'trade',
     'balance',
+    'profile',
 ]);
 
 function getSubcommandInfo(commandData) {

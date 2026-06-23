@@ -92,3 +92,11 @@ export function getFightCounterKey(guildId) {
 export function getFightKey(guildId, fightId) {
     return `guild:${guildId}:fights:${fightId}`;
 }
+
+export function getOsrsLinksKey(guildId, userId) {
+    return getOsrsLinkKey(guildId, userId);
+}
+
+export function getOsrsLinksPrefix(guildId) {
+    return `guild:${guildId}:osrs:link:`;
+}

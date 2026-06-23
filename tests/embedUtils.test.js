@@ -71,3 +71,15 @@ test('setFooter should ignore unimportant footer text', () => {
   assert.equal(data.footer, undefined);
   assert.equal(data.description, 'Base description.');
 });
+
+test('setFooter should allow last updated footer text for profile cards', () => {
+  const embed = createEmbed({
+    title: 'Profile',
+    description: 'OSRS profile card.',
+  });
+
+  embed.setFooter({ text: 'Last updated: 2026-06-23 12:45 UTC' });
+  const data = embed.toJSON();
+
+  assert.equal(data.footer?.text, 'Last updated: 2026-06-23 12:45 UTC');
+});
