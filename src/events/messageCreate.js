@@ -59,15 +59,17 @@ export default {
 
 // Track cooldowns per channel to avoid sticky spam
 const stickyCooldowns = new Map();
-const STICKY_COOLDOWN_MS = 1;
+const STICKY_COOLDOWN_MS = 2 * 1000; // 2 seconds cooldown per channel
 
 async function handleSticky(message) {
   try {
+    logger.debug(`handleSticky triggered for channel ${message.channel.id}, message ${message.id}`);
     const sticky = await getSticky(message.guild.id, message.channel.id);
     if (!sticky) {
       logger.debug(`No sticky configured for channel ${message.channel.id}`);
       return false;
     }
+    logger.debug(`Sticky config found for channel ${message.channel.id}: ${JSON.stringify({ messageId: sticky.messageId, title: sticky.title, channelId: sticky.channelId })}`);
 
     // Skip if the message sent IS the sticky itself (prevent loops)
     if (message.id === sticky.messageId) {
