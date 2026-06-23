@@ -11,24 +11,19 @@ const MONEY_EMOJI = '\u{1F4B0}';
 export default {
     data: new SlashCommandBuilder()
         .setName('balance')
-        .setDescription("Check your or someone else's balance")
-        .addUserOption(option =>
-            option
-                .setName('user')
-                .setDescription('User to check balance for')
-                .setRequired(false)
-        ),
+        .setDescription("Check your balance")
+        // Note: Removed user option - users can only check their own balance
+        ,
 
     execute: withErrorHandling(async (interaction, config, client) => {
         const deferred = await InteractionHelper.safeDefer(interaction);
         if (!deferred) return;
 
-        const userOption = interaction.options.getUser("user");
-        const targetUser = userOption || interaction.user;
+        // Always check the balance of the user who ran the command (no option to check others)
+        const targetUser = interaction.user;
         const guildId = interaction.guildId;
 
-        logger.info(`[ECONOMY] Balance check - userOption: ${userOption?.id || 'null'}, targetUser: ${targetUser.id}, guildId: ${guildId}, isPrefix: ${!!interaction._commandStartTime}`);
-
+        logger.info(`[ECONOMY] Balance check - userId: ${targetUser.id}, guildId: ${guildId}`);
         logger.debug(`[ECONOMY] Balance check for ${targetUser.id}`, { userId: targetUser.id, guildId });
 
         if (targetUser.bot) {
@@ -61,8 +56,8 @@ export default {
         const total = wallet + bank;
 
         const embed = createEmbed({
-            title: `${MONEY_EMOJI} ${targetUser.username}'s Balance`,
-            description: `Here is the current financial status for ${targetUser.username}.`,
+            title: `${MONEY_EMOJI} Your Balance`,
+            description: `Here is your current financial status.`,
         })
             .addFields(
                 {
@@ -72,7 +67,7 @@ export default {
                 }
             )
             .setFooter({
-                text: `Requested by ${interaction.user.tag}`,
+                text: `Your balance`,
                 iconURL: interaction.user.displayAvatarURL(),
             });
 
