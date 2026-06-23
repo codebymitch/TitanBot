@@ -117,7 +117,7 @@ const createTicketHandler = {
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
       
       if (currentTicketCount >= maxTicketsPerUser) {
-        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets before creating a new one.\n\n**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}` });
+        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets first.` });
       }
       
       const modal = new ModalBuilder()
@@ -165,12 +165,10 @@ const createTicketModalHandler = {
         reason
       );
       
-      if (result.success) {
+      if (result.success && result.channel) {
         await interaction.editReply({
-          embeds: [successEmbed(
-            'Ticket Created',
-            `Your ticket has been created in ${result.channel}!`
-          )]
+          content: `✅ Your ticket has been created! Jump to it: ${result.channel}`,
+          embeds: []
         });
       } else {
         await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to create ticket.' });
