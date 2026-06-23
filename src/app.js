@@ -12,6 +12,8 @@ import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
+import { createPvpEventHandler } from './api/pvpEventRoute.js';
+import { recordPvpKill } from './utils/database/pvp.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/schemaVersion.js';
 
@@ -154,6 +156,7 @@ class TitanBot extends Client {
     const maxPortRetryAttempts = Number(process.env.PORT_RETRY_ATTEMPTS || 5);
     const host = process.env.WEB_HOST || '0.0.0.0';
     const corsOrigin = this.config.api?.cors?.origin || '*';
+    const allowedHeaders = this.config.api?.cors?.allowedHeaders || ['Content-Type', 'Authorization'];
     
     app.use((req, res, next) => {
       const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
@@ -163,13 +166,15 @@ class TitanBot extends Client {
         res.header('Access-Control-Allow-Origin', origin || '*');
       }
       res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.header('Access-Control-Allow-Headers', allowedHeaders.join(', '));
       
       if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
       }
       next();
     });
+
+    app.use(express.json({ limit: '16kb' }));
 
     const requestCounts = new Map();
     const windowMs = 60000; 
@@ -194,6 +199,13 @@ class TitanBot extends Client {
       requestCounts.set(ip, times);
       next();
     });
+
+    app.post('/api/pvp-event', createPvpEventHandler({
+      recordKill: recordPvpKill,
+      logger,
+      token: this.config.api?.pvpEvent?.token,
+      defaultGuildId: this.config.api?.pvpEvent?.defaultGuildId || this.config.bot?.guildId || null,
+    }));
 
     app.get('/health', (req, res) => {
       const dbStatus = this.db?.getStatus?.() || { isDegraded: 'unknown' };

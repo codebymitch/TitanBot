@@ -68,6 +68,7 @@ export async function recordPvpKill(guildId, killerName, victimName) {
         logger.info(`[PVP] Recorded kill: ${killerName} defeated ${victimName} in guild ${guildId}`);
     } catch (error) {
         logger.error(`[PVP] Error recording PvP kill in guild ${guildId}:`, error);
+        throw error;
     }
 }
 
