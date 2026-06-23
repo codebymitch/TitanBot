@@ -3,7 +3,6 @@ import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
-import multer from 'multer';
 import cron from 'node-cron';
 
 import config from './config/application.js';
@@ -181,6 +180,9 @@ class TitanBot extends Client {
 
     // Parse JSON for most endpoints
     app.use(express.json({ limit: '16kb' }));
+    
+    // Parse URL-encoded form data for form submissions
+    app.use(express.urlencoded({ limit: '16kb', extended: true }));
 
     const requestCounts = new Map();
     const windowMs = 60000; 
@@ -206,24 +208,18 @@ class TitanBot extends Client {
       next();
     });
 
-    // Setup multer for multipart/form-data (Dink plugin sends this way)
-    const upload = multer({ 
-      storage: multer.memoryStorage(),
-      limits: { fileSize: 16 * 1024 * 1024 } // 16MB limit
-    });
-
     // Debug logging middleware for PvP endpoint
     app.use('/api/pvp-event', (req, res, next) => {
       logger.warn(`[PVP] Received incoming request to /api/pvp-event`);
       logger.warn(`[PVP] Method: ${req.method}`);
       logger.warn(`[PVP] Content-Type: ${req.headers['content-type']}`);
+      logger.warn(`[PVP] Body: ${JSON.stringify(req.body)}`);
       logger.warn(`[PVP] Raw body size: ${req.get('content-length')} bytes`);
       next();
     });
 
     app.post(
       '/api/pvp-event',
-      upload.none(), // Parse multipart/form-data with no files
       rateLimit({
         windowMs: this.config.api?.pvpEvent?.rateLimit?.windowMs || 60_000,
         limit: this.config.api?.pvpEvent?.rateLimit?.max || 30,
