@@ -95,8 +95,19 @@ export async function handleFightChallenge(client, guildId, challengerId, oppone
     }
 
     const existingFight = await findOpenFightBetween(client, guildId, challengerId, opponentId);
-    if (existingFight && !isFightExpired(existingFight)) {
-        throw new Error('There is already a pending or active fight between these two members.');
+    if (existingFight) {
+        if (isFightExpired(existingFight)) {
+            if (existingFight.status === FIGHT_STATUSES.ACTIVE && existingFight.reported_winner) {
+                await payoutFightWinner(client, existingFight.id, existingFight.reported_winner, {
+                    source: 'report_timeout',
+                    reported_winner: existingFight.reported_winner,
+                });
+            } else {
+                await refundFight(client, existingFight.id);
+            }
+        } else {
+            throw new Error('There is already a pending or active fight between these two members.');
+        }
     }
 
     if ((challengerWallet?.wallet || 0) < amount) {
