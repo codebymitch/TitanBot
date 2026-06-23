@@ -177,9 +177,6 @@ class TitanBot extends Client {
     const requestCounts = new Map();
     const windowMs = 60000; 
     const maxRequests = this.config.api?.rateLimit?.max || 100;
-    const pvpEventRequestCounts = new Map();
-    const pvpEventWindowMs = 60000;
-    const pvpEventMaxRequests = 30;
     
     app.use((req, res, next) => {
       const ip = req.ip;
@@ -201,33 +198,9 @@ class TitanBot extends Client {
       next();
     });
 
-    const pvpEventRateLimit = (req, res, next) => {
-      const ip = req.ip;
-      const now = Date.now();
-      const windowStart = now - pvpEventWindowMs;
-
-      if (!pvpEventRequestCounts.has(ip)) {
-        pvpEventRequestCounts.set(ip, []);
-      }
-
-      const times = pvpEventRequestCounts.get(ip).filter((time) => time > windowStart);
-      if (times.length >= pvpEventMaxRequests) {
-        logger.warn('[PVP] PvP webhook rate limit exceeded', {
-          event: 'api.pvp_event.rate_limited',
-          ip,
-        });
-        return res.status(429).json({ error: 'Too many requests' });
-      }
-
-      times.push(now);
-      pvpEventRequestCounts.set(ip, times);
-      next();
-    };
-
     app.post(
       '/api/pvp-event',
       express.json({ limit: '16kb' }),
-      pvpEventRateLimit,
       createPvpEventHandler({
         recordKill: recordPvpKill,
         logger,

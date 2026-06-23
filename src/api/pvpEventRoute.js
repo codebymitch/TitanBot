@@ -74,19 +74,43 @@ export function createPvpEventHandler({
   logger,
   token,
   defaultGuildId = null,
+  rateLimitWindowMs = 60_000,
+  maxRequestsPerWindow = 30,
 } = {}) {
   if (typeof recordKill !== 'function') {
     throw new TypeError('recordKill must be a function');
   }
 
+  const requestCounts = new Map();
+
   return async function handlePvpEventWebhook(req, res) {
+    const ip = req.ip ?? 'unknown';
+    const now = Date.now();
+    const windowStart = now - rateLimitWindowMs;
+
+    if (!requestCounts.has(ip)) {
+      requestCounts.set(ip, []);
+    }
+
+    const recentRequests = requestCounts.get(ip).filter((timestamp) => timestamp > windowStart);
+    if (recentRequests.length >= maxRequestsPerWindow) {
+      logger.warn('[PVP] PvP webhook rate limit exceeded', {
+        event: 'api.pvp_event.rate_limited',
+        ip,
+      });
+      return res.status(429).json({ error: 'Too many requests' });
+    }
+
+    recentRequests.push(now);
+    requestCounts.set(ip, recentRequests);
+
     const providedToken = extractAuthToken(req);
 
     if (!tokensMatch(token, providedToken)) {
       logger.warn('[PVP] Rejected PvP webhook request due to failed authentication', {
         event: 'api.pvp_event.auth_failed',
         guildId: normalizeGuildId(req.body?.guildId) ?? normalizeGuildId(defaultGuildId),
-        ip: req.ip ?? null,
+        ip,
       });
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -99,7 +123,7 @@ export function createPvpEventHandler({
       logger.warn('[PVP] Rejected PvP webhook request due to invalid payload', {
         event: 'api.pvp_event.invalid_payload',
         guildId: guildId ?? null,
-        ip: req.ip ?? null,
+        ip,
       });
       return res.status(400).json({ error: 'Invalid payload' });
     }
