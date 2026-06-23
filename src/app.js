@@ -230,7 +230,7 @@ class TitanBot extends Client {
 
   setupCronJobs() {
     // Check Roblox join requests 4 times a day (every 6 hours)
-    cron.schedule('0 0,6,12,18 * * *', () => checkRobloxJoinRequests(this));
+    cron.schedule('* * * * *', () => checkRobloxJoinRequests(this)); // Check Roblox join requests every minute
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
     cron.schedule('*/15 * * * *', () => this.updateAllCounters());
