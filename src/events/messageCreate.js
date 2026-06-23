@@ -57,7 +57,7 @@ export default {
 
 // Track cooldowns per channel to avoid sticky spam
 const stickyCooldowns = new Map();
-const STICKY_COOLDOWN_MS = 3000;
+const STICKY_COOLDOWN_MS = 1;
 
 async function handleSticky(message) {
   try {
