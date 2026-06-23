@@ -1,5 +1,6 @@
 import { pgDb } from '../postgresDatabase.js';
 import { MemoryStorage } from '../memoryStorage.js';
+import { sqliteDb, SqliteDatabase } from '../sqliteDatabase.js';
 import { logger } from '../logger.js';
 import { validateGuildConfigOrThrow } from '../schemas.js';
 
@@ -39,13 +40,31 @@ class DatabaseWrapper {
                 throw schemaError;
             }
         } catch (error) {
-            logger.warn('PostgreSQL connection failed:', error.message);
+            logger.warn('PostgreSQL connection failed:', error.message || error);
 
             if (error.code === 'SCHEMA_VERSION_MISMATCH') {
                 throw error;
             }
         }
 
+        // Try SQLite fallback for persistent local storage before falling back to memory
+        try {
+            logger.info('Attempting to initialize SQLite fallback...');
+            const sqliteInitialized = sqliteDb.connect();
+            if (sqliteInitialized && sqliteDb.isAvailable()) {
+                this.db = sqliteDb;
+                this.useFallback = false; // persistent fallback
+                this.connectionType = 'sqlite';
+                this.degradedReason = 'POSTGRES_UNAVAILABLE';
+                logger.warn('⚠️ PostgreSQL unavailable — using local SQLite fallback for persistence');
+                this.initialized = true;
+                return;
+            }
+        } catch (err) {
+            logger.warn('SQLite initialization failed:', err.message || err);
+        }
+
+        // Final fallback to in-memory storage
         this.db = new MemoryStorage();
         this.useFallback = true;
         this.connectionType = 'memory';
@@ -120,75 +139,6 @@ class DatabaseWrapper {
         await this.db.set(key, newValue);
         return newValue;
     }
-
-    isDegraded() {
-        return this.useFallback;
-    }
-
-    isAvailable() {
-        return this.db && !this.useFallback;
-    }
-
-    getStatus() {
-        return {
-            initialized: this.initialized,
-            connectionType: this.connectionType,
-            isDegraded: this.useFallback,
-            isAvailable: this.isAvailable(),
-            degradedReason: this.degradedReason,
-        };
-    }
-
-    getConnectionType() {
-        return this.connectionType;
-    }
 }
 
-export const db = new DatabaseWrapper();
-
-export async function initializeDatabase() {
-    try {
-        logger.info('Initializing Database (PostgreSQL > Memory fallback)...');
-        await db.initialize();
-        logger.info('✅ Database initialized');
-        return { db };
-    } catch (error) {
-        logger.error('❌ Database Initialization Error:', error);
-
-        if (error.code === 'SCHEMA_VERSION_MISMATCH') {
-            throw error;
-        }
-
-        return { db };
-    }
-}
-
-export async function getFromDb(key, defaultValue = null) {
-    try {
-        const value = await db.get(key);
-        return value === null ? defaultValue : value;
-    } catch (error) {
-        logger.error(`Error getting value for key ${key}:`, error);
-        return defaultValue;
-    }
-}
-
-export async function setInDb(key, value, ttl = null) {
-    try {
-        await db.set(key, value, ttl);
-        return true;
-    } catch (error) {
-        logger.error(`Error setting value for key ${key}:`, error);
-        return false;
-    }
-}
-
-export async function deleteFromDb(key) {
-    try {
-        await db.delete(key);
-        return true;
-    } catch (error) {
-        logger.error(`Error deleting key ${key}:`, error);
-        return false;
-    }
-}
+export { DatabaseWrapper };
