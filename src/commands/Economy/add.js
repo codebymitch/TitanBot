@@ -66,7 +66,7 @@ export default {
       const fieldName = type === 'bank' ? 'Bank' : 'Wallet';
 
       const embed = createEmbed({
-        title: 'Balance Updated',
+        title: `${MONEY_EMOJI} Balance Updated`,
         description: `Added ${MONEY_EMOJI} ${formatCurrency(amountStr, { short: true, noSymbol: true })} gp to ${target.username}'s ${fieldName}`,
       })
         .addFields(

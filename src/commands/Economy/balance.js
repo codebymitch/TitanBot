@@ -58,7 +58,7 @@ export default {
         const bank = typeof userData.bank === 'number' ? userData.bank : 0;
 
             const embed = createEmbed({
-                title: `${targetUser.username}'s Balance`,
+                title: `${MONEY_EMOJI} ${targetUser.username}'s Balance`,
                 description: `Here is the current financial status for ${targetUser.username}.`,
             })
                 .addFields(
