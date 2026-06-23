@@ -73,7 +73,7 @@ export function formatProfileCurrency(amount) {
     } else if (absolute >= 1_000) {
         formatted = `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
     } else {
-        formatted = value.toLocaleString();
+        formatted = value.toLocaleString('en-US');
     }
 
     return `${formatted} gp`;

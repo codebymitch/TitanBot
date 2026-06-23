@@ -92,7 +92,7 @@ export default {
         const createdAt = Math.floor(targetUser.createdAt.getTime() / 1000);
         const discordUsername = targetUser.username || targetUser.globalName || 'Unknown User';
         const embed = createEmbed({
-            title: `${targetUser.username}'s OSRS Profile`,
+            title: `${discordUsername}'s OSRS Profile`,
             description: linkedUsernames.length === 0
                 ? '⚠️ No linked OSRS accounts found for this member yet.'
                 : 'Comprehensive staking profile overview.',
