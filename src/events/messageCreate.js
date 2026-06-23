@@ -238,11 +238,14 @@ async function handlePvpEvent(message) {
     const content = message.content.trim();
     if (!content) return;
 
+    logger.debug(`[PVP] Checking message: "${content}"`);
+
     // Pattern 1 (checked first): "Victim has been defeated by Killer"
     const deathMatch = content.match(/^(.+?)\s+has\s+been\s+defeated\s+by\s+(.+)$/i);
     if (deathMatch) {
       const victim = deathMatch[1].trim();
       const killer = deathMatch[2].trim();
+      logger.info(`[PVP] Death pattern matched: victim="${victim}", killer="${killer}"`);
       await recordPvpKill(message.guild.id, killer, victim);
       return;
     }
@@ -252,6 +255,7 @@ async function handlePvpEvent(message) {
     if (killMatch) {
       const killer = killMatch[1].trim();
       const victim = killMatch[2].trim();
+      logger.info(`[PVP] Kill pattern matched: killer="${killer}", victim="${victim}"`);
       await recordPvpKill(message.guild.id, killer, victim);
     }
   } catch (error) {
