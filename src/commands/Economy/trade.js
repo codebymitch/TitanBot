@@ -77,117 +77,124 @@ ${target}, you have 2 minutes to Accept or Decline.`,
     // Fetch the reply message so we can await component interactions
     const offerMessage = await interaction.fetchReply();
 
-    const filter = (i) => {
-      if (!i || !i.user) return false;
-      return i.user.id === target.id && (i.customId === acceptId || i.customId === declineId);
-    };
+    // Create a collector so we can provide better feedback to non-recipients
+    const collector = offerMessage.createMessageComponentCollector({ time: 2 * 60 * 1000 });
 
-    let collected;
-    try {
-      collected = await offerMessage.awaitMessageComponent({ filter, time: 2 * 60 * 1000 }); // 2 minutes
-    } catch (err) {
-      // timeout or error – edit message to show expired and disable buttons
+    collector.on('collect', async (i) => {
       try {
+        if (!i || !i.user) return;
+
+        // If someone other than the intended recipient clicks, show a helpful ephemeral reply
+        if (i.user.id !== target.id) {
+          await i.reply({ content: `Only the recipient (${target.tag}) can accept this offer.`, ephemeral: true }).catch(() => {});
+          return;
+        }
+
+        // Disable buttons immediately to prevent double clicks
         const disabledRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(acceptId).setLabel('Accept').setStyle(ButtonStyle.Success).setDisabled(true),
           new ButtonBuilder().setCustomId(declineId).setLabel('Decline').setStyle(ButtonStyle.Danger).setDisabled(true)
         );
-        const expiredEmbed = createEmbed({ title: 'Trade Expired', description: 'The trade offer has expired (no response).' });
-        await InteractionHelper.safeEditReply(interaction, { embeds: [expiredEmbed], components: [disabledRow] });
-      } catch (editErr) {
-        logger.warn('Failed to mark trade offer expired', editErr);
-      }
-      return;
-    }
 
-    // We got a response from the recipient
-    const choice = collected.customId;
+        if (i.customId === declineId) {
+          const declineEmbed = createEmbed({ title: 'Trade Declined', description: `${target.tag} declined the trade offer from ${sender.tag}.` });
+          await i.update({ embeds: [declineEmbed], components: [disabledRow] }).catch(async (err) => {
+            logger.warn('Failed to update decline response', err);
+            await InteractionHelper.safeEditReply(interaction, { embeds: [createEmbed({ title: 'Trade Declined', description: `${target.tag} declined the trade offer.` })], components: [disabledRow] }).catch(() => {});
+          });
+          collector.stop('declined');
+          return;
+        }
 
-    // Disable buttons immediately
-    const disabledRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(acceptId).setLabel('Accept').setStyle(ButtonStyle.Success).setDisabled(true),
-      new ButtonBuilder().setCustomId(declineId).setLabel('Decline').setStyle(ButtonStyle.Danger).setDisabled(true)
-    );
+        // Accept path
+        await i.deferUpdate().catch(() => {});
 
-    if (choice === declineId) {
-      // Recipient declined
-      try {
-        const declineEmbed = createEmbed({ title: 'Trade Declined', description: `${target.tag} declined the trade offer from ${sender.tag}.` });
-        await collected.update({ embeds: [declineEmbed], components: [disabledRow] });
+        // Re-validate sender still has funds
+        const latestSender = await getEconomyData(client, guildId, sender.id) || { wallet: 0, bank: 0 };
+        if ((latestSender.wallet || 0) < parsedAmount) {
+          const failEmbed = createEmbed({ title: 'Trade Failed', description: `Trade could not be completed because ${sender.tag} no longer has sufficient wallet funds.` });
+          await InteractionHelper.safeEditReply(interaction, { embeds: [failEmbed], components: [disabledRow] }).catch(() => {});
+          collector.stop('insufficient');
+          return;
+        }
+
+        // Attempt to remove from sender
+        const removal = await removeMoney(client, guildId, sender.id, parsedAmount, 'wallet');
+        if (!removal || removal.success === false) {
+          const errMsg = removal && removal.error ? removal.error : 'Failed to remove money from sender.';
+          const failEmbed = createEmbed({ title: 'Trade Failed', description: `Failed to withdraw funds from ${sender.tag}: ${errMsg}` });
+          await InteractionHelper.safeEditReply(interaction, { embeds: [failEmbed], components: [disabledRow] }).catch(() => {});
+          collector.stop('removal_failed');
+          return;
+        }
+
+        // Attempt to add to recipient
+        const addition = await addMoney(client, guildId, target.id, parsedAmount, 'wallet');
+        if (!addition || addition.success === false) {
+          // Try to refund sender
+          logger.warn('[ECONOMY] Addition to recipient failed during accepted trade, attempting refund', { to: target.id, from: sender.id, amount: parsedAmount, addition });
+          const refund = await addMoney(client, guildId, sender.id, parsedAmount, 'wallet', { bypassLimits: true }).catch(() => null);
+          const refundMsg = refund && refund.success ? ' Sender has been refunded.' : ' Refund failed — contact an admin.';
+          const errText = (addition && addition.error) ? addition.error + refundMsg : `Failed to add funds to recipient.${refundMsg}`;
+          const failEmbed = createEmbed({ title: 'Trade Failed', description: errText });
+          await InteractionHelper.safeEditReply(interaction, { embeds: [failEmbed], components: [disabledRow] }).catch(() => {});
+          collector.stop('addition_failed');
+          return;
+        }
+
+        // Success: fetch final balances
+        const afterSender = await getEconomyData(client, guildId, sender.id) || { wallet: 0, bank: 0 };
+        const afterTarget = await getEconomyData(client, guildId, target.id) || { wallet: 0, bank: 0 };
+
+        const successEmbed = createEmbed({
+          title: `${MONEY_EMOJI} Trade Completed`,
+          description: `${target.tag} accepted ${sender.tag}'s offer of ${MONEY_EMOJI} ${formatCurrency(parsedAmount, { short: true, noSymbol: true })} gp.`,
+        })
+          .addFields(
+            { name: 'From', value: `${sender.tag} (${sender.id})`, inline: true },
+            { name: 'To', value: `${target.tag} (${target.id})`, inline: true },
+            { name: 'Total (Sender)', value: `${MONEY_EMOJI} ${formatCurrency((afterSender.wallet || 0) + (afterSender.bank || 0), { short: true, noSymbol: true })} gp`, inline: true },
+            { name: 'Total (Recipient)', value: `${MONEY_EMOJI} ${formatCurrency((afterTarget.wallet || 0) + (afterTarget.bank || 0), { short: true, noSymbol: true })} gp`, inline: true },
+          )
+          .setFooter({ text: `Requested by ${sender.tag}`, iconURL: sender.displayAvatarURL() });
+
+        await InteractionHelper.safeEditReply(interaction, { embeds: [successEmbed], components: [disabledRow] }).catch((err) => {
+          logger.error('Failed to send trade success embed', err);
+        });
+
+        logger.info('[ECONOMY] Trade completed', { from: sender.id, to: target.id, amount: parsedAmount });
+        collector.stop('completed');
       } catch (err) {
-        logger.warn('Failed to update decline response', err);
-        await InteractionHelper.safeEditReply(interaction, { embeds: [createEmbed({ title: 'Trade Declined', description: `${target.tag} declined the trade offer.` })], components: [disabledRow] });
+        logger.error('Error handling trade collector collect event', err);
+        try {
+          const disabledRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(acceptId).setLabel('Accept').setStyle(ButtonStyle.Success).setDisabled(true),
+            new ButtonBuilder().setCustomId(declineId).setLabel('Decline').setStyle(ButtonStyle.Danger).setDisabled(true)
+          );
+          const failEmbed = createEmbed({ title: 'Trade Error', description: 'An unexpected error occurred while processing the trade. Buttons have been disabled.' });
+          await InteractionHelper.safeEditReply(interaction, { embeds: [failEmbed], components: [disabledRow] });
+        } catch (editErr) {
+          logger.error('Failed to disable buttons after collector error', editErr);
+        }
+        collector.stop('error');
       }
-      return;
-    }
+    });
 
-    // Recipient accepted – perform transfer now
-    await collected.deferUpdate().catch(() => {});
-
-    // Re-validate sender still has funds
-    const latestSender = await getEconomyData(client, guildId, sender.id) || { wallet: 0, bank: 0 };
-    if ((latestSender.wallet || 0) < parsedAmount) {
-      try {
-        const failEmbed = createEmbed({ title: 'Trade Failed', description: `Trade could not be completed because ${sender.tag} no longer has sufficient wallet funds.` });
-        await InteractionHelper.safeEditReply(interaction, { embeds: [failEmbed], components: [disabledRow] });
-      } catch (err) {
-        logger.warn('Failed to send trade failure embed after insufficient funds', err);
+    collector.on('end', async (collected, reason) => {
+      if (reason === 'time') {
+        // edit message to show expired and disable buttons
+        try {
+          const disabledRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(acceptId).setLabel('Accept').setStyle(ButtonStyle.Success).setDisabled(true),
+            new ButtonBuilder().setCustomId(declineId).setLabel('Decline').setStyle(ButtonStyle.Danger).setDisabled(true)
+          );
+          const expiredEmbed = createEmbed({ title: 'Trade Expired', description: 'The trade offer has expired (no response).' });
+          await InteractionHelper.safeEditReply(interaction, { embeds: [expiredEmbed], components: [disabledRow] });
+        } catch (editErr) {
+          logger.warn('Failed to mark trade offer expired on collector end', editErr);
+        }
       }
-      return;
-    }
-
-    // Attempt to remove from sender
-    const removal = await removeMoney(client, guildId, sender.id, parsedAmount, 'wallet');
-    if (!removal || removal.success === false) {
-      const errMsg = removal && removal.error ? removal.error : 'Failed to remove money from sender.';
-      try {
-        const failEmbed = createEmbed({ title: 'Trade Failed', description: `Failed to withdraw funds from ${sender.tag}: ${errMsg}` });
-        await InteractionHelper.safeEditReply(interaction, { embeds: [failEmbed], components: [disabledRow] });
-      } catch (err) {
-        logger.error('Failed to edit reply after removal failure', err);
-      }
-      return;
-    }
-
-    // Attempt to add to recipient
-    const addition = await addMoney(client, guildId, target.id, parsedAmount, 'wallet');
-    if (!addition || addition.success === false) {
-      // Try to refund sender
-      logger.warn('[ECONOMY] Addition to recipient failed during accepted trade, attempting refund', { to: target.id, from: sender.id, amount: parsedAmount, addition });
-      const refund = await addMoney(client, guildId, sender.id, parsedAmount, 'wallet', { bypassLimits: true });
-      const refundMsg = refund && refund.success ? ' Sender has been refunded.' : ' Refund failed — contact an admin.';
-      const errText = (addition && addition.error) ? addition.error + refundMsg : `Failed to add funds to recipient.${refundMsg}`;
-      try {
-        const failEmbed = createEmbed({ title: 'Trade Failed', description: errText });
-        await InteractionHelper.safeEditReply(interaction, { embeds: [failEmbed], components: [disabledRow] });
-      } catch (err) {
-        logger.error('Failed to edit reply after addition failure', err);
-      }
-      return;
-    }
-
-    // Success: fetch final balances
-    const afterSender = await getEconomyData(client, guildId, sender.id) || { wallet: 0, bank: 0 };
-    const afterTarget = await getEconomyData(client, guildId, target.id) || { wallet: 0, bank: 0 };
-
-    try {
-      const successEmbed = createEmbed({
-        title: `${MONEY_EMOJI} Trade Completed`,
-        description: `${target.tag} accepted ${sender.tag}'s offer of ${MONEY_EMOJI} ${formatCurrency(parsedAmount, { short: true, noSymbol: true })} gp.`,
-      })
-        .addFields(
-          { name: 'From', value: `${sender.tag} (${sender.id})`, inline: true },
-          { name: 'To', value: `${target.tag} (${target.id})`, inline: true },
-          { name: 'Total (Sender)', value: `${MONEY_EMOJI} ${formatCurrency((afterSender.wallet || 0) + (afterSender.bank || 0), { short: true, noSymbol: true })} gp`, inline: true },
-          { name: 'Total (Recipient)', value: `${MONEY_EMOJI} ${formatCurrency((afterTarget.wallet || 0) + (afterTarget.bank || 0), { short: true, noSymbol: true })} gp`, inline: true },
-        )
-        .setFooter({ text: `Requested by ${sender.tag}`, iconURL: sender.displayAvatarURL() });
-
-      await InteractionHelper.safeEditReply(interaction, { embeds: [successEmbed], components: [disabledRow] });
-      logger.info('[ECONOMY] Trade completed', { from: sender.id, to: target.id, amount: parsedAmount });
-    } catch (err) {
-      logger.error('Failed to send trade success embed', err);
-    }
+    });
 
   }, { command: 'trade' })
 };
