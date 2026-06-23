@@ -12,7 +12,12 @@ import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
-import { createPvpEventHandler } from './api/pvpEventRoute.js';
+import {
+  extractPvpEventAuthToken,
+  normalizePvpEventGuildId,
+  normalizePvpEventName,
+  pvpEventTokensMatch,
+} from './api/pvpEventRoute.js';
 import { recordPvpKill } from './utils/database/pvp.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/schemaVersion.js';
@@ -177,6 +182,9 @@ class TitanBot extends Client {
     const requestCounts = new Map();
     const windowMs = 60000; 
     const maxRequests = this.config.api?.rateLimit?.max || 100;
+    const pvpEventRequestCounts = new Map();
+    const pvpEventWindowMs = 60000;
+    const pvpEventMaxRequests = 30;
     
     app.use((req, res, next) => {
       const ip = req.ip;
@@ -201,12 +209,62 @@ class TitanBot extends Client {
     app.post(
       '/api/pvp-event',
       express.json({ limit: '16kb' }),
-      createPvpEventHandler({
-        recordKill: recordPvpKill,
-        logger,
-        token: this.config.api?.pvpEvent?.token,
-        defaultGuildId: this.config.api?.pvpEvent?.defaultGuildId,
-      }),
+      async (req, res) => {
+        const ip = req.ip ?? 'unknown';
+        const now = Date.now();
+        const windowStart = now - pvpEventWindowMs;
+
+        if (!pvpEventRequestCounts.has(ip)) {
+          pvpEventRequestCounts.set(ip, []);
+        }
+
+        const recentRequests = pvpEventRequestCounts.get(ip).filter((timestamp) => timestamp > windowStart);
+        if (recentRequests.length >= pvpEventMaxRequests) {
+          logger.warn('[PVP] PvP webhook rate limit exceeded', {
+            event: 'api.pvp_event.rate_limited',
+            ip,
+          });
+          return res.status(429).json({ error: 'Too many requests' });
+        }
+
+        recentRequests.push(now);
+        pvpEventRequestCounts.set(ip, recentRequests);
+
+        const providedToken = extractPvpEventAuthToken(req);
+        const defaultGuildId = this.config.api?.pvpEvent?.defaultGuildId;
+
+        if (!pvpEventTokensMatch(this.config.api?.pvpEvent?.token, providedToken)) {
+          logger.warn('[PVP] Rejected PvP webhook request due to failed authentication', {
+            event: 'api.pvp_event.auth_failed',
+            guildId: normalizePvpEventGuildId(req.body?.guildId) ?? normalizePvpEventGuildId(defaultGuildId),
+            ip,
+          });
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const killer = normalizePvpEventName(req.body?.killer);
+        const victim = normalizePvpEventName(req.body?.victim);
+        const guildId = normalizePvpEventGuildId(req.body?.guildId) ?? normalizePvpEventGuildId(defaultGuildId);
+
+        if (!killer || !victim || !guildId) {
+          logger.warn('[PVP] Rejected PvP webhook request due to invalid payload', {
+            event: 'api.pvp_event.invalid_payload',
+            guildId: guildId ?? null,
+            ip,
+          });
+          return res.status(400).json({ error: 'Invalid payload' });
+        }
+
+        try {
+          await recordPvpKill(guildId, killer, victim);
+
+          logger.info(`[PVP] Webhook recorded kill: ${killer} defeated ${victim} in guild ${guildId}`);
+          return res.status(200).json({ success: true });
+        } catch (error) {
+          logger.error(`[PVP] Error handling PvP webhook for guild ${guildId}:`, error);
+          return res.status(500).json({ error: 'Internal server error' });
+        }
+      },
     );
 
     app.get('/health', (req, res) => {

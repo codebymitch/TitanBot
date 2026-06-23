@@ -197,5 +197,9 @@ test('rate limits repeated PvP webhook requests from the same IP', async () => {
   await handler(req, secondResponse);
   assert.equal(secondResponse.statusCode, 429);
   assert.deepEqual(secondResponse.body, { error: 'Too many requests' });
-  assert.equal(logger.warnMessages.at(-1)?.meta?.event, 'api.pvp_event.rate_limited');
+  assert.ok(logger.warnMessages.length > 0);
+  assert.equal(
+    logger.warnMessages[logger.warnMessages.length - 1].meta.event,
+    'api.pvp_event.rate_limited',
+  );
 });

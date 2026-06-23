@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-function normalizeName(value) {
+export function normalizePvpEventName(value) {
   if (typeof value !== 'string') {
     return null;
   }
@@ -9,7 +9,7 @@ function normalizeName(value) {
   return trimmedValue.length > 0 ? trimmedValue : null;
 }
 
-function normalizeGuildId(value) {
+export function normalizePvpEventGuildId(value) {
   if (typeof value === 'string') {
     const trimmedValue = value.trim();
     return trimmedValue.length > 0 ? trimmedValue : null;
@@ -30,7 +30,7 @@ function readHeader(req, headerName) {
   return req.headers?.[headerName.toLowerCase()] ?? null;
 }
 
-function extractAuthToken(req) {
+export function extractPvpEventAuthToken(req) {
   const authorizationHeader = readHeader(req, 'authorization');
   if (typeof authorizationHeader === 'string' && authorizationHeader.trim()) {
     const trimmedHeader = authorizationHeader.trim();
@@ -50,7 +50,7 @@ function extractAuthToken(req) {
   return null;
 }
 
-function tokensMatch(expectedToken, providedToken) {
+export function pvpEventTokensMatch(expectedToken, providedToken) {
   if (typeof expectedToken !== 'string' || expectedToken.length === 0) {
     return false;
   }
@@ -74,7 +74,7 @@ export function createPvpEventHandler({
   logger,
   token,
   defaultGuildId = null,
-  rateLimitWindowMs = 60_000,
+  windowMs = 60_000,
   maxRequestsPerWindow = 30,
 } = {}) {
   if (typeof recordKill !== 'function') {
@@ -86,7 +86,7 @@ export function createPvpEventHandler({
   return async function handlePvpEventWebhook(req, res) {
     const ip = req.ip ?? 'unknown';
     const now = Date.now();
-    const windowStart = now - rateLimitWindowMs;
+    const windowStart = now - windowMs;
 
     if (!requestCounts.has(ip)) {
       requestCounts.set(ip, []);
@@ -104,20 +104,20 @@ export function createPvpEventHandler({
     recentRequests.push(now);
     requestCounts.set(ip, recentRequests);
 
-    const providedToken = extractAuthToken(req);
+    const providedToken = extractPvpEventAuthToken(req);
 
-    if (!tokensMatch(token, providedToken)) {
+    if (!pvpEventTokensMatch(token, providedToken)) {
       logger.warn('[PVP] Rejected PvP webhook request due to failed authentication', {
         event: 'api.pvp_event.auth_failed',
-        guildId: normalizeGuildId(req.body?.guildId) ?? normalizeGuildId(defaultGuildId),
+        guildId: normalizePvpEventGuildId(req.body?.guildId) ?? normalizePvpEventGuildId(defaultGuildId),
         ip,
       });
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const killer = normalizeName(req.body?.killer);
-    const victim = normalizeName(req.body?.victim);
-    const guildId = normalizeGuildId(req.body?.guildId) ?? normalizeGuildId(defaultGuildId);
+    const killer = normalizePvpEventName(req.body?.killer);
+    const victim = normalizePvpEventName(req.body?.victim);
+    const guildId = normalizePvpEventGuildId(req.body?.guildId) ?? normalizePvpEventGuildId(defaultGuildId);
 
     if (!killer || !victim || !guildId) {
       logger.warn('[PVP] Rejected PvP webhook request due to invalid payload', {
