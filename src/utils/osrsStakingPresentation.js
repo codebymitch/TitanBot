@@ -2,6 +2,60 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { formatCurrency } from './economy.js';
 import { createEmbed } from './embeds.js';
 
+function getFightPayouts(fight) {
+    if (typeof fight?.challengerPayout === 'number' && typeof fight?.opponentPayout === 'number') {
+        return {
+            challengerPayout: fight.challengerPayout,
+            opponentPayout: fight.opponentPayout,
+        };
+    }
+
+    if (fight?.status === 'cancelled' || fight?.disputeResolution === 'refund_both') {
+        return {
+            challengerPayout: fight?.amount || 0,
+            opponentPayout: fight?.amount || 0,
+        };
+    }
+
+    return {
+        challengerPayout: fight?.winner_id === fight?.challenger_id ? (fight?.amount || 0) * 2 : 0,
+        opponentPayout: fight?.winner_id === fight?.opponent_id ? (fight?.amount || 0) * 2 : 0,
+    };
+}
+
+export function getFightResolutionLabel(fight) {
+    switch (fight?.disputeResolution) {
+    case 'pay_challenger':
+        return '💰 Pay Challenger';
+    case 'pay_opponent':
+        return '💰 Pay Opponent';
+    case 'refund_both':
+        return '♻️ Refund Both';
+    default:
+        if (fight?.status === 'cancelled') {
+            return '♻️ Refund Both';
+        }
+
+        if (fight?.winner_id === fight?.challenger_id) {
+            return '💰 Pay Challenger';
+        }
+
+        if (fight?.winner_id === fight?.opponent_id) {
+            return '💰 Pay Opponent';
+        }
+
+        return 'Pending';
+    }
+}
+
+export function formatFightPayoutSummary(fight) {
+    const { challengerPayout, opponentPayout } = getFightPayouts(fight);
+    return [
+        `<@${fight.challenger_id}>: ${formatCurrency(challengerPayout, { short: true })}`,
+        `<@${fight.opponent_id}>: ${formatCurrency(opponentPayout, { short: true })}`,
+    ].join('\n');
+}
+
 export function createFightActionRow(fightId, disabled = false) {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -13,6 +67,41 @@ export function createFightActionRow(fightId, disabled = false) {
             .setCustomId(`fight:decline:${fightId}`)
             .setLabel('Decline')
             .setStyle(ButtonStyle.Danger)
+            .setDisabled(disabled),
+    );
+}
+
+export function createFightResultConfirmationRow(fightId, disabled = false) {
+    return new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`fight_result:accept:${fightId}`)
+            .setLabel('✅ Accept')
+            .setStyle(ButtonStyle.Success)
+            .setDisabled(disabled),
+        new ButtonBuilder()
+            .setCustomId(`fight_result:decline:${fightId}`)
+            .setLabel('❌ Decline')
+            .setStyle(ButtonStyle.Danger)
+            .setDisabled(disabled),
+    );
+}
+
+export function createFightDisputeResolutionRow(fightId, disabled = false) {
+    return new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`fight_dispute_resolve:pay_challenger:${fightId}`)
+            .setLabel('💰 Pay Challenger')
+            .setStyle(ButtonStyle.Success)
+            .setDisabled(disabled),
+        new ButtonBuilder()
+            .setCustomId(`fight_dispute_resolve:pay_opponent:${fightId}`)
+            .setLabel('💰 Pay Opponent')
+            .setStyle(ButtonStyle.Success)
+            .setDisabled(disabled),
+        new ButtonBuilder()
+            .setCustomId(`fight_dispute_resolve:refund_both:${fightId}`)
+            .setLabel('♻️ Refund Both')
+            .setStyle(ButtonStyle.Secondary)
             .setDisabled(disabled),
     );
 }
@@ -93,7 +182,7 @@ export function createFightConfirmedEmbed(fight, confirmerId, confirmation) {
     const label = confirmation === 'accept' ? '✅ Win Claimed' : '❌ Loss Accepted';
     return createEmbed({
         title: 'Fight Result Recorded',
-        description: `<@${confirmerId}> has confirmed: **${label}**.\nWaiting for the other fighter to confirm via \`/fight-results\` or Dink webhook.`,
+        description: `<@${confirmerId}> has confirmed: **${label}**.\nThe other fighter can use the buttons below, \`/fight-results\`, or the Dink webhook to finish the outcome.`,
         color: 'info',
         fields: [
             { name: 'Fight ID', value: fight.id, inline: true },
@@ -132,11 +221,11 @@ export function createFightDisputeEmbed(fight, ticketChannelId) {
     return createEmbed({
         title: '⚠️ Fight Dispute — Ticket Created',
         description: [
-            `Conflicting results were submitted for this fight.`,
-            `Both fighters' confirmations don't match — a support ticket has been auto-created for manual review.`,
-            ticketChannelId ? `\n📋 **Ticket:** <#${ticketChannelId}>` : '',
-            `\nFunds remain in escrow until staff resolve the ticket.`,
-        ].join('\n'),
+            'Conflicting results were submitted for this fight.',
+            'Both fighters\' confirmations do not match — a support ticket has been auto-created for manual review.',
+            ticketChannelId ? `📋 **Ticket:** <#${ticketChannelId}>` : null,
+            'Funds remain in escrow until staff resolve the ticket.',
+        ].filter(Boolean).join('\n\n'),
         color: 'error',
         fields: [
             { name: 'Fight ID', value: fight.id, inline: true },
@@ -147,31 +236,37 @@ export function createFightDisputeEmbed(fight, ticketChannelId) {
     });
 }
 
-export function createLinkApprovalEmbed(userId, osrsUsername, requestedAt) {
+export function createFightDisputeTicketEmbed(fight) {
     return createEmbed({
-        title: '📋 RSN Link Request',
-        description: `A player has requested to link an OSRS username. Please review and approve or decline.`,
-        color: 'info',
+        title: `⚠️ Fight Dispute — ${fight.challengerOsrsUsername || 'Challenger'} vs ${fight.opponentOsrsUsername || 'Opponent'}`,
+        description: 'Both fighters submitted conflicting results. Staff will review the dispute and decide how to distribute the escrowed funds.',
+        color: 'error',
         fields: [
-            { name: 'Discord User', value: `<@${userId}>`, inline: true },
-            { name: 'OSRS Username', value: osrsUsername, inline: true },
-            { name: 'Requested', value: `<t:${Math.floor(new Date(requestedAt).getTime() / 1000)}:R>`, inline: true },
-            { name: 'Status', value: '🟡 Pending', inline: true },
+            { name: 'Fight ID', value: fight.id, inline: true },
+            { name: 'Escrowed Pot', value: formatCurrency(fight.amount * 2, { short: true }), inline: true },
+            { name: 'Challenger', value: `<@${fight.challenger_id}> (${fight.challengerOsrsUsername || 'Unknown'})`, inline: false },
+            { name: 'Opponent', value: `<@${fight.opponent_id}> (${fight.opponentOsrsUsername || 'Unknown'})`, inline: false },
+            { name: 'Challenger Confirmed', value: fight.challengerConfirmed || 'pending', inline: true },
+            { name: 'Opponent Confirmed', value: fight.opponentConfirmed || 'pending', inline: true },
+            { name: 'Staff Resolution', value: 'Choose **Pay Challenger**, **Pay Opponent**, or **Refund Both** below.', inline: false },
         ],
     });
 }
 
-export function createRemovalApprovalEmbed(userId, osrsUsername, requestedAt, reason) {
+export function createFightDisputeResolvedEmbed(fight, resolverId) {
     return createEmbed({
-        title: '📋 RSN Removal Request',
-        description: `A player has requested to remove their linked OSRS username. Please review and approve or decline.`,
-        color: 'warning',
+        title: '✅ Fight Dispute Resolved',
+        description: `**${getFightResolutionLabel(fight)}** was selected for this dispute.`,
+        color: fight.disputeResolution === 'refund_both' || fight.status === 'cancelled' ? 'warning' : 'success',
         fields: [
-            { name: 'Discord User', value: `<@${userId}>`, inline: true },
-            { name: 'OSRS Username', value: osrsUsername, inline: true },
-            { name: 'Requested', value: `<t:${Math.floor(new Date(requestedAt).getTime() / 1000)}:R>`, inline: true },
-            { name: 'Reason', value: reason || 'No reason provided', inline: false },
-            { name: 'Status', value: '🟡 Pending', inline: true },
+            { name: 'Fight ID', value: fight.id, inline: true },
+            { name: 'Resolved By', value: `<@${resolverId}>`, inline: true },
+            {
+                name: 'Resolved At',
+                value: fight.disputeResolvedAt ? `<t:${Math.floor(new Date(fight.disputeResolvedAt).getTime() / 1000)}:F>` : 'Just now',
+                inline: false,
+            },
+            { name: 'Payout Summary', value: formatFightPayoutSummary(fight), inline: false },
         ],
     });
 }

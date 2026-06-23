@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { errorEmbed } from '../../utils/embeds.js';
 import { createEmbed } from '../../utils/embeds.js';
@@ -6,26 +6,8 @@ import {
     handleOsrsLinkApproval,
     handleOsrsLinkDecline,
 } from '../../services/osrsLinkApprovalService.js';
-import { getGuildConfig } from '../../services/guildConfig.js';
 import { logger } from '../../utils/logger.js';
-
-const ADMIN_ROLES = ['Owner', 'Administrator', 'Support Staff', 'Admin', 'Mod', 'Moderator'];
-
-async function isAuthorizedAdmin(interaction) {
-    if (!interaction.guild) return false;
-    const member = interaction.member;
-    if (!member) return false;
-
-    if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
-    if (interaction.guild.ownerId === interaction.user.id) return true;
-
-    const memberRoles = member.roles?.cache;
-    if (!memberRoles) return false;
-
-    return memberRoles.some((role) => ADMIN_ROLES.some((adminRole) =>
-        role.name.toLowerCase().includes(adminRole.toLowerCase()),
-    ));
-}
+import { getOsrsAdminPermissionError, isAuthorizedOsrsAdmin } from '../../utils/osrsAdminAuth.js';
 
 export default {
     name: 'osrs_link',
@@ -36,9 +18,9 @@ export default {
         if (!deferSuccess) return;
 
         try {
-            if (!(await isAuthorizedAdmin(interaction))) {
+            if (!(await isAuthorizedOsrsAdmin(interaction, client))) {
                 await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('You do not have permission to approve or decline RSN link requests. Required: Owner, Administrator, or Support Staff role.')],
+                    embeds: [errorEmbed(getOsrsAdminPermissionError('approve or decline RSN link requests'))],
                 });
                 return;
             }

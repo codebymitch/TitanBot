@@ -241,6 +241,45 @@ export async function handleFightResult(client, guildId, userId, confirmation, f
     return { fight: disputed, outcome: 'dispute' };
 }
 
+export async function resolveFightDispute(client, guildId, fightId, resolution, resolverId) {
+    if (!['pay_challenger', 'pay_opponent', 'refund_both'].includes(resolution)) {
+        throw new Error('Invalid dispute resolution.');
+    }
+
+    const fight = await getFight(client, fightId);
+    if (!fight || fight.guildId !== guildId) {
+        throw new Error('Fight not found.');
+    }
+
+    if (fight.status !== FIGHT_STATUSES.TICKET_REQUIRED) {
+        throw new Error('That fight dispute has already been resolved.');
+    }
+
+    const disputeResolvedAt = new Date().toISOString();
+    const metadata = {
+        source: 'staff_dispute',
+        disputeResolvedBy: resolverId,
+        disputeResolvedAt,
+    };
+
+    if (resolution === 'refund_both') {
+        return refundFight(client, fight.id, {
+            ...metadata,
+            disputeResolution: 'refund_both',
+            challengerPayout: fight.amount,
+            opponentPayout: fight.amount,
+        });
+    }
+
+    const winnerId = resolution === 'pay_challenger' ? fight.challenger_id : fight.opponent_id;
+    return payoutFightWinner(client, fight.id, winnerId, {
+        ...metadata,
+        disputeResolution: resolution,
+        challengerPayout: resolution === 'pay_challenger' ? fight.amount * 2 : 0,
+        opponentPayout: resolution === 'pay_opponent' ? fight.amount * 2 : 0,
+    });
+}
+
 export async function resolveFightFromWebhook(client, guildId, killerName, victimName) {
     const [killerLink, victimLink] = await Promise.all([
         getOsrsLinkByUsername(client, guildId, killerName),

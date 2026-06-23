@@ -47,6 +47,12 @@ function withDefaults(record) {
         challengerConfirmed: null,
         opponentConfirmed: null,
         ticketId: null,
+        disputeResolution: null,
+        disputeResolvedAt: null,
+        disputeResolvedBy: null,
+        challengerPayout: null,
+        opponentPayout: null,
+        resolutionSource: null,
         ...record,
     };
 }
@@ -210,7 +216,7 @@ export async function getExpiredFights(client, now = new Date()) {
     return expired.sort((a, b) => new Date(a.expiresAt) - new Date(b.expiresAt));
 }
 
-export async function refundFight(client, fightId) {
+export async function refundFight(client, fightId, resolution = {}) {
     const fight = await getFight(client, fightId);
     if (!fight) {
         return null;
@@ -225,7 +231,13 @@ export async function refundFight(client, fightId) {
 
     fight.fundsRefunded = true;
     fight.status = FIGHT_STATUSES.CANCELLED;
-    fight.resolved_at = new Date().toISOString();
+    fight.resolved_at = resolution.disputeResolvedAt || new Date().toISOString();
+    fight.resolutionSource = resolution.source || fight.resolutionSource || 'manual';
+    fight.disputeResolution = resolution.disputeResolution || fight.disputeResolution;
+    fight.disputeResolvedAt = resolution.disputeResolvedAt || fight.disputeResolvedAt;
+    fight.disputeResolvedBy = resolution.disputeResolvedBy || fight.disputeResolvedBy;
+    fight.challengerPayout = resolution.challengerPayout ?? fight.amount;
+    fight.opponentPayout = resolution.opponentPayout ?? fight.amount;
     await saveFight(client, fight);
     return fight;
 }
@@ -244,9 +256,14 @@ export async function payoutFightWinner(client, fightId, winnerId, resolution = 
 
     fight.winner_id = winnerId;
     fight.status = FIGHT_STATUSES.COMPLETED;
-    fight.resolved_at = new Date().toISOString();
+    fight.resolved_at = resolution.disputeResolvedAt || new Date().toISOString();
     fight.reported_winner = resolution.reported_winner ?? fight.reported_winner;
     fight.resolutionSource = resolution.source || fight.resolutionSource || 'manual';
+    fight.disputeResolution = resolution.disputeResolution || fight.disputeResolution;
+    fight.disputeResolvedAt = resolution.disputeResolvedAt || fight.disputeResolvedAt;
+    fight.disputeResolvedBy = resolution.disputeResolvedBy || fight.disputeResolvedBy;
+    fight.challengerPayout = resolution.challengerPayout ?? (winnerId === fight.challenger_id ? fight.amount * 2 : 0);
+    fight.opponentPayout = resolution.opponentPayout ?? (winnerId === fight.opponent_id ? fight.amount * 2 : 0);
     await saveFight(client, fight);
     return fight;
 }
