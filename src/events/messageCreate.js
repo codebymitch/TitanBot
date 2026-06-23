@@ -18,7 +18,7 @@ import {
   recordCorrectCount,
 } from '../services/countingGameService.js';
 import { getSticky, saveSticky } from '../commands/utility/sticky.js';
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, PermissionsBitField } from 'discord.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -45,7 +45,10 @@ export default {
 
       await handleLeveling(message, client);
 
-      await handleSticky(message);
+      const stickyReposted = await handleSticky(message);
+      if (stickyReposted) {
+        logger.info(`Sticky message reposted in ${message.channel.id} after message ${message.id}`);
+      }
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
     }
@@ -59,18 +62,35 @@ const STICKY_COOLDOWN_MS = 3000;
 async function handleSticky(message) {
   try {
     const sticky = await getSticky(message.guild.id, message.channel.id);
-    if (!sticky) return;
+    if (!sticky) {
+      logger.debug(`No sticky configured for channel ${message.channel.id}`);
+      return false;
+    }
 
     // Skip if the message sent IS the sticky itself (prevent loops)
-    if (message.id === sticky.messageId) return;
+    if (message.id === sticky.messageId) {
+      logger.debug(`Received sticky message itself in ${message.channel.id}, skipping repost.`);
+      return false;
+    }
 
     // Cooldown check — only repost once every 3 seconds per channel
     const cooldownKey = `${message.guild.id}_${message.channel.id}`;
     const lastRepost = stickyCooldowns.get(cooldownKey) || 0;
     const now = Date.now();
 
-    if (now - lastRepost < STICKY_COOLDOWN_MS) return;
+    if (now - lastRepost < STICKY_COOLDOWN_MS) {
+      logger.debug(`Sticky cooldown active for channel ${message.channel.id}`);
+      return false;
+    }
     stickyCooldowns.set(cooldownKey, now);
+
+    // Permissions check
+    const botMember = await message.guild.members.fetch(message.client.user.id).catch(() => null);
+    const channelPerms = message.channel.permissionsFor(botMember);
+    if (!channelPerms || !channelPerms.has([PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.ManageMessages])) {
+      logger.warn(`Missing sticky permissions in channel ${message.channel.id}. CanSend: ${channelPerms?.has(PermissionsBitField.Flags.SendMessages)}, CanManage: ${channelPerms?.has(PermissionsBitField.Flags.ManageMessages)}`);
+      return false;
+    }
 
     // Delete the old sticky message
     if (sticky.messageId) {
@@ -93,8 +113,12 @@ async function handleSticky(message) {
       ...sticky,
       messageId: newMsg.id,
     });
+
+    logger.info(`Sticky reposted successfully in channel ${message.channel.id}`);
+    return true;
   } catch (error) {
     logger.error('Error handling sticky message:', error);
+    return false;
   }
 }
 
