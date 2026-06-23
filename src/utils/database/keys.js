@@ -1,3 +1,5 @@
+const buildOsrsLinkPrefix = (guildId) => `guild:${guildId}:osrs:link:`;
+
 export const getGuildConfigKey = (guildId) => `guild:${guildId}:config`;
 export const getGuildBirthdaysKey = (guildId) => `guild:${guildId}:birthdays`;
 
@@ -77,10 +79,22 @@ export function getPvpRecentKey(guildId) {
     return `guild:${guildId}:pvp:recent`;
 }
 
-export function getOsrsLinksKey(guildId, userId) {
-    return `guild:${guildId}:osrs:links:${userId}`;
+export function getOsrsLinkKey(guildId, userId) {
+    return `${buildOsrsLinkPrefix(guildId)}${userId}`;
+}
+
+export function getOsrsUsernameKey(guildId, osrsUsername) {
+    return `guild:${guildId}:osrs:username:${osrsUsername.toLowerCase()}`;
+}
+
+export function getFightCounterKey(guildId) {
+    return `guild:${guildId}:fights:counter`;
+}
+
+export function getFightKey(guildId, fightId) {
+    return `guild:${guildId}:fights:${fightId}`;
 }
 
 export function getOsrsLinksPrefix(guildId) {
-    return `guild:${guildId}:osrs:links:`;
+    return buildOsrsLinkPrefix(guildId);
 }

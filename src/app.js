@@ -15,6 +15,7 @@ import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
 import { createPvpEventHandler } from './api/pvpEventRoute.js';
 import { recordPvpKill } from './utils/database/pvp.js';
+import { expirePendingFights } from './services/osrsStakingService.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/schemaVersion.js';
 
@@ -369,6 +370,9 @@ class TitanBot extends Client {
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
     cron.schedule('*/15 * * * *', () => this.updateAllCounters());
+    cron.schedule('* * * * *', () => expirePendingFights(this).catch((error) => {
+      logger.error('[OSRS_FIGHT] Failed to expire fights:', error);
+    }));
   }
 
   async updateAllCounters() {

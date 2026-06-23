@@ -139,6 +139,26 @@ class DatabaseWrapper {
         await this.db.set(key, newValue);
         return newValue;
     }
+
+    isAvailable() {
+        if (!this.initialized || !this.db) {
+            return false;
+        }
+
+        if (typeof this.db.isAvailable === 'function') {
+            return this.db.isAvailable();
+        }
+
+        return true;
+    }
+
+    getStatus() {
+        return {
+            isDegraded: this.connectionType === 'memory',
+            connectionType: this.connectionType,
+            degradedReason: this.degradedReason,
+        };
+    }
 }
 
 const db = new DatabaseWrapper();

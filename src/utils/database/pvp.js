@@ -1,6 +1,7 @@
 import { logger } from '../logger.js';
 import { db } from './wrapper.js';
 import { getPvpStatsKey, getPvpRecentKey } from './keys.js';
+import { resolveFightFromWebhook } from '../../services/osrsStakingService.js';
 
 export { getPvpStatsKey, getPvpRecentKey } from './keys.js';
 
@@ -64,6 +65,11 @@ export async function recordPvpKill(guildId, killerName, victimName) {
             recentData.length = MAX_RECENT_EVENTS;
         }
         await db.set(recentKey, recentData);
+
+        const resolvedFight = await resolveFightFromWebhook({ db }, guildId, killerName, victimName);
+        if (resolvedFight?.winner_id) {
+            logger.info(`[PVP] Resolved OSRS fight ${resolvedFight.id} from webhook kill in guild ${guildId}`);
+        }
 
         logger.info(`[PVP] Recorded kill: ${killerName} defeated ${victimName} in guild ${guildId}`);
     } catch (error) {

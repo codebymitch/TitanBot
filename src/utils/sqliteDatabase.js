@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import Database from 'better-sqlite3';
+import { createRequire } from 'module';
 import { logger } from './logger.js';
+
+const require = createRequire(import.meta.url);
 
 class SqliteDatabase {
   constructor(dbPath) {
@@ -22,7 +24,8 @@ class SqliteDatabase {
 
   connect() {
     try {
-      this.db = new Database(this.path, { verbose: null });
+      const BetterSqlite3 = require('better-sqlite3');
+      this.db = new BetterSqlite3(this.path, { verbose: null });
 
       // key/value table with optional expiration (ms since epoch)
       this.db.prepare(
