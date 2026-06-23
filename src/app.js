@@ -11,6 +11,7 @@ import { getServerCounters, saveServerCounters, updateCounter } from './services
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
+import { checkRobloxJoinRequests } from './services/robloxJoinRequestService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
 
 class TitanBot extends Client {
@@ -228,6 +229,8 @@ class TitanBot extends Client {
   }
 
   setupCronJobs() {
+    // Check Roblox join requests 4 times a day (every 6 hours)
+    cron.schedule('0 0,6,12,18 * * *', () => checkRobloxJoinRequests(this));
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
     cron.schedule('*/15 * * * *', () => this.updateAllCounters());
