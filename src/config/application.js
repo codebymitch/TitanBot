@@ -72,6 +72,10 @@ const appConfig = {
     pvpEvent: {
       token: process.env.PVP_EVENT_API_TOKEN || process.env.PVP_WEBHOOK_TOKEN || null,
       defaultGuildId: process.env.PVP_EVENT_GUILD_ID || process.env.GUILD_ID || null,
+      rateLimit: {
+        windowMs: 60 * 1000,
+        max: 30,
+      },
     },
   },
 

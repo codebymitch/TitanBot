@@ -74,35 +74,13 @@ export function createPvpEventHandler({
   logger,
   token,
   defaultGuildId = null,
-  windowMs = 60_000,
-  maxRequestsPerWindow = 30,
 } = {}) {
   if (typeof recordKill !== 'function') {
     throw new TypeError('recordKill must be a function');
   }
 
-  const requestCounts = new Map();
-
   return async function handlePvpEventWebhook(req, res) {
     const ip = req.ip ?? 'unknown';
-    const now = Date.now();
-    const windowStart = now - windowMs;
-
-    if (!requestCounts.has(ip)) {
-      requestCounts.set(ip, []);
-    }
-
-    const recentRequests = requestCounts.get(ip).filter((timestamp) => timestamp > windowStart);
-    if (recentRequests.length >= maxRequestsPerWindow) {
-      logger.warn('[PVP] PvP webhook rate limit exceeded', {
-        event: 'api.pvp_event.rate_limited',
-        ip,
-      });
-      return res.status(429).json({ error: 'Too many requests' });
-    }
-
-    recentRequests.push(now);
-    requestCounts.set(ip, recentRequests);
 
     const providedToken = extractPvpEventAuthToken(req);
 

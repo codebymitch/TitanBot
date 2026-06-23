@@ -173,33 +173,3 @@ test('returns 500 and logs when PvP event recording fails', async () => {
   assert.deepEqual(res.body, { error: 'Internal server error' });
   assert.equal(logger.errorMessages.length, 1);
 });
-
-test('rate limits repeated PvP webhook requests from the same IP', async () => {
-  const logger = createLogger();
-  const handler = createPvpEventHandler({
-    recordKill: async () => {},
-    logger,
-    token: 'secret-token',
-    maxRequestsPerWindow: 1,
-  });
-
-  const req = {
-    body: { killer: 'Alice', victim: 'Bob', guildId: 'guild-1' },
-    headers: { authorization: 'secret-token' },
-    ip: '127.0.0.1',
-  };
-
-  const firstResponse = createResponse();
-  await handler(req, firstResponse);
-  assert.equal(firstResponse.statusCode, 200);
-
-  const secondResponse = createResponse();
-  await handler(req, secondResponse);
-  assert.equal(secondResponse.statusCode, 429);
-  assert.deepEqual(secondResponse.body, { error: 'Too many requests' });
-  assert.ok(logger.warnMessages.length > 0);
-  assert.equal(
-    logger.warnMessages[logger.warnMessages.length - 1].meta.event,
-    'api.pvp_event.rate_limited',
-  );
-});
