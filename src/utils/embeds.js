@@ -119,6 +119,7 @@ export function createEmbed({
   fields = [],
   author = null,
   footer = null,
+  // thumbnail and image parameters are accepted for compatibility but intentionally ignored
   thumbnail = null,
   image = null,
   timestamp = false,
@@ -172,29 +173,8 @@ export function createEmbed({
     }
   }
 
-  if (thumbnail) {
-    try {
-      if (typeof thumbnail === 'string' && thumbnail.length > 0) {
-        embed.setThumbnail(thumbnail);
-      } else if (thumbnail && typeof thumbnail.url === 'string') {
-        embed.setThumbnail(thumbnail.url);
-      }
-    } catch (error) {
-      
-    }
-  }
-
-  if (image) {
-    try {
-      if (typeof image === 'string' && image.length > 0) {
-        embed.setImage(image);
-      } else if (image && typeof image.url === 'string') {
-        embed.setImage(image.url);
-      }
-    } catch (error) {
-      
-    }
-  }
+  // Intentionally DO NOT set thumbnail or image on embeds to avoid broken external images.
+  // This prevents old/broken image boxes from appearing in embeds.
 
   if (timestamp === true) {
     embed.setTimestamp();
