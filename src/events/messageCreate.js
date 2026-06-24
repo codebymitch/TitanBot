@@ -17,7 +17,7 @@ import {
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
-import { getSticky, saveSticky } from '../commands/utility/sticky.js';
+import { getSticky, saveSticky } from '../commands/Utility/sticky.js';
 import { EmbedBuilder, PermissionsBitField } from 'discord.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
