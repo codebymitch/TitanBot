@@ -23,22 +23,19 @@ export default {
           });
 
           const embed = new EmbedBuilder()
-            .setColor(0x2ECC71)
+            .setColor(0xFFFFFF)
             .setDescription(formattedMessage)
-            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
-            .addFields(
-              { name: 'Member', value: `<@${member.id}>`, inline: true },
-              { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
-              { name: 'Member Count', value: `#${member.guild.memberCount}`, inline: true },
-            )
+            .setFooter({ text: `${member.guild.name} Management` })
             .setTimestamp();
 
           if (welcomeConfig.welcomeImage) {
             embed.setImage(welcomeConfig.welcomeImage);
           }
 
-          const pingContent = welcomeConfig.welcomePing ? `<@${member.id}>` : undefined;
-          await welcomeChannel.send({ content: pingContent, embeds: [embed] });
+          // Title line outside the embed, pinging the user
+          const titleContent = `Welcome to ${member.guild.name} <@${member.id}> 🎉`;
+
+          await welcomeChannel.send({ content: titleContent, embeds: [embed] });
           logger.info(`Welcome message sent for ${member.user.tag} in ${member.guild.name}`);
         }
       }
@@ -51,18 +48,15 @@ export default {
 
         if (announcementChannel) {
           const embed = new EmbedBuilder()
-            .setColor(0x2ECC71)
-            .setTitle(`👋 Welcome to ${member.guild.name}!`)
-            .setDescription(`Hey <@${member.id}>, welcome to **${member.guild.name}**! We're glad to have you here.\n\nMake sure to check out the rules and grab your roles!`)
-            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
-            .addFields(
-              { name: 'Member', value: `<@${member.id}>`, inline: true },
-              { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
-              { name: 'Member Count', value: `#${member.guild.memberCount}`, inline: true },
-            )
+            .setColor(0xFFFFFF)
+            .setDescription(`Welcome to **${member.guild.name}**! We're glad to have you here.\n\nMake sure to check out the rules and grab your roles!`)
+            .setFooter({ text: `${member.guild.name} Management` })
             .setTimestamp();
 
-          await announcementChannel.send({ embeds: [embed] });
+          await announcementChannel.send({
+            content: `Welcome to ${member.guild.name} <@${member.id}> 🎉`,
+            embeds: [embed],
+          });
         }
       }
 
