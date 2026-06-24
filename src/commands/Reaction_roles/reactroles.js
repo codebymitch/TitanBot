@@ -1,5 +1,5 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, RoleSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType, EmbedBuilder, LabelBuilder, CheckboxBuilder, TextDisplayBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, RoleSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType, EmbedBuilder } from 'discord.js';
 import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, createError, TitanBotError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
@@ -61,6 +61,31 @@ export default {
                 .addRoleOption(option =>
                     option.setName('role5')
                         .setDescription('Fifth role to add')
+                        .setRequired(false)
+                )
+                .addRoleOption(option =>
+                    option.setName('role6')
+                        .setDescription('Sixth role to add')
+                        .setRequired(false)
+                )
+                .addRoleOption(option =>
+                    option.setName('role7')
+                        .setDescription('Seventh role to add')
+                        .setRequired(false)
+                )
+                .addRoleOption(option =>
+                    option.setName('role8')
+                        .setDescription('Eighth role to add')
+                        .setRequired(false)
+                )
+                .addRoleOption(option =>
+                    option.setName('role9')
+                        .setDescription('Ninth role to add')
+                        .setRequired(false)
+                )
+                .addRoleOption(option =>
+                    option.setName('role10')
+                        .setDescription('Tenth role to add')
                         .setRequired(false)
                 )
         )
@@ -226,7 +251,7 @@ async function handleSetup(interaction) {
     const roles = [];
     const roleValidationErrors = [];
     
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 10; i++) {
         const role = interaction.options.getRole(`role${i}`);
         if (role) {
             if (role.position >= interaction.guild.members.me.roles.highest.position) {
@@ -1012,22 +1037,19 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
 
     const deleteModal = new ModalBuilder()
         .setCustomId('rr_delete_confirm_modal')
-        .setTitle('Delete Reaction Role Panel');
-
-    const deleteWarningText = new TextDisplayBuilder()
-        .setContent(`⚠️ You are about to permanently delete the panel **${title}**. This will remove the Discord message and all associated reaction role assignments.`);
-
-    const deleteCheckbox = new CheckboxBuilder()
-        .setCustomId('delete_confirmation')
-        .setDefault(false);
-
-    const deleteCheckboxLabel = new LabelBuilder()
-        .setLabel('I confirm — this cannot be undone')
-        .setCheckboxComponent(deleteCheckbox);
-
-    deleteModal
-        .addTextDisplayComponents(deleteWarningText)
-        .addLabelComponents(deleteCheckboxLabel);
+        .setTitle('Delete Reaction Role Panel')
+        .addComponents(
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('delete_confirmation')
+                    .setLabel('Type "DELETE" to confirm')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('DELETE')
+                    .setMaxLength(6)
+                    .setMinLength(6)
+                    .setRequired(true),
+            ),
+        );
 
     await btnInteraction.showModal(deleteModal);
 
@@ -1043,10 +1065,10 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
         return;
     }
 
-    const confirmed = submitted.fields.getCheckbox('delete_confirmation');
+    const confirmed = submitted.fields.getTextInputValue('delete_confirmation').trim();
 
-    if (!confirmed) {
-        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'You must tick the confirmation checkbox to delete the panel.' });
+    if (confirmed !== 'DELETE') {
+        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'You must type "DELETE" exactly to confirm deletion.' });
         await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild, client);
         return;
     }
