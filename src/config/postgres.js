@@ -124,9 +124,9 @@ export const pgConfig = {
         keepalives: 1,
         keepalives_idle: 30,
 
-        retries: parseInt(process.env.POSTGRES_RETRIES) || 3,
-        backoffBase: parseInt(process.env.POSTGRES_BACKOFF_BASE) || 100,
-        backoffMultiplier: parseInt(process.env.POSTGRES_BACKOFF_MULTIPLIER) || 2,
+        retries: parseInt(process.env.POSTGRES_RETRIES) || 15,
+        backoffBase: parseInt(process.env.POSTGRES_BACKOFF_BASE) || 500,
+        backoffMultiplier: parseInt(process.env.POSTGRES_BACKOFF_MULTIPLIER) || 1.5,
     },
     
     tables: validatedTables,
@@ -194,3 +194,4 @@ export const pgConfig = {
 };
 
 export default pgConfig;
+
