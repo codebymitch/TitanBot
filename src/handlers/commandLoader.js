@@ -82,6 +82,8 @@ export async function loadCommands(client) {
             const commandDir = path.dirname(filePath);
             const category = path.basename(commandDir);
             
+            logger.debug(`Attempting to load command: ${commandName} from ${normalizedPath}`);
+            
             const commandModule = await import(`file://${filePath}`);
             const command = commandModule.default || commandModule;
             
@@ -110,7 +112,11 @@ export async function loadCommands(client) {
             }
             
         } catch (error) {
-            logger.error(`Error loading command from ${filePath}:`, error);
+            logger.error(`❌ ERROR loading command from ${filePath}:`, {
+                errorMessage: error.message,
+                errorName: error.name,
+                errorStack: error.stack
+            });
         }
     }
     
