@@ -1,4 +1,4 @@
-﻿import { Events } from 'discord.js';
+import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
@@ -17,7 +17,7 @@ import {
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
-import { getSticky, saveSticky } from '../commands/utility/sticky.js';
+import { getSticky, saveSticky } from '../commands/Utility/sticky.js';
 import { EmbedBuilder } from 'discord.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;

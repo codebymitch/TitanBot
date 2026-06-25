@@ -1,6 +1,6 @@
 // src/buttons/punish_rosterlink.js
 import { EmbedBuilder } from 'discord.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../../utils/logger.js';
 
 const BUTTON_LABELS = {
   punish_reviewed: '✅ Reviewed by IA/HC',
