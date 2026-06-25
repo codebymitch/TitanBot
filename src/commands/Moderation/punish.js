@@ -37,16 +37,24 @@ async function executePunishmentAction(member, punishmentType, durationStr, guil
       case 'Verbal Warning':
       case 'Written Warning': {
         // Add warning role
-        await member.roles.add(WARNING_ROLE_ID).catch(() => {});
-        results.push(`✅ Warning role added`);
+        try {
+          await member.roles.add(WARNING_ROLE_ID);
+          results.push(`✅ Warning role added`);
+        } catch (roleErr) {
+          results.push(`❌ Failed to add warning role: ${roleErr.message}`);
+        }
         break;
       }
 
       case 'Mute/Timeout':
       case 'Temporary Ban': {
         // Add muted role
-        await member.roles.add(MUTED_ROLE_ID).catch(() => {});
-        results.push(`✅ Muted role added`);
+        try {
+          await member.roles.add(MUTED_ROLE_ID);
+          results.push(`✅ Muted role added`);
+        } catch (roleErr) {
+          results.push(`❌ Failed to add muted role: ${roleErr.message}`);
+        }
 
         // Schedule role removal if duration provided
         if (durationStr) {
@@ -75,15 +83,23 @@ async function executePunishmentAction(member, punishmentType, durationStr, guil
       case 'Permanent Ban':
       case 'Termination': {
         // Add muted role permanently
-        await member.roles.add(MUTED_ROLE_ID).catch(() => {});
-        results.push(`✅ Muted role added permanently`);
+        try {
+          await member.roles.add(MUTED_ROLE_ID);
+          results.push(`✅ Muted role added permanently`);
+        } catch (roleErr) {
+          results.push(`❌ Failed to add muted role: ${roleErr.message}`);
+        }
         break;
       }
 
       case 'Suspension': {
         // Add suspension role
-        await member.roles.add(SUSPENSION_ROLE_ID).catch(() => {});
-        results.push(`✅ Suspension role added`);
+        try {
+          await member.roles.add(SUSPENSION_ROLE_ID);
+          results.push(`✅ Suspension role added`);
+        } catch (roleErr) {
+          results.push(`❌ Failed to add suspension role: ${roleErr.message}`);
+        }
 
         // Schedule role removal if duration provided
         if (durationStr) {
@@ -302,20 +318,8 @@ export default {
       const buttons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`punish_reviewed_${caseCode}`)
-          .setLabel('✅ Reviewed by IA/HC')
+          .setLabel('✅ Reviewed by Management')
           .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId(`punish_processed_${caseCode}`)
-          .setLabel('Department Hub Processed')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId(`punish_roster_${caseCode}`)
-          .setLabel('Roles & Roster Updated')
-          .setStyle(ButtonStyle.Danger),
-        new ButtonBuilder()
-          .setCustomId(`punish_rosterlink_${caseCode}`)
-          .setLabel('Roster')
-          .setStyle(ButtonStyle.Secondary),
       );
 
       // Send to punishment log forum channel
