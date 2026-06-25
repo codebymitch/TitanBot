@@ -11,11 +11,37 @@ import { logModerationAction, generateCaseId, storeModerationCase } from '../../
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { getFromDb, setInDb } from '../../utils/database.js';
 
 const PUNISHMENT_LOG_CHANNEL_ID = '1517145309015314442';
-const WARNING_ROLE_ID = '1480276327578996747';
-const MUTED_ROLE_ID = '1516865012554141801';
-const SUSPENSION_ROLE_ID = '1516865012554141801';
+const WARNING_ROLE_ID = '1519540353881866404';
+const MUTED_ROLE_ID = '1519537206182809743';
+const SUSPENSION_ROLE_ID = '1519537206182809743';
+
+// Key to store saved roles per user
+const SAVED_ROLES_KEY = (guildId, userId) => `saved_roles_${guildId}_${userId}`;
+
+async function saveAndRemoveRoles(member, guild) {
+  try {
+    // Get all roles except @everyone and bot-managed roles
+    const rolesToSave = member.roles.cache
+      .filter(r => r.id !== guild.id && !r.managed)
+      .map(r => r.id);
+
+    if (rolesToSave.length === 0) return;
+
+    // Save roles to database
+    await setInDb(SAVED_ROLES_KEY(guild.id, member.id), {
+      roles: rolesToSave,
+      savedAt: new Date().toISOString(),
+    });
+
+    // Remove all saved roles
+    await member.roles.remove(rolesToSave).catch(() => {});
+  } catch (err) {
+    throw new Error(`Failed to save/remove roles: ${err.message}`);
+  }
+}
 
 const PUNISHMENT_TYPES = [
   'Verbal Warning',
@@ -48,7 +74,13 @@ async function executePunishmentAction(member, punishmentType, durationStr, guil
 
       case 'Mute/Timeout':
       case 'Temporary Ban': {
-        // Add muted role
+        // Save and remove all roles, then add muted role
+        try {
+          await saveAndRemoveRoles(member, guild);
+          results.push(`✅ All roles saved and removed`);
+        } catch (saveErr) {
+          results.push(`⚠️ Role save failed: ${saveErr.message}`);
+        }
         try {
           await member.roles.add(MUTED_ROLE_ID);
           results.push(`✅ Muted role added`);
@@ -82,7 +114,13 @@ async function executePunishmentAction(member, punishmentType, durationStr, guil
 
       case 'Permanent Ban':
       case 'Termination': {
-        // Add muted role permanently
+        // Save and remove all roles, then add muted role permanently
+        try {
+          await saveAndRemoveRoles(member, guild);
+          results.push(`✅ All roles saved and removed`);
+        } catch (saveErr) {
+          results.push(`⚠️ Role save failed: ${saveErr.message}`);
+        }
         try {
           await member.roles.add(MUTED_ROLE_ID);
           results.push(`✅ Muted role added permanently`);
@@ -93,7 +131,13 @@ async function executePunishmentAction(member, punishmentType, durationStr, guil
       }
 
       case 'Suspension': {
-        // Add suspension role
+        // Save and remove all roles, then add suspension role
+        try {
+          await saveAndRemoveRoles(member, guild);
+          results.push(`✅ All roles saved and removed`);
+        } catch (saveErr) {
+          results.push(`⚠️ Role save failed: ${saveErr.message}`);
+        }
         try {
           await member.roles.add(SUSPENSION_ROLE_ID);
           results.push(`✅ Suspension role added`);
@@ -318,8 +362,20 @@ export default {
       const buttons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`punish_reviewed_${caseCode}`)
-          .setLabel('✅ Reviewed by Management')
+          .setLabel('✅ Reviewed by IA/HC')
           .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`punish_processed_${caseCode}`)
+          .setLabel('Department Hub Processed')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`punish_roster_${caseCode}`)
+          .setLabel('Roles & Roster Updated')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId(`punish_rosterlink_${caseCode}`)
+          .setLabel('Roster')
+          .setStyle(ButtonStyle.Secondary),
       );
 
       // Send to punishment log forum channel
