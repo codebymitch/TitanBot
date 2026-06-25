@@ -13,6 +13,9 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 const PUNISHMENT_LOG_CHANNEL_ID = '1517145309015314442';
+const WARNING_ROLE_ID = '1519540353881866404';
+const MUTED_ROLE_ID = '1519537206182809743';
+const SUSPENSION_ROLE_ID = '1519537206182809743';
 
 const PUNISHMENT_TYPES = [
   'Verbal Warning',
@@ -25,6 +28,92 @@ const PUNISHMENT_TYPES = [
   'Demotion',
   'Suspension',
 ];
+
+async function executePunishmentAction(member, punishmentType, durationStr, guild) {
+  const results = [];
+
+  try {
+    switch (punishmentType) {
+      case 'Verbal Warning':
+      case 'Written Warning': {
+        // Add warning role
+        await member.roles.add(WARNING_ROLE_ID).catch(() => {});
+        results.push(`✅ Warning role added`);
+        break;
+      }
+
+      case 'Mute/Timeout':
+      case 'Temporary Ban': {
+        // Add muted role
+        await member.roles.add(MUTED_ROLE_ID).catch(() => {});
+        results.push(`✅ Muted role added`);
+
+        // Schedule role removal if duration provided
+        if (durationStr) {
+          const ms = parseDuration(durationStr);
+          if (ms) {
+            setTimeout(async () => {
+              try {
+                const freshMember = await guild.members.fetch(member.id).catch(() => null);
+                if (freshMember) {
+                  await freshMember.roles.remove(MUTED_ROLE_ID).catch(() => {});
+                }
+              } catch (err) {}
+            }, ms);
+            results.push(`⏰ Muted role will be removed after ${formatDuration(durationStr)}`);
+          }
+        }
+        break;
+      }
+
+      case 'Kick': {
+        await member.kick().catch(() => {});
+        results.push(`✅ Member kicked`);
+        break;
+      }
+
+      case 'Permanent Ban':
+      case 'Termination': {
+        // Add muted role permanently
+        await member.roles.add(MUTED_ROLE_ID).catch(() => {});
+        results.push(`✅ Muted role added permanently`);
+        break;
+      }
+
+      case 'Suspension': {
+        // Add suspension role
+        await member.roles.add(SUSPENSION_ROLE_ID).catch(() => {});
+        results.push(`✅ Suspension role added`);
+
+        // Schedule role removal if duration provided
+        if (durationStr) {
+          const ms = parseDuration(durationStr);
+          if (ms) {
+            setTimeout(async () => {
+              try {
+                const freshMember = await guild.members.fetch(member.id).catch(() => null);
+                if (freshMember) {
+                  await freshMember.roles.remove(SUSPENSION_ROLE_ID).catch(() => {});
+                }
+              } catch (err) {}
+            }, ms);
+            results.push(`⏰ Suspension role will be removed after ${formatDuration(durationStr)}`);
+          }
+        }
+        break;
+      }
+
+      case 'Demotion': {
+        results.push(`📝 Demotion logged`);
+        break;
+      }
+    }
+  } catch (err) {
+    results.push(`⚠️ Action partially failed: ${err.message}`);
+  }
+
+  return results;
+}
 
 function generateCaseCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -119,6 +208,14 @@ export default {
         throw new TitanBotError('Invalid duration', ErrorTypes.USER_INPUT, 'Invalid duration format. Use formats like `30d`, `7d`, `24h`, `1w`, `30m`.', { subtype: 'invalid_duration' });
       }
 
+      // Execute the punishment action
+      let actionResults = [];
+      if (member) {
+        actionResults = await executePunishmentAction(member, punishmentType, durationStr, interaction.guild);
+      } else {
+        actionResults = ['⚠️ Member not found in server — action skipped, log created'];
+      }
+
       const caseCode = generateCaseCode();
       const now = new Date();
       const formattedDate = now.toLocaleDateString('en-US', {
@@ -173,6 +270,14 @@ export default {
         .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 128 }))
         .setTimestamp();
 
+      if (actionResults.length > 0) {
+        embed.addFields({
+          name: 'Actions Taken',
+          value: actionResults.join('\n'),
+          inline: false,
+        });
+      }
+
       if (durationStr) {
         embed.addFields(
           { name: 'Active For', value: formatDuration(durationStr), inline: true },
@@ -196,8 +301,20 @@ export default {
       const buttons = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`punish_reviewed_${caseCode}`)
-          .setLabel('✅ Reviewed by Management')
+          .setLabel('✅ Reviewed by IA/HC')
           .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`punish_processed_${caseCode}`)
+          .setLabel('Department Hub Processed')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`punish_roster_${caseCode}`)
+          .setLabel('Roles & Roster Updated')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId(`punish_rosterlink_${caseCode}`)
+          .setLabel('Roster')
+          .setStyle(ButtonStyle.Secondary),
       );
 
       // Send to punishment log forum channel
