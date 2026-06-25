@@ -2,10 +2,7 @@ import { EmbedBuilder } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 
 const BUTTON_LABELS = {
-  punish_reviewed: '✅ Reviewed by IA/HC',
-  punish_processed: '🏢 Department Hub Processed',
-  punish_roster: '🔄 Roles & Roster Updated',
-  punish_rosterlink: '📋 Roster',
+  punish_reviewed: '✅ Reviewed Management',
 };
 
 async function execute(interaction, client) {
