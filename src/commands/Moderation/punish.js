@@ -13,9 +13,9 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 const PUNISHMENT_LOG_CHANNEL_ID = '1517145309015314442';
-const WARNING_ROLE_ID = '1519540353881866404';
-const MUTED_ROLE_ID = '1480276327578996747';
-const SUSPENSION_ROLE_ID = '1480276327578996747';
+const WARNING_ROLE_ID = '1480276327578996747';
+const MUTED_ROLE_ID = '1516865012554141801';
+const SUSPENSION_ROLE_ID = '1516865012554141801';
 
 const PUNISHMENT_TYPES = [
   'Verbal Warning',
