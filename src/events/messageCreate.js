@@ -17,8 +17,8 @@ import {
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
-import { getSticky, saveSticky } from '../commands/Utility/sticky.js';
-import { EmbedBuilder, PermissionsBitField } from 'discord.js';
+import { getSticky, saveSticky } from '../commands/utility/sticky.js';
+import { EmbedBuilder } from 'discord.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -26,112 +26,92 @@ const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
-    if (!message.guild) return;
-    if (message.author.bot) return;
-
-    logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
-
-    let stickyReposted = false;
-
     try {
+      if (!message.guild) return;
+
+      // Handle sticky BEFORE bot check so non-bot messages trigger repost
+      // But skip if the message author is the bot itself to prevent loops
+      if (!message.author.bot) {
+        await handleSticky(message);
+      }
+
+      if (message.author.bot) return;
+
+      logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
+
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
         return;
       }
 
       await handleFAQ(message);
+
       await handlePrefixCommand(message, client);
+
       await handleLeveling(message, client);
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
-    } finally {
-      try {
-        stickyReposted = await handleSticky(message);
-        if (stickyReposted) {
-          logger.info(`Sticky message reposted in ${message.channel.id} after message ${message.id}`);
-        }
-      } catch (stickyError) {
-        logger.error('Error reposting sticky message in finally block:', stickyError);
-      }
     }
   }
 };
 
-// Track cooldowns per channel to avoid sticky spam
-const stickyCooldowns = new Map();
-const STICKY_COOLDOWN_MS = 2 * 1000; // 2 seconds cooldown per channel
+// Track active sticky reposts per channel to prevent stacking
+const stickyPending = new Map();
 
 async function handleSticky(message) {
   try {
-    logger.debug(`handleSticky triggered for channel ${message.channel.id}, message ${message.id}`);
     const sticky = await getSticky(message.guild.id, message.channel.id);
-    if (!sticky) {
-      logger.debug(`No sticky configured for channel ${message.channel.id}`);
-      return false;
-    }
-    logger.debug(`Sticky config found for channel ${message.channel.id}: ${JSON.stringify({ messageId: sticky.messageId, title: sticky.title, channelId: sticky.channelId })}`);
+    if (!sticky) return;
 
-    // Skip if the message sent IS the sticky itself (prevent loops)
-    if (message.id === sticky.messageId) {
-      logger.debug(`Received sticky message itself in ${message.channel.id}, skipping repost.`);
-      return false;
-    }
+    // Skip if the message is the sticky itself
+    if (message.id === sticky.messageId) return;
 
-    // Cooldown check — only repost once every few seconds per channel
-    const cooldownKey = `${message.guild.id}_${message.channel.id}`;
-    const lastRepost = stickyCooldowns.get(cooldownKey) || 0;
-    const now = Date.now();
+    const channelKey = `${message.guild.id}_${message.channel.id}`;
 
-    if (now - lastRepost < STICKY_COOLDOWN_MS) {
-      logger.debug(`Sticky cooldown active for channel ${message.channel.id}`);
-      return false;
-    }
-    stickyCooldowns.set(cooldownKey, now);
+    // If a repost is already scheduled for this channel, just let it run
+    if (stickyPending.get(channelKey)) return;
 
-    const channelPerms = message.channel.permissionsFor(message.guild.members.me || message.client.user);
-    if (!channelPerms || !channelPerms.has(PermissionsBitField.Flags.SendMessages)) {
-      logger.warn(`Missing send permission for sticky in channel ${message.channel.id}.`);
-      return false;
+    // Mark as pending
+    stickyPending.set(channelKey, true);
+
+    // Short delay so rapid messages settle before we repost
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Re-fetch sticky in case it changed during the delay
+    const latestSticky = await getSticky(message.guild.id, message.channel.id);
+    if (!latestSticky) {
+      stickyPending.delete(channelKey);
+      return;
     }
 
-    let oldMsgDeleted = false;
-    if (sticky.messageId) {
-      const oldMsg = await message.channel.messages.fetch(sticky.messageId, { cache: false, force: true }).catch(() => null);
-      if (oldMsg) {
-        if (oldMsg.deletable) {
-          await oldMsg.delete().catch(error => {
-            logger.warn(`Failed to delete old sticky message ${sticky.messageId} in ${message.channel.id}:`, error);
-          });
-          oldMsgDeleted = true;
-        } else {
-          logger.warn(`Old sticky message ${sticky.messageId} in ${message.channel.id} is not deletable.`);
-        }
-      } else {
-        logger.debug(`Old sticky message ${sticky.messageId} not found in ${message.channel.id}.`);
-      }
+    // Delete the old sticky message
+    if (latestSticky.messageId) {
+      const oldMsg = await message.channel.messages.fetch(latestSticky.messageId).catch(() => null);
+      if (oldMsg) await oldMsg.delete().catch(() => {});
     }
 
-    // Repost the sticky at the bottom
+    // Repost at the bottom
     const embed = new EmbedBuilder()
-      .setTitle(sticky.title || '📌 Sticky Message')
-      .setDescription(sticky.message)
-      .setColor(parseInt(sticky.color || '0xF1C40F', 16))
+      .setTitle(latestSticky.title || '📌 Sticky Message')
+      .setDescription(latestSticky.message)
+      .setColor(parseInt(latestSticky.color || '0xF1C40F', 16))
       .setFooter({ text: '📌 Sticky Message' })
       .setTimestamp();
 
     const newMsg = await message.channel.send({ embeds: [embed] });
 
-    // Update the stored message ID
+    // Save the new message ID
     await saveSticky(message.guild.id, message.channel.id, {
-      ...sticky,
+      ...latestSticky,
       messageId: newMsg.id,
     });
 
-    logger.info(`Sticky reposted successfully in channel ${message.channel.id}`);
-    return true;
+    // Clear pending flag
+    stickyPending.delete(channelKey);
   } catch (error) {
     logger.error('Error handling sticky message:', error);
-    return false;
+    const channelKey = `${message.guild.id}_${message.channel.id}`;
+    stickyPending.delete(channelKey);
   }
 }
 
@@ -243,7 +223,11 @@ async function handleCountingGame(message, client) {
     const invalidAttempt = !validCount || message.author.id === config.lastUserId;
 
     if (invalidAttempt) {
+      // React with ❌ before deleting so user knows why
+      await message.react('❌').catch(() => {});
+      await new Promise(resolve => setTimeout(resolve, 600));
       await message.delete().catch(() => {});
+
       await saveCountingGameConfig(client, message.guild.id, {
         ...config,
         nextNumber: 1,
@@ -259,6 +243,8 @@ async function handleCountingGame(message, client) {
       return true;
     }
 
+    // React with ✅ for valid count
+    await message.react('✅').catch(() => {});
     await recordCorrectCount(client, message.guild.id, message.author.id);
     return true;
   } catch (error) {
