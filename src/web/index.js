@@ -12,10 +12,10 @@ const publicDir = join(__dirname, 'public');
 const PgSession = connectPgSimple(session);
 
 export function mountDashboard(app, client) {
-    const pool = client.db?.db?.pool;
+    const conString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 
-    const store = pool
-        ? new PgSession({ pool, createTableIfMissing: true })
+    const store = conString
+        ? new PgSession({ conString, createTableIfMissing: true })
         : undefined;
 
     app.use(session({
