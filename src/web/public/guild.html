@@ -42,6 +42,9 @@
             <button class="pill-tab" id="tab-btn-welcome" onclick="showTab('welcome')">👋 Welcome</button>
             <button class="pill-tab" id="tab-btn-tickets" onclick="showTab('tickets')">🎫 Tickets</button>
             <button class="pill-tab" id="tab-btn-logging" onclick="showTab('logging')">📝 Logging</button>
+            <button class="pill-tab" id="tab-btn-leveling" onclick="showTab('leveling')">⭐ Leveling</button>
+            <button class="pill-tab" id="tab-btn-birthdays" onclick="showTab('birthdays')">🎂 Birthdays</button>
+            <button class="pill-tab" id="tab-btn-verification" onclick="showTab('verification')">✅ Verification</button>
         </div>
 
         <div class="content" id="content">
@@ -273,6 +276,134 @@ function renderTab(tab) {
         </div>`;
     }
 
+    else if (tab === 'leveling') {
+        const lv = config.leveling || {};
+        const xp = lv.xpPerMessage || {};
+        content.innerHTML = `
+        <div class="card">
+            <div class="card-header"><div><h2>⭐ Leveling System</h2><p>Configure XP and level-up behaviour.</p></div></div>
+            <div class="toggle-row">
+                <div class="toggle-info"><h3>Enable Leveling</h3><p>Award XP to members for chatting.</p></div>
+                <label class="toggle">
+                    <input type="checkbox" id="cfg-lv-enabled" ${lv.enabled ? 'checked' : ''} onchange="setDirty()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-info"><h3>Announce Level-Ups</h3><p>Post a message when someone levels up.</p></div>
+                <label class="toggle">
+                    <input type="checkbox" id="cfg-lv-announce" ${lv.announceLevelUp !== false ? 'checked' : ''} onchange="setDirty()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div><h2>📊 XP Settings</h2><p>Control how much XP members earn.</p></div></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Min XP Per Message <span class="label-hint">1–500</span></label>
+                    <input type="number" id="cfg-lv-xp-min" value="${xp.min ?? 15}" min="1" max="500" oninput="setDirty()">
+                </div>
+                <div class="form-group">
+                    <label>Max XP Per Message <span class="label-hint">1–500</span></label>
+                    <input type="number" id="cfg-lv-xp-max" value="${xp.max ?? 25}" min="1" max="500" oninput="setDirty()">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>XP Cooldown <span class="label-hint">seconds between XP grants</span></label>
+                    <input type="number" id="cfg-lv-cooldown" value="${lv.xpCooldown ?? 60}" min="0" max="3600" oninput="setDirty()">
+                </div>
+                <div class="form-group">
+                    <label>XP Multiplier</label>
+                    <input type="number" id="cfg-lv-multiplier" value="${lv.xpMultiplier ?? 1}" min="0.1" max="10" step="0.1" oninput="setDirty()">
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div><h2>📣 Level-Up Announcements</h2></div></div>
+            <div class="form-group">
+                <label>Level-Up Channel <span class="label-hint">leave empty to post in same channel</span></label>
+                <select id="cfg-lv-channel" onchange="setDirty()">${selCh(lv.levelUpChannel)}</select>
+            </div>
+            <div class="form-group">
+                <label>Level-Up Message <span class="label-hint">{user} and {level} available</span></label>
+                <textarea id="cfg-lv-message" rows="2" oninput="setDirty()">${escHtml(lv.levelUpMessage || 'Congratulations {user}, you reached level {level}!')}</textarea>
+            </div>
+        </div>`;
+    }
+
+    else if (tab === 'birthdays') {
+        content.innerHTML = `
+        <div class="card">
+            <div class="card-header"><div><h2>🎂 Birthday Settings</h2><p>Celebrate member birthdays automatically.</p></div></div>
+            <div class="form-group">
+                <label>Birthday Announcement Channel</label>
+                <select id="cfg-bday-channel" onchange="setDirty()">${selCh(config.birthdayChannelId)}</select>
+            </div>
+            <div class="form-group">
+                <label>Birthday Role <span class="label-hint">assigned on their birthday</span></label>
+                <select id="cfg-bday-role" onchange="setDirty()">${selRole(config.birthdayRoleId)}</select>
+            </div>
+        </div>`;
+    }
+
+    else if (tab === 'verification') {
+        const v = config.verification || {};
+        const av = v.autoVerify || {};
+        content.innerHTML = `
+        <div class="card">
+            <div class="card-header"><div><h2>✅ Verification System</h2><p>Require members to verify before accessing the server.</p></div></div>
+            <div class="toggle-row">
+                <div class="toggle-info"><h3>Enable Verification</h3><p>Show a verification panel new members must complete.</p></div>
+                <label class="toggle">
+                    <input type="checkbox" id="cfg-v-enabled" ${v.enabled ? 'checked' : ''} onchange="setDirty()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="form-row" style="margin-top:16px">
+                <div class="form-group">
+                    <label>Verification Channel</label>
+                    <select id="cfg-v-channel" onchange="setDirty()">${selCh(v.channelId)}</select>
+                </div>
+                <div class="form-group">
+                    <label>Verified Role</label>
+                    <select id="cfg-v-role" onchange="setDirty()">${selRole(v.roleId)}</select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Verification Message</label>
+                <textarea id="cfg-v-message" rows="3" oninput="setDirty()">${escHtml(v.message || 'Click the button below to verify and access the server.')}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Button Text</label>
+                <input type="text" id="cfg-v-button" value="${escHtml(v.buttonText || 'Verify')}" maxlength="80" oninput="setDirty()">
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div><h2>🤖 Auto-Verify</h2><p>Automatically verify members who meet certain criteria.</p></div></div>
+            <div class="toggle-row">
+                <div class="toggle-info"><h3>Enable Auto-Verify</h3><p>Automatically verify members without button click.</p></div>
+                <label class="toggle">
+                    <input type="checkbox" id="cfg-av-enabled" ${av.enabled ? 'checked' : ''} onchange="setDirty()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="form-group" style="margin-top:16px">
+                <label>Criteria</label>
+                <select id="cfg-av-criteria" onchange="setDirty()">
+                    <option value="none" ${(av.criteria||'none')==='none'?'selected':''}>None</option>
+                    <option value="account_age" ${av.criteria==='account_age'?'selected':''}>Account Age</option>
+                    <option value="server_size" ${av.criteria==='server_size'?'selected':''}>Server Size</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Min Account Age <span class="label-hint">days (used when criteria = Account Age)</span></label>
+                <input type="number" id="cfg-av-age" value="${av.accountAgeDays ?? 7}" min="1" max="365" oninput="setDirty()">
+            </div>
+        </div>`;
+    }
+
     document.getElementById('save-bar').style.display = dirty ? 'flex' : 'none';
 }
 
@@ -322,6 +453,48 @@ function collectConfig() {
                     audit: get('cfg-logging-audit'),
                     applications: get('cfg-logging-applications'),
                     reports: get('cfg-logging-reports'),
+                },
+            },
+        };
+    }
+    if (currentTab === 'leveling') {
+        const min = parseInt(document.getElementById('cfg-lv-xp-min')?.value || '15');
+        const max = parseInt(document.getElementById('cfg-lv-xp-max')?.value || '25');
+        const cooldown = parseInt(document.getElementById('cfg-lv-cooldown')?.value || '60');
+        const multiplier = parseFloat(document.getElementById('cfg-lv-multiplier')?.value || '1');
+        return {
+            leveling: {
+                ...((config.leveling) || {}),
+                enabled: get('cfg-lv-enabled'),
+                announceLevelUp: get('cfg-lv-announce'),
+                xpPerMessage: { min: Math.min(min, max), max: Math.max(min, max) },
+                xpCooldown: isNaN(cooldown) ? 60 : Math.min(3600, Math.max(0, cooldown)),
+                xpMultiplier: isNaN(multiplier) ? 1 : Math.min(10, Math.max(0.1, multiplier)),
+                levelUpChannel: get('cfg-lv-channel'),
+                levelUpMessage: get('cfg-lv-message') || 'Congratulations {user}, you reached level {level}!',
+            },
+        };
+    }
+    if (currentTab === 'birthdays') {
+        return {
+            birthdayChannelId: get('cfg-bday-channel'),
+            birthdayRoleId: get('cfg-bday-role'),
+        };
+    }
+    if (currentTab === 'verification') {
+        const age = parseInt(document.getElementById('cfg-av-age')?.value || '7');
+        return {
+            verification: {
+                ...((config.verification) || {}),
+                enabled: get('cfg-v-enabled'),
+                channelId: get('cfg-v-channel'),
+                roleId: get('cfg-v-role'),
+                message: get('cfg-v-message') || 'Click the button below to verify and access the server.',
+                buttonText: get('cfg-v-button') || 'Verify',
+                autoVerify: {
+                    enabled: get('cfg-av-enabled'),
+                    criteria: get('cfg-av-criteria') || 'none',
+                    accountAgeDays: isNaN(age) ? 7 : Math.min(365, Math.max(1, age)),
                 },
             },
         };

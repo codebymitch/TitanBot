@@ -12,6 +12,9 @@ const ALLOWED_CONFIG_KEYS = new Set([
     'ticketClosedCategoryId', 'ticketPanelMessage', 'ticketButtonLabel',
     'maxTicketsPerUser', 'ticketLogsChannelId', 'ticketTranscriptChannelId',
     'logging',
+    'leveling',
+    'birthdayChannelId', 'birthdayRoleId',
+    'verification',
 ]);
 
 export function createApiRouter(client) {
