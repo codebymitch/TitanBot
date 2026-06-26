@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TitanBot Dashboard</title>
+    <link rel="stylesheet" href="/dashboard/assets/css/style.css">
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">⚡</div>
+            <div>
+                <h2>TitanBot</h2>
+                <span>Dashboard</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-label">Navigation</div>
+            <button class="nav-item active" onclick="location.href='/dashboard'">
+                <span class="icon">🏠</span> My Servers
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <img id="user-avatar" src="" alt="">
+                <span class="name" id="user-name">Loading…</span>
+                <form action="/auth/logout" method="POST" style="margin:0">
+                    <button class="logout" type="submit" title="Logout">✕</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="content" style="max-width:900px">
+            <div class="page-header">
+                <h1>Your Servers</h1>
+                <p>Select a server to configure TitanBot settings.</p>
+            </div>
+
+            <div id="guild-list">
+                <div class="loading-overlay">
+                    <div class="spinner"></div>
+                    <span>Loading your servers…</span>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script src="/dashboard/assets/js/app.js"></script>
+<script>
+async function init() {
+    const [user, guilds] = await Promise.all([
+        api('/api/me'),
+        api('/api/guilds'),
+    ]);
+
+    if (user) {
+        document.getElementById('user-name').textContent = user.username;
+        const avatar = document.getElementById('user-avatar');
+        if (user.avatar) {
+            avatar.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`;
+        } else {
+            avatar.src = `https://cdn.discordapp.com/embed/avatars/${parseInt(user.id) % 5}.png`;
+        }
+    }
+
+    const container = document.getElementById('guild-list');
+
+    if (!guilds || guilds.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">🤖</div>
+                <h2>No servers found</h2>
+                <p>TitanBot isn't in any servers where you have Manage Server permission.<br>
+                <a href="https://discord.com/api/oauth2/authorize?client_id=${encodeURIComponent('')}&permissions=8&scope=bot+applications.commands" target="_blank">Invite the bot</a> to get started.</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = `<div class="guild-grid">${guilds.map(g => {
+        const icon = g.icon
+            ? `<img src="https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=128" alt="">`
+            : `<div class="guild-icon-lg">${g.name.charAt(0)}</div>`;
+        return `<a href="/dashboard/guild/${g.id}" class="guild-card">${icon}<h3>${escHtml(g.name)}</h3></a>`;
+    }).join('')}</div>`;
+}
+
+init();
+</script>
+</body>
+</html>

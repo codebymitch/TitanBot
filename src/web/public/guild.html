@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TitanBot — Server Config</title>
+    <link rel="stylesheet" href="/dashboard/assets/css/style.css">
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">⚡</div>
+            <div><h2>TitanBot</h2><span>Dashboard</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-label">Settings</div>
+            <button class="nav-item" id="tab-btn-general" onclick="showTab('general')">
+                <span class="icon">⚙️</span> General
+            </button>
+            <button class="nav-item" id="tab-btn-welcome" onclick="showTab('welcome')">
+                <span class="icon">👋</span> Welcome
+            </button>
+            <button class="nav-item" id="tab-btn-tickets" onclick="showTab('tickets')">
+                <span class="icon">🎫</span> Tickets
+            </button>
+            <button class="nav-item" id="tab-btn-logging" onclick="showTab('logging')">
+                <span class="icon">📝</span> Logging
+            </button>
+            <div class="nav-label" style="margin-top:12px">Navigation</div>
+            <button class="nav-item" onclick="location.href='/dashboard'">
+                <span class="icon">🏠</span> All Servers
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <img id="user-avatar" src="" alt="">
+                <span class="name" id="user-name">…</span>
+                <form action="/auth/logout" method="POST" style="margin:0">
+                    <button class="logout" type="submit" title="Logout">✕</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <button class="back" onclick="location.href='/dashboard'" title="Back">←</button>
+            <span id="guild-icon-el"></span>
+            <h1 id="guild-name">Loading…</h1>
+        </div>
+
+        <div class="content" id="content">
+            <div class="loading-overlay">
+                <div class="spinner"></div>
+                <span>Loading server settings…</span>
+            </div>
+        </div>
+
+        <div class="save-bar" id="save-bar" style="display:none">
+            <span class="save-status" id="save-status"></span>
+            <div style="display:flex;gap:10px">
+                <button class="btn btn-ghost btn-sm" onclick="discardChanges()">Discard</button>
+                <button class="btn btn-primary btn-sm" id="save-btn" onclick="saveConfig()">Save Changes</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+<script src="/dashboard/assets/js/app.js"></script>
+<script>
+const guildId = location.pathname.split('/').pop();
+let guildData = null;
+let config = null;
+let originalConfig = null;
+let currentTab = 'general';
+let dirty = false;
+
+async function init() {
+    const [user, guild, cfg] = await Promise.all([
+        api('/api/me'),
+        api(`/api/guilds/${guildId}`),
+        api(`/api/guilds/${guildId}/config`),
+    ]);
+
+    if (!guild || !cfg) return;
+
+    guildData = guild;
+    config = deepCopy(cfg);
+    originalConfig = deepCopy(cfg);
+
+    // User chip
+    if (user) {
+        document.getElementById('user-name').textContent = user.username;
+        const av = document.getElementById('user-avatar');
+        av.src = user.avatar
+            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
+            : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.id) % 5}.png`;
+    }
+
+    // Guild header
+    document.title = `TitanBot — ${guild.name}`;
+    document.getElementById('guild-name').textContent = guild.name;
+    const iconEl = document.getElementById('guild-icon-el');
+    if (guild.icon) {
+        iconEl.innerHTML = `<img class="guild-icon" src="${guild.icon}" alt="">`;
+    } else {
+        iconEl.innerHTML = `<span class="guild-icon-placeholder">${guild.name.charAt(0)}</span>`;
+    }
+
+    showTab('general');
+}
+
+function showTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.nav-item[id^="tab-btn-"]').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-btn-${tab}`)?.classList.add('active');
+    renderTab(tab);
+}
+
+function renderTab(tab) {
+    const content = document.getElementById('content');
+    if (!guildData || !config) return;
+
+    const textChannels = guildData.channels.filter(c => c.type === 0 || c.type === 5);
+    const categories = guildData.channels.filter(c => c.type === 4);
+    const roles = guildData.roles;
+
+    const selCh = (val) => buildSelect(textChannels, val, 'None / Not set');
+    const selCat = (val) => buildSelect(categories, val, 'None / Not set');
+    const selRole = (val) => buildSelect(roles, val, 'None / Not set');
+
+    if (tab === 'general') {
+        content.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <div><h2>⚙️ General Settings</h2><p>Basic bot configuration for this server.</p></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Bot Prefix <span class="label-hint">for text commands</span></label>
+                    <input type="text" id="cfg-prefix" value="${escHtml(config.prefix || '!')}" maxlength="5" oninput="setDirty()">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Moderator Role</label>
+                    <select id="cfg-modRole" onchange="setDirty()">${selRole(config.modRole)}</select>
+                </div>
+                <div class="form-group">
+                    <label>Admin Role</label>
+                    <select id="cfg-adminRole" onchange="setDirty()">${selRole(config.adminRole)}</select>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    else if (tab === 'welcome') {
+        content.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <div><h2>👋 Welcome Settings</h2><p>Greet new members and assign roles automatically.</p></div>
+            </div>
+            <div class="form-group">
+                <label>Welcome Channel</label>
+                <select id="cfg-welcomeChannel" onchange="setDirty()">${selCh(config.welcomeChannel)}</select>
+            </div>
+            <div class="form-group">
+                <label>Welcome Message <span class="label-hint">use {user} and {server}</span></label>
+                <textarea id="cfg-welcomeMessage" rows="3" oninput="setDirty()">${escHtml(config.welcomeMessage || 'Welcome {user} to {server}!')}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Auto Role <span class="label-hint">assigned when someone joins</span></label>
+                <select id="cfg-autoRole" onchange="setDirty()">${selRole(config.autoRole)}</select>
+            </div>
+        </div>`;
+    }
+
+    else if (tab === 'tickets') {
+        const dmEnabled = config.dmOnClose !== false;
+        content.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <div><h2>🎫 Ticket System</h2><p>Configure how the ticket system works in this server.</p></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Panel Channel</label>
+                    <select id="cfg-ticketPanelChannelId" onchange="setDirty()">${selCh(config.ticketPanelChannelId)}</select>
+                </div>
+                <div class="form-group">
+                    <label>Staff Role</label>
+                    <select id="cfg-ticketStaffRoleId" onchange="setDirty()">${selRole(config.ticketStaffRoleId)}</select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Open Tickets Category</label>
+                    <select id="cfg-ticketCategoryId" onchange="setDirty()">${selCat(config.ticketCategoryId)}</select>
+                </div>
+                <div class="form-group">
+                    <label>Closed Tickets Category</label>
+                    <select id="cfg-ticketClosedCategoryId" onchange="setDirty()">${selCat(config.ticketClosedCategoryId)}</select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Panel Message</label>
+                <textarea id="cfg-ticketPanelMessage" rows="3" oninput="setDirty()">${escHtml(config.ticketPanelMessage || 'Click the button below to create a support ticket.')}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Button Label</label>
+                    <input type="text" id="cfg-ticketButtonLabel" value="${escHtml(config.ticketButtonLabel || 'Create Ticket')}" maxlength="80" oninput="setDirty()">
+                </div>
+                <div class="form-group">
+                    <label>Max Tickets Per User</label>
+                    <input type="number" id="cfg-maxTicketsPerUser" value="${config.maxTicketsPerUser || 3}" min="1" max="10" oninput="setDirty()">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ticket Logs Channel</label>
+                    <select id="cfg-ticketLogsChannelId" onchange="setDirty()">${selCh(config.ticketLogsChannelId)}</select>
+                </div>
+                <div class="form-group">
+                    <label>Transcript Channel</label>
+                    <select id="cfg-ticketTranscriptChannelId" onchange="setDirty()">${selCh(config.ticketTranscriptChannelId)}</select>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div><h2>🔧 Ticket Options</h2></div></div>
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <h3>DM on Close</h3>
+                    <p>Send users a DM when their ticket is closed.</p>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" id="cfg-dmOnClose" ${dmEnabled ? 'checked' : ''} onchange="setDirty()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>`;
+    }
+
+    else if (tab === 'logging') {
+        const logging = config.logging || {};
+        const ch = logging.channels || {};
+        content.innerHTML = `
+        <div class="card">
+            <div class="card-header"><div><h2>📝 Logging</h2><p>Track server events to audit channels.</p></div></div>
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <h3>Enable Logging</h3>
+                    <p>Turn on audit logging for this server.</p>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" id="cfg-logging-enabled" ${logging.enabled ? 'checked' : ''} onchange="setDirty()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><div><h2>📡 Log Channels</h2><p>Where different types of logs are sent.</p></div></div>
+            <div class="form-group">
+                <label>Audit Log Channel</label>
+                <select id="cfg-logging-audit" onchange="setDirty()">${selCh(ch.audit)}</select>
+            </div>
+            <div class="form-group">
+                <label>Applications Channel</label>
+                <select id="cfg-logging-applications" onchange="setDirty()">${selCh(ch.applications)}</select>
+            </div>
+            <div class="form-group">
+                <label>Reports Channel</label>
+                <select id="cfg-logging-reports" onchange="setDirty()">${selCh(ch.reports)}</select>
+            </div>
+        </div>`;
+    }
+
+    document.getElementById('save-bar').style.display = dirty ? 'flex' : 'none';
+}
+
+function collectConfig() {
+    const get = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return undefined;
+        if (el.type === 'checkbox') return el.checked;
+        return el.value || null;
+    };
+
+    if (currentTab === 'general') {
+        return {
+            prefix: get('cfg-prefix') || '!',
+            modRole: get('cfg-modRole'),
+            adminRole: get('cfg-adminRole'),
+        };
+    }
+    if (currentTab === 'welcome') {
+        return {
+            welcomeChannel: get('cfg-welcomeChannel'),
+            welcomeMessage: get('cfg-welcomeMessage') || 'Welcome {user} to {server}!',
+            autoRole: get('cfg-autoRole'),
+        };
+    }
+    if (currentTab === 'tickets') {
+        const max = parseInt(document.getElementById('cfg-maxTicketsPerUser')?.value || '3');
+        return {
+            ticketPanelChannelId: get('cfg-ticketPanelChannelId'),
+            ticketStaffRoleId: get('cfg-ticketStaffRoleId'),
+            ticketCategoryId: get('cfg-ticketCategoryId'),
+            ticketClosedCategoryId: get('cfg-ticketClosedCategoryId'),
+            ticketPanelMessage: get('cfg-ticketPanelMessage') || 'Click the button below to create a support ticket.',
+            ticketButtonLabel: get('cfg-ticketButtonLabel') || 'Create Ticket',
+            maxTicketsPerUser: isNaN(max) ? 3 : Math.min(10, Math.max(1, max)),
+            ticketLogsChannelId: get('cfg-ticketLogsChannelId'),
+            ticketTranscriptChannelId: get('cfg-ticketTranscriptChannelId'),
+            dmOnClose: get('cfg-dmOnClose'),
+        };
+    }
+    if (currentTab === 'logging') {
+        return {
+            logging: {
+                ...((config.logging) || {}),
+                enabled: get('cfg-logging-enabled'),
+                channels: {
+                    audit: get('cfg-logging-audit'),
+                    applications: get('cfg-logging-applications'),
+                    reports: get('cfg-logging-reports'),
+                },
+            },
+        };
+    }
+    return {};
+}
+
+async function saveConfig() {
+    const btn = document.getElementById('save-btn');
+    const status = document.getElementById('save-status');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    status.textContent = '';
+    status.className = 'save-status';
+
+    const updates = collectConfig();
+    const result = await api(`/api/guilds/${guildId}/config`, { method: 'PATCH', body: updates });
+
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+
+    if (result) {
+        config = deepCopy(result);
+        originalConfig = deepCopy(result);
+        dirty = false;
+        document.getElementById('save-bar').style.display = 'none';
+        toast('Settings saved!', 'success');
+    }
+}
+
+function discardChanges() {
+    config = deepCopy(originalConfig);
+    dirty = false;
+    renderTab(currentTab);
+}
+
+function setDirty() {
+    dirty = true;
+    document.getElementById('save-bar').style.display = 'flex';
+}
+
+function deepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+init();
+</script>
+</body>
+</html>

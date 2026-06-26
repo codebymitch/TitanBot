@@ -15,14 +15,15 @@
     "backup:drill": "node scripts/restore-drill.js"
   },
   "dependencies": {
+    "@discord-player/extractor": "^4.5.0",
     "@discordjs/rest": "^2.6.1",
     "@discordjs/voice": "^0.17.0",
-    "@discord-player/extractor": "^4.5.0",
     "axios": "^1.15.2",
-    "discord.js": "^14.26.4",
     "discord-player": "^6.7.1",
+    "discord.js": "^14.26.4",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-session": "^1.19.0",
     "ffmpeg-static": "^5.2.0",
     "libsodium-wrappers": "^0.7.15",
     "node-cron": "^4.2.1",

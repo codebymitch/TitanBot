@@ -13,6 +13,7 @@ import { checkBirthdays } from './services/birthdayService.js';
 import { processScheduledRemovals } from './services/punishmentScheduler.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
+import { mountDashboard } from './web/index.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/schemaVersion.js';
 
@@ -199,12 +200,14 @@ class TitanBot extends Client {
     });
 
     app.get('/', (req, res) => {
-      res.status(200).json({ 
+      res.status(200).json({
         message: 'TitanBot System Online',
         version: pkg.version,
         timestamp: new Date().toISOString()
       });
     });
+
+    mountDashboard(app, this);
 
     const startServer = (port, attempt = 0) => {
       let hasStartedListening = false;
