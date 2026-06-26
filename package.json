@@ -19,6 +19,7 @@
     "@discordjs/rest": "^2.6.1",
     "@discordjs/voice": "^0.17.0",
     "axios": "^1.15.2",
+    "connect-pg-simple": "^10.0.0",
     "discord-player": "^6.7.1",
     "discord.js": "^14.26.4",
     "dotenv": "^17.2.3",
