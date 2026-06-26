@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applications — KJ'S CUSTOMS</title>
+    <link rel="stylesheet" href="/dashboard/assets/css/style.css">
+    <style>
+        .app-filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .filter-select {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 14px;
+            border-radius: var(--radius-pill);
+            font-size: 0.875rem;
+            cursor: pointer;
+            outline: none;
+        }
+        .filter-select:focus { border-color: var(--accent); }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 16px;
+        }
+        .app-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: border-color 0.2s;
+        }
+        .app-card:hover { border-color: var(--accent); }
+        .app-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .app-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .app-card-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .status-badge.pending  { background: rgba(230,180,0,0.15); color: #e6b400; }
+        .status-badge.approved { background: rgba(46,204,113,0.15); color: #2ecc71; }
+        .status-badge.denied   { background: rgba(231,76,60,0.15);  color: #e74c3c; }
+
+        .app-answers {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .app-qa {
+            background: var(--surface2);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .app-qa-q {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .app-qa-a {
+            font-size: 0.875rem;
+            color: var(--text);
+            white-space: pre-wrap;
+        }
+
+        .app-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .app-card-actions .btn { flex: 1; justify-content: center; }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px 28px 24px;
+            max-width: 480px;
+            width: 100%;
+        }
+        .modal h2 { font-size: 1.15rem; margin-bottom: 16px; }
+        .modal label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .modal textarea {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 0.875rem;
+            resize: vertical;
+            min-height: 80px;
+            box-sizing: border-box;
+            font-family: inherit;
+            outline: none;
+        }
+        .modal textarea:focus { border-color: var(--accent); }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+            justify-content: flex-end;
+        }
+
+        .app-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .app-meta span { display: flex; align-items: center; gap: 4px; }
+
+        .review-note {
+            background: var(--surface2);
+            border-left: 3px solid var(--accent);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">⚡</div>
+            <div><h2>KJ'S CUSTOMS</h2><span>Dashboard</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-label">Navigation</div>
+            <button class="nav-item" onclick="location.href='/dashboard'">
+                <span class="icon">🏠</span> All Servers
+            </button>
+            <div class="nav-label">Server</div>
+            <button class="nav-item" id="nav-config-btn" onclick="goToConfig()">
+                <span class="icon">⚙️</span> Configuration
+            </button>
+            <button class="nav-item active">
+                <span class="icon">📋</span> Applications
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <img id="user-avatar" src="" alt="">
+                <span class="name" id="user-name">…</span>
+                <form action="/auth/logout" method="POST" style="margin:0">
+                    <button class="logout" type="submit" title="Logout">✕</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <button class="back" onclick="goToConfig()" title="Back to config">←</button>
+            <span id="guild-icon-el"></span>
+            <h1 id="guild-name">Loading…</h1>
+        </div>
+
+        <div class="content" style="max-width:1100px">
+            <div class="page-header">
+                <h2>Applications</h2>
+                <p>Review, approve, and deny applications submitted by members.</p>
+            </div>
+
+            <div class="app-filters">
+                <select class="filter-select" id="filter-status" onchange="loadApplications()">
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="denied">Denied</option>
+                    <option value="">All</option>
+                </select>
+                <select class="filter-select" id="filter-role" onchange="loadApplications()">
+                    <option value="">All Application Types</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="loadApplications()" style="margin-left:auto">🔄 Refresh</button>
+            </div>
+
+            <div id="app-list">
+                <div class="loading-overlay">
+                    <div class="spinner"></div>
+                    <span>Loading applications…</span>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Review Modal -->
+<div class="modal-backdrop" id="review-modal" style="display:none" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+        <h2 id="modal-title">Review Application</h2>
+        <label for="modal-reason">Reason <span style="color:var(--text-muted)">(optional)</span></label>
+        <textarea id="modal-reason" placeholder="Provide a reason for your decision… (will be DM'd to the applicant)" maxlength="500"></textarea>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="document.getElementById('review-modal').style.display='none'">Cancel</button>
+            <button class="btn" id="modal-confirm-btn" onclick="submitReview()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+<script src="/dashboard/assets/js/app.js"></script>
+<script>
+const pathParts = location.pathname.split('/');
+const guildId = pathParts[pathParts.indexOf('guild') + 1];
+let pendingReview = null; // { appId, action }
+
+function goToConfig() {
+    location.href = `/dashboard/guild/${guildId}`;
+}
+
+async function init() {
+    const [user, guild, appRoles] = await Promise.all([
+        api('/api/me'),
+        api(`/api/guilds/${guildId}`),
+        api(`/api/guilds/${guildId}/application-roles`),
+    ]);
+
+    if (user) {
+        document.getElementById('user-name').textContent = user.username;
+        const av = document.getElementById('user-avatar');
+        av.src = user.avatar
+            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
+            : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.id) % 5}.png`;
+    }
+
+    if (guild) {
+        document.title = `Applications — ${guild.name}`;
+        document.getElementById('guild-name').textContent = guild.name;
+        const iconEl = document.getElementById('guild-icon-el');
+        if (guild.icon) {
+            iconEl.innerHTML = `<img class="guild-icon" src="${guild.icon}" alt="">`;
+        } else {
+            iconEl.innerHTML = `<span class="guild-icon-placeholder">${guild.name.charAt(0)}</span>`;
+        }
+    }
+
+    if (appRoles && appRoles.length) {
+        const sel = document.getElementById('filter-role');
+        appRoles.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.roleId;
+            opt.textContent = r.name;
+            sel.appendChild(opt);
+        });
+    }
+
+    await loadApplications();
+}
+
+async function loadApplications() {
+    const status = document.getElementById('filter-status').value;
+    const roleId = document.getElementById('filter-role').value;
+
+    document.getElementById('app-list').innerHTML = `
+        <div class="loading-overlay">
+            <div class="spinner"></div>
+            <span>Loading…</span>
+        </div>`;
+
+    let url = `/api/guilds/${guildId}/applications`;
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (roleId) params.set('roleId', roleId);
+    if ([...params].length) url += '?' + params;
+
+    const apps = await api(url);
+
+    const container = document.getElementById('app-list');
+
+    if (!apps || apps.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">📋</div>
+                <h2>No applications found</h2>
+                <p>There are no ${status || ''} applications${roleId ? ' for this type' : ''} at this time.</p>
+            </div>`;
+        return;
+    }
+
+    const sorted = apps.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    container.innerHTML = `<div class="app-grid">${sorted.map(renderAppCard).join('')}</div>`;
+}
+
+function renderAppCard(app) {
+    const statusMap = {
+        pending:  { label: 'Pending',  emoji: '🟡' },
+        approved: { label: 'Accepted', emoji: '🟢' },
+        denied:   { label: 'Denied',   emoji: '🔴' },
+    };
+    const s = statusMap[app.status] || { label: 'Unknown', emoji: '⚪' };
+    const date = app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '?';
+    const username = escHtml(app.username || 'Unknown User');
+    const roleName = escHtml(app.roleName || 'Unknown Role');
+
+    const answers = Array.isArray(app.answers) && app.answers.length
+        ? `<div class="app-answers">${app.answers.map(qa => `
+            <div class="app-qa">
+                <div class="app-qa-q">${escHtml(qa.question)}</div>
+                <div class="app-qa-a">${escHtml(qa.answer)}</div>
+            </div>`).join('')}</div>`
+        : `<div class="app-qa"><div class="app-qa-q">No answers recorded.</div></div>`;
+
+    const reviewNote = (app.status !== 'pending' && app.reviewMessage)
+        ? `<div class="review-note"><strong>Decision note:</strong> ${escHtml(app.reviewMessage)}</div>`
+        : '';
+
+    const actions = app.status === 'pending'
+        ? `<div class="app-card-actions">
+                <button class="btn btn-sm" style="background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3)" onclick="openReview('${app.id}','approve')">✓ Approve</button>
+                <button class="btn btn-sm" style="background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3)" onclick="openReview('${app.id}','deny')">✗ Deny</button>
+           </div>`
+        : '';
+
+    return `
+        <div class="app-card" id="app-${app.id}">
+            <div class="app-card-header">
+                <div>
+                    <div class="app-card-title">${username}</div>
+                    <div class="app-card-sub">Applying for: ${roleName}</div>
+                </div>
+                <span class="status-badge ${app.status}">${s.emoji} ${s.label}</span>
+            </div>
+            <div class="app-meta">
+                <span>📅 ${date}</span>
+                <span>🆔 ${escHtml(String(app.id))}</span>
+                ${app.userId ? `<span>👤 <code style="font-size:0.75rem">${app.userId}</code></span>` : ''}
+            </div>
+            ${answers}
+            ${reviewNote}
+            ${actions}
+        </div>`;
+}
+
+function openReview(appId, action) {
+    pendingReview = { appId, action };
+    const modal = document.getElementById('review-modal');
+    const title = document.getElementById('modal-title');
+    const btn = document.getElementById('modal-confirm-btn');
+    document.getElementById('modal-reason').value = '';
+
+    if (action === 'approve') {
+        title.textContent = '✓ Approve Application';
+        btn.style.background = 'rgba(46,204,113,0.8)';
+        btn.style.color = '#fff';
+        btn.textContent = 'Approve';
+    } else {
+        title.textContent = '✗ Deny Application';
+        btn.style.background = 'rgba(231,76,60,0.8)';
+        btn.style.color = '#fff';
+        btn.textContent = 'Deny';
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('modal-reason').focus(), 50);
+}
+
+function closeModal(e) {
+    document.getElementById('review-modal').style.display = 'none';
+}
+
+async function submitReview() {
+    if (!pendingReview) return;
+    const { appId, action } = pendingReview;
+    const reason = document.getElementById('modal-reason').value.trim();
+
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.disabled = true;
+    btn.textContent = 'Processing…';
+
+    const result = await api(`/api/guilds/${guildId}/applications/${appId}/review`, {
+        method: 'POST',
+        body: { action, reason },
+    });
+
+    btn.disabled = false;
+    document.getElementById('review-modal').style.display = 'none';
+    pendingReview = null;
+
+    if (result && result.success) {
+        toast(`Application ${action === 'approve' ? 'approved' : 'denied'} — applicant has been notified via DM.`, 'success');
+        await loadApplications();
+    } else {
+        toast(result?.error || 'Failed to review application.', 'error');
+    }
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('review-modal').style.display = 'none';
+});
+
+init();
+</script>
+</body>
+</html>

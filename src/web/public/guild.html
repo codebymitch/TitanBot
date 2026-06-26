@@ -18,6 +18,13 @@
             <button class="nav-item active" onclick="location.href='/dashboard'">
                 <span class="icon">🏠</span> All Servers
             </button>
+            <div class="nav-label" id="nav-guild-label" style="display:none">Server</div>
+            <button class="nav-item" id="nav-config-btn" style="display:none" onclick="location.href=window.location.pathname">
+                <span class="icon">⚙️</span> Configuration
+            </button>
+            <button class="nav-item" id="nav-apps-btn" style="display:none" onclick="goToApps()">
+                <span class="icon">📋</span> Applications
+            </button>
         </nav>
         <div class="sidebar-footer">
             <div class="user-chip">
@@ -107,7 +114,14 @@ async function init() {
     }
 
     document.getElementById('pill-tabs').style.display = 'flex';
+    document.getElementById('nav-guild-label').style.display = '';
+    document.getElementById('nav-config-btn').style.display = '';
+    document.getElementById('nav-apps-btn').style.display = '';
     showTab('general');
+}
+
+function goToApps() {
+    location.href = `/dashboard/guild/${guildId}/applications`;
 }
 
 function showTab(tab) {

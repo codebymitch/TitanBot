@@ -37,4 +37,8 @@ export function mountDashboard(app, client) {
     app.get('/dashboard/guild/:id', requireAuthPage, (req, res) => {
         res.sendFile(join(publicDir, 'guild.html'));
     });
+
+    app.get('/dashboard/guild/:id/applications', requireAuthPage, (req, res) => {
+        res.sendFile(join(publicDir, 'applications.html'));
+    });
 }
