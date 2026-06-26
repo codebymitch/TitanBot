@@ -10,6 +10,7 @@ import { getGuildConfig } from './services/guildConfig.js';
 import { getServerCounters, saveServerCounters, updateCounter } from './services/serverstatsService.js';
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
+import { processScheduledRemovals } from './services/punishmentScheduler.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
 import pkg from '../package.json' with { type: 'json' };
@@ -244,6 +245,7 @@ class TitanBot extends Client {
 
   setupCronJobs() {
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
+    cron.schedule('* * * * *', () => processScheduledRemovals(this)); // Check scheduled punishments every minute
     cron.schedule('* * * * *', () => checkGiveaways(this));
     cron.schedule('*/15 * * * *', () => this.updateAllCounters());
   }

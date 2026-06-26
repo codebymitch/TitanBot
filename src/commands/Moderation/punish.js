@@ -12,6 +12,7 @@ import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getFromDb, setInDb } from '../../utils/database.js';
+import { scheduleRoleRemoval } from '../../services/punishmentScheduler.js';
 
 const PUNISHMENT_LOG_CHANNEL_ID = '1517145309015314442';
 const WARNING_ROLE_ID = '1519540353881866404';
@@ -131,14 +132,8 @@ async function executePunishmentAction(member, punishmentType, durationStr, guil
         if (durationStr) {
           const ms = parseDuration(durationStr);
           if (ms) {
-            setTimeout(async () => {
-              try {
-                const freshMember = await guild.members.fetch(member.id).catch(() => null);
-                if (freshMember) {
-                  await freshMember.roles.remove(MUTED_ROLE_ID).catch(() => {});
-                }
-              } catch (err) {}
-            }, ms);
+            const removeAt = new Date(Date.now() + ms).toISOString();
+            await scheduleRoleRemoval(guild.id, member.id, MUTED_ROLE_ID, removeAt, 'pending');
             results.push(`⏰ Muted role will be removed after ${formatDuration(durationStr)}`);
           }
         }
@@ -188,14 +183,8 @@ async function executePunishmentAction(member, punishmentType, durationStr, guil
         if (durationStr) {
           const ms = parseDuration(durationStr);
           if (ms) {
-            setTimeout(async () => {
-              try {
-                const freshMember = await guild.members.fetch(member.id).catch(() => null);
-                if (freshMember) {
-                  await freshMember.roles.remove(SUSPENSION_ROLE_ID).catch(() => {});
-                }
-              } catch (err) {}
-            }, ms);
+            const removeAt = new Date(Date.now() + ms).toISOString();
+            await scheduleRoleRemoval(guild.id, member.id, SUSPENSION_ROLE_ID, removeAt, 'pending');
             results.push(`⏰ Suspension role will be removed after ${formatDuration(durationStr)}`);
           }
         }
