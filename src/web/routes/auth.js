@@ -52,7 +52,11 @@ router.get('/callback', async (req, res) => {
             }),
         });
 
-        if (!tokenRes.ok) throw new Error('Token exchange failed');
+        if (!tokenRes.ok) {
+            const errBody = await tokenRes.text();
+            console.error('Discord token exchange failed:', tokenRes.status, errBody);
+            throw new Error('Token exchange failed');
+        }
         const tokens = await tokenRes.json();
 
         const [userRes, guildsRes] = await Promise.all([
