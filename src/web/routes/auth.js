@@ -27,7 +27,7 @@ router.get('/debug', (req, res) => {
 router.get('/login', (req, res) => {
     const state = Math.random().toString(36).slice(2);
     req.session.oauthState = state;
-    res.redirect(getOAuthURL(state));
+    req.session.save(() => res.redirect(getOAuthURL(state)));
 });
 
 router.get('/callback', async (req, res) => {
