@@ -401,7 +401,40 @@ components: []
     );
     
     await channel.send({ embeds: [closeEmbed], components: [controlRow] });
-    
+
+    // Generate and send transcript on close
+    try {
+      const guildConfig = await getGuildConfig(channel.client, channel.guild.id);
+      if (guildConfig.ticketTranscriptChannelId) {
+        const transcriptChannel = await channel.client.channels.fetch(guildConfig.ticketTranscriptChannelId).catch(() => null);
+        if (transcriptChannel?.isSendable()) {
+          const attachment = await generateTranscript(channel);
+          if (attachment) {
+            const transcriptEmbed = buildStandardLogEmbed({
+              color: 0x3498db,
+              title: 'Ticket Transcript',
+              description: [
+                formatLogLine('Ticket', `#${ticketData.id}`),
+                formatLogLine('Channel', `#${channel.name}`),
+                formatLogLine('Closed by', `<@${closer.id}>`),
+                formatLogLine('Generated', `<t:${Math.floor(Date.now() / 1000)}:F>`),
+              ].join('\n'),
+              footer: closer?.username
+                ? { text: `Closed by ${closer.username}`, iconURL: closer.displayAvatarURL?.() }
+                : undefined,
+              timestamp: true,
+            });
+            await transcriptChannel.send({ embeds: [transcriptEmbed], files: [attachment] });
+            logger.info('Transcript sent on ticket close', { channelId: channel.id, ticketNumber: ticketData.id });
+          }
+        } else {
+          logger.warn('Transcript channel not sendable or not found on close', { channelId: channel.id });
+        }
+      }
+    } catch (transcriptError) {
+      logger.error('Failed to send transcript on close:', { channelId: channel.id, error: transcriptError.message });
+    }
+
     await logTicketEvent({
       client: channel.client,
       guildId: channel.guild.id,
