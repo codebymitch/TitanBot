@@ -1,8 +1,6 @@
 import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { Player } from 'discord-player';
-import extractorPkg from '@discord-player/extractor';
-const { DefaultExtractors } = extractorPkg;
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
@@ -297,7 +295,7 @@ class TitanBot extends Client {
   async initializePlayer() {
     try {
       this.player = new Player(this, { skipFFmpeg: false });
-      await this.player.extractors.loadMulti(DefaultExtractors);
+      await this.player.extractors.loadDefault();
       startupLog(`✅ Music player initialized (${this.player.extractors.size} extractors)`);
     } catch (error) {
       logger.warn('Music player failed to initialize — music commands will be unavailable:', error.message);
