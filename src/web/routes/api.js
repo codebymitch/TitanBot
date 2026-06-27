@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { getGuildConfig, updateGuildConfig } from '../../services/guildConfig.js';
-import { getApplications, getApplication, getApplicationRoles, updateApplication } from '../../utils/database.js';
-import { getColor } from '../../config/bot.js';
+import { getApplications, getApplication, getApplicationRoles, getApplicationSettings, getApplicationRoleSettings, updateApplication } from '../../utils/database.js';
+import { resolveApplicationLogChannel } from '../../services/loggingService.js';
+import { EmbedBuilder } from 'discord.js';
 
 const MANAGE_GUILD = 0x20;
 
@@ -148,14 +149,14 @@ export function createApiRouter(client) {
                 reviewedAt: new Date().toISOString(),
             });
 
+            const guild = client.guilds.cache.get(id);
+            const color = action === 'approve' ? 0x2ecc71 : 0xe74c3c;
+            const statusLabel = action === 'approve' ? 'Accepted' : 'Denied';
+            const emoji = action === 'approve' ? '🟢' : '🔴';
+
             // DM the applicant
             try {
-                const guild = client.guilds.cache.get(id);
                 const user = await client.users.fetch(application.userId);
-                const { EmbedBuilder } = await import('discord.js');
-                const color = action === 'approve' ? 0x2ecc71 : 0xe74c3c;
-                const statusLabel = action === 'approve' ? 'Accepted' : 'Denied';
-                const emoji = action === 'approve' ? '🟢' : '🔴';
                 const dmEmbed = new EmbedBuilder()
                     .setTitle(`${emoji} Application ${statusLabel}`)
                     .setDescription(
@@ -171,14 +172,56 @@ export function createApiRouter(client) {
             }
 
             // Assign role if approved
-            if (action === 'approve' && application.roleId) {
+            if (action === 'approve' && application.roleId && guild) {
                 try {
-                    const guild = client.guilds.cache.get(id);
                     const member = await guild.members.fetch(application.userId);
                     await member.roles.add(application.roleId);
-                } catch (_) {
-                    // Role assignment failed — log but don't fail the request
+                } catch (_) {}
+            }
+
+            // Update existing log message or send a new one to the log channel
+            try {
+                const [appSettings, roleSettings, guildConfig] = await Promise.all([
+                    getApplicationSettings(client, id),
+                    getApplicationRoleSettings(client, id, application.roleId),
+                    getGuildConfig(client, id),
+                ]);
+
+                const logChannelId = application.logChannelId
+                    || resolveApplicationLogChannel(guildConfig, roleSettings, appSettings);
+
+                if (logChannelId && guild) {
+                    const logChannel = guild.channels.cache.get(logChannelId);
+                    if (logChannel) {
+                        const logEmbed = new EmbedBuilder()
+                            .setTitle(`${emoji} Application ${statusLabel}`)
+                            .setColor(color)
+                            .addFields(
+                                { name: 'Applicant', value: `<@${application.userId}> (${application.username || application.userId})`, inline: true },
+                                { name: 'Application', value: application.roleName || 'Unknown', inline: true },
+                                { name: 'Status', value: `${emoji} ${statusLabel}`, inline: true },
+                                { name: 'Reason', value: sanitizedReason, inline: false },
+                                { name: 'Reviewed by', value: `<@${reviewerId}>`, inline: true },
+                                { name: 'Application ID', value: `\`${appId}\``, inline: true },
+                            )
+                            .setTimestamp();
+
+                        // If there's an existing log message, edit it; otherwise post a new one
+                        if (application.logMessageId) {
+                            try {
+                                const existing = await logChannel.messages.fetch(application.logMessageId);
+                                await existing.edit({ embeds: [logEmbed], components: [] });
+                            } catch (_) {
+                                // Message deleted or inaccessible — send a fresh one
+                                await logChannel.send({ embeds: [logEmbed] });
+                            }
+                        } else {
+                            await logChannel.send({ embeds: [logEmbed] });
+                        }
+                    }
                 }
+            } catch (_) {
+                // Log channel errors are non-fatal
             }
 
             res.json({ success: true, status });
