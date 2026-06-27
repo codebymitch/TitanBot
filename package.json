@@ -18,7 +18,6 @@
     "@discord-player/extractor": "^4.5.0",
     "@discordjs/rest": "^2.6.1",
     "@discordjs/voice": "^0.17.0",
-    "@distube/ytdl-core": "^4.16.12",
     "axios": "^1.15.2",
     "connect-pg-simple": "^10.0.0",
     "discord-player": "^6.7.1",
@@ -31,6 +30,7 @@
     "node-cron": "^4.2.1",
     "opusscript": "^0.0.8",
     "pg": "^8.11.3",
+    "play-dl": "^1.9.7",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^3.25.76"
