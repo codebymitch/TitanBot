@@ -28,6 +28,7 @@
     "ffmpeg-static": "^5.2.0",
     "libsodium-wrappers": "^0.7.15",
     "node-cron": "^4.2.1",
+    "opusscript": "^0.0.8",
     "pg": "^8.11.3",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
