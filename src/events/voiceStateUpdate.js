@@ -197,18 +197,18 @@ export default {
 
                 const tempChannel = await guild.channels.create({
                     name: channelName,
- type: ChannelType.GuildVoice,
+                    type: ChannelType.GuildVoice,
                     parent: triggerChannel.parentId,
- userLimit: userLimit === 0 ? undefined : userLimit,
+                    userLimit: userLimit === 0 ? undefined : userLimit,
                     bitrate: bitrate,
                     permissionOverwrites: [
                         {
                             id: member.id,
-                            allow: ['Connect', 'Speak', 'PrioritySpeaker', 'MoveMembers']
+                            allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.PrioritySpeaker, PermissionFlagsBits.MoveMembers]
                         },
                         {
                             id: guild.id,
-                            allow: ['Connect', 'Speak']
+                            allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
                         }
                     ]
                 });
