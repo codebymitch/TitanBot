@@ -35,7 +35,6 @@ export default {
                 );
             }
 
-            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
@@ -49,7 +48,6 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new TitanBotError(
                     'Invalid message ID format',
@@ -64,7 +62,6 @@ export default {
                 interaction.guildId,
             );
 
-            
             const giveaway = giveaways.find(g => g.messageId === messageId);
 
             if (!giveaway) {
@@ -76,7 +73,6 @@ export default {
                 );
             }
 
-            
             if (!giveaway.isEnded && !giveaway.ended) {
                 throw new TitanBotError(
                     `Giveaway still active: ${messageId}`,
@@ -97,13 +93,11 @@ export default {
                 );
             }
 
-            
             const newWinners = selectWinners(
                 participants,
                 giveaway.winnerCount,
             );
 
-            
             const updatedGiveaway = {
                 ...giveaway,
                 winnerIds: newWinners,
@@ -111,7 +105,6 @@ export default {
                 rerolledBy: interaction.user.id
             };
 
-            
             const channel = await interaction.client.channels.fetch(
                 giveaway.channelId,
             ).catch(err => {
@@ -140,7 +133,6 @@ export default {
                 });
             }
 
-            
             const message = await channel.messages
                 .fetch(messageId)
                 .catch(err => {
@@ -158,9 +150,8 @@ export default {
 
                 const winnerMentions = newWinners
                     .map((id) => `<@${id}>`)
-                    .join(", ");
-                
-                // Edit the original winner ping if it still exists, otherwise send a new one
+                    .join(",");
+
                 const existingPingMsg = giveaway.winnerPingMessageId
                     ? await channel.messages.fetch(giveaway.winnerPingMessageId).catch(() => null)
                     : null;
@@ -188,17 +179,17 @@ export default {
                             userId: interaction.user.id,
                             fields: [
                                 {
-                                    name: '🎁 Prize',
+                                    name: 'Prize',
                                     value: giveaway.prize || 'Mystery Prize!',
                                     inline: true
                                 },
                                 {
-                                    name: '🏆 New Winners',
+                                    name: 'New Winners',
                                     value: winnerMentions,
                                     inline: false
                                 },
                                 {
-                                    name: '👥 Total Entries',
+                                    name: 'Total Entries',
                                     value: participants.length.toString(),
                                     inline: true
                                 }
@@ -220,7 +211,6 @@ export default {
                 });
             }
 
-            
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
@@ -238,9 +228,8 @@ export default {
 
             const winnerMentions = newWinners
                 .map((id) => `<@${id}>`)
-                .join(", ");
-            
-            // Edit the original winner ping if it still exists, otherwise send a new one
+                .join(",");
+
             const existingPingMsg = giveaway.winnerPingMessageId
                 ? await channel.messages.fetch(giveaway.winnerPingMessageId).catch(() => null)
                 : null;
@@ -268,17 +257,17 @@ export default {
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prize',
+                                name: 'Prize',
                                 value: giveaway.prize || 'Mystery Prize!',
                                 inline: true
                             },
                             {
-                                name: '🏆 New Winners',
+                                name: 'New Winners',
                                 value: winnerMentions,
                                 inline: false
                             },
                             {
-                                name: '👥 Total Entries',
+                                name: 'Total Entries',
                                 value: participants.length.toString(),
                                 inline: true
                             }
@@ -309,6 +298,3 @@ export default {
         }
     },
 };
-
-
-

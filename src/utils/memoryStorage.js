@@ -1,9 +1,7 @@
+// memoryStorage.js
+
 import { logger } from './logger.js';
 
-/**
- * In-memory storage fallback for when database is unavailable
- * Used when PostgreSQL connection fails
- */
 class MemoryStorage {
     constructor() {
         this.data = new Map();
@@ -96,5 +94,3 @@ class MemoryStorage {
 }
 
 export { MemoryStorage };
-
-

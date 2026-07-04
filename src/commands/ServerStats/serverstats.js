@@ -1,6 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 
 import { handleCreate } from './modules/serverstats_create.js';
@@ -104,10 +104,7 @@ export default {
                     await handleDelete(interaction, client);
                     break;
                 default:
-                    await InteractionHelper.safeReply(interaction, {
-                        embeds: [errorEmbed("Unknown subcommand.")],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Unknown subcommand.' });
             }
         } catch (error) {
             logger.error(`Error in serverstats ${subcommand}:`, error);
@@ -126,7 +123,3 @@ export default {
         }
     }
 };
-
-
-
-

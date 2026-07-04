@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
+import { handleInteractionError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -39,8 +39,9 @@ export default {
 
 try {
             if (!interaction.guild) {
-                return interaction.editReply({
-                    embeds: [errorEmbed('❌ Server Only', 'This command can only be used in a server/guild.')],
+                return replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'This command can only be used in a server/guild.',
                 });
             }
             
@@ -71,9 +72,9 @@ try {
                 if (onlineOnly) errorMessage = 'No users are currently online.'; 
                 if (role && onlineOnly) errorMessage = `No **${role.name}** members are online.`;
                 
-                return interaction.editReply({
-                    embeds: [errorEmbed('❌ No Users Found', errorMessage + '\n\nTry adjusting your filters.')],
-                    flags: ["Ephemeral"]
+                return replyUserError(interaction, {
+                    type: ErrorTypes.USER_INPUT,
+                    message: errorMessage + '\n\nTry adjusting your filters.',
                 });
             }
             
@@ -94,9 +95,9 @@ try {
             )
             .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
             .addFields(
-                { name: '👤 Username', value: user.username, inline: true },
-                { name: '🤖 Bot', value: user.bot ? 'Yes' : 'No', inline: true },
-                { name: `🎭 Roles (${roles.length})`, value: roles.length > 0 ? roles.slice(0, 5).join(' ') + (roles.length > 5 ? ` +${roles.length - 5} more` : '') : 'No roles', inline: false }
+                { name: 'Username', value: user.username, inline: true },
+                { name: 'Bot', value: user.bot ? 'Yes' : 'No', inline: true },
+                { name: `Roles (${roles.length})`, value: roles.length > 0 ? roles.slice(0, 5).join('') + (roles.length > 5 ? `+${roles.length - 5} more` : '') : 'No roles', inline: false }
             )
             .setColor('primary');
             
@@ -137,9 +138,9 @@ const collector = response.createMessageComponentCollector({ filter, time: 30000
                     }
                     
                     if (newMemberArray.length === 0) {
-                        await i.update({
-                            embeds: [errorEmbed('No Users Found', 'No users found matching the criteria.')],
-                            components: [row]
+                        await replyUserError(i, {
+                            type: ErrorTypes.USER_INPUT,
+                            message: 'No users found matching the criteria.',
                         });
                         return;
                     }
@@ -160,9 +161,9 @@ const collector = response.createMessageComponentCollector({ filter, time: 30000
                     )
                     .setThumbnail(newUser.displayAvatarURL({ dynamic: true, size: 256 }))
                     .addFields(
-                        { name: '👤 Username', value: newUser.username, inline: true },
-                        { name: '🤖 Bot', value: newUser.bot ? 'Yes' : 'No', inline: true },
-                        { name: `🎭 Roles (${newRoles.length})`, value: newRoles.length > 0 ? newRoles.slice(0, 5).join(' ') + (newRoles.length > 5 ? ` +${newRoles.length - 5} more` : '') : 'No roles', inline: false }
+                        { name: 'Username', value: newUser.username, inline: true },
+                        { name: 'Bot', value: newUser.bot ? 'Yes' : 'No', inline: true },
+                        { name: `Roles (${newRoles.length})`, value: newRoles.length > 0 ? newRoles.slice(0, 5).join('') + (newRoles.length > 5 ? `+${newRoles.length - 5} more` : '') : 'No roles', inline: false }
                     )
                     .setColor(newSelectedMember.displayHexColor || '#3498db');
                     
@@ -198,6 +199,3 @@ const collector = response.createMessageComponentCollector({ filter, time: 30000
         }
     },
 };
-
-
-

@@ -40,7 +40,6 @@ export default {
       const numSides = parseInt(match[2], 10);
       const modifier = parseInt(match[3] || "0", 10);
 
-      
       if (numDice < 1 || numDice > 20) {
         throw new TitanBotError(
           `Too many dice requested: ${numDice}`,
@@ -70,7 +69,7 @@ export default {
 
       const resultsDetail =
         numDice > 1 ? `**Rolls:** ${rolls.join(" + ")}\n` : "";
-      const modifierText = modifier !== 0 ? ` + (${modifier})` : "";
+      const modifierText = modifier !== 0 ? `+ (${modifier})` : "";
 
       const embed = successEmbed(
         `🎲 Rolling ${numDice}d${numSides}${modifier !== 0 ? match[3] : ""}`,
@@ -87,6 +86,3 @@ export default {
     }
   },
 };
-
-
-

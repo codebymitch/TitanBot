@@ -1,8 +1,3 @@
-
-
-
-
-
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -21,12 +16,6 @@ export default {
     )
     .setDMPermission(false),
   category: 'Leveling',
-
-  
-
-
-
-
 
   async execute(interaction, config, client) {
     try {
@@ -75,17 +64,17 @@ export default {
         .setThumbnail(member.displayAvatarURL({ dynamic: true }))
         .addFields(
           {
-            name: '📊 Level',
+            name: 'Level',
             value: safeUserData.level.toString(),
             inline: true
           },
           {
-            name: '⭐ XP',
+            name: 'XP',
             value: `${safeUserData.xp}/${xpNeeded}`,
             inline: true
           },
           {
-            name: '✨ Total XP',
+            name: 'Total XP',
             value: safeUserData.totalXp.toString(),
             inline: true
           },
@@ -109,12 +98,6 @@ export default {
   }
 };
 
-
-
-
-
-
-
 function createProgressBar(percentage, length = 10) {
   if (percentage < 0 || percentage > 100) {
     percentage = Math.max(0, Math.min(100, percentage));
@@ -122,6 +105,3 @@ function createProgressBar(percentage, length = 10) {
   const filled = Math.round((percentage / 100) * length);
   return '█'.repeat(filled) + '░'.repeat(length - filled);
 }
-
-
-

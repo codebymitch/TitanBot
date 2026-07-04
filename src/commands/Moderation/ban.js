@@ -4,7 +4,7 @@ import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { ModerationService } from '../../services/moderationService.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ban")
@@ -26,6 +26,15 @@ export default {
             const user = interaction.options.getUser("target");
             const reason = interaction.options.getString("reason") || "No reason provided";
 
+            if (!user) {
+                throw new TitanBotError(
+                    'Missing target user',
+                    ErrorTypes.USER_INPUT,
+                    'You must specify a user to ban.',
+                    { subtype: 'invalid_user' },
+                );
+            }
+
             if (user.id === interaction.user.id) {
                 throw new Error("You cannot ban yourself.");
             }
@@ -33,7 +42,6 @@ export default {
                 throw new Error("You cannot ban the bot.");
             }
 
-            
             const result = await ModerationService.banUser({
                 guild: interaction.guild,
                 user,
@@ -55,6 +63,3 @@ export default {
         }
     },
 };
-
-
-

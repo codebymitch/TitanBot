@@ -1,8 +1,7 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { successEmbed, buildUserErrorEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
@@ -66,12 +65,12 @@ export default {
                 depositAmount = userData.wallet;
                 await interaction.followUp({
                     embeds: [
-                        MessageTemplates.ERRORS.INVALID_INPUT(
-                            "deposit amount",
+                        buildUserErrorEmbed(
+                            'validation',
                             `You tried to deposit more than you have. Depositing your remaining cash: **$${depositAmount.toLocaleString()}**`
                         )
                     ],
-                    flags: ["Ephemeral"],
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -93,12 +92,12 @@ export default {
                 if (amountInput.toLowerCase() !== "all") {
                     await interaction.followUp({
                         embeds: [
-                            MessageTemplates.ERRORS.INVALID_INPUT(
-                                "deposit amount",
+                            buildUserErrorEmbed(
+                                'validation',
                                 `You only had space for **$${depositAmount.toLocaleString()}** in your bank account (Max: $${maxBank.toLocaleString()}). The rest remains in your cash.`
                             )
                         ],
-                        flags: ["Ephemeral"],
+                        flags: MessageFlags.Ephemeral,
                     });
                 }
             }
@@ -117,18 +116,18 @@ export default {
 
             await setEconomyData(client, guildId, userId, userData);
 
-            const embed = MessageTemplates.SUCCESS.DATA_UPDATED(
-                "deposit",
+            const embed = successEmbed(
+                'Deposit Successful',
                 `You successfully deposited **$${depositAmount.toLocaleString()}** into your bank.`
             )
                 .addFields(
                     {
-                        name: "💵 New Cash Balance",
+                        name: "New Cash Balance",
                         value: `$${userData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "🏦 New Bank Balance",
+                        name: "New Bank Balance",
                         value: `$${userData.bank.toLocaleString()} / $${maxBank.toLocaleString()}`,
                         inline: true,
                     },
@@ -137,8 +136,3 @@ export default {
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'deposit' })
 };
-
-
-
-
-

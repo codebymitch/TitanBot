@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { getColor } from '../../config/bot.js';
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
@@ -33,10 +33,9 @@ export default {
                     });
                 } catch (error) {
                     logger.warn(`Invalid timezone requested: ${timezone}`);
-                    const embed = errorEmbed('Invalid Timezone', 'Invalid timezone. Please use a valid timezone identifier (e.g., UTC, America/New_York, Europe/London)');
-                    embed.setColor(getColor('error'));
-                    await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [embed],
+                    await replyUserError(interaction, {
+                        type: ErrorTypes.VALIDATION,
+                        message: 'Invalid timezone. Please use a valid timezone identifier (e.g., UTC, America/New_York, Europe/London)',
                     });
                     return;
                 }
@@ -61,7 +60,3 @@ export default {
         );
     },
 };
-
-
-
-

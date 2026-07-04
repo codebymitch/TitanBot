@@ -74,7 +74,6 @@ export default {
             let earned = Math.floor(Math.random() * (MAX_WORK_AMOUNT - MIN_WORK_AMOUNT + 1)) + MIN_WORK_AMOUNT;
             const job = WORK_JOBS[Math.floor(Math.random() * WORK_JOBS.length)];
 
-            
             let multiplierMessage = "";
             if (hasLaptop > 0) {
                 earned = Math.floor(earned * LAPTOP_MULTIPLIER);
@@ -103,12 +102,12 @@ export default {
             )
                 .addFields(
                     {
-                        name: "💰 New Balance",
+                        name: "New Balance",
                         value: `$${userData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "⏰ Next Work",
+                        name: "Next Work",
                         value: `<t:${Math.floor((now + WORK_COOLDOWN) / 1000)}:R>`,
                         inline: true,
                     }
@@ -121,7 +120,3 @@ export default {
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'work' })
 };
-
-
-
-

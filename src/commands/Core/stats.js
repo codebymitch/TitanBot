@@ -19,7 +19,7 @@ export default {
       );
       const nodeVersion = process.version;
 
-      const embed = createEmbed({ title: "📊 System Statistics", description: "Real-time performance metrics." }).addFields(
+      const embed = createEmbed({ title: "System Statistics", description: "Real-time performance metrics." }).addFields(
         { name: "Servers", value: `${totalGuilds}`, inline: true },
         { name: "Users", value: `${totalMembers}`, inline: true },
         { name: "Node.js", value: `${nodeVersion}`, inline: true },
@@ -41,7 +41,3 @@ export default {
     }
   },
 };
-
-
-
-

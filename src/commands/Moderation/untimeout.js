@@ -1,10 +1,10 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { logEvent } from '../../utils/moderation.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("untimeout")
@@ -30,29 +30,42 @@ export default {
         }
 
         try {
-                const targetUser = interaction.options.getUser("target");
-                const member = interaction.options.getMember("target");
+            const targetUser = interaction.options.getUser("target");
+            const member = interaction.options.getMember("target");
 
-                
-                const result = await ModerationService.removeTimeoutUser({
-                    guild: interaction.guild,
-                    member,
-                    moderator: interaction.member
-                });
+            if (!targetUser) {
+                throw new TitanBotError(
+                    'Missing target user',
+                    ErrorTypes.USER_INPUT,
+                    'You must specify a user to untimeout.',
+                    { subtype: 'invalid_user' },
+                );
+            }
 
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        successEmbed(
-                            `🔓 **Removed timeout** from ${targetUser.tag}`,
-                        ),
-                    ],
-                });
+            if (!member) {
+                throw new TitanBotError(
+                    "Target not found",
+                    ErrorTypes.USER_INPUT,
+                    "The target user is not currently in this server."
+                );
+            }
+
+            await ModerationService.removeTimeoutUser({
+                guild: interaction.guild,
+                member,
+                moderator: interaction.member
+            });
+
+            await InteractionHelper.safeEditReply(interaction, {
+                embeds: [
+                    successEmbed(
+                        `🔓 **Removed timeout** from ${targetUser.tag}`,
+                    ),
+                ],
+            });
         } catch (error) {
             logger.error('Untimeout command error:', error);
             await handleInteractionError(interaction, error, { subtype: 'untimeout_failed' });
         }
     }
 };
-
-
-

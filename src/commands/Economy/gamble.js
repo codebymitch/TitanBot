@@ -1,8 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const BASE_WIN_CHANCE = 0.4;
@@ -64,7 +63,6 @@ export default {
             let usedClover = false;
             let usedCharm = false;
 
-            
             if (cloverCount > 0) {
                 winChance += CLOVER_WIN_BONUS;
                 userData.inventory["lucky_clover"] -= 1;
@@ -94,7 +92,7 @@ cashChange = amountWon;
             } else {
 cashChange = -betAmount;
 
-                resultEmbed = errorEmbed(
+                resultEmbed = warningEmbed(
                     "💔 You Lost...",
                     `The dice rolled against you. You lost your **$${betAmount.toLocaleString()}** bet.`,
                 );
@@ -108,7 +106,7 @@ userData.lastGamble = now;
             const newCash = userData.wallet;
 
             resultEmbed.addFields({
-                name: "💵 New Cash Balance",
+                name: "New Cash Balance",
                 value: `$${newCash.toLocaleString()}`,
                 inline: true,
             });
@@ -130,7 +128,3 @@ userData.lastGamble = now;
             await InteractionHelper.safeEditReply(interaction, { embeds: [resultEmbed] });
     }, { command: 'gamble' })
 };
-
-
-
-

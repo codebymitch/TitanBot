@@ -38,7 +38,6 @@ export default {
                 const targetUser = interaction.options.getUser("target");
                 const reason = interaction.options.getString("reason") || "No reason provided";
 
-                
                 const result = await ModerationService.unbanUser({
                     guild: interaction.guild,
                     user: targetUser,
@@ -60,6 +59,3 @@ export default {
         }
     }
 };
-
-
-

@@ -1,8 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { checkRateLimit } from '../../utils/rateLimiter.js';
 import { getColor } from '../../config/bot.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -18,9 +17,12 @@ export default {
     )
 .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
   category: "moderation",
+  abuseProtection: { maxAttempts: 5, windowMs: 60_000 },
 
   async execute(interaction, config, client) {
-    const deferSuccess = await InteractionHelper.safeDefer(interaction);
+    const deferSuccess = await InteractionHelper.safeDefer(interaction, {
+      flags: MessageFlags.Ephemeral,
+    });
     if (!deferSuccess) {
       logger.warn(`Purge interaction defer failed`, {
         userId: interaction.user.id,
@@ -30,45 +32,13 @@ export default {
       return;
     }
 
-    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages))
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Permission Denied",
-            "You need the `Manage Messages` permission to purge messages.",
-          ),
-        ],
-      });
-
     const amount = interaction.options.getInteger("amount");
     const channel = interaction.channel;
 
     if (amount < 1 || amount > 100)
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Invalid Amount",
-            "Please specify a number between 1 and 100.",
-          ),
-        ],
-      });
+      return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Please specify a number between 1 and 100.' });
 
     try {
-      
-      const rateLimitKey = `purge_${interaction.user.id}`;
-      const isAllowed = await checkRateLimit(rateLimitKey, 5, 60000);
-      if (!isAllowed) {
-        return await InteractionHelper.safeEditReply(interaction, {
-          embeds: [
-            warningEmbed(
-              "You're purging messages too fast. Please wait a minute before trying again.",
-              "⏳ Rate Limited"
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-
       const fetched = await channel.messages.fetch({ limit: amount });
       const deleted = await channel.bulkDelete(fetched, true);
       const deletedCount = deleted.size;
@@ -107,9 +77,12 @@ export default {
 
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
-          successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
+          successEmbed(
+            "Messages Purged",
+            `Deleted ${deletedCount} messages in ${channel}.`,
+          ),
         ],
-flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral,
       });
 
       setTimeout(() => {
@@ -119,17 +92,7 @@ flags: MessageFlags.Ephemeral,
       }, 3000);
     } catch (error) {
       logger.error('Purge command error:', error);
-      await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "An unexpected error occurred during message deletion. Note: Messages older than 14 days cannot be bulk deleted.",
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      });
+      await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An unexpected error occurred during message deletion. Note: Messages older than 14 days cannot be bulk deleted.' });
     }
   }
 };
-
-
-

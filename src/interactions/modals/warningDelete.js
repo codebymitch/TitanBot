@@ -1,4 +1,4 @@
-import { warningDeleteModalHandler, warningClearConfirmModalHandler } from '../../handlers/warningModals.js';
+import { warningDeleteModalHandler, warningClearConfirmModalHandler } from '../../handlers/warningHandlers.js';
 
 const deleteExecute = typeof warningDeleteModalHandler === 'function'
   ? warningDeleteModalHandler

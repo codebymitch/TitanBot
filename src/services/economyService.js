@@ -1,21 +1,4 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// economyService.js
 
 import { logger } from '../utils/logger.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../utils/economy.js';
@@ -23,8 +6,7 @@ import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { wrapServiceClassMethods } from '../utils/serviceErrorBoundary.js';
 
 class EconomyService {
-  
-  
+
   static DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
   static WORK_COOLDOWN = 30 * 60 * 1000;
   static GAMBLE_COOLDOWN = 5 * 60 * 1000;
@@ -47,13 +29,6 @@ class EconomyService {
       );
     }
   }
-
-  
-
-
-
-
-
 
   static async claimDaily(client, guildId, userId) {
     logger.debug(`[ECONOMY_SERVICE] claimDaily requested`, { userId, guildId });
@@ -124,15 +99,6 @@ class EconomyService {
     }
   }
 
-  
-
-
-
-
-
-
-
-
   static async transferMoney(client, guildId, senderId, receiverId, amount) {
     logger.debug(`[ECONOMY_SERVICE] transferMoney requested`, {
       senderId,
@@ -141,7 +107,6 @@ class EconomyService {
       guildId
     });
 
-    
     if (amount <= 0) {
       throw createError(
         "Invalid transfer amount",
@@ -162,7 +127,6 @@ class EconomyService {
 
     this.validateAmount(amount, { operation: 'transfer', senderId, receiverId });
 
-    
     const [senderData, receiverData] = await Promise.all([
       getEconomyData(client, guildId, senderId),
       getEconomyData(client, guildId, receiverId)
@@ -181,7 +145,6 @@ class EconomyService {
       );
     }
 
-    
     if (senderData.wallet < amount) {
       logger.warn(`[ECONOMY_SERVICE] Insufficient funds for transfer`, {
         senderId,
@@ -196,7 +159,6 @@ class EconomyService {
       );
     }
 
-    
     const walletBefore = senderData.wallet;
     const senderNext = (senderData.wallet || 0) - amount;
     const receiverNext = (receiverData.wallet || 0) + amount;
@@ -208,14 +170,14 @@ class EconomyService {
     receiverData.wallet = receiverNext;
 
     try {
-      // Step 1: Deduct from sender
+      
       await setEconomyData(client, guildId, senderId, senderData);
       
       try {
-        // Step 2: Add to receiver
+        
         await setEconomyData(client, guildId, receiverId, receiverData);
       } catch (receiverError) {
-        // ROLLBACK: Try to restore sender's money if receiver update fails
+        
         logger.error(`[ECONOMY_CRITICAL] Failed to credit receiver ${receiverId}. Attempting rollback for sender ${senderId}...`, receiverError);
         
         senderData.wallet = walletBefore;
@@ -224,7 +186,7 @@ class EconomyService {
           logger.info(`[ECONOMY_ROLLBACK] Successfully rolled back sender ${senderId} after receiver credit failure.`);
         } catch (rollbackError) {
           logger.error(`[ECONOMY_FATAL] ROLLBACK FAILED for sender ${senderId}! Data is now inconsistent.`, rollbackError);
-          // At this point, manual intervention is needed.
+          
         }
         
         throw receiverError;
@@ -265,15 +227,6 @@ class EconomyService {
     }
   }
 
-  
-
-
-
-
-
-
-
-
   static async addMoney(client, guildId, userId, amount, source = 'unknown') {
     if (amount <= 0) {
       throw createError(
@@ -307,15 +260,6 @@ class EconomyService {
 
     return userData;
   }
-
-  
-
-
-
-
-
-
-
 
   static async removeMoney(client, guildId, userId, amount, reason = 'unknown') {
     if (amount <= 0) {
@@ -358,14 +302,6 @@ class EconomyService {
 
     return userData;
   }
-
-  
-
-
-
-
-
-
 
   static async depositToBank(client, guildId, userId, amount) {
     this.validateAmount(amount, { operation: 'deposit', userId });
@@ -415,14 +351,6 @@ class EconomyService {
     return userData;
   }
 
-  
-
-
-
-
-
-
-
   static async withdrawFromBank(client, guildId, userId, amount) {
     this.validateAmount(amount, { operation: 'withdraw', userId });
 
@@ -461,13 +389,6 @@ class EconomyService {
     return userData;
   }
 
-  
-
-
-
-
-
-
   static checkCooldown(userData, action, cooldownMs) {
     const lastActionField = `last${action.charAt(0).toUpperCase() + action.slice(1)}`;
     const lastTime = userData[lastActionField] || 0;
@@ -481,11 +402,6 @@ class EconomyService {
       nextAvailable: new Date(lastTime + cooldownMs)
     };
   }
-
-  
-
-
-
 
   static validateAmount(amount, context = {}) {
     if (!Number.isInteger(amount)) {
@@ -517,11 +433,6 @@ class EconomyService {
     }
   }
 
-  
-
-
-
-
   static formatDuration(ms) {
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -536,11 +447,6 @@ class EconomyService {
     }
     return `${seconds}s`;
   }
-
-  
-
-
-
 
   static formatCooldownDisplay(ms) {
     const duration = this.formatDuration(ms);

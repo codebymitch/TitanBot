@@ -106,39 +106,28 @@ export default {
             await handleVerification(member, guild, config.verification, member.client);
         }
 
-        
         try {
             await logEvent({
                 client: member.client,
                 guildId: guild.id,
                 eventType: EVENT_TYPES.MEMBER_JOIN,
                 data: {
-                    description: `${user.tag} joined the server`,
+                    title: 'User joined',
+                    lines: [
+                        `**User:** ${user.toString()} (${user.displayName !== user.username ? `@${user.displayName}` : user.tag})`,
+                        `**ID:** \`${user.id}\``,
+                        `**Created:** <t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
+                        `**Members:** ${guild.memberCount}`,
+                    ],
+                    quoted: false,
+                    thumbnail: user.displayAvatarURL({ dynamic: true }),
                     userId: user.id,
-                    fields: [
-                        {
-                            name: '👤 Member',
-                            value: `${user.tag} (${user.id})`,
-                            inline: true
-                        },
-                        {
-                            name: '👥 Member Count',
-                            value: guild.memberCount.toString(),
-                            inline: true
-                        },
-                        {
-                            name: '📅 Account Created',
-                            value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
-                            inline: true
-                        }
-                    ]
                 }
             });
         } catch (error) {
             logger.debug('Error logging member join:', error);
         }
-        
-        
+
         try {
             const counters = await getServerCounters(member.client, guild.id);
             for (const counter of counters) {
@@ -149,8 +138,7 @@ export default {
         } catch (error) {
             logger.debug('Error updating counters on member join:', error);
         }
-        
-        // Restore birthday data if the member previously left
+
         try {
             const backupKey = `guild:${guild.id}:birthdays:left`;
             const backup = (await member.client.db.get(backupKey)) || {};
@@ -210,6 +198,3 @@ async function assignRoleSafely(member, role) {
         logger.warn(`Failed to assign role ${role.id} to member ${member.id}:`, error);
     }
 }
-
-
-

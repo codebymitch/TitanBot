@@ -1,5 +1,7 @@
+// postgresDatabase.js
+
 import pg from 'pg';
-import { pgConfig } from '../config/postgres.js';
+import { pgConfig, resolvePostgresPoolConfig } from '../config/postgres.js';
 import { logger } from './logger.js';
 import { assertAllowlistedIdentifier, quoteIdentifier } from './sqlIdentifiers.js';
 
@@ -13,10 +15,6 @@ class PostgreSQLDatabase {
         this.lastFailureReason = null;
         this.lastFailureMessage = null;
     }
-
-    
-
-
 
     async connect() {
         if (this.connectionPromise) {
@@ -37,26 +35,10 @@ class PostgreSQLDatabase {
             try {
                 await new Promise(resolve => setTimeout(resolve, 100));
 
-                this.pool = new pg.Pool({
-                    
-                    host: pgConfig.options.host,
-                    port: pgConfig.options.port,
-                    database: pgConfig.options.database,
-                    user: pgConfig.options.user,
-                    password: pgConfig.options.password,
-                    ssl: pgConfig.options.ssl,
-                    
-                    
-                    max: pgConfig.options.max,
-                    min: pgConfig.options.min,
-                    idleTimeoutMillis: pgConfig.options.idleTimeoutMillis,
-                    connectionTimeoutMillis: pgConfig.options.connectionTimeoutMillis,
-                    
-                    
-                    application_name: pgConfig.options.application_name,
-                    statement_timeout: pgConfig.options.statement_timeout,
-                    keepalives: pgConfig.options.keepalives,
-                    keepalives_idle: pgConfig.options.keepalives_idle,
+                this.pool = new pg.Pool(resolvePostgresPoolConfig());
+
+                this.pool.on('error', (error, client) => {
+                    logger.error('PostgreSQL pool error:', error);
                 });
 
                 const client = await this.pool.connect();
@@ -67,7 +49,7 @@ class PostgreSQLDatabase {
                 this.lastFailureMessage = null;
 
                 this.isConnected = true;
-                logger.info('✅ PostgreSQL Database initialized successfully');
+                logger.info('PostgreSQL Database initialized successfully');
 
                 if (pgConfig.features.autoCreateTables) {
                     await this.createTables();
@@ -84,7 +66,7 @@ class PostgreSQLDatabase {
                                 ALTER TABLE ${pgConfig.tables.guilds} 
                                 ADD COLUMN counters JSONB DEFAULT '[]'
                             `);
-                            logger.info('✅ Added counters column to guilds table');
+                            logger.info('Added counters column to guilds table');
                         }
                     } catch (error) {
                         logger.warn('Could not add counters column to guilds table:', error.message);
@@ -134,13 +116,13 @@ class PostgreSQLDatabase {
                 const isLastAttempt = attempt >= attempts;
                 const isSchemaMismatch = error.code === 'SCHEMA_VERSION_MISMATCH';
                 if (isLastAttempt) {
-                    logger.error('❌ Failed to initialize PostgreSQL Database:', error);
+                    logger.error('Failed to initialize PostgreSQL Database:', error);
                     this.isConnected = false;
                     return false;
                 }
 
                 if (isSchemaMismatch) {
-                    logger.error('❌ Failed to initialize PostgreSQL Database:', error);
+                    logger.error('Failed to initialize PostgreSQL Database:', error);
                     this.isConnected = false;
                     return false;
                 }
@@ -154,10 +136,6 @@ class PostgreSQLDatabase {
         this.isConnected = false;
         return false;
     }
-
-    
-
-
 
     isAvailable() {
         return this.isConnected && this.pool;
@@ -239,9 +217,6 @@ class PostgreSQLDatabase {
         };
     }
 
-    /**
-     * Create database tables
-     */
     async createTables() {
         const tables = [
             `CREATE TABLE IF NOT EXISTS ${pgConfig.tables.guilds} (
@@ -416,14 +391,11 @@ class PostgreSQLDatabase {
             }
         }
         
-        logger.info('✅ Database tables created/verified');
+        logger.info('Database tables created/verified');
         
         await this.createIndexes();
         await this.createAuditTriggers();
     }
-
-    
-
 
     async createIndexes() {
         const indexes = [
@@ -455,11 +427,8 @@ class PostgreSQLDatabase {
             }
         }
         
-        logger.info('✅ Performance indexes created/verified');
+        logger.info('Performance indexes created/verified');
     }
-
-    
-
 
     async createAuditTriggers() {
         try {
@@ -519,17 +488,11 @@ class PostgreSQLDatabase {
                 }
             }
             
-            logger.info('✅ Audit triggers created/verified');
+            logger.info('Audit triggers created/verified');
         } catch (error) {
             logger.warn('Error creating audit triggers:', error.message);
         }
     }
-
-    
-
-
-
-
 
     async get(key, defaultValue = null) {
         try {
@@ -562,13 +525,6 @@ class PostgreSQLDatabase {
             return defaultValue;
         }
     }
-
-    
-
-
-
-
-
 
     async set(key, value, ttl = null) {
         try {
@@ -608,11 +564,6 @@ class PostgreSQLDatabase {
         }
     }
 
-    
-
-
-
-
     async delete(key) {
         try {
             if (!this.isAvailable()) {
@@ -638,11 +589,6 @@ class PostgreSQLDatabase {
             return false;
         }
     }
-
-    
-
-
-
 
     async list(prefix) {
         try {
@@ -671,11 +617,6 @@ class PostgreSQLDatabase {
             return [];
         }
     }
-
-    
-
-
-
 
     async insertVerificationAudit(record) {
         try {
@@ -708,11 +649,6 @@ class PostgreSQLDatabase {
         }
     }
 
-    
-
-
-
-
     async exists(key) {
         try {
             if (!this.isAvailable()) {
@@ -726,12 +662,6 @@ class PostgreSQLDatabase {
             return false;
         }
     }
-
-    
-
-
-
-
 
     async increment(key, amount = 1) {
         try {
@@ -748,12 +678,6 @@ class PostgreSQLDatabase {
             return amount;
         }
     }
-
-    
-
-
-
-
 
     async decrement(key, amount = 1) {
         try {
@@ -781,8 +705,7 @@ class PostgreSQLDatabase {
         }
 
         const parts = key.split(':');
-        
-        
+
         if (parts[0] === 'guild') {
             if (parts[2] === 'config') {
                 return { type: 'guild_config', guildId: parts[1], fullKey: key };
@@ -817,21 +740,13 @@ class PostgreSQLDatabase {
             }
         }
 
-        
         if (parts[0] === 'counters' && parts[1]) {
             return { type: 'counters', guildId: parts[1], fullKey: key };
         }
 
-        
         return { type: 'temp', fullKey: key };
     }
 
-    /**
-     * Get structured data from appropriate table
-     * @param {Object} parsedKey - Parsed key information
-     * @param {any} defaultValue - Default value
-     * @returns {Promise<any>} The data
-     */
     async getStructuredData(parsedKey, defaultValue) {
         try {
             switch (parsedKey.type) {
@@ -888,8 +803,7 @@ class PostgreSQLDatabase {
                     );
                     if (economyResult.rows.length === 0) return defaultValue;
                     const row = economyResult.rows[0];
-                    // Return the full data blob when available (contains wallet, bank, etc.)
-                    // Fall back to constructing a compatible object from the columns
+
                     if (row.data && typeof row.data === 'object' && Object.keys(row.data).length > 0) {
                         return row.data;
                     }
@@ -926,13 +840,6 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Set structured data to appropriate table
-     * @param {Object} parsedKey - Parsed key information
-     * @param {any} value - Value to set
-     * @param {number} ttl - Optional TTL
-     * @returns {Promise<boolean>} Success status
-     */
     async setStructuredData(parsedKey, value, ttl) {
         try {
             switch (parsedKey.type) {
@@ -1139,7 +1046,7 @@ class PostgreSQLDatabase {
                                 ALTER TABLE ${pgConfig.tables.guilds} 
                                 ADD COLUMN counters JSONB DEFAULT '[]'
                             `);
-                            logger.info('✅ Added counters column to guilds table');
+                            logger.info('Added counters column to guilds table');
                         } catch (alterError) {
                             logger.error('Failed to add counters column:', alterError);
                             throw new Error(`Counters column missing and could not be created: ${alterError.message}`);
@@ -1173,11 +1080,6 @@ class PostgreSQLDatabase {
         }
     }
 
-    /**
-     * Delete structured data from appropriate table
-     * @param {Object} parsedKey - Parsed key information
-     * @returns {Promise<boolean>} Success status
-     */
     async deleteStructuredData(parsedKey) {
         try {
             switch (parsedKey.type) {
@@ -1226,9 +1128,6 @@ class PostgreSQLDatabase {
         }
     }
 
-    
-
-
     async disconnect() {
         try {
             if (this.pool) {
@@ -1239,10 +1138,6 @@ class PostgreSQLDatabase {
             logger.error('Error closing PostgreSQL connection:', error);
         }
     }
-
-    
-
-
 
     async getInfo() {
         try {
@@ -1268,6 +1163,3 @@ class PostgreSQLDatabase {
 const pgDb = new PostgreSQLDatabase();
 
 export { PostgreSQLDatabase, pgDb };
-
-
-

@@ -1,5 +1,4 @@
-import { MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { EmbedBuilder } from 'discord.js';
 import { getAllBirthdays } from '../../../services/birthdayService.js';
 import { deleteBirthday } from '../../../utils/database.js';
 import { logger } from '../../../utils/logger.js';
@@ -12,26 +11,19 @@ export default {
             await InteractionHelper.safeDefer(interaction);
 
             const guildId = interaction.guildId;
-            
-            
+
             const sortedBirthdays = await getAllBirthdays(client, guildId);
 
             if (sortedBirthdays.length === 0) {
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('No Birthdays')
+                    .setDescription('No birthdays have been set in this server yet.');
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [createEmbed({
-                        title: '❌ No Birthdays',
-                        description: 'No birthdays have been set in this server yet.',
-                        color: 'error'
-                    })]
+                    embeds: [embed]
                 });
             }
 
-            const embed = createEmbed({
-                title: "🎂 Server Birthdays",
-                color: 'info'
-            });
-
-            // Batch fetch to verify which users are still in the guild
             const userIds = sortedBirthdays.map(b => b.userId);
             const fetchedMembers = await interaction.guild.members.fetch({ user: userIds }).catch(() => null);
 
@@ -48,7 +40,6 @@ export default {
                 birthdayList += `${displayIndex}. <@${birthday.userId}> - ${birthday.monthName} ${birthday.day}\n`;
             }
 
-            // Clean up birthday entries for members who left the server
             if (fetchedMembers && staleUserIds.length > 0) {
                 for (const userId of staleUserIds) {
                     deleteBirthday(client, guildId, userId).catch(() => null);
@@ -56,21 +47,25 @@ export default {
             }
 
             if (displayIndex === 0) {
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('No Birthdays')
+                    .setDescription('No birthdays have been set by current server members.');
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [createEmbed({
-                        title: '❌ No Birthdays',
-                        description: 'No birthdays have been set by current server members.',
-                        color: 'error'
-                    })]
+                    embeds: [embed]
                 });
             }
 
             birthdayList = `**${displayIndex} birthday${displayIndex !== 1 ? 's' : ''} in ${interaction.guild.name}**\n\n` + birthdayList;
 
-            embed.setDescription(birthdayList);
-            embed.setFooter({ text: `Total: ${displayIndex} birthday${displayIndex !== 1 ? 's' : ''}` });
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('Server Birthdays')
+                .setDescription(`${birthdayList}\n\nTotal: ${displayIndex} birthday${displayIndex !== 1 ? 's' : ''}`);
 
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, {
+                embeds: [embed]
+            });
             
             logger.info('Birthday list retrieved successfully', {
                 userId: interaction.user.id,
@@ -94,6 +89,3 @@ export default {
         }
     }
 };
-
-
-

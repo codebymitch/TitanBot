@@ -1,25 +1,16 @@
-
-
-
+// xpSystem.js
 
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getXpForLevel, getUserLevelData, saveUserLevelData } from './leveling.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
+import { formatLogLine } from '../utils/logEmbeds.js';
 import { Mutex } from '../utils/mutex.js';
-
-
-
-
-
-
-
-
 
 export async function addXp(client, guild, member, xpToAdd) {
   const lockKey = `leveling:${guild.id}:${member.user.id}`;
   return await Mutex.runExclusive(lockKey, async () => {
     try {
-      // XP Logic...
+      
       if (!xpToAdd || xpToAdd <= 0) {
         return { success: false, reason: 'Invalid XP amount' };
       }
@@ -35,8 +26,7 @@ export async function addXp(client, guild, member, xpToAdd) {
       levelData.xp += xpToAdd;
       levelData.totalXp += xpToAdd;
       levelData.lastMessage = Date.now();
-      
-      // Handle multi-level jumps
+
       let xpNeededForNextLevel = getXpForLevel(levelData.level);
       let didLevelUp = false;
       const initialLevel = levelData.level;
@@ -49,50 +39,32 @@ export async function addXp(client, guild, member, xpToAdd) {
 
         logger.info(`🎉 ${member.user.tag} leveled up to level ${levelData.level} in ${guild.name}`);
 
-        // Award role rewards for each level if applicable
         if (config.roleRewards && config.roleRewards[levelData.level]) {
           await awardRoleReward(guild, member, config.roleRewards[levelData.level], levelData.level);
         }
       }
 
       if (didLevelUp) {
-        // If they leveled up, we only announce once (to the highest level reached)
+        
         if (config.announceLevelUp) {
           await sendLevelUpAnnouncement(guild, member, levelData, config);
         }
 
-        // Log the levelup event (once for the highest level reached)
         try {
           await logEvent({
             client,
             guildId: guild.id,
             eventType: EVENT_TYPES.LEVELING_LEVELUP,
             data: {
-              description: `${member.user.tag} reached level ${levelData.level}`,
+              title: 'Level Up',
+              lines: [
+                formatLogLine('Member', `${member.user.tag} (\`${member.user.id}\`)`),
+                formatLogLine('New Level', levelData.level.toString()),
+                formatLogLine('Levels Gained', (levelData.level - initialLevel).toString()),
+                formatLogLine('Total XP', levelData.totalXp.toString()),
+              ],
               userId: member.user.id,
-              fields: [
-                {
-                  name: '👤 Member',
-                  value: `${member.user.tag} (${member.user.id})`,
-                  inline: true
-                },
-                {
-                  name: '📊 New Level',
-                  value: levelData.level.toString(),
-                  inline: true
-                },
-                {
-                  name: '📈 Levels Gained',
-                  value: (levelData.level - initialLevel).toString(),
-                  inline: true
-                },
-                {
-                  name: '✨ Total XP',
-                  value: levelData.totalXp.toString(),
-                  inline: true
-                }
-              ]
-            }
+            },
           });
         } catch (logError) {
           logger.debug('Failed to log leveling event:', logError.message);
@@ -117,15 +89,6 @@ export async function addXp(client, guild, member, xpToAdd) {
   });
 }
 
-
-
-
-
-
-
-
-
-
 async function awardRoleReward(guild, member, roleId, level) {
   try {
     const role = guild.roles.cache.get(roleId);
@@ -135,7 +98,6 @@ async function awardRoleReward(guild, member, roleId, level) {
       return;
     }
 
-    
     if (member.roles.cache.has(roleId)) {
       return;
     }
@@ -147,15 +109,6 @@ async function awardRoleReward(guild, member, roleId, level) {
   }
 }
 
-
-
-
-
-
-
-
-
-
 async function sendLevelUpAnnouncement(guild, member, levelData, config) {
   try {
     const levelUpChannel = config.levelUpChannel 
@@ -166,7 +119,6 @@ async function sendLevelUpAnnouncement(guild, member, levelData, config) {
       return;
     }
 
-    
     const permissions = levelUpChannel.permissionsFor(guild.members.me);
     if (!permissions || !permissions.has(['SendMessages', 'EmbedLinks'])) {
       logger.warn(`Missing permissions to send levelup message in ${levelUpChannel.id}`);
@@ -186,5 +138,3 @@ async function sendLevelUpAnnouncement(guild, member, levelData, config) {
     logger.error('Error sending level up announcement:', error);
   }
 }
-
-

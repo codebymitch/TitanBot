@@ -54,5 +54,3 @@ export default async (client) => {
     logger.error('Error loading interactions:', error);
   }
 };
-
-

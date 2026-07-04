@@ -1,5 +1,8 @@
+// serverstatsService.js
+
 import { logger } from '../utils/logger.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
+import { formatLogLine } from '../utils/logEmbeds.js';
 
 export const COUNTER_TYPE_CONFIG = {
   members: {
@@ -76,7 +79,6 @@ export async function getCounterCount(guild, type) {
   }
 }
 
-
 function isValidCounterShape(counter) {
   return Boolean(
     counter &&
@@ -116,13 +118,6 @@ function sanitizeCounters(counters, guildId) {
     .map(counter => normalizeCounter(counter, guildId));
 }
 
-
-
-
-
-
-
-
 export async function updateCounter(client, guild, counter) {
   try {
     if (!counter || !counter.type || !counter.channelId) {
@@ -131,9 +126,16 @@ export async function updateCounter(client, guild, counter) {
     }
     
     const { type, channelId } = counter;
-    const channel = guild.channels.cache.get(channelId);
+    let channel = guild.channels.cache.get(channelId);
     if (!channel) {
-      logger.error('Channel not found for counter:', channelId);
+      try {
+        channel = await guild.channels.fetch(channelId);
+      } catch {
+        channel = null;
+      }
+    }
+    if (!channel) {
+      logger.warn(`Counter channel ${channelId} not found in guild ${guild.id}, skipping update`);
       return false;
     }
 
@@ -160,33 +162,20 @@ export async function updateCounter(client, guild, counter) {
           logger.debug(`Updated channel name to: "${newName}"`);
         }
 
-        
         try {
           await logEvent({
             client,
             guildId: guild.id,
             eventType: EVENT_TYPES.COUNTER_UPDATE,
             data: {
-              description: `Counter updated: ${baseName}`,
+              title: 'Counter Updated',
+              lines: [
+                formatLogLine('Type', getCounterTypeLabel(type)),
+                formatLogLine('Count', count.toString()),
+                formatLogLine('Channel', channel.toString()),
+              ],
               channelId: channel.id,
-              fields: [
-                {
-                  name: '📊 Counter Type',
-                  value: getCounterTypeLabel(type),
-                  inline: true
-                },
-                {
-                  name: '🔢 New Count',
-                  value: count.toString(),
-                  inline: true
-                },
-                {
-                  name: '📍 Channel',
-                  value: channel.toString(),
-                  inline: true
-                }
-              ]
-            }
+            },
           });
         } catch (error) {
           logger.debug('Error logging counter update:', error);
@@ -207,12 +196,6 @@ export async function updateCounter(client, guild, counter) {
     return false;
   }
 }
-
-
-
-
-
-
 
 export async function getServerCounters(client, guildId) {
   try {
@@ -252,13 +235,6 @@ export async function getServerCounters(client, guildId) {
   }
 }
 
-
-
-
-
-
-
-
 export async function saveServerCounters(client, guildId, counters) {
   try {
     if (!client || !client.db) {
@@ -282,5 +258,3 @@ export async function saveServerCounters(client, guildId, counters) {
     return false;
   }
 }
-
-

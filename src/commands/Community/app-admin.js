@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ComponentType, LabelBuilder, RoleSelectMenuBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { getColor } from '../../config/bot.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -103,10 +103,7 @@ export default {
 
     execute: withErrorHandling(async (interaction) => {
         if (!interaction.inGuild()) {
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed("This command can only be used in a server.")],
-                flags: ["Ephemeral"],
-            });
+            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This command can only be used in a server.' });
         }
 
         const { options, guild, member } = interaction;
@@ -122,8 +119,6 @@ export default {
             subcommand
         });
 
-        // ✓ Permission check: User must have ManageGuild permission or a configured manager role
-        // This prevents unauthorized users from accessing admin functions
         await ApplicationService.checkManagerPermission(interaction.client, guild.id, member);
 
         if (subcommand === "setup") {
@@ -140,15 +135,11 @@ export default {
 };
 
 async function handleSetup(interaction) {
-    // Ensure interaction hasn't been deferred/replied yet (safety check)
+    
     if (interaction.deferred || interaction.replied) {
-        return InteractionHelper.safeReply(interaction, {
-            embeds: [errorEmbed("This interaction has already been processed. Please try the command again.")],
-            flags: ["Ephemeral"],
-        });
+        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This interaction has already been processed. Please try the command again.' });
     }
 
-    // Build modal using LabelBuilder API with a native role select dropdown
     const modal = new ModalBuilder()
         .setCustomId('app_setup_modal')
         .setTitle('Set Up New Application');
@@ -213,7 +204,7 @@ async function handleSetup(interaction) {
     await interaction.showModal(modal);
 
     const submitted = await interaction.awaitModalSubmit({
-        time: 15 * 60 * 1000, // 15 minutes
+        time: 15 * 60 * 1000, 
         filter: (i) =>
             i.customId === 'app_setup_modal' &&
             i.user.id === interaction.user.id,
@@ -229,10 +220,7 @@ async function handleSetup(interaction) {
     const roleId = selectedRoles.first()?.id;
 
     if (!roleId) {
-        await submitted.reply({
-            embeds: [errorEmbed('No Role Selected', 'You must select a role for the application.')],
-            flags: ['Ephemeral'],
-        });
+        await replyUserError(submitted, { type: ErrorTypes.USER_INPUT, message: 'You must select a role for the application.' });
         return;
     }
 
@@ -242,42 +230,31 @@ async function handleSetup(interaction) {
         submitted.fields.getTextInputValue('app_question_3').trim(),
     ].filter(q => q.length > 0);
 
-    // Get the role to verify it exists
     const role = await interaction.guild.roles.fetch(roleId).catch(() => null);
     if (!role) {
-        await submitted.reply({
-            embeds: [errorEmbed('Invalid Role', 'The selected role could not be found.')],
-            flags: ['Ephemeral'],
-        });
+        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'The selected role could not be found.' });
         return;
     }
 
-    // Check if this role is already an application
     const existingRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
     if (existingRoles.some(r => r.roleId === roleId)) {
-        await submitted.reply({
-            embeds: [errorEmbed('Already Configured', `The role ${role} is already configured as an application.`)],
-            flags: ['Ephemeral'],
-        });
+        await replyUserError(submitted, { type: ErrorTypes.CONFIGURATION, message: 'The role ${role} is already configured as an application.' });
         return;
     }
 
-    // Add the role to applications with enabled status
     existingRoles.push({
         roleId: roleId,
         name: appName,
-        enabled: true,  // New applications start enabled
+        enabled: true,  
     });
 
     await saveApplicationRoles(interaction.client, interaction.guild.id, existingRoles);
 
-    // Enable the system
     const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
     if (!settings.enabled) {
         await ApplicationService.updateSettings(interaction.client, interaction.guild.id, { enabled: true });
     }
 
-    // Save the questions for this specific role
     await saveApplicationRoleSettings(interaction.client, interaction.guild.id, roleId, { questions });
 
     await submitted.reply({
@@ -288,12 +265,10 @@ async function handleSetup(interaction) {
         flags: ['Ephemeral'],
     });
 
-    // Auto-open dashboard with this app selected
     setTimeout(() => {
         appDashboard.execute(submitted, null, interaction.client, appName);
     }, 500);
 }
-
 
 async function handleReview(interaction) {
     const appId = interaction.options.getString("id");
@@ -304,29 +279,19 @@ async function handleReview(interaction) {
         appId,
     );
     if (!application) {
-        return InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("Application not found.")],
-            flags: ["Ephemeral"],
-        });
+        return await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'Application not found.' });
     }
 
     if (application.status !== "pending") {
-        return InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                errorEmbed("This application has already been processed."),
-            ],
-            flags: ["Ephemeral"],
-        });
+        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This application has already been processed.' });
     }
 
-    // Show application details with approve/deny buttons
     const appEmbed = createEmbed({
-        title: `📋 Review Application`,
+        title: `Review Application`,
         description: `**User:** <@${application.userId}>\n**Application:** ${application.roleName}\n**Application ID:** \`${appId}\``,
         color: 'info',
     });
 
-    // Add application answers to the embed
     if (application.answers && application.answers.length > 0) {
         application.answers.forEach((item, index) => {
             appEmbed.addFields({
@@ -354,21 +319,19 @@ async function handleReview(interaction) {
         flags: ["Ephemeral"],
     });
 
-    // Setup button collector
     const collector = interaction.channel.createMessageComponentCollector({
         componentType: ComponentType.Button,
         filter: i =>
             i.user.id === interaction.user.id &&
             (i.customId.startsWith(`app_review_approve_${appId}`) ||
              i.customId.startsWith(`app_review_deny_${appId}`)),
-        time: 300_000, // 5 minutes
+        time: 300_000, 
         max: 1,
     });
 
     collector.on('collect', async buttonInteraction => {
         const isApprove = buttonInteraction.customId.includes('approve');
-        
-        // Show modal for reason
+
         const reasonModal = new ModalBuilder()
             .setCustomId(`app_review_reason_${appId}_${isApprove ? 'approve' : 'deny'}`)
             .setTitle(`${isApprove ? 'Approve' : 'Deny'} Application - Reason`);
@@ -389,7 +352,7 @@ async function handleReview(interaction) {
 
         try {
             const reasonSubmit = await buttonInteraction.awaitModalSubmit({
-                time: 5 * 60 * 1000, // 5 minutes
+                time: 5 * 60 * 1000, 
                 filter: i =>
                     i.customId === `app_review_reason_${appId}_${isApprove ? 'approve' : 'deny'}` &&
                     i.user.id === buttonInteraction.user.id,
@@ -412,7 +375,6 @@ async function handleReview(interaction) {
                 }
             );
 
-            // Send DM to user
             try {
                 const user = await reasonSubmit.client.users.fetch(application.userId);
                 const statusColor = status === "approved" ? getColor('success') : getColor('error');
@@ -433,7 +395,6 @@ async function handleReview(interaction) {
                 });
             }
 
-            // Update log message
             if (application.logMessageId && application.logChannelId) {
                 try {
                     const statusColor = status === "approved" ? getColor('success') : getColor('error');
@@ -471,7 +432,6 @@ async function handleReview(interaction) {
                 }
             }
 
-            // Assign role if approved
             if (isApprove) {
                 try {
                     const member = await interaction.guild.members.fetch(
@@ -488,7 +448,6 @@ async function handleReview(interaction) {
                 }
             }
 
-            // Respond to modal submission
             await reasonSubmit.reply({
                 embeds: [
                     successEmbed(
@@ -501,17 +460,14 @@ async function handleReview(interaction) {
 
         } catch (error) {
             logger.error('Error reviewing application:', error);
-            await buttonInteraction.reply({
-                embeds: [errorEmbed('Error', 'An error occurred while reviewing the application.')],
-                flags: ["Ephemeral"],
-            });
+            await replyUserError(buttonInteraction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while reviewing the application.' });
         }
     });
 
     collector.on('end', async (collected, reason) => {
         if (reason === 'time') {
             const timeoutEmbed = createEmbed({
-                title: '⏱️ Review Timeout',
+                title: 'Review Timeout',
                 description: 'The review buttons have timed out.',
                 color: 'warning',
             });
@@ -530,7 +486,7 @@ async function handleList(interaction) {
     const limit = interaction.options.getNumber("limit") || 10;
 
     const filters = {};
-    // Default to showing only pending applications if no status specified
+    
     if (status) {
         filters.status = status;
     } else {
@@ -542,21 +498,20 @@ async function handleList(interaction) {
         interaction.guild.id,
         filters,
     );
-    
-    // Filter out applications from users who are no longer in the guild (except if filtering by specific user)
+
     if (!user) {
         applications = await Promise.all(
             applications.map(async (app) => {
                 try {
                     await interaction.guild.members.fetch(app.userId);
-                    return app; // User still in guild
+                    return app; 
                 } catch {
-                    // User no longer in guild, delete the application
+                    
                     await deleteApplication(interaction.client, interaction.guild.id, app.id, app.userId);
-                    return null; // Mark for removal
+                    return null; 
                 }
             })
-        ).then(results => results.filter(Boolean)); // Remove nulls
+        ).then(results => results.filter(Boolean)); 
     }
 
     if (user) {
@@ -576,7 +531,7 @@ async function handleList(interaction) {
                 const role = interaction.guild.roles.cache.get(appRole.roleId);
                 embed.addFields({
                     name: `${index + 1}. ${appRole.name}`,
-                    value: `**Role:** ${role ? `<@&${appRole.roleId}>` : 'Role not found'}\n**Available for applications:** Yes`,
+                    value: `**Role:** ${role ?`<@&${appRole.roleId}>`: 'Role not found'}\n**Available for applications:** Yes`,
                     inline: false
                 });
             });
@@ -587,15 +542,7 @@ async function handleList(interaction) {
 
             return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
         } else {
-            return InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "No applications found and no application roles configured.\n" +
-                        "Use `/app-admin roles add` to configure application roles first."
-                    ),
-                ],
-                flags: ["Ephemeral"],
-            });
+            return await replyUserError(interaction, { type: ErrorTypes.CONFIGURATION, message: '"No applications found and no application roles configured.\\n" +\n                        "Use `/app-admin roles add` to configure application roles first."' });
         }
     }
 
@@ -643,10 +590,7 @@ export async function handleApplicationReviewModal(interaction) {
     try {
         const application = await getApplication(interaction.client, interaction.guild.id, appId);
         if (!application) {
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Application not found.')],
-                flags: ["Ephemeral"]
-            });
+            return await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'Application not found.' });
         }
         
         const status = isApprove ? 'approved' : 'denied';
@@ -722,12 +666,6 @@ export async function handleApplicationReviewModal(interaction) {
         
     } catch (error) {
         logger.error('Error processing application review:', error);
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed('An error occurred while processing the application.')],
-            flags: ["Ephemeral"]
-        });
+        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while processing the application.' });
     }
 }
-
-
-

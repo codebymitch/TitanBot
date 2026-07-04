@@ -1,6 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -22,25 +22,11 @@ export default {
 
             const permissionContext = await getTicketPermissionContext({ client, interaction });
             if (!permissionContext.ticketData) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This command can only be used in a valid ticket channel.' });
             }
 
             if (!permissionContext.canManageTicket) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Permission Denied",
-                            "You need the `Manage Channels` permission or the configured `Ticket Staff Role` to claim tickets.",
-                        ),
-                    ],
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the `Manage Channels` permission or the configured `Ticket Staff Role` to claim tickets.' });
             }
 
             const channel = interaction.channel;
@@ -53,14 +39,7 @@ export default {
                     guildId: interaction.guildId,
                     error: result.error
                 });
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            result.error || "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'result.error || "This command can only be used in a valid ticket channel."' });
             }
 
             await InteractionHelper.safeEditReply(interaction, {
@@ -97,6 +76,3 @@ export default {
         }
     },
 };
-
-
-

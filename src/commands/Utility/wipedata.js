@@ -6,6 +6,7 @@ import { handleInteractionError } from '../../utils/errorHandler.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
+    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName('wipedata')
         .setDescription('Delete all your personal data from the bot (irreversible)'),
@@ -24,7 +25,7 @@ export default {
                 `• 📋 All other personal data\n\n` +
                 `**This cannot be undone. Are you absolutely sure?**`;
 
-            const embed = warningEmbed(warningMessage, '🗑️ Wipe All Data');
+            const embed = warningEmbed('Wipe All Data', warningMessage);
 
             const confirmButtons = getConfirmationButtons('wipedata');
 
@@ -53,7 +54,3 @@ export default {
         }
     }
 };
-
-
-
-

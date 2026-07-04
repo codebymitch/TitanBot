@@ -1,6 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -48,9 +48,7 @@ export default {
                 const includeSymbols = interaction.options.getBoolean('symbols') ?? true;
                 
                 if (length < 8 || length > 50) {
-                    await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('❌ Invalid Length', 'Password must be 8-50 characters. You provided: ' + length)],
-                    });
+                    await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: '\'Password must be 8-50 characters. You provided:\' + length' });
                     return;
                 }
             
@@ -152,7 +150,3 @@ strengthColor = getColor('warning');
         }
     },
 };
-
-
-
-

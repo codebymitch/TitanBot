@@ -1,12 +1,8 @@
-import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
+import { createEmbed, successEmbed } from '../utils/embeds.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 
-/**
- * Handle wipedata confirmation button
- * Deletes all user data from the database
- */
 const wipedataConfirmHandler = {
   name: 'wipedata_yes',
   async execute(interaction, client) {
@@ -17,7 +13,6 @@ const wipedataConfirmHandler = {
       const userId = interaction.user.id;
       const guildId = interaction.guildId;
 
-      
       const dataKeyPatterns = [
         `economy:${guildId}:${userId}`,
         `level:${guildId}:${userId}`,
@@ -46,7 +41,6 @@ const wipedataConfirmHandler = {
       let deletedCount = 0;
       const deleteErrors = [];
 
-      
       for (const key of dataKeyPatterns) {
         try {
           const exists = await client.db.exists(key);
@@ -60,7 +54,6 @@ const wipedataConfirmHandler = {
         }
       }
 
-      
       try {
         if (client.db.list && typeof client.db.list === 'function') {
           const searchPrefixes = [
@@ -111,7 +104,7 @@ const wipedataConfirmHandler = {
         `*All your economy balance, levels, items, and personal data have been removed.*`;
 
       await interaction.editReply({
-        embeds: [successEmbed(successMessage, '🗑️ Data Wipe Complete')],
+        embeds: [successEmbed('Data Wipe Complete', successMessage)],
         components: []
       });
 
@@ -123,17 +116,10 @@ const wipedataConfirmHandler = {
     } catch (error) {
       logger.error('Wipedata confirm button handler error:', error);
       
-      await interaction.editReply({
-        embeds: [errorEmbed('Data Wipe Failed', 'An error occurred while wiping your data. Please try again later or contact support.')],
-        components: []
-      });
+      await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while wiping your data. Please try again later or contact support.' });
     }
   }
 };
-
-
-
-
 
 const wipedataCancelHandler = {
   name: 'wipedata_no',
@@ -155,17 +141,10 @@ const wipedataCancelHandler = {
       logger.error('Wipedata cancel button handler error:', error);
       
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Error', 'Could not cancel data wipe.')],
-          flags: MessageFlags.Ephemeral
-        });
+        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Could not cancel data wipe.' });
       }
     }
   }
 };
 
 export { wipedataConfirmHandler, wipedataCancelHandler };
-
-
-
-

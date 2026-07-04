@@ -1,26 +1,9 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// applicationService.js
 
 import { logger } from '../utils/logger.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { PermissionFlagsBits } from 'discord.js';
-import { sanitizeInput, sanitizeMarkdown } from '../utils/sanitization.js';
+import { sanitizeInput, sanitizeMarkdown } from '../utils/validation.js';
 import {
     getApplicationSettings,
     saveApplicationSettings,
@@ -33,7 +16,6 @@ import {
     saveApplicationRoles
 } from '../utils/database.js';
 
-
 const applicationCooldowns = new Map();
 const APPLICATION_SUBMIT_COOLDOWN = 5 * 60 * 1000; 
 
@@ -41,10 +23,6 @@ class ApplicationService {
     static sanitizeApplicationText(value, maxLength) {
         return sanitizeMarkdown(sanitizeInput(String(value ?? ''), maxLength));
     }
-
-    
-
-
 
     static validateApplicationSubmission(data) {
         if (!data.guildId || !data.userId || !data.roleId) {
@@ -65,7 +43,6 @@ class ApplicationService {
             );
         }
 
-        
         for (const answer of data.answers) {
             const sanitizedQuestion = this.sanitizeApplicationText(answer.question, 200);
             const sanitizedAnswer = this.sanitizeApplicationText(answer.answer, 1000);
@@ -79,7 +56,6 @@ class ApplicationService {
                 );
             }
 
-            
             if (sanitizedAnswer.length > 1000) {
                 throw createError(
                     'Answer too long',
@@ -102,10 +78,6 @@ class ApplicationService {
         return true;
     }
 
-    
-
-
-
     static checkApplicationCooldown(userId) {
         const now = Date.now();
         const cooldownKey = `submit_${userId}`;
@@ -124,10 +96,6 @@ class ApplicationService {
         applicationCooldowns.set(cooldownKey, now);
         return true;
     }
-
-    
-
-
 
     static async checkManagerPermission(client, guildId, member) {
         const settings = await getApplicationSettings(client, guildId);
@@ -149,21 +117,13 @@ class ApplicationService {
         return true;
     }
 
-    
-
-
-
-
-
     static async submitApplication(client, data) {
         try {
             
             this.validateApplicationSubmission(data);
 
-            
             this.checkApplicationCooldown(data.userId);
 
-            
             const settings = await getApplicationSettings(client, data.guildId);
             if (!settings.enabled) {
                 throw createError(
@@ -174,7 +134,6 @@ class ApplicationService {
                 );
             }
 
-            
             const userApps = await getUserApplications(client, data.guildId, data.userId);
             const pendingApp = userApps.find(app => app.status === 'pending');
 
@@ -187,7 +146,6 @@ class ApplicationService {
                 );
             }
 
-            
             const sanitizedData = {
                 ...data,
                 answers: data.answers.map(answer => ({
@@ -196,7 +154,6 @@ class ApplicationService {
                 }))
             };
 
-            
             const application = await createApplication(client, sanitizedData);
 
             logger.info('Application submitted', {
@@ -219,19 +176,10 @@ class ApplicationService {
         }
     }
 
-    
-
-
-
-
-
-
-
     static async reviewApplication(client, guildId, applicationId, reviewData) {
         try {
             const { action, reason, reviewerId } = reviewData;
 
-            
             if (!['approve', 'deny'].includes(action)) {
                 throw createError(
                     'Invalid review action',
@@ -241,7 +189,6 @@ class ApplicationService {
                 );
             }
 
-            
             const application = await getApplication(client, guildId, applicationId);
             if (!application) {
                 throw createError(
@@ -252,7 +199,6 @@ class ApplicationService {
                 );
             }
 
-            
             if (application.status !== 'pending') {
                 throw createError(
                     'Application already processed',
@@ -265,7 +211,6 @@ class ApplicationService {
             const status = action === 'approve' ? 'approved' : 'denied';
             const sanitizedReason = reason ? reason.trim().substring(0, 500) : 'No reason provided.';
 
-            
             const updatedApplication = await updateApplication(client, guildId, applicationId, {
                 status,
                 reviewer: reviewerId,
@@ -292,13 +237,6 @@ class ApplicationService {
             throw error;
         }
     }
-
-    
-
-
-
-
-
 
     static async getApplicationsList(client, guildId, filters = {}) {
         try {
@@ -327,13 +265,6 @@ class ApplicationService {
         }
     }
 
-    
-
-
-
-
-
-
     static async updateSettings(client, guildId, updates) {
         try {
             
@@ -346,7 +277,6 @@ class ApplicationService {
                 );
             }
 
-            
             if (updates.managerRoles && !Array.isArray(updates.managerRoles)) {
                 throw createError(
                     'Invalid manager roles format',
@@ -356,7 +286,6 @@ class ApplicationService {
                 );
             }
 
-            
             if (updates.questions) {
                 if (!Array.isArray(updates.questions) || updates.questions.length === 0) {
                     throw createError(
@@ -367,7 +296,6 @@ class ApplicationService {
                     );
                 }
 
-                
                 updates.questions = updates.questions.map(q => 
                     typeof q === 'string' ? q.trim().substring(0, 100) : q
                 );
@@ -393,13 +321,6 @@ class ApplicationService {
         }
     }
 
-    
-
-
-
-
-
-
     static async manageApplicationRoles(client, guildId, data) {
         try {
             const { action, roleId, name } = data;
@@ -416,7 +337,6 @@ class ApplicationService {
                     );
                 }
 
-                
                 if (currentRoles.some(appRole => appRole.roleId === roleId)) {
                     throw createError(
                         'Role already configured',
@@ -479,13 +399,6 @@ class ApplicationService {
         }
     }
 
-    
-
-
-
-
-
-
     static async getUserApplications(client, guildId, userId) {
         try {
             const applications = await getUserApplications(client, guildId, userId);
@@ -512,13 +425,6 @@ class ApplicationService {
             );
         }
     }
-
-    
-
-
-
-
-
 
     static async getSingleApplication(client, guildId, applicationId) {
         try {

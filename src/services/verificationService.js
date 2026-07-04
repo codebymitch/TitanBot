@@ -1,16 +1,4 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
+// verificationService.js
 
 import { PermissionFlagsBits } from 'discord.js';
 import { botConfig } from '../config/bot.js';
@@ -19,7 +7,6 @@ import { getGuildConfig, setGuildConfig } from './guildConfig.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { insertVerificationAudit } from '../utils/database.js';
 import { ensureTypedServiceError } from '../utils/serviceErrorBoundary.js';
-
 
 const verificationCooldowns = new Map();
 const attemptTracker = new Map();
@@ -40,23 +27,6 @@ const shouldSendAutoVerifyDm = autoVerifyDefaults.sendDMNotification ?? true;
 const shouldLogVerifications = verificationDefaults.logAllVerifications ?? true;
 const shouldKeepAuditTrail = verificationDefaults.keepAuditTrail ?? false;
 let lastCleanupAt = 0;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export async function verifyUser(client, guildId, userId, options = {}) {
     const { source = 'manual', moderatorId = null } = options;
@@ -85,7 +55,6 @@ export async function verifyUser(client, guildId, userId, options = {}) {
             );
         }
 
-        
         const guildConfig = await getGuildConfig(client, guildId);
         
         if (!guildConfig.verification?.enabled) {
@@ -97,10 +66,8 @@ export async function verifyUser(client, guildId, userId, options = {}) {
             );
         }
 
-        
         await validateVerificationSetup(guild, guildConfig.verification);
 
-        
         const verifiedRole = guild.roles.cache.get(guildConfig.verification.roleId);
         const canAssignRole = await validateBotCanAssignRole(guild, verifiedRole.id);
         if (!canAssignRole) {
@@ -122,14 +89,11 @@ export async function verifyUser(client, guildId, userId, options = {}) {
             };
         }
 
-        
         await checkVerificationCooldown(userId, guildId, defaultCooldownMs);
         await trackVerificationAttempt(userId, guildId, defaultMaxAttempts, defaultAttemptWindowMs);
 
-        
         await member.roles.add(verifiedRole.id, `User verified (${source})`);
 
-        
         logVerificationAction(client, guildId, userId, 'verified', {
             source,
             roleId: verifiedRole.id,
@@ -212,17 +176,6 @@ function pruneVerificationTrackers(now = Date.now()) {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
 export async function autoVerifyOnJoin(client, guild, member, verificationConfig) {
     try {
         
@@ -246,10 +199,8 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             roleId: autoVerifyRoleId
         };
 
-        
         await validateVerificationSetup(guild, effectiveVerificationConfig);
 
-        
         const shouldVerify = evaluateAutoVerifyCriteria(
             member,
             verificationConfig.autoVerify
@@ -263,10 +214,8 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             };
         }
 
-        
         const verifiedRole = guild.roles.cache.get(autoVerifyRoleId);
-        
-        
+
         const canAssign = await validateBotCanAssignRole(guild, verifiedRole.id);
         if (!canAssign) {
             logger.warn('Cannot auto-verify: bot cannot assign role', {
@@ -280,7 +229,6 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             };
         }
 
-        
         if (member.roles.cache.has(verifiedRole.id)) {
             return {
                 autoVerified: false,
@@ -289,10 +237,8 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             };
         }
 
-        
         await member.roles.add(verifiedRole.id, 'Auto-verified on join');
 
-        
         logVerificationAction(client, guild.id, member.id, 'auto_verified', {
             criteria: verificationConfig.autoVerify.criteria,
             accountAge: Date.now() - member.user.createdTimestamp,
@@ -308,7 +254,6 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
             accountAge: Date.now() - member.user.createdTimestamp
         });
 
-        
         if (shouldSendAutoVerifyDm) {
             await sendAutoVerifyNotification(member, verifiedRole, guild);
         }
@@ -345,15 +290,6 @@ export async function autoVerifyOnJoin(client, guild, member, verificationConfig
         };
     }
 }
-
-
-
-
-
-
-
-
-
 
 export async function removeVerification(client, guildId, userId, options = {}) {
     const { moderatorId = null, reason = 'admin_removal' } = options;
@@ -421,13 +357,11 @@ export async function removeVerification(client, guildId, userId, options = {}) 
             };
         }
 
-        
         await member.roles.remove(
             verifiedRole.id, 
             `Verification removed by ${moderatorId || 'system'}: ${reason}`
         );
 
-        
         logVerificationAction(client, guildId, userId, 'removed', {
             removedBy: moderatorId,
             reason,
@@ -468,14 +402,6 @@ export async function removeVerification(client, guildId, userId, options = {}) 
     }
 }
 
-
-
-
-
-
-
-
-
 export async function validateVerificationSetup(guild, verificationConfig) {
     const botMember = guild.members.me;
     if (!botMember) {
@@ -487,7 +413,6 @@ export async function validateVerificationSetup(guild, verificationConfig) {
         );
     }
 
-    
     const verifiedRole = guild.roles.cache.get(verificationConfig.roleId);
     if (!verifiedRole) {
         throw createError(
@@ -498,7 +423,6 @@ export async function validateVerificationSetup(guild, verificationConfig) {
         );
     }
 
-    
     if (verificationConfig.channelId) {
         const channel = guild.channels.cache.get(verificationConfig.channelId);
         if (!channel) {
@@ -510,7 +434,6 @@ export async function validateVerificationSetup(guild, verificationConfig) {
             );
         }
 
-        
         const botPerms = channel.permissionsFor(botMember);
         const requiredPerms = ['ViewChannel', 'SendMessages', 'EmbedLinks'];
         const missingPerms = requiredPerms.filter(perm => !botPerms.has(perm));
@@ -527,13 +450,6 @@ export async function validateVerificationSetup(guild, verificationConfig) {
 
     return true;
 }
-
-
-
-
-
-
-
 
 export async function validateBotCanAssignRole(guild, roleId) {
     const role = guild.roles.cache.get(roleId);
@@ -554,8 +470,7 @@ export async function validateBotCanAssignRole(guild, roleId) {
         });
         return false;
     }
-    
-    
+
     if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
         logger.warn('Cannot assign role - missing ManageRoles permission', {
             guildId: guild.id,
@@ -564,7 +479,6 @@ export async function validateBotCanAssignRole(guild, roleId) {
         return false;
     }
 
-    
     const botHighest = botMember.roles.highest;
     if (role.position >= botHighest.position) {
         logger.warn('Cannot assign role - role hierarchy issue', {
@@ -578,13 +492,6 @@ export async function validateBotCanAssignRole(guild, roleId) {
 
     return true;
 }
-
-
-
-
-
-
-
 
 function evaluateAutoVerifyCriteria(member, autoVerifyConfig) {
     const { criteria, accountAgeDays } = autoVerifyConfig;
@@ -608,14 +515,6 @@ function evaluateAutoVerifyCriteria(member, autoVerifyConfig) {
     }
 }
 
-
-
-
-
-
-
-
-
 export async function checkVerificationCooldown(userId, guildId, cooldownMs = defaultCooldownMs) {
     pruneVerificationTrackers();
 
@@ -635,15 +534,6 @@ export async function checkVerificationCooldown(userId, guildId, cooldownMs = de
     verificationCooldowns.set(key, Date.now());
 }
 
-
-
-
-
-
-
-
-
-
 export async function trackVerificationAttempt(
     userId,
     guildId,
@@ -656,7 +546,6 @@ export async function trackVerificationAttempt(
     const attempts = attemptTracker.get(key) || [];
     const now = Date.now();
 
-    
     const recentAttempts = attempts.filter(timestamp => now - timestamp < windowMs);
 
     if (recentAttempts.length >= maxAttempts) {
@@ -671,13 +560,6 @@ export async function trackVerificationAttempt(
     recentAttempts.push(now);
     attemptTracker.set(key, recentAttempts);
 }
-
-
-
-
-
-
-
 
 async function sendAutoVerifyNotification(member, role, guild) {
     try {
@@ -711,15 +593,6 @@ async function sendAutoVerifyNotification(member, role, guild) {
         
     }
 }
-
-
-
-
-
-
-
-
-
 
 function logVerificationAction(client, guildId, userId, action, metadata = {}) {
     if (!shouldLogVerifications) {
@@ -779,13 +652,6 @@ function sanitizeAuditMetadata(metadata = {}) {
         };
     }
 }
-
-
-
-
-
-
-
 
 export function validateAutoVerifyCriteria(criteria, accountAgeDays) {
     const validCriteria = ['account_age', 'server_size', 'none'];

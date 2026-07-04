@@ -60,7 +60,6 @@ export default {
                 );
             }
 
-            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
@@ -72,18 +71,15 @@ export default {
 
             logger.info(`Giveaway creation started by ${interaction.user.tag} in guild ${interaction.guildId}`);
 
-            
             const durationString = interaction.options.getString("duration");
             const winnerCount = interaction.options.getInteger("winners");
             const prize = interaction.options.getString("prize");
             const targetChannel = interaction.options.getChannel("channel") || interaction.channel;
 
-            
             const durationMs = parseDuration(durationString);
             validateWinnerCount(winnerCount);
             const prizeName = validatePrize(prize);
 
-            
             if (!targetChannel.isTextBased()) {
                 throw new TitanBotError(
                     'Target channel is not text-based',
@@ -95,7 +91,6 @@ export default {
 
             const endTime = Date.now() + durationMs;
 
-            
             const initialGiveawayData = {
                 messageId: "placeholder",
                 channelId: targetChannel.id,
@@ -111,18 +106,15 @@ export default {
                 createdAt: new Date().toISOString()
             };
 
-            
             const embed = createGiveawayEmbed(initialGiveawayData, "active");
             const row = createGiveawayButtons(false);
-            
-            
+
             const giveawayMessage = await targetChannel.send({
                 content: "🎉 **NEW GIVEAWAY** 🎉",
                 embeds: [embed],
                 components: [row],
             });
 
-            
             initialGiveawayData.messageId = giveawayMessage.id;
             const saved = await saveGiveaway(
                 interaction.client,
@@ -134,7 +126,6 @@ export default {
                 logger.warn(`Failed to save giveaway to database: ${giveawayMessage.id}`);
             }
 
-            
             try {
                 await logEvent({
                     client: interaction.client,
@@ -146,22 +137,22 @@ export default {
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prize',
+                                name: 'Prize',
                                 value: prizeName,
                                 inline: true
                             },
                             {
-                                name: '🏆 Winners',
+                                name: 'Winners',
                                 value: winnerCount.toString(),
                                 inline: true
                             },
                             {
-                                name: '⏰ Duration',
+                                name: 'Duration',
                                 value: durationString,
                                 inline: true
                             },
                             {
-                                name: '📍 Channel',
+                                name: 'Channel',
                                 value: targetChannel.toString(),
                                 inline: true
                             }
@@ -174,7 +165,6 @@ export default {
 
             logger.info(`Giveaway created successfully: ${giveawayMessage.id} in ${targetChannel.name}`);
 
-            
             await InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
@@ -194,6 +184,3 @@ export default {
         }
     },
 };
-
-
-

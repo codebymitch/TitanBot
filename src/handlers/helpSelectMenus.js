@@ -21,6 +21,7 @@ const CATEGORY_ICONS = {
     Core: "ℹ️",
     Moderation: "🛡️",
     Economy: "💰",
+    Music: "🎵",
     Fun: "🎮",
     Leveling: "📊",
     Utility: "🔧",
@@ -30,11 +31,20 @@ const CATEGORY_ICONS = {
     Counter: "🔢",
     Tools: "🛠️",
     Search: "🔍",
-    Reaction_Roles: "🎭",
+    "Reaction Roles": "🎭",
     Community: "👥",
     Birthday: "🎂",
+    "Join To Create": "🔌",
+    Verification: "✅",
     Config: "⚙️",
 };
+
+function formatCategoryName(rawCategory) {
+    return rawCategory
+        .replace(/_/g, ' ')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 function buildHelpEntries(command, category) {
     const commandData = normalizeCommandData(command);
@@ -110,8 +120,7 @@ function normalizeCommandData(command) {
 }
 
 async function createCategoryCommandsMenu(category, client) {
-    const categoryName =
-        category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+    const categoryName = formatCategoryName(category);
     const icon = CATEGORY_ICONS[categoryName] || "🔍";
 
     const categoryCommands = [];
@@ -162,7 +171,7 @@ async function createCategoryCommandsMenu(category, client) {
     const embed = createEmbed({
         title: `${icon} ${categoryName} Commands`,
         description: categoryCommands.length > 0
-            ? `Click any command mention below to use it:`
+            ? `Click any command mention below to use it.`
             : `No commands found in the **${categoryName}** category.`
     });
 
@@ -264,9 +273,7 @@ export async function createAllCommandsMenu(page = 1, client) {
                     )
                         continue;
 
-                    const categoryName =
-                        category.charAt(0).toUpperCase() +
-                        category.slice(1).toLowerCase();
+                    const categoryName = formatCategoryName(category);
 
                     allCommands.push(...buildHelpEntries(command, categoryName));
                 }
@@ -300,7 +307,7 @@ export async function createAllCommandsMenu(page = 1, client) {
 
     const embed = createEmbed({
         title: "📋 All Commands",
-        description: `(${allCommands.length} total commands, including subcommands)`
+        description: `Browse every available command in one list. Use the page buttons below to move through the full set.`
     });
 
     embed.setFooter({ text: FOOTER_TEXT });
@@ -407,7 +414,3 @@ export const helpCategorySelectMenu = {
         }
     },
 };
-
-
-
-

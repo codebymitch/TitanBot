@@ -4,7 +4,6 @@ import { shopItems } from '../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
@@ -156,8 +155,3 @@ export default {
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: [MessageFlags.Ephemeral] });
     }, { command: 'buy' })
 };
-
-
-
-
-

@@ -1,11 +1,11 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
-import { errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError, TitanBotError } from '../../utils/errorHandler.js';
+import { handleInteractionError, TitanBotError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
 import greetDashboard from './modules/greet_dashboard.js';
 
 export default {
+    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName('greet')
         .setDescription('Manage welcome & goodbye settings')
@@ -19,15 +19,7 @@ export default {
     async execute(interaction, config, client) {
         try {
             if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-                return await InteractionHelper.safeReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            'Missing Permissions',
-                            'You need the **Manage Server** permission to use `/greet`.',
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the **Manage Server** permission to use `/greet`.' });
             }
 
             const subcommand = interaction.options.getSubcommand();
@@ -40,10 +32,7 @@ export default {
             }
         } catch (error) {
             if (error instanceof TitanBotError) {
-                return await InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed('Configuration Error', error.userMessage || 'Something went wrong.')],
-                    flags: MessageFlags.Ephemeral,
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.CONFIGURATION, message: error.userMessage || 'Something went wrong.' });
             }
             await handleInteractionError(interaction, error, { command: 'greet' });
         }

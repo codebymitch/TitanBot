@@ -1,5 +1,4 @@
-import { MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { EmbedBuilder } from 'discord.js';
 import { getUserBirthday } from '../../../services/birthdayService.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
@@ -14,29 +13,28 @@ export default {
             const userId = targetUser.id;
             const guildId = interaction.guildId;
 
-            
             const birthdayData = await getUserBirthday(client, guildId, userId);
 
             if (!birthdayData) {
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('No Birthday Found')
+                    .setDescription(targetUser.id === interaction.user.id 
+                        ? "You haven't set your birthday yet. Use `/birthday set` to add it!"
+                        : `${targetUser.username} hasn't set their birthday yet.`);
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [createEmbed({
-                        title: '❌ No Birthday Found',
-                        description: targetUser.id === interaction.user.id 
-                            ? "You haven't set your birthday yet. Use `/birthday set` to add it!"
-                            : `${targetUser.username} hasn't set their birthday yet.`,
-                        color: 'error'
-                    })]
+                    embeds: [embed]
                 });
             }
             
-            const embed = createEmbed({
-                title: "🎂 Birthday Information",
-                description: `**Date:** ${birthdayData.monthName} ${birthdayData.day}\n**User:** ${targetUser.toString()}`,
-                color: 'info',
-                footer: targetUser.id === interaction.user.id ? "Your Birthday" : `${targetUser.username}'s Birthday`
-            });
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('Birthday Information')
+                .setDescription(`**Date:** ${birthdayData.monthName} ${birthdayData.day}\n**User:** ${targetUser.toString()}`);
             
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+            await InteractionHelper.safeEditReply(interaction, {
+                embeds: [embed]
+            });
             
             logger.info('Birthday info retrieved successfully', {
                 userId: interaction.user.id,
@@ -59,6 +57,3 @@ export default {
         }
     }
 };
-
-
-

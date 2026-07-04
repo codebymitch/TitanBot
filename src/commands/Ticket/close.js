@@ -1,8 +1,8 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
+import { handleInteractionError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getTicketPermissionContext } from '../../utils/ticketPermissions.js';
 import { closeTicket } from '../../services/ticket.js';
@@ -28,25 +28,11 @@ export default {
 
             const permissionContext = await getTicketPermissionContext({ client, interaction });
             if (!permissionContext.ticketData) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This command can only be used in a valid ticket channel.' });
             }
 
             if (!permissionContext.canCloseTicket) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Permission Denied",
-                            "You need the `Manage Channels` permission, the configured `Ticket Staff Role`, or be the ticket creator to close this ticket.",
-                        ),
-                    ],
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the `Manage Channels` permission, the configured `Ticket Staff Role`, or be the ticket creator to close this ticket.' });
             }
 
             const channel = interaction.channel;
@@ -63,14 +49,7 @@ export default {
                     guildId: interaction.guildId,
                     error: result.error
                 });
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Not a Ticket Channel",
-                            result.error || "This command can only be used in a valid ticket channel.",
-                        ),
-                    ],
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'This command can only be used in a valid ticket channel.' });
             }
 
             await InteractionHelper.safeEditReply(interaction, {
@@ -108,6 +87,3 @@ export default {
         }
     },
 };
-
-
-

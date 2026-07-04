@@ -1,3 +1,5 @@
+// serviceErrorBoundary.js
+
 import { createError, ErrorTypes, TitanBotError } from './errorHandler.js';
 import { resolveErrorCode, getErrorMetadata } from './errorRegistry.js';
 

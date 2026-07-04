@@ -1,3 +1,5 @@
+// errorRegistry.js
+
 const ErrorCodes = Object.freeze({
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   PERMISSION_DENIED: 'PERMISSION_DENIED',

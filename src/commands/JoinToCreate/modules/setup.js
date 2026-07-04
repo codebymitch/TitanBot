@@ -41,7 +41,7 @@ export default {
                 `• Temporary Channel Name Template: \`${nameTemplate}\`\n` +
                 `• User Limit: ${userLimit === 0 ? 'No limit' : userLimit + ' users'}\n` +
                 `• Bitrate: ${bitrate} kbps\n` +
-                `${category ? `• Category: ${category.name}` : '• Category: None (root level)'}\n\n` +
+                `${category ?`• Category: ${category.name}`: '• Category: None (root level)'}\n\n` +
                 `When users join this channel, a temporary voice channel will be created for them.`,
                 '✅ Join to Create Setup Complete'
             );
@@ -76,6 +76,3 @@ export default {
         }
     }
 };
-
-
-

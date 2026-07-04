@@ -1,8 +1,3 @@
-
-
-
-
-
 export const shopItems = [
     {
         id: 'extra_work',
@@ -142,39 +137,18 @@ roleId: null,
     }
 ];
 
-
-
-
-
-
 export function getItemById(itemId) {
     return shopItems.find(item => item.id === itemId);
 }
-
-
-
-
-
 
 export function getItemsByType(type) {
     return shopItems.filter(item => item.type === type);
 }
 
-
-
-
-
-
 export function getItemPrice(itemId) {
     const item = getItemById(itemId);
     return item ? item.price : 0;
 }
-
-
-
-
-
-
 
 export function validatePurchase(itemId, userData) {
     const item = getItemById(itemId);
@@ -182,7 +156,6 @@ export function validatePurchase(itemId, userData) {
         return { valid: false, reason: 'Item not found' };
     }
 
-    
     const inventory = userData.inventory || {};
     const upgrades = userData.upgrades || {};
 
@@ -228,7 +201,3 @@ export function validatePurchase(itemId, userData) {
 
     return { valid: true };
 }
-
-
-
-

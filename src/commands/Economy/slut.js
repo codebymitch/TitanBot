@@ -60,7 +60,7 @@ function resolveOutcome(activity, wallet) {
             type: 'payout',
             delta: amount,
             message: randomChoice(POSITIVE_OUTCOMES),
-            title: `💰 ${activity.name} - Payout`
+            title: `${activity.name} - Payout`
         };
     }
 
@@ -74,7 +74,7 @@ function resolveOutcome(activity, wallet) {
             type: 'fine',
             delta: -amount,
             message: randomChoice(FINE_OUTCOMES),
-            title: `🚨 ${activity.name} - Fined`
+            title: `${activity.name} - Fined`
         };
     }
 
@@ -86,7 +86,7 @@ function resolveOutcome(activity, wallet) {
             type: 'robbed',
             delta: -amount,
             message: randomChoice(ROBBED_OUTCOMES),
-            title: `🕵️ ${activity.name} - Robbed`
+            title: `${activity.name} - Robbed`
         };
     }
 
@@ -97,7 +97,7 @@ function resolveOutcome(activity, wallet) {
         type: 'loss',
         delta: -amount,
         message: randomChoice(LOSS_OUTCOMES),
-        title: `❌ ${activity.name} - Loss`
+        title: `${activity.name} - Loss`
     };
 }
 
@@ -186,8 +186,3 @@ export default {
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'slut' })
 };
-
-
-
-
-

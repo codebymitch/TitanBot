@@ -2,6 +2,7 @@ import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 import { getReactionRoleMessage, deleteReactionRoleMessage } from '../services/reactionRoleService.js';
+import { formatLogLine } from '../utils/logEmbeds.js';
 
 const MAX_LOGGED_MESSAGE_CONTENT_LENGTH = 1024;
 
@@ -25,25 +26,13 @@ export default {
               guildId: message.guild.id,
               eventType: EVENT_TYPES.REACTION_ROLE_DELETE,
               data: {
-                description: `Reaction role message was deleted manually and removed from database.`,
-                channelId: message.channel?.id,
-                fields: [
-                  {
-                    name: '🗑️ Message ID',
-                    value: message.id,
-                    inline: true
-                  },
-                  {
-                    name: '📍 Channel',
-                    value: message.channel ? `${message.channel.toString()} (${message.channel.id})` : 'Unknown',
-                    inline: true
-                  },
-                  {
-                    name: '🧹 Cleanup',
-                    value: 'Database entry removed automatically',
-                    inline: false
-                  }
-                ]
+                title: 'Reaction Role Removed',
+                lines: [
+                  formatLogLine('Channel', message.channel ? `${message.channel.name} ${message.channel.toString()}` : 'Unknown'),
+                  formatLogLine('Message ID', `\`${message.id}\``),
+                  formatLogLine('Cleanup', 'Database entry removed automatically'),
+                ],
+                quoted: true,
               }
             });
           } catch (logCleanupError) {
@@ -56,57 +45,22 @@ export default {
 
       if (message.author?.bot) return;
 
-      const fields = [];
+      const metaLines = [
+        formatLogLine('Channel', message.channel ? `${message.channel.name} ${message.channel.toString()}` : 'Unknown'),
+        formatLogLine('Message ID', `\`${message.id}\``),
+        formatLogLine('Message author', message.author ? message.author.toString() : 'Unknown'),
+        formatLogLine('Message created', `<t:${Math.floor(message.createdTimestamp / 1000)}:R>`),
+      ];
 
-      
-      if (message.author) {
-        fields.push({
-          name: '👤 Author',
-          value: `${message.author.tag} (${message.author.id})`,
-          inline: true
-        });
-      }
-
-      
-      fields.push({
-        name: '💬 Channel',
-        value: `${message.channel.toString()} (${message.channel.id})`,
-        inline: true
-      });
-
-      
+      let messageBody = null;
       if (message.content) {
-        const content = message.content.length > MAX_LOGGED_MESSAGE_CONTENT_LENGTH 
-          ? message.content.substring(0, MAX_LOGGED_MESSAGE_CONTENT_LENGTH - 3) + '...' 
+        messageBody = message.content.length > MAX_LOGGED_MESSAGE_CONTENT_LENGTH
+          ? `${message.content.substring(0, MAX_LOGGED_MESSAGE_CONTENT_LENGTH - 3)}...`
           : message.content;
-        fields.push({
-          name: '📝 Content',
-          value: content || '*(empty message)*',
-          inline: false
-        });
       }
 
-      
-      fields.push({
-        name: '🆔 Message ID',
-        value: message.id,
-        inline: true
-      });
-
-      
-      fields.push({
-        name: '📅 Created',
-        value: `<t:${Math.floor(message.createdTimestamp / 1000)}:R>`,
-        inline: true
-      });
-
-      
       if (message.attachments.size > 0) {
-        fields.push({
-          name: '📎 Attachments',
-          value: message.attachments.size.toString(),
-          inline: true
-        });
+        metaLines.push(formatLogLine('Attachments', String(message.attachments.size)));
       }
 
       await logEvent({
@@ -114,10 +68,12 @@ export default {
         guildId: message.guild.id,
         eventType: EVENT_TYPES.MESSAGE_DELETE,
         data: {
-          description: `A message was deleted in ${message.channel.toString()}`,
+          title: 'Message deleted',
+          lines: metaLines,
+          quoted: true,
+          section: messageBody ? { title: 'Message', body: messageBody || '*(empty message)*' } : null,
           userId: message.author?.id,
           channelId: message.channel.id,
-          fields
         }
       });
 

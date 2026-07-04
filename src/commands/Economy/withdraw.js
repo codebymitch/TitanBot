@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -64,18 +63,18 @@ export default {
 
             await setEconomyData(client, guildId, userId, userData);
 
-            const embed = MessageTemplates.SUCCESS.DATA_UPDATED(
-                "withdrawal",
+            const embed = successEmbed(
+                'Withdrawal Successful',
                 `You successfully withdrew **$${withdrawAmount.toLocaleString()}** from your bank.`
             )
                 .addFields(
                     {
-                        name: "💵 New Cash Balance",
+                        name: "New Cash Balance",
                         value: `$${userData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "🏦 New Bank Balance",
+                        name: "New Bank Balance",
                         value: `$${userData.bank.toLocaleString()}`,
                         inline: true,
                     },

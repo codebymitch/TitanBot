@@ -3,14 +3,8 @@ import path from "path";
 import botConfig, { validateConfig } from "./bot.js";
 import { shopConfig as shop } from "./shop/index.js";
 import { pgConfig } from "./postgres.js";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-
-
-
-
 
 const appConfig = {
   paths: {
@@ -29,6 +23,7 @@ const appConfig = {
     token: process.env.DISCORD_TOKEN || process.env.TOKEN,
     clientId: process.env.CLIENT_ID,
     guildId: process.env.GUILD_ID,
+    multiGuild: process.env.MULTI_GUILD === 'true',
 
     shop: {
       ...botConfig.shop,
@@ -77,11 +72,6 @@ const appConfig = {
 
   shop,
 
-  
-
-
-
-
   features: {
     
     economy: true,                  
@@ -90,18 +80,15 @@ const appConfig = {
     logging: true,                  
     welcome: true,                  
 
-    
     tickets: true,                  
     giveaways: true,                
     birthday: true,                 
     counter: true,                  
 
-    
     verification: true,             
     reactionRoles: true,            
     joinToCreate: true,             
 
-    
     voice: true,                    
     search: true,                   
     tools: true,                    
@@ -109,8 +96,7 @@ const appConfig = {
     community: true,                
     fun: true,                      
 
-    
-    music: false,                   
+    music: true,
   },
 
   env: process.env.NODE_ENV || "development",

@@ -1,6 +1,5 @@
 import { logger } from '../utils/logger.js';
 
-
 export const botConfig = {
   // =========================
   // BOT PRESENCE (what users see under the bot name)
@@ -41,13 +40,17 @@ export const botConfig = {
     owners: process.env.OWNER_IDS?.split(",") || [],
 
     // Default wait time between command uses (in seconds).
-    defaultCooldown: 3, 
+    defaultCooldown: 3,
 
     // If true, old commands are removed before re-registering.
     deleteCommands: false,
 
     // Optional server ID used for testing slash commands quickly.
     testGuildId: process.env.TEST_GUILD_ID,
+
+    // Command prefix for text-based commands (e.g., "!" for "!ping").
+    // Supports both slash commands and prefix commands.
+    prefix: process.env.PREFIX || "!",
   },
 
   // =========================
@@ -69,13 +72,13 @@ export const botConfig = {
     },
 
     // How long users must wait before submitting another application (hours).
-    applicationCooldown: 24, 
+    applicationCooldown: 24,
 
     // Auto-delete denied applications after this many days.
-    deleteDeniedAfter: 7, 
+    deleteDeniedAfter: 7,
 
     // Auto-delete approved applications after this many days.
-    deleteApprovedAfter: 30, 
+    deleteApprovedAfter: 30,
 
     // Role IDs allowed to manage applications.
     managerRoles: [], // Will be populated from environment or database
@@ -88,14 +91,14 @@ export const botConfig = {
   embeds: {
     colors: {
       // Main brand colors.
-      primary: "#336699", 
-      secondary: "#2F3136", 
+      primary: "#336699",
+      secondary: "#2F3136",
 
       // Standard status colors for success/error/warning/info messages.
-      success: "#57F287", 
-      error: "#ED4245", 
-      warning: "#FEE75C", 
-      info: "#3498DB", 
+      success: "#57F287",
+      error: "#ED4245",
+      warning: "#FEE75C",
+      info: "#3498DB",
 
       // Neutral utility colors.
       light: "#FFFFFF",
@@ -185,7 +188,7 @@ export const botConfig = {
 
     // Jail time after failed rob (milliseconds).
     // 3600000 = 1 hour.
-    robFailJailTime: 3600000, 
+    robFailJailTime: 3600000,
   },
 
   // =========================
@@ -193,7 +196,7 @@ export const botConfig = {
   // =========================
   // Add shop defaults here when needed.
   shop: {
-    
+
   },
 
   // =========================
@@ -251,7 +254,7 @@ export const botConfig = {
   giveaways: {
     // Default giveaway duration in milliseconds.
     // 86400000 = 24 hours.
-    defaultDuration: 86400000, 
+    defaultDuration: 86400000,
 
     // Allowed winner count range.
     minimumWinners: 1,
@@ -259,9 +262,9 @@ export const botConfig = {
 
     // Allowed giveaway duration range in milliseconds.
     // 300000 = 5 minutes.
-    minimumDuration: 300000, 
+    minimumDuration: 300000,
     // 2592000000 = 30 days.
-    maximumDuration: 2592000000, 
+    maximumDuration: 2592000000,
 
     // Role IDs allowed to host giveaways.
     allowedRoles: [],
@@ -311,8 +314,8 @@ export const botConfig = {
 
       // Allowed safety limits for account-age requirements.
       // 1 = minimum day, 365 = maximum days.
-      minAccountAge: 1,      
-      maxAccountAge: 365,    
+      minAccountAge: 1,
+      maxAccountAge: 365,
 
       // If true, user receives a DM after verification.
       sendDMNotification: true,
@@ -327,29 +330,29 @@ export const botConfig = {
 
     // Minimum time between verification attempts (milliseconds).
     // 5000 = 5 seconds.
-    verificationCooldown: 5000,  
+    verificationCooldown: 5000,
 
     // Maximum failed attempts allowed inside the time window below.
-    maxVerificationAttempts: 3,   
+    maxVerificationAttempts: 3,
 
     // Time window for counting attempts (milliseconds).
     // 60000 = 1 minute.
-    attemptWindow: 60000,          
+    attemptWindow: 60000,
 
     // In-memory safety limits (helps avoid unbounded memory growth).
     maxCooldownEntries: 10000,
     maxAttemptEntries: 10000,
     // Cleanup frequency for cooldown/attempt maps (milliseconds).
     // 300000 = 5 minutes.
-    cooldownCleanupInterval: 300000, 
+    cooldownCleanupInterval: 300000,
     // Maximum metadata payload size for audit entries (bytes).
     maxAuditMetadataBytes: 4096,
     // Maximum number of audit entries kept in memory.
     maxInMemoryAuditEntries: 1000,
-  // If true, log every verification action.
-  logAllVerifications: true,
-  // If true, preserve verification audit history.
-  keepAuditTrail: true,
+    // If true, log every verification action.
+    logAllVerifications: true,
+    // If true, preserve verification audit history.
+    keepAuditTrail: true,
   },
 
   // =========================
@@ -463,11 +466,9 @@ export const botConfig = {
   },
 };
 
-
 export function validateConfig(config) {
   const errors = [];
 
-  
   if (process.env.NODE_ENV !== 'production') {
     logger.debug('Environment variables check:');
     logger.debug('DISCORD_TOKEN exists:', !!process.env.DISCORD_TOKEN);
@@ -486,7 +487,6 @@ export function validateConfig(config) {
     errors.push("Client ID is required (CLIENT_ID environment variable)");
   }
 
-  
   if (process.env.NODE_ENV === 'production') {
     if (!process.env.POSTGRES_HOST) {
       errors.push("PostgreSQL host is required in production (POSTGRES_HOST environment variable)");
@@ -502,7 +502,6 @@ export function validateConfig(config) {
   return errors;
 }
 
-
 const configErrors = validateConfig(botConfig);
 if (configErrors.length > 0) {
   logger.error("Bot configuration errors:", configErrors.join("\n"));
@@ -510,7 +509,6 @@ if (configErrors.length > 0) {
     process.exit(1);
   }
 }
-
 
 export const BotConfig = botConfig;
 
@@ -528,7 +526,6 @@ export function getColor(path, fallback = "#99AAB5") {
       botConfig.embeds.colors,
     );
   
-  // Convert the result to integer if it's a hex string
   if (typeof result === "string" && result.startsWith("#")) {
     return parseInt(result.replace("#", ""), 16);
   }
@@ -543,7 +540,3 @@ export function getRandomColor() {
 }
 
 export default botConfig;
-
-
-
-

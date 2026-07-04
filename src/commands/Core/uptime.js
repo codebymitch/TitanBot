@@ -24,7 +24,7 @@ export default {
 
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [createEmbed({ 
-          title: "⏱️ System Uptime", 
+          title: "System Uptime", 
           description: `\`\`\`${uptimeStr}\`\`\`` 
         })],
       });
@@ -42,7 +42,3 @@ export default {
     }
   },
 };
-
-
-
-

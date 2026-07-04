@@ -1,3 +1,5 @@
+// welcome.js
+
 import { logger } from './logger.js';
 
 const DEFAULT_TEMPLATES = {
@@ -12,10 +14,13 @@ function replaceAll(message, token, value) {
     return message.split(token).join(String(value));
 }
 
-
-
-
-
+export function truncateForEmbedField(value, maxLength = 1024) {
+    const text = String(value ?? '').trim();
+    if (!text) {
+        return '—';
+    }
+    return text.length <= maxLength ? text : `${text.slice(0, maxLength - 1)}…`;
+}
 
 export function formatWelcomeMessage(message, data) {
     
@@ -26,7 +31,6 @@ export function formatWelcomeMessage(message, data) {
     const user = data?.user;
     const guild = data?.guild;
 
-    
     if (!user || typeof user !== 'object') {
         logger.warn('Invalid user object passed to formatWelcomeMessage');
     }
@@ -67,5 +71,3 @@ export function getDefaultWelcomeMessage() {
 export function getDefaultGoodbyeMessage() {
     return DEFAULT_TEMPLATES.goodbye;
 }
-
-

@@ -9,8 +9,7 @@ export default {
         .setName("eleaderboard")
         .setDescription("View the server's top 10 richest users.")
         .setDMPermission(false),
-    
-    
+
     execute: withErrorHandling(async (interaction, config, client) => {
         const deferred = await InteractionHelper.safeDefer(interaction);
         if (!deferred) return;
@@ -81,14 +80,9 @@ export default {
             const embed = createEmbed({
                 title: `Economy Leaderboard`,
                 description,
-                footer: `Your Rank: ${userRank > 0 ? `#${userRank}` : "No ranking data available"}`,
+                footer: `Your Rank: ${userRank > 0 ?`#${userRank}`: "No ranking data available"}`,
             });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'eleaderboard' })
 };
-
-
-
-
-

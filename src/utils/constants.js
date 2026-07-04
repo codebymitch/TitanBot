@@ -1,11 +1,4 @@
-
-
-
-
-
-
-
-
+// constants.js
 
 export const DEFAULT_ECONOMY_DATA = {
     wallet: 0,
@@ -29,33 +22,24 @@ export const DEFAULT_ECONOMY_DATA = {
     cooldowns: {}
 };
 
-
-
-
-
 export const DEFAULT_GUILD_CONFIG = {
-    logIgnore: { users: [], channels: [] },
     enabledCommands: {},
-    reportChannelId: null,
     birthdayChannelId: null,
     premiumRoleId: null,
     modRole: null,
     adminRole: null,
-    logChannelId: null,
     welcomeChannel: null,
     autoRole: null,
     logging: {
         enabled: false,
-        enabledEvents: {}
+        channels: { audit: null, applications: null, reports: null },
+        ignore: { users: [], channels: [] },
+        enabledEvents: {},
     },
     verification: {
         enabled: false
     }
 };
-
-
-
-
 
 export const INTERACTION_TIMEOUTS = {
     EXPIRE: 15 * 60 * 1000,  
@@ -63,9 +47,6 @@ export const INTERACTION_TIMEOUTS = {
     REPLY_TIMEOUT: 3000       
 };
 
-/**
- * Database and storage limits
- */
 export const STORAGE_LIMITS = {
     MAX_EMBED_TITLE: 256,
     MAX_EMBED_DESCRIPTION: 4096,
@@ -80,10 +61,6 @@ export const STORAGE_LIMITS = {
     MAX_BUTTONS_PER_ROW: 5
 };
 
-
-
-
-
 export const DEFAULTS = {
     EMPTY_ARRAY: [],
     EMPTY_OBJECT: {},
@@ -93,9 +70,6 @@ export const DEFAULTS = {
     NULL: null
 };
 
-
-
-
 export const ERROR_DEFAULTS = {
     INVALID_INPUT: 'Invalid input provided',
     DATABASE_ERROR: 'Database operation failed',
@@ -103,9 +77,6 @@ export const ERROR_DEFAULTS = {
     INSUFFICIENT_PERMISSIONS: 'Insufficient permissions',
     INVALID_FORMAT: 'Invalid format'
 };
-
-
-
 
 export const TIME = {
     SECOND: 1000,

@@ -18,31 +18,27 @@ import {
     RadioGroupBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { successEmbed, errorEmbed } from '../../utils/embeds.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { TitanBotError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const MAX_FIELDS = 25;
-const IDLE_TIMEOUT = 900_000; // 15 minutes
+const IDLE_TIMEOUT = 900_000; 
 
 const COLOR_PRESETS = [
-    { label: 'Primary (Blue)',        value: '#336699', emoji: '🔵' },
-    { label: 'Success (Green)',       value: '#57F287', emoji: '🟢' },
-    { label: 'Error (Red)',           value: '#ED4245', emoji: '🔴' },
-    { label: 'Warning (Yellow)',      value: '#FEE75C', emoji: '🟡' },
-    { label: 'Info (Bright Blue)',    value: '#3498DB', emoji: '💙' },
-    { label: 'Blurple (Discord)',     value: '#5865F2', emoji: '🟣' },
-    { label: 'Fuchsia',              value: '#EB459E', emoji: '💜' },
-    { label: 'Gold',                  value: '#F1C40F', emoji: '🟠' },
-    { label: 'White',                 value: '#FFFFFF', emoji: '⚪' },
-    { label: 'Dark',                  value: '#202225', emoji: '⚫' },
-    { label: 'Custom Hex...',         value: '__custom__', emoji: '🎨' },
+    { label: 'Primary (Blue)',        value: '#336699', emoji: '' },
+    { label: 'Success (Green)',       value: '#57F287', emoji: '' },
+    { label: 'Error (Red)',           value: '#ED4245', emoji: '' },
+    { label: 'Warning (Yellow)',      value: '#FEE75C', emoji: '' },
+    { label: 'Info (Bright Blue)',    value: '#3498DB', emoji: '' },
+    { label: 'Blurple (Discord)',     value: '#5865F2', emoji: '' },
+    { label: 'Fuchsia',              value: '#EB459E', emoji: '' },
+    { label: 'Gold',                  value: '#F1C40F', emoji: '' },
+    { label: 'White',                 value: '#FFFFFF', emoji: '' },
+    { label: 'Dark',                  value: '#202225', emoji: '' },
+    { label: 'Custom Hex...',         value: '__custom__', emoji: '' },
 ];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isValidUrl(str) {
     try {
@@ -57,11 +53,6 @@ function isValidHex(str) {
     return /^#[0-9A-Fa-f]{6}$/.test(str);
 }
 
-// ─── Embed Builders ────────────────────────────────────────────────────────────
-
-/**
- * Builds the live preview embed from current state.
- */
 function buildPreviewEmbed(state) {
     const embed = new EmbedBuilder();
 
@@ -93,7 +84,6 @@ function buildPreviewEmbed(state) {
 
     if (state.fields.length > 0) embed.addFields(state.fields.slice(0, 25));
 
-    // Ensure the embed renders if completely empty
     if (
         !state.title &&
         !state.description &&
@@ -106,19 +96,16 @@ function buildPreviewEmbed(state) {
     return embed;
 }
 
-/**
- * Builds the status/control dashboard embed (shown below the preview).
- */
 function buildDashboardEmbed(state) {
     const trunc = (str, n) =>
         str.length > n ? str.substring(0, n) + '…' : str;
 
     const lines = [
-        `**Title** › ${state.title ? `\`${trunc(state.title, 40)}\`` : '`Not set`'}`,
-        `**Description** › ${state.description ? `${state.description.length} character(s)` : '`Not set`'}`,
-        `**Color** › ${state.color ? `\`${state.color}\`` : '`Default`'}`,
-        `**Author** › ${state.author?.name ? `\`${trunc(state.author.name, 30)}\`` : '`Not set`'}`,
-        `**Footer** › ${state.footer?.text ? `\`${trunc(state.footer.text, 30)}\`` : '`Not set`'}`,
+        `**Title** › ${state.title ?`\`${trunc(state.title, 40)}\`` : '`Not set`'}`,
+        `**Description** › ${state.description ?`${state.description.length} character(s)`: '`Not set`'}`,
+        `**Color** › ${state.color ?`\`${state.color}\`` : '`Default`'}`,
+        `**Author** › ${state.author?.name ?`\`${trunc(state.author.name, 30)}\`` : '`Not set`'}`,
+        `**Footer** › ${state.footer?.text ?`\`${trunc(state.footer.text, 30)}\`` : '`Not set`'}`,
         `**Thumbnail** › ${state.thumbnail ? '✅ Set' : '`Not set`'}`,
         `**Image** › ${state.image ? '✅ Set' : '`Not set`'}`,
         `**Timestamp** › ${state.timestamp ? '✅ Enabled' : '`Disabled`'}`,
@@ -126,15 +113,12 @@ function buildDashboardEmbed(state) {
     ];
 
     return new EmbedBuilder()
-        .setTitle('🛠️ Embed Builder — Control Panel')
+        .setTitle('Embed Builder — Control Panel')
         .setDescription(lines.join('\n'))
         .setColor(getColor('info'))
         .setFooter({ text: 'The preview above updates live · Closes after 5 min of inactivity' });
 }
 
-/**
- * Builds the main action select menu.
- */
 function buildMainMenu(state) {
     const select = new StringSelectMenuBuilder()
         .setCustomId('eb_menu')
@@ -166,7 +150,7 @@ function buildMainMenu(state) {
                 .setValue('set_images')
                 .setEmoji('🖼️'),
             new StringSelectMenuOptionBuilder()
-                .setLabel(`Add Field  (${state.fields.length}/${MAX_FIELDS})`)
+                .setLabel(`Add Field (${state.fields.length}/${MAX_FIELDS})`)
                 .setDescription('Add a new inline or block field')
                 .setValue('add_field')
                 .setEmoji('➕'),
@@ -223,17 +207,12 @@ function buildMainMenu(state) {
     return select;
 }
 
-/**
- * Updates the dashboard message with the latest state.
- */
 async function refreshDashboard(interaction, state) {
     return await InteractionHelper.safeEditReply(interaction, {
         embeds: [buildPreviewEmbed(state), buildDashboardEmbed(state)],
         components: [new ActionRowBuilder().addComponents(buildMainMenu(state))],
     });
 }
-
-// ─── Option Handlers ──────────────────────────────────────────────────────────
 
 async function handleEditContent(selectInteraction, rootInteraction, state) {
     const modal = new ModalBuilder()
@@ -262,7 +241,8 @@ async function handleEditContent(selectInteraction, rootInteraction, state) {
             ),
         );
 
-    await selectInteraction.showModal(modal);
+    const shown = await InteractionHelper.safeShowModal(selectInteraction, modal);
+    if (!shown) return;
 
     const submitted = await selectInteraction
         .awaitModalSubmit({
@@ -273,7 +253,6 @@ async function handleEditContent(selectInteraction, rootInteraction, state) {
 
     if (!submitted) return;
 
-    // Defer immediately to avoid interaction timeout
     await submitted.deferUpdate().catch(() => {});
 
     state.title       = submitted.fields.getTextInputValue('eb_title').trim()       || null;
@@ -301,7 +280,7 @@ async function handleSetColor(selectInteraction, rootInteraction, state) {
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('🎨 Set Color')
+                .setTitle('Set Color')
                 .setDescription(
                     'Select a preset color or choose **Custom Hex** to enter your own `#RRGGBB` value.',
                 )
@@ -320,6 +299,7 @@ async function handleSetColor(selectInteraction, rootInteraction, state) {
     });
 
     colorCollector.on('collect', async colorInter => {
+        try {
         const picked = colorInter.values[0];
 
         if (picked === '__custom__') {
@@ -339,7 +319,8 @@ async function handleSetColor(selectInteraction, rootInteraction, state) {
                     ),
                 );
 
-            await colorInter.showModal(hexModal);
+            const shown = await InteractionHelper.safeShowModal(colorInter, hexModal);
+            if (!shown) return;
 
             const hexSubmit = await colorInter
                 .awaitModalSubmit({
@@ -353,14 +334,9 @@ async function handleSetColor(selectInteraction, rootInteraction, state) {
 
             const hex = hexSubmit.fields.getTextInputValue('hex_value').trim();
             if (!isValidHex(hex)) {
-                await hexSubmit.reply({
-                    embeds: [
-                        errorEmbed(
-                            'Invalid Hex',
-                            `\`${hex}\` is not a valid hex color. Use the format \`#RRGGBB\` (e.g. \`#5865F2\`).`,
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
+                await replyUserError(hexSubmit, {
+                    type: ErrorTypes.USER_INPUT,
+                    message: `\`${hex}\` is not a valid hex color. Use the format \`#RRGGBB\` (e.g. \`#5865F2\`).`,
                 });
                 return;
             }
@@ -373,6 +349,9 @@ async function handleSetColor(selectInteraction, rootInteraction, state) {
         }
 
         await refreshDashboard(rootInteraction, state);
+        } catch (error) {
+            logger.warn('Embed builder color picker interaction failed:', error.message);
+        }
     });
 }
 
@@ -411,7 +390,8 @@ async function handleSetAuthor(selectInteraction, rootInteraction, state) {
             ),
         );
 
-    await selectInteraction.showModal(modal);
+    const shown = await InteractionHelper.safeShowModal(selectInteraction, modal);
+    if (!shown) return;
 
     const submitted = await selectInteraction
         .awaitModalSubmit({
@@ -427,16 +407,16 @@ async function handleSetAuthor(selectInteraction, rootInteraction, state) {
     const url     = submitted.fields.getTextInputValue('author_url').trim();
 
     if (iconUrl && !isValidUrl(iconUrl)) {
-        await submitted.reply({
-            embeds: [errorEmbed('Invalid URL', 'Author icon URL must be a valid `https://` URL.')],
-            flags: MessageFlags.Ephemeral,
+        await replyUserError(submitted, {
+            type: ErrorTypes.USER_INPUT,
+            message: 'Author icon URL must be a valid `https://` URL.',
         });
         return;
     }
     if (url && !isValidUrl(url)) {
-        await submitted.reply({
-            embeds: [errorEmbed('Invalid URL', 'Author link URL must be a valid `https://` URL.')],
-            flags: MessageFlags.Ephemeral,
+        await replyUserError(submitted, {
+            type: ErrorTypes.USER_INPUT,
+            message: 'Author link URL must be a valid `https://` URL.',
         });
         return;
     }
@@ -473,7 +453,8 @@ async function handleSetFooter(selectInteraction, rootInteraction, state) {
             ),
         );
 
-    await selectInteraction.showModal(modal);
+    const shown = await InteractionHelper.safeShowModal(selectInteraction, modal);
+    if (!shown) return;
 
     const submitted = await selectInteraction
         .awaitModalSubmit({
@@ -488,9 +469,9 @@ async function handleSetFooter(selectInteraction, rootInteraction, state) {
     const iconUrl = submitted.fields.getTextInputValue('footer_icon').trim();
 
     if (iconUrl && !isValidUrl(iconUrl)) {
-        await submitted.reply({
-            embeds: [errorEmbed('Invalid URL', 'Footer icon URL must be a valid `https://` URL.')],
-            flags: MessageFlags.Ephemeral,
+        await replyUserError(submitted, {
+            type: ErrorTypes.USER_INPUT,
+            message: 'Footer icon URL must be a valid `https://` URL.',
         });
         return;
     }
@@ -533,7 +514,7 @@ async function handleSetImages(selectInteraction, rootInteraction, state) {
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('🖼️ Set Images')
+                .setTitle('Set Images')
                 .setDescription('Choose which image to set or remove.')
                 .addFields(
                     { name: 'Thumbnail',    value: state.thumbnail ? `[View](${state.thumbnail})` : '`Not set`', inline: true },
@@ -554,6 +535,7 @@ async function handleSetImages(selectInteraction, rootInteraction, state) {
     });
 
     imgMenuCollector.on('collect', async imgInter => {
+        try {
         const pick = imgInter.values[0];
 
         if (pick === 'clear_thumbnail') {
@@ -586,7 +568,8 @@ async function handleSetImages(selectInteraction, rootInteraction, state) {
                 ),
             );
 
-        await imgInter.showModal(urlModal);
+        const shown = await InteractionHelper.safeShowModal(imgInter, urlModal);
+        if (!shown) return;
 
         const submitted = await imgInter
             .awaitModalSubmit({
@@ -600,11 +583,9 @@ async function handleSetImages(selectInteraction, rootInteraction, state) {
 
         const url = submitted.fields.getTextInputValue('image_url').trim();
         if (!isValidUrl(url)) {
-            await submitted.reply({
-                embeds: [
-                    errorEmbed('Invalid URL', 'Image URL must be a valid `https://` link to a publicly accessible image.'),
-                ],
-                flags: MessageFlags.Ephemeral,
+            await replyUserError(submitted, {
+                type: ErrorTypes.USER_INPUT,
+                message: 'Image URL must be a valid `https://` link to a publicly accessible image.',
             });
             return;
         }
@@ -614,15 +595,18 @@ async function handleSetImages(selectInteraction, rootInteraction, state) {
 
         await submitted.deferUpdate().catch(() => {});
         await refreshDashboard(rootInteraction, state);
+        } catch (error) {
+            logger.warn('Embed builder image picker interaction failed:', error.message);
+        }
     });
 }
 
 async function handleAddField(selectInteraction, rootInteraction, state) {
     if (state.fields.length >= MAX_FIELDS) {
         await selectInteraction.deferUpdate();
-        await selectInteraction.followUp({
-            embeds: [errorEmbed('Fields Full', `Embeds can have a maximum of ${MAX_FIELDS} fields.`)],
-            flags: MessageFlags.Ephemeral,
+        await replyUserError(selectInteraction, {
+            type: ErrorTypes.VALIDATION,
+            message: `Embeds can have a maximum of ${MAX_FIELDS} fields.`,
         });
         return;
     }
@@ -667,7 +651,8 @@ async function handleAddField(selectInteraction, rootInteraction, state) {
 
     modal.addLabelComponents(fieldNameLabel, fieldValueLabel, inlineLabel);
 
-    await selectInteraction.showModal(modal);
+    const shown = await InteractionHelper.safeShowModal(selectInteraction, modal);
+    if (!shown) return;
 
     const submitted = await selectInteraction
         .awaitModalSubmit({
@@ -709,7 +694,7 @@ async function handleEditField(selectInteraction, rootInteraction, state) {
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('📝 Edit Field')
+                .setTitle('Edit Field')
                 .setDescription('Select the field you want to modify.')
                 .setColor(getColor('info')),
         ],
@@ -726,6 +711,7 @@ async function handleEditField(selectInteraction, rootInteraction, state) {
     });
 
     pickCollector.on('collect', async pickInter => {
+        try {
         const idx   = parseInt(pickInter.values[0], 10);
         const field = state.fields[idx];
         if (!field) { await pickInter.deferUpdate(); return; }
@@ -763,7 +749,7 @@ async function handleEditField(selectInteraction, rootInteraction, state) {
                 { label: 'No — full width', value: 'no' },
                 { label: 'Yes — side-by-side', value: 'yes' },
             ]);
-        // Pre-select the current value
+        
         if (field.inline) {
             editInlineRadio.setOptions([
                 { label: 'No — full width', value: 'no' },
@@ -777,7 +763,8 @@ async function handleEditField(selectInteraction, rootInteraction, state) {
 
         modal.addLabelComponents(editNameLabel, editValueLabel, editInlineLabel);
 
-        await pickInter.showModal(modal);
+        const shown = await InteractionHelper.safeShowModal(pickInter, modal);
+        if (!shown) return;
 
         const submitted = await pickInter
             .awaitModalSubmit({
@@ -797,6 +784,9 @@ async function handleEditField(selectInteraction, rootInteraction, state) {
 
         await submitted.deferUpdate().catch(() => {});
         await refreshDashboard(rootInteraction, state);
+        } catch (error) {
+            logger.warn('Embed builder field edit interaction failed:', error.message);
+        }
     });
 }
 
@@ -821,7 +811,7 @@ async function handleRemoveField(selectInteraction, rootInteraction, state) {
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('➖ Remove Field')
+                .setTitle('Remove Field')
                 .setDescription('Select the field you want to delete.')
                 .setColor(getColor('warning')),
         ],
@@ -866,7 +856,7 @@ async function handleReorderFields(selectInteraction, rootInteraction, state) {
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('↕️ Reorder Fields')
+                .setTitle('Reorder Fields')
                 .setDescription('Select a field, then use the arrows to move it up or down.')
                 .setColor(getColor('info')),
         ],
@@ -908,7 +898,7 @@ async function handleReorderFields(selectInteraction, rootInteraction, state) {
         await pickInter.followUp({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('↕️ Move Field')
+                    .setTitle('Move Field')
                     .setDescription(
                         `Moving **${state.fields[sourceIdx].name}** — currently at position **${sourceIdx + 1}** of **${state.fields.length}**.`,
                     )
@@ -953,14 +943,9 @@ async function handlePostEmbed(selectInteraction, rootInteraction, state, guild)
         !state.author?.name
     ) {
         await selectInteraction.deferUpdate();
-        await selectInteraction.followUp({
-            embeds: [
-                errorEmbed(
-                    'Empty Embed',
-                    'Add at least a title, description, or field before posting.',
-                ),
-            ],
-            flags: MessageFlags.Ephemeral,
+        await replyUserError(selectInteraction, {
+            type: ErrorTypes.VALIDATION,
+            message: 'Add at least a title, description, or field before posting.',
         });
         return;
     }
@@ -975,7 +960,7 @@ async function handlePostEmbed(selectInteraction, rootInteraction, state, guild)
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('📤 Post Embed')
+                .setTitle('Post Embed')
                 .setDescription('Select the channel where this embed will be sent.')
                 .setColor(getColor('info')),
         ],
@@ -996,30 +981,24 @@ async function handlePostEmbed(selectInteraction, rootInteraction, state, guild)
         const channel = chanInter.channels.first();
 
         if (!channel) {
-            await chanInter.followUp({
-                embeds: [errorEmbed('No Channel', 'Could not resolve the selected channel.')],
-                flags: MessageFlags.Ephemeral,
+            await replyUserError(chanInter, {
+                type: ErrorTypes.USER_INPUT,
+                message: 'Could not resolve the selected channel.',
             });
             return;
         }
 
         const perms = channel.permissionsFor(guild.members.me);
         if (!perms?.has([PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])) {
-            await chanInter.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Missing Permissions',
-                        `I need **Send Messages** and **Embed Links** permissions in ${channel} to post there.`,
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
+            await replyUserError(chanInter, {
+                type: ErrorTypes.PERMISSION,
+                message: `I need **Send Messages** and **Embed Links** permissions in ${channel} to post there.`,
             });
             return;
         }
 
         const finalEmbed = buildPreviewEmbed(state);
 
-        // Remove the placeholder description before sending
         if (finalEmbed.data.description === '*(Empty — use the menu below to add content)*') {
             finalEmbed.setDescription(null);
         }
@@ -1027,7 +1006,7 @@ async function handlePostEmbed(selectInteraction, rootInteraction, state, guild)
         await channel.send({ embeds: [finalEmbed] });
 
         await chanInter.followUp({
-            embeds: [successEmbed('✅ Embed Sent', `Your embed has been posted to ${channel}.`)],
+            embeds: [successEmbed('Embed Sent', `Your embed has been posted to ${channel}.`)],
             flags: MessageFlags.Ephemeral,
         });
     });
@@ -1043,7 +1022,7 @@ async function handleJsonExport(selectInteraction, rootInteraction, state) {
         await selectInteraction.followUp({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('📋 Embed JSON')
+                    .setTitle('Embed JSON')
                     .setDescription(`\`\`\`json\n${json}\n\`\`\``)
                     .setColor(getColor('info')),
             ],
@@ -1053,7 +1032,7 @@ async function handleJsonExport(selectInteraction, rootInteraction, state) {
         await selectInteraction.followUp({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('📋 Embed JSON')
+                    .setTitle('Embed JSON')
                     .setDescription('The JSON is too long to display inline — see the attached file.')
                     .setColor(getColor('info')),
             ],
@@ -1068,9 +1047,8 @@ async function handleJsonExport(selectInteraction, rootInteraction, state) {
     }
 }
 
-// ─── Main Export ──────────────────────────────────────────────────────────────
-
 export default {
+    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName('embedbuilder')
         .setDescription('Build and post a fully custom embed with live preview')
@@ -1085,7 +1063,6 @@ export default {
 
             const guild = interaction.guild;
 
-            // Builder state — holds every embed property being constructed
             const state = {
                 title:       null,
                 description: null,
@@ -1171,12 +1148,10 @@ export default {
                             ? error.userMessage || 'An error occurred.'
                             : 'An unexpected error occurred.';
                     if (!ci.replied && !ci.deferred) await ci.deferUpdate().catch(() => {});
-                    await ci
-                        .followUp({
-                            embeds: [errorEmbed('Error', msg)],
-                            flags: MessageFlags.Ephemeral,
-                        })
-                        .catch(() => {});
+                    await replyUserError(ci, {
+                        type: ErrorTypes.UNKNOWN,
+                        message: msg,
+                    }).catch(() => {});
                 }
             });
 

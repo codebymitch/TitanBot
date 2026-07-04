@@ -1,38 +1,17 @@
-/**
- * Centralized Error Handling System
- * 
- * This module provides structured error handling for the TitanBot application.
- * 
- * PHILOSOPHY:
- * - All errors are categorized by type for consistent handling
- * - User-facing errors display friendly messages
- * - System errors are logged with full context
- * - Errors contain context information for debugging
- * 
- * USAGE:
- * - Throw TitanBotError for application-specific errors
- * - Use handleInteractionError for interaction errors
- * - Errors are automatically formatted and sent to user
- * 
- * ERROR TYPES:
- * - VALIDATION: Invalid user input
- * - PERMISSION: Missing access permissions
- * - CONFIGURATION: Missing/invalid configuration
- * - DATABASE: Database operation failure
- * - NETWORK: Network/external service failure
- * - DISCORD_API: Discord API error
- * - USER_INPUT: User input processing error
- * - RATE_LIMIT: Rate limit exceeded
- * - UNKNOWN: Unclassified error
- */
+// errorHandler.js
+//
+// User-facing error rules:
+// 1. Use replyUserError or handleInteractionError — not raw errorEmbed in commands/handlers
+// 2. Set a specific userMessage when you know the cause
+// 3. Use ErrorTypes — don't invent custom title strings
+// 4. Put guidance in the description, not embed tip fields
+// 5. Success/info/warning replies use successEmbed / infoEmbed / warningEmbed
 
 import { logger } from './logger.js';
-import { createEmbed } from './embeds.js';
+import { buildUserErrorEmbed } from './embeds.js';
 import { MessageFlags } from 'discord.js';
 import { getErrorMetadata, getDefaultErrorCodeByType, resolveErrorCode, ErrorCodes } from './errorRegistry.js';
-
-
-
+import { InteractionHelper } from './interactionHelper.js';
 
 export const ErrorTypes = {
     VALIDATION: 'validation',
@@ -46,9 +25,6 @@ export const ErrorTypes = {
     UNKNOWN: 'unknown'
 };
 
-
-
-
 export class TitanBotError extends Error {
     constructor(message, type = ErrorTypes.UNKNOWN, userMessage = null, context = {}) {
         super(message);
@@ -60,9 +36,6 @@ export class TitanBotError extends Error {
         this.timestamp = new Date().toISOString();
     }
 }
-
-
-
 
 export function categorizeError(error) {
     if (error instanceof TitanBotError) {
@@ -103,63 +76,63 @@ export function categorizeError(error) {
     return ErrorTypes.UNKNOWN;
 }
 
-
-
-
 const UserMessages = {
     [ErrorTypes.VALIDATION]: {
-        default: "Please check your input and try again.",
-        missing_required: "You're missing some required information. Please check the command options.",
-        invalid_format: "The format you provided is incorrect. Please try again."
+        default: 'Please check your input and try again.',
+        missing_required: "You're missing some required information. Check the command options and try again.",
+        invalid_format: 'The format you provided is incorrect. Check the command usage and try again.'
     },
     [ErrorTypes.PERMISSION]: {
-        default: "I don't have permission to do that. Please check my server permissions.",
+        default: "You don't have permission to do that.",
         user_permission: "You don't have permission to use this command.",
-        bot_permission: "I need additional permissions to perform this action."
+        bot_permission: "I don't have the permissions needed to do that in this channel."
     },
     [ErrorTypes.CONFIGURATION]: {
-        default: "Something is not configured correctly. Please contact an administrator.",
-        missing_config: "This feature hasn't been set up yet. Please contact an administrator.",
-        invalid_config: "The configuration is invalid. Please contact an administrator."
+        default: 'This feature is not set up yet. Ask a server administrator to configure it.',
+        missing_config: 'This feature has not been configured yet. Ask a server administrator to set it up.',
+        invalid_config: 'The server configuration for this feature is invalid. Ask a server administrator to review it.'
     },
     [ErrorTypes.DATABASE]: {
-        default: "I'm having trouble with my database. Please try again in a moment.",
-        connection_failed: "I'm having trouble connecting to my database. Please try again later.",
-        timeout: "The operation took too long. Please try again."
+        default: 'Something went wrong while saving data. Please try again in a moment.',
+        connection_failed: 'I could not reach the database. Please try again later.',
+        timeout: 'That took too long to complete. Please try again.'
     },
     [ErrorTypes.NETWORK]: {
-        default: "I'm having network issues. Please try again in a moment.",
-        timeout: "The request timed out. Please try again.",
-        unreachable: "I can't reach the service right now. Please try again later."
+        default: 'I could not reach an external service. Please try again in a moment.',
+        timeout: 'The request timed out. Please try again.',
+        unreachable: 'The service is unavailable right now. Please try again later.'
     },
     [ErrorTypes.DISCORD_API]: {
-        default: "I'm having trouble with Discord. Please try again in a moment.",
-        rate_limit: "You're doing that too much. Please wait a moment and try again.",
-        forbidden: "I'm not allowed to do that. Please check my permissions."
+        default: 'Discord rejected that request. Please try again in a moment.',
+        rate_limit: "You're doing that too quickly. Wait a moment and try again.",
+        forbidden: "I'm not allowed to do that here. Check my role permissions."
     },
     [ErrorTypes.USER_INPUT]: {
-        default: "There was an issue with your request. Please try again.",
-        invalid_user: "I couldn't find that user. Please check the user mention or ID.",
-        invalid_channel: "I couldn't find that channel. Please check the channel mention or ID."
+        default: 'There was a problem with your request. Check your input and try again.',
+        invalid_user: 'I could not find that user. Check the mention or ID and try again.',
+        invalid_channel: 'I could not find that channel. Check the mention or ID and try again.'
     },
     [ErrorTypes.RATE_LIMIT]: {
-        default: "You're doing that too much. Please wait a moment and try again.",
-        command_cooldown: "This command is on cooldown. Please wait before using it again.",
-        global_rate_limit: "You're being rate limited by Discord. Please wait a moment."
+        default: "You're doing that too quickly. Wait a moment and try again.",
+        command_cooldown: 'This command is on cooldown. Wait before using it again.',
+        global_rate_limit: 'Discord is rate limiting requests. Wait a moment and try again.'
     },
     [ErrorTypes.UNKNOWN]: {
-        default: "Something went wrong. Please try again in a moment.",
-        unexpected: "An unexpected error occurred. Please try again later."
+        default: 'Something went wrong. Please try again in a moment.',
+        unexpected: 'An unexpected error occurred. Please try again later.',
+        warn_failed: 'I could not warn that member. Check my permissions and role hierarchy, then try again.',
+        kick_failed: 'I could not kick that member. Check my permissions and role hierarchy, then try again.',
+        ban_failed: 'I could not ban that member. Check my permissions and role hierarchy, then try again.',
+        unban_failed: 'I could not unban that user. Check my permissions and try again.',
+        timeout_failed: 'I could not timeout that member. Check my permissions and role hierarchy, then try again.',
+        untimeout_failed: 'I could not remove the timeout. Check my permissions and try again.'
     }
 };
-
-
-
 
 export function getUserMessage(error, context = {}) {
     const type = categorizeError(error);
     const messages = UserMessages[type] || UserMessages[ErrorTypes.UNKNOWN];
-    
+
     if (error.userMessage) {
         return error.userMessage;
     }
@@ -168,22 +141,48 @@ export function getUserMessage(error, context = {}) {
         return messages[context.subtype];
     }
 
+    if (context.subtype && UserMessages[ErrorTypes.UNKNOWN][context.subtype]) {
+        return UserMessages[ErrorTypes.UNKNOWN][context.subtype];
+    }
+
     return messages.default;
 }
 
-
-
-
-export async function handleInteractionError(interaction, error, context = {}) {
-    const errorType = categorizeError(error);
-    const userMessage = getUserMessage(error, context);
+function buildErrorLogData(interaction, error, errorType, context = {}) {
     const resolvedErrorCode = resolveErrorCode({ error, errorType, context });
     const errorMetadata = getErrorMetadata(resolvedErrorCode);
     const traceId = context.traceId || interaction?.traceContext?.traceId || interaction?.traceId || error?.context?.traceId;
-    
-    
-    
-    
+
+    return {
+        logData: {
+            event: 'interaction.error',
+            errorCode: resolvedErrorCode,
+            remediationHint: errorMetadata.remediation,
+            severity: errorMetadata.severity,
+            retryable: errorMetadata.retryable,
+            error: error.message,
+            type: errorType,
+            traceId,
+            guildId: interaction?.guildId,
+            userId: interaction?.user?.id,
+            command: interaction?.commandName || context.command,
+            interaction: interaction ? {
+                type: interaction.type,
+                commandName: interaction.commandName,
+                customId: interaction.customId,
+                userId: interaction.user?.id,
+                guildId: interaction.guildId,
+                channelId: interaction.channelId
+            } : undefined,
+            context
+        },
+        traceId,
+        resolvedErrorCode,
+        errorMetadata
+    };
+}
+
+function logInteractionError(error, errorType, logData) {
     const isUserError = [
         ErrorTypes.VALIDATION,
         ErrorTypes.RATE_LIMIT,
@@ -191,177 +190,159 @@ export async function handleInteractionError(interaction, error, context = {}) {
         ErrorTypes.PERMISSION
     ].includes(errorType);
     const isExpectedError = Boolean(error?.context?.expected === true || error?.context?.suppressErrorLog === true);
-    
-    const logData = {
-        event: 'interaction.error',
-        errorCode: resolvedErrorCode,
-        remediationHint: errorMetadata.remediation,
-        severity: errorMetadata.severity,
-        retryable: errorMetadata.retryable,
-        error: error.message,
-        type: errorType,
-        traceId,
-        guildId: interaction.guildId,
-        userId: interaction.user.id,
-        command: interaction.commandName || context.command,
-        interaction: {
-            type: interaction.type,
-            commandName: interaction.commandName,
-            customId: interaction.customId,
-            userId: interaction.user.id,
-            guildId: interaction.guildId,
-            channelId: interaction.channelId
-        },
-        context
-    };
-    
+
     if (isUserError || isExpectedError) {
         if (errorType !== ErrorTypes.RATE_LIMIT) {
-            logger.debug(`User Error [${errorType.toUpperCase()}]: ${error.message}`, logData);
+            logger.debug(`User Error [${errorType.toUpperCase()}]: ${error.userMessage || error.message}`, logData);
         }
     } else {
-        // System errors (database, network, etc.) - unexpected failures
         logger.error(`System Error [${errorType.toUpperCase()}]`, {
             ...logData,
             stack: error.stack
         });
     }
+}
 
-    const embed = createEmbed({
-        title: getErrorTitle(errorType),
-        description: userMessage,
-        color: 'error',
-        timestamp: true
-    });
-
-    if (errorType === ErrorTypes.RATE_LIMIT) {
-        embed.addFields({
-            name: "💡 Tip",
-            value: "Rate limits help prevent spam. Wait a moment before trying again."
-        });
-    } else if (errorType === ErrorTypes.PERMISSION) {
-        embed.addFields({
-            name: "🔧 Need Help?",
-            value: "Contact a server administrator if you believe this is an error."
-        });
-    } else if (errorType === ErrorTypes.CONFIGURATION) {
-        embed.addFields({
-            name: "📋 Configuration",
-            value: "This feature needs to be configured by a server administrator."
-        });
-    }
-
+async function sendErrorResponse(interaction, embed, context = {}) {
     try {
-        
         if (!interaction || !interaction.id) {
             logger.warn('Interaction was null or invalid when handling error', {
                 event: 'interaction.error.invalid_interaction',
                 errorCode: ErrorCodes.INTERACTION_INVALID,
                 remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_INVALID).remediation,
-                traceId
+                traceId: context.traceId
             });
-            return;
+            return false;
         }
 
-        
+        const coordinator = InteractionHelper.getCoordinator(interaction);
+        if (coordinator?.isUsageFinalized()) {
+            return false;
+        }
+
         if (interaction.createdTimestamp && (Date.now() - interaction.createdTimestamp) > 14 * 60 * 1000) {
             logger.warn('Interaction expired before error handler could send response', {
                 event: 'interaction.error.expired',
                 errorCode: ErrorCodes.INTERACTION_EXPIRED,
                 remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_EXPIRED).remediation,
-                traceId,
+                traceId: context.traceId,
                 guildId: interaction.guildId,
-                userId: interaction.user.id,
+                userId: interaction.user?.id,
                 command: interaction.commandName || context.command
             });
-            return;
+            return false;
         }
 
-        const errorMessage = { 
-            embeds: [embed]
-        };
-        
-        if (!interaction.deferred && !interaction.replied) {
+        const errorMessage = { embeds: [embed] };
+
+        if (interaction._isPrefixCommand) {
+            if (coordinator?.hasResponded()) {
+                await coordinator.edit(errorMessage);
+            } else {
+                await coordinator?.respond(errorMessage);
+            }
+            return true;
+        }
+
+        const useEphemeral = context.ephemeral !== false;
+        if (useEphemeral && !interaction.deferred && !interaction.replied) {
             errorMessage.flags = MessageFlags.Ephemeral;
         }
-        
+
         if (interaction.deferred || interaction.replied) {
             await interaction.editReply(errorMessage);
         } else {
             await interaction.reply(errorMessage);
         }
+
+        return true;
     } catch (replyError) {
-        
-        if (replyError.code === 40060 || replyError.code === 10062) {
-            logger.warn('Interaction already acknowledged or expired, cannot send error response:', {
+        if (replyError.code === 40060 || replyError.code === 10062 || replyError.code === 50027) {
+            logger.warn('Interaction already acknowledged, expired, or token invalid; cannot send error response:', {
                 event: 'interaction.error.response_unavailable',
                 errorCode: String(replyError.code),
-                traceId,
+                traceId: context.traceId,
                 guildId: interaction.guildId,
-                userId: interaction.user.id,
+                userId: interaction.user?.id,
                 command: interaction.commandName || context.command,
                 code: replyError.code
             });
-            return;
+            return false;
         }
+
         logger.error('Failed to send error response:', {
             event: 'interaction.error.response_failed',
             errorCode: String(replyError.code || ErrorCodes.INTERACTION_RESPONSE_FAILED),
             remediationHint: getErrorMetadata(ErrorCodes.INTERACTION_RESPONSE_FAILED).remediation,
-            traceId,
+            traceId: context.traceId,
             guildId: interaction.guildId,
-            userId: interaction.user.id,
+            userId: interaction.user?.id,
             command: interaction.commandName || context.command,
             error: replyError
         });
+        return false;
     }
 }
 
+/**
+ * Reply with a typed user-facing error (early-return validation, permission checks, etc.).
+ */
+export async function replyUserError(interaction, {
+    type = ErrorTypes.UNKNOWN,
+    message,
+    subtype = null,
+    ephemeral = true,
+    context = {}
+} = {}) {
+    const errorType = type || ErrorTypes.UNKNOWN;
+    const syntheticError = message
+        ? createError('User error', errorType, message, { expected: true, ...context })
+        : createError('User error', errorType, null, { expected: true, ...context });
 
+    const userMessage = getUserMessage(syntheticError, { subtype, ...context });
+    const { logData, traceId } = buildErrorLogData(interaction, syntheticError, errorType, {
+        ...context,
+        subtype,
+        source: context.source || 'replyUserError'
+    });
 
+    logInteractionError(syntheticError, errorType, logData);
 
-function getErrorTitle(errorType) {
-    const titles = {
-        [ErrorTypes.VALIDATION]: "❌ Invalid Input",
-        [ErrorTypes.PERMISSION]: "🚫 Permission Denied",
-        [ErrorTypes.CONFIGURATION]: "⚙️ Configuration Error",
-        [ErrorTypes.DATABASE]: "🗄️ Database Error",
-        [ErrorTypes.NETWORK]: "🌐 Network Error",
-        [ErrorTypes.DISCORD_API]: "🔌 API Error",
-        [ErrorTypes.USER_INPUT]: "💬 Input Error",
-        [ErrorTypes.RATE_LIMIT]: "⏱️ Slow Down!",
-        [ErrorTypes.UNKNOWN]: "❓ Unexpected Error"
-    };
-    
-    return titles[errorType] || titles[ErrorTypes.UNKNOWN];
+    const embed = buildUserErrorEmbed(errorType, userMessage);
+    return sendErrorResponse(interaction, embed, { ...context, traceId, ephemeral, subtype });
 }
 
+export async function handleInteractionError(interaction, error, context = {}) {
+    const errorType = categorizeError(error);
+    const userMessage = getUserMessage(error, context);
+    const { logData, traceId } = buildErrorLogData(interaction, error, errorType, context);
 
+    logInteractionError(error, errorType, logData);
 
+    const embed = buildUserErrorEmbed(errorType, userMessage);
+    await sendErrorResponse(interaction, embed, { ...context, traceId });
+}
 
 export function withErrorHandling(fn, context = {}) {
     return async (...args) => {
         try {
             return await fn(...args);
         } catch (error) {
-            const interaction = args.find(arg => 
-                arg && typeof arg === 'object' && 
-                (arg.isCommand || arg.isButton || arg.isModalSubmit || arg.isStringSelectMenu || arg.isChatInputCommand)
+            const interaction = args.find((arg) =>
+                arg && typeof arg === 'object' &&
+                (arg.isCommand || arg.isButton || arg.isModalSubmit || arg.isStringSelectMenu || arg.isChatInputCommand || arg._isPrefixCommand)
             );
-            
+
             if (interaction) {
                 await handleInteractionError(interaction, error, context);
             } else {
                 logger.error('Error in non-interaction context:', error);
             }
-            
+
             return null;
         }
     };
 }
-
-
-
 
 export function createError(message, type = ErrorTypes.UNKNOWN, userMessage = null, context = {}) {
     const normalizedContext = {
@@ -377,11 +358,8 @@ export default {
     TitanBotError,
     categorizeError,
     getUserMessage,
+    replyUserError,
     handleInteractionError,
     withErrorHandling,
     createError
 };
-
-
-
-

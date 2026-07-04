@@ -1,3 +1,5 @@
+// giveaways.js
+
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { logger } from './logger.js';
 import { TitanBotError, ErrorTypes } from './errorHandler.js';
@@ -8,20 +10,9 @@ import {
     selectWinners as selectWinnersService
 } from '../services/giveawayService.js';
 
-/**
- * Generate a consistent key for giveaways in the database
- * @param {string} guildId - The guild ID
- * @returns {string} The formatted key
- */
 export function giveawayKey(guildId) {
     return `guild:${guildId}:giveaways`;
 }
-
-
-
-
-
-
 
 function arrayToGiveawayMap(giveaways) {
     const map = {};
@@ -35,12 +26,6 @@ function arrayToGiveawayMap(giveaways) {
     return map;
 }
 
-
-
-
-
-
-
 export async function getGuildGiveaways(client, guildId) {
     try {
         if (!client.db) {
@@ -51,8 +36,7 @@ export async function getGuildGiveaways(client, guildId) {
         const key = giveawayKey(guildId);
         const giveaways = await client.db.get(key, {});
         const unwrappedGiveaways = unwrapReplitData(giveaways);
-        
-        
+
         if (typeof unwrappedGiveaways === 'object' && !Array.isArray(unwrappedGiveaways)) {
             return Object.values(unwrappedGiveaways || {});
         }
@@ -62,13 +46,6 @@ export async function getGuildGiveaways(client, guildId) {
         return [];
     }
 }
-
-
-
-
-
-
-
 
 export async function saveGiveaway(client, guildId, giveawayData) {
     try {
@@ -88,8 +65,7 @@ export async function saveGiveaway(client, guildId, giveawayData) {
 
         const key = giveawayKey(guildId);
         const giveaways = await getGuildGiveaways(client, guildId);
-        
-        
+
         const giveawayMap = arrayToGiveawayMap(giveaways);
         giveawayMap[giveawayData.messageId] = giveawayData;
         
@@ -105,13 +81,6 @@ export async function saveGiveaway(client, guildId, giveawayData) {
         return false;
     }
 }
-
-
-
-
-
-
-
 
 export async function deleteGiveaway(client, guildId, messageId) {
     try {
@@ -131,8 +100,7 @@ export async function deleteGiveaway(client, guildId, messageId) {
 
         const key = giveawayKey(guildId);
         const giveaways = await getGuildGiveaways(client, guildId);
-        
-        
+
         const giveawayMap = arrayToGiveawayMap(giveaways);
         
         if (!giveawayMap[messageId]) {
@@ -154,14 +122,6 @@ export async function deleteGiveaway(client, guildId, messageId) {
     }
 }
 
-
-
-
-
-
-
-
-
 export function createGiveawayEmbed(giveaway, status, winners = []) {
     try {
         return createGiveawayEmbedService(giveaway, status, winners);
@@ -171,23 +131,11 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
     }
 }
 
-
-
-
-
-
 export function isGiveawayEnded(giveaway) {
     if (!giveaway) return true;
     const endTime = giveaway.endsAt || giveaway.endTime;
     return Date.now() > endTime;
 }
-
-
-
-
-
-
-
 
 export function pickWinners(entrants, count) {
     try {
@@ -206,22 +154,9 @@ export function pickWinners(entrants, count) {
     }
 }
 
-
-
-
-
-
-
-
 export function giveawayEmbed(giveaway, status, winners = []) {
     return createGiveawayEmbed(giveaway, status, winners);
 }
-
-
-
-
-
-
 
 export function giveawayButtons(ended = false) {
     try {
@@ -256,6 +191,3 @@ export function giveawayButtons(ended = false) {
         return row;
     }
 }
-
-
-

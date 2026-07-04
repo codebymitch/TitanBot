@@ -1,3 +1,5 @@
+// schemas.js
+
 import { z } from 'zod';
 import { createError, ErrorTypes } from './errorHandler.js';
 
@@ -8,11 +10,22 @@ export const LogIgnoreSchema = z
   })
   .default({ users: [], channels: [] });
 
+export const LoggingChannelsSchema = z
+  .object({
+    audit: z.string().nullable().optional(),
+    applications: z.string().nullable().optional(),
+    reports: z.string().nullable().optional(),
+  })
+  .default({ audit: null, applications: null, reports: null });
+
 export const LoggingConfigSchema = z
   .object({
     enabled: z.boolean().default(false),
+    channels: LoggingChannelsSchema.optional(),
+    ignore: LogIgnoreSchema.optional(),
+    enabledEvents: z.record(z.boolean()).default({}),
+    // legacy flat fields — accepted on parse, stripped on normalize
     channelId: z.string().nullable().optional(),
-    enabledEvents: z.record(z.boolean()).default({})
   })
   .default({ enabled: false, enabledEvents: {} });
 
@@ -58,14 +71,14 @@ export const GuildConfigSchema = z
     birthdayChannelId: z.string().nullable().optional(),
     premiumRoleId: z.string().nullable().optional(),
     logIgnore: LogIgnoreSchema.optional(),
-    enabledCommands: z.record(z.boolean()).optional(),
+    disabledCommands: z.record(z.boolean()).optional(),
+    disabledCategories: z.record(z.boolean()).optional(),
     logging: LoggingConfigSchema.optional(),
     ticketLogging: TicketLoggingSchema.optional(),
     enableLogging: z.boolean().optional(),
     verification: VerificationConfigSchema
   })
   .passthrough();
-
 
 export const EconomyDataSchema = z
   .object({
@@ -87,11 +100,106 @@ export const EconomyDataSchema = z
   })
   .passthrough();
 
+const DEFAULT_LOGGING = {
+  enabled: false,
+  channels: { audit: null, applications: null, reports: null },
+  ignore: { users: [], channels: [] },
+  enabledEvents: {},
+};
+
+function migrateLoggingConfig(raw = {}, legacy = {}) {
+  const base = typeof raw === 'object' && raw !== null ? raw : {};
+  const {
+    logChannelId,
+    reportChannelId,
+    enableLogging,
+    logIgnore,
+  } = legacy;
+
+  const auditChannel =
+    base.channels?.audit ??
+    base.channelId ??
+    logChannelId ??
+    null;
+
+  const applicationsChannel = base.channels?.applications ?? null;
+
+  const reportsChannel =
+    base.channels?.reports ??
+    reportChannelId ??
+    null;
+
+  const ignore = {
+    users: base.ignore?.users ?? logIgnore?.users ?? [],
+    channels: base.ignore?.channels ?? logIgnore?.channels ?? [],
+  };
+
+  let enabled = base.enabled ?? false;
+  if (enableLogging === false) {
+    enabled = false;
+  } else if (auditChannel && base.enabled === undefined && enableLogging !== false) {
+    enabled = base.enabled ?? Boolean(enableLogging);
+  }
+
+  const { channelId: _legacyChannelId, ignore: _ignore, channels: _channels, ...rest } = base;
+
+  return {
+    ...DEFAULT_LOGGING,
+    ...rest,
+    enabled,
+    channels: {
+      audit: auditChannel,
+      applications: applicationsChannel,
+      reports: reportsChannel,
+    },
+    ignore,
+    enabledEvents: base.enabledEvents ?? {},
+  };
+}
+
+export function stripLegacyLoggingFields(config) {
+  if (!config || typeof config !== 'object') {
+    return config;
+  }
+
+  const {
+    logChannelId: _logChannelId,
+    enableLogging: _enableLogging,
+    reportChannelId: _reportChannelId,
+    logIgnore: _logIgnore,
+    ...rest
+  } = config;
+
+  if (rest.logging && typeof rest.logging === 'object') {
+    const { channelId: _channelId, ...loggingRest } = rest.logging;
+    rest.logging = loggingRest;
+  }
+
+  return rest;
+}
+
 export function normalizeGuildConfig(raw, defaults = {}) {
   const base = typeof raw === 'object' && raw !== null ? raw : {};
   const merged = { ...defaults, ...base };
+
+  merged.logging = migrateLoggingConfig(merged.logging, {
+    logChannelId: merged.logChannelId,
+    reportChannelId: merged.reportChannelId,
+    enableLogging: merged.enableLogging,
+    logIgnore: merged.logIgnore,
+  });
+
   const parsed = GuildConfigSchema.safeParse(merged);
-  return parsed.success ? parsed.data : { ...defaults, ...base };
+  const normalized = parsed.success ? parsed.data : { ...defaults, ...merged };
+
+  normalized.logging = migrateLoggingConfig(normalized.logging, {
+    logChannelId: normalized.logChannelId,
+    reportChannelId: normalized.reportChannelId,
+    enableLogging: normalized.enableLogging,
+    logIgnore: normalized.logIgnore,
+  });
+
+  return stripLegacyLoggingFields(normalized);
 }
 
 export function normalizeEconomyData(raw, defaults = {}) {
@@ -102,10 +210,14 @@ export function normalizeEconomyData(raw, defaults = {}) {
 }
 
 export function validateGuildConfigOrThrow(rawConfig, context = {}) {
-  const parsed = GuildConfigSchema.safeParse(rawConfig);
+  const normalized = normalizeGuildConfig(rawConfig);
+  const parsed = GuildConfigSchema.safeParse(normalized);
 
   if (parsed.success) {
-    return parsed.data;
+    return stripLegacyLoggingFields({
+      ...normalized,
+      logging: migrateLoggingConfig(normalized.logging, {}),
+    });
   }
 
   throw createError(
@@ -123,5 +235,3 @@ export function validateGuildConfigOrThrow(rawConfig, context = {}) {
     }
   );
 }
-
-

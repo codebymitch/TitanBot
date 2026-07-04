@@ -1,8 +1,8 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, LabelBuilder } from 'discord.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { TitanBotError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import {
     initializeJoinToCreate,
@@ -13,7 +13,6 @@ import {
     logConfigurationChange,
     getConfiguration
 } from '../../services/joinToCreateService.js';
-
 
 export default {
     data: new SlashCommandBuilder()
@@ -42,9 +41,9 @@ export default {
                             { name: "{username}'s Space", value: "{username}'s Space" },
                             { name: "{displayName}'s Room", value: "{displayName}'s Room" },
                             { name: "{username}'s VC", value: "{username}'s VC" },
-                            { name: "🎵 {username}'s Music Room", value: "🎵 {username}'s Music Room" },
-                            { name: "🎮 {username}'s Gaming Room", value: "🎮 {username}'s Gaming Room" },
-                            { name: "💬 {username}'s Chat Room", value: "💬 {username}'s Chat Room" },
+                            { name: "{username}'s Music Room", value: "{username}'s Music Room" },
+                            { name: "{username}'s Gaming Room", value: "{username}'s Gaming Room" },
+                            { name: "{username}'s Chat Room", value: "{username}'s Chat Room" },
                             { name: "{username}'s Private Room", value: "{username}'s Private Room" }
                         )
                 )
@@ -109,13 +108,7 @@ export default {
                     errorMessage = 'An unexpected error occurred. Please try again or contact support.';
                 }
 
-                const errorEmbedObj = errorEmbed("⚠️ Error", errorMessage);
-
-                if (interaction.deferred) {
-                    return await InteractionHelper.safeEditReply(interaction, { embeds: [errorEmbedObj] });
-                } else {
-                    return await InteractionHelper.safeReply(interaction, { embeds: [errorEmbedObj], flags: MessageFlags.Ephemeral });
-                }
+                return replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: errorMessage });
             } catch (replyError) {
                 logger.error('Failed to send error message:', replyError);
             }
@@ -133,7 +126,6 @@ async function handleSetupSubcommand(interaction, client) {
 
         logger.debug(`Setting up Join to Create in guild ${guildId} with template: ${nameTemplate}`);
 
-        // Check if guild already has a Join to Create channel configured
         const existingConfig = await getConfiguration(client, guildId);
         
         if (Array.isArray(existingConfig.triggerChannels) && existingConfig.triggerChannels.length > 0) {
@@ -174,7 +166,6 @@ async function handleSetupSubcommand(interaction, client) {
             }
         }
 
-        // Create the trigger channel
         logger.debug('Creating Join to Create trigger channel...');
         let triggerChannel = await interaction.guild.channels.create({
             name: 'Join to Create',
@@ -192,7 +183,6 @@ async function handleSetupSubcommand(interaction, client) {
 
         logger.debug(`Created trigger channel ${triggerChannel.id}, initializing config...`);
 
-        // Initialize the Join to Create configuration
         const config = await initializeJoinToCreate(client, guildId, triggerChannel.id, {
             nameTemplate: nameTemplate,
             userLimit: userLimit,
@@ -216,7 +206,7 @@ async function handleSetupSubcommand(interaction, client) {
             `• Template: \`${nameTemplate}\`\n` +
             `• User Limit: ${userLimit === 0 ? 'Unlimited' : userLimit + ' users'}\n` +
             `• Bitrate: ${bitrate} kbps\n` +
-            `${category ? `• Category: ${category.name}` : '• Category: Root level'}`
+            `${category ?`• Category: ${category.name}`: '• Category: Root level'}`
         );
 
         return await InteractionHelper.safeEditReply(interaction, { embeds: [responseEmbed] });
@@ -239,28 +229,26 @@ async function handleConfigSubcommand(interaction, client) {
         const triggerChannel = interaction.options.getChannel('trigger_channel');
         const guildId = interaction.guild.id;
 
-        // Validate that the channel is actually a Join to Create trigger
         const currentConfig = await getChannelConfiguration(client, guildId, triggerChannel.id);
         const channelConfig = currentConfig.channelConfig || {};
 
-        
         const configEmbed = new EmbedBuilder()
-            .setTitle('⚙️ Join to Create Configuration')
+            .setTitle('Join to Create Configuration')
             .setDescription(`Configuration for ${triggerChannel}`)
             .setColor(getColor('info'))
             .addFields(
                 {
-                    name: '📝 Channel Name Template',
+                    name: 'Channel Name Template',
                     value: `\`${channelConfig.nameTemplate || currentConfig.channelNameTemplate || "{username}'s Room"}\``,
                     inline: false
                 },
                 {
-                    name: '👥 User Limit',
+                    name: 'User Limit',
                     value: `${(channelConfig.userLimit ?? currentConfig.userLimit ?? 0) === 0 ? 'Unlimited' : (channelConfig.userLimit ?? currentConfig.userLimit ?? 0) + ' users'}`,
                     inline: true
                 },
                 {
-                    name: '🎵 Bitrate',
+                    name: 'Bitrate',
                     value: `${(channelConfig.bitrate ?? currentConfig.bitrate ?? 64000) / 1000} kbps`,
                     inline: true
                 }
@@ -268,7 +256,6 @@ async function handleConfigSubcommand(interaction, client) {
             .setFooter({ text: 'Use the buttons below to modify settings • Only one trigger channel is supported per guild' })
             .setTimestamp();
 
-        
         const nameButton = new ButtonBuilder()
             .setCustomId(`jtc_config_name_${triggerChannel.id}`)
             .setLabel('📝 Name Template')
@@ -306,7 +293,6 @@ async function handleConfigSubcommand(interaction, client) {
             );
         }
 
-        
         const collector = message.createMessageComponentCollector({
             componentType: ComponentType.Button,
             time: 300000
@@ -387,9 +373,9 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
             { label: "{username}'s Space",          value: "{username}'s Space" },
             { label: "{displayName}'s Room",        value: "{displayName}'s Room" },
             { label: "{username}'s VC",             value: "{username}'s VC" },
-            { label: "🎵 {username}'s Music Room",  value: "🎵 {username}'s Music Room" },
-            { label: "🎮 {username}'s Gaming Room", value: "🎮 {username}'s Gaming Room" },
-            { label: "💬 {username}'s Chat Room",   value: "💬 {username}'s Chat Room" },
+            { label: "{username}'s Music Room",  value: "{username}'s Music Room" },
+            { label: "{username}'s Gaming Room", value: "{username}'s Gaming Room" },
+            { label: "{username}'s Chat Room",   value: "{username}'s Chat Room" },
             { label: "{username}'s Private Room",   value: "{username}'s Private Room" },
         ];
 
@@ -424,7 +410,6 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
             time: 60000
         });
 
-        // Recheck permissions
         if (!hasManageGuildPermission(modalSubmission.member)) {
             await modalSubmission.reply({
                 content: '❌ You need **Manage Server** permission to modify these settings.',
@@ -445,7 +430,7 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
         });
 
         await modalSubmission.reply({
-            embeds: [successEmbed('✅ Updated', `Channel name template changed to \`${newTemplate}\``)],
+            embeds: [successEmbed('Updated', `Channel name template changed to \`${newTemplate}\``)],
             flags: MessageFlags.Ephemeral
         });
 
@@ -493,7 +478,6 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
             time: 60000
         });
 
-        // Recheck permissions
         if (!hasManageGuildPermission(modalSubmission.member)) {
             await modalSubmission.reply({
                 content: '❌ You need **Manage Server** permission to modify these settings.',
@@ -514,7 +498,7 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
         });
 
         await modalSubmission.reply({
-            embeds: [successEmbed('✅ Updated', `User limit changed to ${parseInt(userInput) === 0 ? 'Unlimited' : parseInt(userInput) + ' users'}`)],
+            embeds: [successEmbed('Updated', `User limit changed to ${parseInt(userInput) === 0 ? 'Unlimited' : parseInt(userInput) + ' users'}`)],
             flags: MessageFlags.Ephemeral
         });
 
@@ -562,7 +546,6 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
             time: 60000
         });
 
-        // Recheck permissions
         if (!hasManageGuildPermission(modalSubmission.member)) {
             await modalSubmission.reply({
                 content: '❌ You need **Manage Server** permission to modify these settings.',
@@ -583,7 +566,7 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
         });
 
         await modalSubmission.reply({
-            embeds: [successEmbed('✅ Updated', `Bitrate changed to ${parseInt(userInput)} kbps`)],
+            embeds: [successEmbed('Updated', `Bitrate changed to ${parseInt(userInput)} kbps`)],
             flags: MessageFlags.Ephemeral
         });
 
@@ -603,7 +586,6 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
     }
 }
 
-
 async function handleChannelDeletion(interaction, triggerChannel, currentConfig, client) {
     try {
         const confirmRow = new ActionRowBuilder().addComponents(
@@ -618,7 +600,7 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
         );
 
         await InteractionHelper.safeReply(interaction, {
-            embeds: [errorEmbed('⚠️ Confirm Deletion', `Are you sure you want to remove **${triggerChannel.name}** from the Join to Create system?\n\nThis action cannot be undone.`)],
+            embeds: [warningEmbed('Confirm Deletion', `Are you sure you want to remove **${triggerChannel.name}** from the Join to Create system?\n\nThis action cannot be undone.`)],
             components: [confirmRow],
             flags: MessageFlags.Ephemeral
         });
@@ -635,7 +617,7 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
 
         deleteCollector.on('collect', async (buttonInteraction) => {
             try {
-                // Recheck permissions
+                
                 if (!hasManageGuildPermission(buttonInteraction.member)) {
                     await buttonInteraction.reply({
                         content: '❌ You need **Manage Server** permission to remove channels.',
@@ -648,13 +630,11 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
                     
                     await removeTriggerChannel(client, interaction.guild.id, triggerChannel.id);
 
-                    
                     await logConfigurationChange(client, interaction.guild.id, interaction.user.id, 'Removed Join to Create trigger', {
                         channelId: triggerChannel.id,
                         channelName: triggerChannel.name
                     });
 
-                    
                     try {
                         if (triggerChannel.members.size === 0) {
                             await triggerChannel.delete('Join to Create trigger removed by administrator');
@@ -665,13 +645,13 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
                     }
 
                     await buttonInteraction.update({
-                        embeds: [successEmbed('✅ Removed', `**${triggerChannel.name}** has been removed from the Join to Create system.`)],
+                        embeds: [successEmbed('Removed', `**${triggerChannel.name}** has been removed from the Join to Create system.`)],
                         components: []
                     });
 
                 } else {
                     await buttonInteraction.update({
-                        embeds: [successEmbed('✅ Cancelled', 'Channel removal has been cancelled.')],
+                        embeds: [successEmbed('Cancelled', 'Channel removal has been cancelled.')],
                         components: []
                     });
                 }
@@ -702,8 +682,3 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
         );
     }
 }
-
-
-
-
-

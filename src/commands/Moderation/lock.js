@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
@@ -25,30 +25,13 @@ export default {
       return;
     }
 
-    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Permission Denied",
-            "You need the `Manage Channels` permission to lock channels.",
-          ),
-        ],
-      });
-
     const channel = interaction.channel;
     const everyoneRole = interaction.guild.roles.everyone;
 
     try {
       const currentPermissions = channel.permissionsFor(everyoneRole);
       if (currentPermissions.has(PermissionFlagsBits.SendMessages) === false) {
-        return await InteractionHelper.safeEditReply(interaction, {
-          embeds: [
-            errorEmbed(
-              "Channel Already Locked",
-              `${channel} is already locked.`,
-            ),
-          ],
-        });
+        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: '${channel} is already locked.' });
       }
 
       await channel.permissionOverwrites.edit(
@@ -96,16 +79,7 @@ export default {
       });
     } catch (error) {
       logger.error('Lock command error:', error);
-      await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "An unexpected error occurred while trying to lock the channel. Check my permissions (I need 'Manage Channels').",
-          ),
-        ],
-      });
+      await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'An unexpected error occurred while trying to lock the channel. Check my permissions (I need \'Manage Channels\').' });
     }
   }
 };
-
-
-

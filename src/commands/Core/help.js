@@ -1,4 +1,4 @@
-﻿import {
+import {
     SlashCommandBuilder,
     ActionRowBuilder,
     ButtonBuilder,
@@ -25,6 +25,7 @@ const CATEGORY_ICONS = {
     Core: "ℹ️",
     Moderation: "🛡️",
     Economy: "💰",
+    Music: "🎵",
     Fun: "🎮",
     Leveling: "📊",
     Utility: "🔧",
@@ -34,15 +35,19 @@ const CATEGORY_ICONS = {
     Counter: "🔢",
     Tools: "🛠️",
     Search: "🔍",
-    Reaction_Roles: "🎭",
+    "Reaction Roles": "🎭",
     Community: "👥",
     Birthday: "🎂",
-    Config: "⚙️",
+    "Join To Create": "🔌",
+    Verification: "✅",
 };
 
-
-
-
+function formatCategoryName(rawCategory) {
+    return rawCategory
+        .replace(/_/g, '')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 export async function createInitialHelpMenu(client) {
     const commandsPath = path.join(__dirname, "../../commands");
@@ -56,13 +61,11 @@ export async function createInitialHelpMenu(client) {
     const options = [
         {
             label: "📋 All Commands",
-            description: "View all available commands with pagination",
+            description: "Browse every available command in a single list",
             value: ALL_COMMANDS_ID,
         },
         ...categoryDirs.map((category) => {
-            const categoryName =
-                category.charAt(0).toUpperCase() +
-                category.slice(1).toLowerCase();
+            const categoryName = formatCategoryName(category);
             const icon = CATEGORY_ICONS[categoryName] || "🔍";
             return {
                 label: `${icon} ${categoryName}`,
@@ -73,89 +76,36 @@ export async function createInitialHelpMenu(client) {
     ];
 
     const botName = client?.user?.username || "Bot";
-    const embed = createEmbed({ 
-        title: `🤖 ${botName} Help Center`,
-        description: "Your all-in-one Discord companion for moderation, economy, fun, and server management.",
-        color: 'primary'
+    const embed = createEmbed({
+        title: `📖 ${botName} Help`,
+        description: 'Set up your server, pick what to enable, then browse commands below.',
+        color: 'primary',
+        thumbnail: client.user?.displayAvatarURL?.({ size: 1024 }),
+        fields: [
+            {
+                name: '🚀 Getting Started',
+                value: [
+                    '**1. Launch setup** — Run `/configwizard` to configure prefix, mod role, and logs.',
+                    '**2. Enable systems** — Use `/commands dashboard` to turn categories on or off.',                    '**3. Browse commands** — Use the menu below to view categories and commands.',
+                ].join('\n'),
+                inline: false,
+            },
+            {
+                name: 'ℹ️ How It Works',
+                value: [
+                    '• Dashboard commands manage each feature visually',
+                    '• Settings are saved per server',
+                    '• Slash commands and prefixes both work once enabled',
+                ].join('\n'),
+                inline: false,
+            },
+            {
+                name: '\u200B',
+                value: `-# ${botName} is [open source](https://youtu.be/1jCZX8s3bJE?si=NPOYx-vxVE1I5vJK)`,
+                inline: false,
+            },
+        ],
     });
-
-    embed.addFields(
-        {
-            name: "🛡️ **Moderation**",
-            value: "Server moderation, user management, and enforcement tools",
-            inline: true
-        },
-        {
-            name: "💰 **Economy**",
-            value: "Currency system, shops, and virtual economy",
-            inline: true
-        },
-        {
-            name: "🎮 **Fun**",
-            value: "Games, entertainment, and interactive commands",
-            inline: true
-        },
-        {
-            name: "📊 **Leveling**",
-            value: "User levels, XP system, and progression tracking",
-            inline: true
-        },
-        {
-            name: "🎫 **Tickets**",
-            value: "Support ticket system for server management",
-            inline: true
-        },
-        {
-            name: "🎉 **Giveaways**",
-            value: "Automated giveaway management and distribution",
-            inline: true
-        },
-        {
-            name: "👋 **Welcome**",
-            value: "Member welcome messages and onboarding",
-            inline: true
-        },
-        {
-            name: "🎂 **Birthdays**",
-            value: "Birthday tracking and celebration features",
-            inline: true
-        },
-        {
-            name: "👥 **Community**",
-            value: "Community tools, applications, and member engagement",
-            inline: true
-        },
-        {
-            name: "⚙️ **Config**",
-            value: "Server and bot configuration management commands",
-            inline: true
-        },
-        {
-            name: "🔢 **Counter**",
-            value: "Live counter channel setup and counter controls",
-            inline: true
-        },
-        {
-            name: "🎙️ **Join to Create**",
-            value: "Dynamic voice channel creation and management",
-            inline: true
-        },
-        {
-            name: "🎭 **Reaction Roles**",
-            value: "Self-assignable roles using reaction-role systems",
-            inline: true
-        },
-        {
-            name: "✅ **Verification**",
-            value: "Member verification workflows and access gating",
-            inline: true
-        },
-        {
-            name: "🔧 **Utilities**",
-            value: "Useful tools and server utilities",
-            inline: true
-        }
-    );
 
     embed.setFooter({ 
         text: "Made with ❤️" 
@@ -172,11 +122,6 @@ export async function createInitialHelpMenu(client) {
         .setURL("https://discord.gg/QnWNz2dKCE")
         .setStyle(ButtonStyle.Link);
 
-    const touchpointButton = new ButtonBuilder()
-        .setLabel("Learn from Touchpoint")
-        .setURL("https://www.youtube.com/@TouchDisc")
-        .setStyle(ButtonStyle.Link);
-
     const selectRow = createSelectMenu(
         CATEGORY_SELECT_ID,
         "Select to view the commands",
@@ -186,7 +131,6 @@ export async function createInitialHelpMenu(client) {
     const buttonRow = new ActionRowBuilder().addComponents([
         bugReportButton,
         supportButton,
-        touchpointButton,
     ]);
 
     return {
@@ -196,6 +140,7 @@ export async function createInitialHelpMenu(client) {
 }
 
 export default {
+    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName("help")
         .setDescription("Displays the help menu with all available commands"),
@@ -214,6 +159,10 @@ export default {
 
         setTimeout(async () => {
             try {
+                if (!InteractionHelper.isInteractionValid(interaction)) {
+                    return;
+                }
+
                 const closedEmbed = createEmbed({
                     title: "Help menu closed",
                     description: "Help menu has been closed, use /help again.",
@@ -230,5 +179,3 @@ export default {
         }, HELP_MENU_TIMEOUT_MS);
     },
 };
-
-

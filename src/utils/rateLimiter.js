@@ -1,20 +1,14 @@
+// rateLimiter.js
+
 import { logger } from './logger.js';
 
 const rateLimitStore = new Map();
-
-
-
-
-
-
-
 
 export async function checkRateLimit(key, maxAttempts = 5, windowMs = 60000) {
   try {
     const now = Date.now();
     const entry = rateLimitStore.get(key);
 
-    
     if (!entry || now - entry.windowStart > windowMs) {
       rateLimitStore.set(key, {
         count: 1,
@@ -23,13 +17,11 @@ export async function checkRateLimit(key, maxAttempts = 5, windowMs = 60000) {
       return true;
     }
 
-    
     if (entry.count < maxAttempts) {
       entry.count++;
       return true;
     }
 
-    
     logger.debug(`Rate limit exceeded for ${key}`);
     return false;
   } catch (error) {
@@ -37,12 +29,6 @@ export async function checkRateLimit(key, maxAttempts = 5, windowMs = 60000) {
     return true; 
   }
 }
-
-
-
-
-
-
 
 export function getRateLimitStatus(key, windowMs = 60000) {
   const entry = rateLimitStore.get(key);
@@ -60,16 +46,9 @@ export function getRateLimitStatus(key, windowMs = 60000) {
   };
 }
 
-
-
-
-
 export function clearRateLimit(key) {
   rateLimitStore.delete(key);
 }
-
-
-
 
 export function clearAllRateLimits() {
   rateLimitStore.clear();

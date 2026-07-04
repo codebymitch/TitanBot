@@ -13,7 +13,7 @@
 - [Manual Installation Steps](#manual-installation-steps)
 - [Support Server](https://discord.gg/QnWNz2dKCE)
 - [Required Bot Intents](#bot-intents)
-- [Contributing](#contributing)
+- [Contributing](CONTRIBUTING.md)
 
 <a name="features-overview"></a>
 ## Features Overview
@@ -81,7 +81,12 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 - **Welcome Messages** - Greet new members
 - **Auto Roles** - Assign roles on join
 - **Custom Embeds** - Personalized messages
-
+  
+### Music
+- **24/7 Mode** - Play music 24/7
+- **Interative Button System** - Manage music through buttons
+- **Supports EVERY platform** - Supports spotify, deezer, youtube, apple music
+  
 </td>
 </tr>
 </table>
@@ -111,7 +116,22 @@ TitanBot is fully containerized for easy deployment.
    docker-compose up -d
    ```
 
-This will start both the bot and a persistent PostgreSQL database.
+This will start the bot, PostgreSQL, and Lavalink (when music is enabled).
+
+### Music
+
+Music uses [Lavalink v4](https://github.com/lavalink-devs/Lavalink) via [Riffy](https://github.com/riffy-rb/riffy), similar to [Musicify](https://github.com/codebymitch/Musicify).
+
+1. Set in `.env`:
+   ```env
+   LAVALINK_HOST=lavalink
+   LAVALINK_PORT=2333
+   LAVALINK_PASSWORD=youshallnotpass
+   LAVALINK_SECURE=false
+   ```
+2. With Docker Compose, Lavalink is included automatically when you `docker compose up`.
+3. On Railway, deploy Lavalink separately or as another service and point `LAVALINK_HOST` at the private hostname.
+4. Use `/play <song>` from a voice channel, or `/join` to connect without playing. Prefix shortcuts: `join`, `np`, `leave`, `pause`, `resume`, `skip`, `stop`, `volume <0-100>`, or `music <subcommand>`. Use `/nowplaying` and `/queue` for status; `/music` for loop, shuffle, seek, and other controls.
 
 ### Using GitHub Container Registry
 
@@ -182,6 +202,21 @@ docker pull ghcr.io/codebymitch/titanbot:main
    This gives clear startup/online status messages while keeping logs simple for non-technical operators.
    If port `3000` is busy, the bot tries the next available ports automatically (up to `PORT_RETRY_ATTEMPTS`).
 
+### Running in multiple servers (optional)
+
+Most users run TitanBot on a **single server** with `GUILD_ID` set (default tutorial setup). If you want commands to work in **every server** the bot is invited to, opt in with:
+
+```env
+MULTI_GUILD=true
+```
+
+Notes for multi-server mode:
+- `GUILD_ID` is not used for command registration when `MULTI_GUILD=true` (you can leave it set or remove it)
+- Global slash commands may take up to about an hour to propagate on first deploy
+- Each server still has **isolated** config, economy, tickets, leveling, and other data
+- In the [Discord Developer Portal](https://discord.com/developers/applications), ensure your bot is not restricted to a single guild if you plan to invite it elsewhere
+- Generate an OAuth2 invite URL from the [Discord Developer Portal](https://discord.com/developers/applications) (OAuth2 → URL Generator, scopes: `bot` and `applications.commands`)
+
 4. **Setup PostgreSQL Database** (Optional but recommended)
    ```bash
    # Create database and user
@@ -191,9 +226,9 @@ docker pull ghcr.io/codebymitch/titanbot:main
    psql -c "GRANT ALL PRIVILEGES ON DATABASE titanbot TO titanbot;"
    ```
 
-5. **Test Database Connection**
+5. **Verify Database Setup**
    ```bash
-   npm run test-postgres
+   npm run migrate:check
    ```
 
 6. **Start the Bot**
@@ -228,23 +263,6 @@ TitanBot requires the following Discord intents:
 - **Ban Members**
 - **Moderate Members**
 - **Connect**
-
-<a name="contributing"></a>
-## Contributing
-
-We welcome contributions to TitanBot! Here's how you can help:
-
-1. **Fork the repository**
-2. **Create a feature branch**
-3. **Make your changes**
-4. **Test thoroughly**
-5. **Submit a pull request**
-
-### Development Guidelines
-- Follow existing code style
-- Add proper error handling
-- Include documentation for new features
-- Test with PostgreSQL and memory storage
 
 ## License
 

@@ -1,8 +1,3 @@
-
-
-
-
-
 import { shopItems, getItemById, getItemsByType, getItemPrice, validatePurchase } from './items.js';
 import { botConfig } from '../bot.js';
 
@@ -126,14 +121,6 @@ export {
     validatePurchase
 };
 
-
-
-
-
-
-
-
-
 export function getCurrentPrice(itemId, { quantity = 1, userData = null } = {}) {
     const basePrice = getItemPrice(itemId) * quantity;
     
@@ -163,11 +150,6 @@ discount += 0.1;
     return Math.floor(basePrice * (1 - discount));
 }
 
-
-
-
-
-
 export function getCategoryForItem(itemType) {
     return shopConfig.categories.find(cat => 
         cat.itemTypes.includes(itemType)
@@ -179,11 +161,6 @@ export function getCategoryForItem(itemType) {
     };
 }
 
-
-
-
-
-
 export function getItemsInCategory(categoryId) {
     const category = shopConfig.categories.find(cat => cat.id === categoryId);
     if (!category) return [];
@@ -192,7 +169,3 @@ export function getItemsInCategory(categoryId) {
         category.itemTypes.includes(item.type)
     );
 }
-
-
-
-

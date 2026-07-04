@@ -1,9 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { botConfig } from '../../config/bot.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const COOLDOWN = 30 * 60 * 1000;
@@ -70,8 +69,8 @@ export default {
                     `You found **$${amountWon.toLocaleString()}** under a park bench.`,
                 ];
 
-                replyEmbed = MessageTemplates.SUCCESS.DATA_UPDATED(
-                    "begging",
+                replyEmbed = successEmbed(
+                    'Begging Successful',
                     successMessages[
                         Math.floor(Math.random() * successMessages.length)
                     ]
@@ -84,11 +83,10 @@ export default {
                     "You tried to beg, but you were too embarrassed and gave up.",
                 ];
 
-                replyEmbed = MessageTemplates.ERRORS.INSUFFICIENT_FUNDS(
-                    "nothing",
-                    "You failed to get any money from begging."
+                replyEmbed = warningEmbed(
+                    'Insufficient Funds',
+                    failMessages[Math.floor(Math.random() * failMessages.length)]
                 );
-                replyEmbed.data.description = failMessages[Math.floor(Math.random() * failMessages.length)];
             }
 
             userData.wallet = newCash;
@@ -99,5 +97,3 @@ userData.lastBeg = Date.now();
             await InteractionHelper.safeEditReply(interaction, { embeds: [replyEmbed] });
     }, { command: 'beg' })
 };
-
-

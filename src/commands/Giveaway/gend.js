@@ -37,7 +37,6 @@ export default {
                 );
             }
 
-            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
@@ -51,7 +50,6 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new TitanBotError(
                     'Invalid message ID format',
@@ -73,7 +71,6 @@ export default {
                 );
             }
 
-            
             const endResult = await endGiveawayService(
                 interaction.client,
                 giveaway,
@@ -84,7 +81,6 @@ export default {
             const updatedGiveaway = endResult.giveaway;
             const winners = endResult.winners;
 
-            
             const channel = await interaction.client.channels.fetch(
                 updatedGiveaway.channelId,
             ).catch(err => {
@@ -117,14 +113,12 @@ export default {
                 );
             }
 
-            
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
                 updatedGiveaway,
             );
 
-            
             const newEmbed = createGiveawayEmbed(updatedGiveaway, "ended", winners);
             const newRow = createGiveawayButtons(true);
 
@@ -134,11 +128,10 @@ export default {
                 components: [newRow],
             });
 
-            
             if (winners.length > 0) {
                 const winnerMentions = winners
                     .map((id) => `<@${id}>`)
-                    .join(", ");
+                    .join(",");
                 const winnerPingMsg = await channel.send({
                     content: `🎉 CONGRATULATIONS ${winnerMentions}! You won the **${updatedGiveaway.prize}** giveaway! Please contact the host <@${updatedGiveaway.hostId}> to claim your prize.`,
                 });
@@ -147,7 +140,6 @@ export default {
 
                 logger.info(`Giveaway ended with ${winners.length} winner(s): ${messageId}`);
 
-                
                 try {
                     await logEvent({
                         client: interaction.client,
@@ -159,17 +151,17 @@ export default {
                             userId: interaction.user.id,
                             fields: [
                                 {
-                                    name: '🎁 Prize',
+                                    name: 'Prize',
                                     value: updatedGiveaway.prize || 'Mystery Prize!',
                                     inline: true
                                 },
                                 {
-                                    name: '🏆 Winners',
+                                    name: 'Winners',
                                     value: winnerMentions,
                                     inline: false
                                 },
                                 {
-                                    name: '👥 Entries',
+                                    name: 'Entries',
                                     value: endResult.participantCount.toString(),
                                     inline: true
                                 }
@@ -207,6 +199,3 @@ export default {
         }
     },
 };
-
-
-

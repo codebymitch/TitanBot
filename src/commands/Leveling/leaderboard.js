@@ -1,8 +1,3 @@
-
-
-
-
-
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -15,12 +10,6 @@ export default {
     .setDescription("Shows the server's level leaderboard")
     .setDMPermission(false),
   category: 'Leveling',
-
-  
-
-
-
-
 
   async execute(interaction, config, client) {
     try {
@@ -51,7 +40,7 @@ export default {
       }
 
       const embed = new EmbedBuilder()
-        .setTitle('🏆 Level Leaderboard')
+        .setTitle('Level Leaderboard')
         .setColor('#2ecc71')
         .setDescription("Top 10 most active members in this server:")
         .setTimestamp();
@@ -92,6 +81,3 @@ export default {
     }
   }
 };
-
-
-

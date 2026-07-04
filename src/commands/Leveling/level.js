@@ -1,6 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed } from '../../utils/embeds.js';
+import { createEmbed } from '../../utils/embeds.js';
 import { getLevelingConfig, saveLevelingConfig } from '../../services/leveling.js';
 import { botHasPermission } from '../../utils/permissionGuard.js';
 import { TitanBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
@@ -74,14 +74,7 @@ export default {
             if (!deferred) return;
 
             if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            'Missing Permissions',
-                            'You need the **Manage Server** permission to use this command.',
-                        ),
-                    ],
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the **Manage Server** permission to use this command.' });
             }
 
             const subcommand = interaction.options.getSubcommand();
@@ -100,14 +93,7 @@ export default {
                 const xpCooldown = interaction.options.getInteger('xp_cooldown') ?? 60;
 
                 if (xpMin > xpMax) {
-                    return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [
-                            errorEmbed(
-                                'Invalid XP Range',
-                                `Minimum XP (**${xpMin}**) cannot be greater than maximum XP (**${xpMax}**).`,
-                            ),
-                        ],
-                    });
+                    return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Minimum XP (**${xpMin}**) cannot be greater than maximum XP (**${xpMax}**).' });
                 }
 
                 if (!botHasPermission(channel, ['SendMessages', 'EmbedLinks'])) {
@@ -121,14 +107,7 @@ export default {
                 const existingConfig = await getLevelingConfig(client, interaction.guildId);
 
                 if (existingConfig.configured) {
-                    return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [
-                            errorEmbed(
-                                'Leveling System Already Active',
-                                `The leveling system is already set up on this server (level-up notifications go to <#${existingConfig.levelUpChannel}>).\n\nUse \`/level dashboard\` to adjust any settings.`,
-                            ),
-                        ],
-                    });
+                    return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'The leveling system is already set up on this server (level-up notifications go to <#${existingConfig.levelUpChannel}>).\n\nUse \\`/level dashboard\\` to adjust any settings.' });
                 }
 
                 const newConfig = {
@@ -155,7 +134,7 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         createEmbed({
-                            title: '✅ Leveling System Set Up',
+                            title: 'Leveling System Set Up',
                             description:
                                 `The leveling system is now **enabled** and ready to go.\n\n` +
                                 `**Level-up Channel:** ${channel}\n` +

@@ -1,8 +1,3 @@
-
-
-
-
-
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -32,17 +27,10 @@ export default {
     .setDMPermission(false),
   category: 'Leveling',
 
-  
-
-
-
-
-
   async execute(interaction, config, client) {
     try {
       await InteractionHelper.safeDefer(interaction);
 
-      
       const hasPermission = await checkUserPermissions(
         interaction,
         PermissionFlagsBits.ManageGuild,
@@ -66,7 +54,6 @@ export default {
       const targetUser = interaction.options.getUser('user');
       const newLevel = interaction.options.getInteger('level');
 
-      
       const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
       if (!member) {
         throw new TitanBotError(
@@ -76,13 +63,12 @@ export default {
         );
       }
 
-      
       const userData = await setUserLevel(client, interaction.guildId, targetUser.id, newLevel);
 
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           createEmbed({
-            title: '✅ Level Set',
+            title: 'Level Set',
             description: `Successfully set ${targetUser.tag}'s level to **${newLevel}**.\n**Total XP:** ${userData.totalXp}`,
             color: 'success'
           })
@@ -101,5 +87,3 @@ export default {
     }
   }
 };
-
-

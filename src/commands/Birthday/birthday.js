@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, MessageFlags, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 
@@ -93,10 +93,7 @@ export default {
                 case 'setchannel':
                     return await birthdaySetchannel.execute(interaction, config, client);
                 default:
-                    return InteractionHelper.safeReply(interaction, {
-                        embeds: [errorEmbed('Error', 'Unknown subcommand')],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Unknown subcommand' });
             }
         } catch (error) {
             logger.error('Birthday command execution failed', {
@@ -114,5 +111,3 @@ export default {
         }
     }
 };
-
-

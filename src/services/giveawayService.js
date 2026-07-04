@@ -1,44 +1,18 @@
+// giveawayService.js
+
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { getColor } from '../config/bot.js';
 import { getEndedGiveaways, markGiveawayEnded } from '../utils/database.js';
+import { checkRateLimit, getRateLimitStatus } from '../utils/rateLimiter.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
+const GIVEAWAY_INTERACTION_COOLDOWN = 1000;
 
-const userGiveawayInteractions = new Map();
-const GIVEAWAY_INTERACTION_COOLDOWN = 1000; 
-const GIVEAWAY_INTERACTION_TTL = 5 * 60 * 1000; 
-const GIVEAWAY_INTERACTION_MAX_ENTRIES = 5000;
-const GIVEAWAY_INTERACTION_CLEANUP_INTERVAL = 60 * 1000;
-let lastInteractionCleanupAt = 0;
-
-function cleanupInteractionCache(force = false) {
-    const now = Date.now();
-    if (!force && (now - lastInteractionCleanupAt) < GIVEAWAY_INTERACTION_CLEANUP_INTERVAL) {
-        return;
-    }
-
-    lastInteractionCleanupAt = now;
-    const cutoff = now - GIVEAWAY_INTERACTION_TTL;
-    for (const [key, timestamp] of userGiveawayInteractions.entries()) {
-        if (timestamp < cutoff) {
-            userGiveawayInteractions.delete(key);
-        }
-    }
-
-    while (userGiveawayInteractions.size > GIVEAWAY_INTERACTION_MAX_ENTRIES) {
-        const oldestKey = userGiveawayInteractions.keys().next().value;
-        if (!oldestKey) break;
-        userGiveawayInteractions.delete(oldestKey);
-    }
+function getGiveawayInteractionKey(userId, giveawayId) {
+    return `giveaway:${userId}:${giveawayId}`;
 }
-
-
-
-
-
-
 
 export function parseDuration(durationString) {
     if (!durationString || typeof durationString !== 'string') {
@@ -120,11 +94,6 @@ export function parseDuration(durationString) {
     return ms;
 }
 
-
-
-
-
-
 export function validatePrize(prize) {
     if (!prize || typeof prize !== 'string') {
         throw new TitanBotError(
@@ -148,11 +117,6 @@ export function validatePrize(prize) {
     return trimmed;
 }
 
-
-
-
-
-
 export function validateWinnerCount(winnerCount) {
     if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 10) {
         throw new TitanBotError(
@@ -163,13 +127,6 @@ export function validateWinnerCount(winnerCount) {
         );
     }
 }
-
-
-
-
-
-
-
 
 export function createGiveawayEmbed(giveaway, status, winners = []) {
     try {
@@ -210,11 +167,6 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
         );
     }
 }
-
-
-
-
-
 
 export function createGiveawayButtons(ended = false) {
     try {
@@ -260,19 +212,11 @@ export function createGiveawayButtons(ended = false) {
     }
 }
 
-
-
-
-
-
-
-
 export function selectWinners(participants, winnerCount) {
     if (!Array.isArray(participants) || participants.length === 0) {
         return [];
     }
 
-    // Ensure participants are unique
     const uniqueParticipants = [...new Set(participants)];
 
     if (!Number.isInteger(winnerCount) || winnerCount < 1) {
@@ -287,7 +231,7 @@ export function selectWinners(participants, winnerCount) {
     const requested = Math.min(winnerCount, uniqueParticipants.length);
     
     try {
-        // Shuffle the unique participants using Fisher-Yates
+        
         const shuffled = [...uniqueParticipants];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -305,48 +249,21 @@ export function selectWinners(participants, winnerCount) {
     }
 }
 
-
-
-
-
-
-
 export function isUserRateLimited(userId, giveawayId) {
-    cleanupInteractionCache();
-
-    const key = `${userId}:${giveawayId}`;
-    const lastInteraction = userGiveawayInteractions.get(key);
-    
-    if (!lastInteraction) {
-        return false;
-    }
-
-    const elapsed = Date.now() - lastInteraction;
-    return elapsed < GIVEAWAY_INTERACTION_COOLDOWN;
+    const status = getRateLimitStatus(
+        getGiveawayInteractionKey(userId, giveawayId),
+        GIVEAWAY_INTERACTION_COOLDOWN,
+    );
+    return status.attempts >= 1 && status.remaining > 0;
 }
 
-
-
-
-
-
-export function recordUserInteraction(userId, giveawayId) {
-    cleanupInteractionCache();
-
-    const key = `${userId}:${giveawayId}`;
-    userGiveawayInteractions.set(key, Date.now());
-
-    cleanupInteractionCache(true);
+export async function recordUserInteraction(userId, giveawayId) {
+    await checkRateLimit(
+        getGiveawayInteractionKey(userId, giveawayId),
+        1,
+        GIVEAWAY_INTERACTION_COOLDOWN,
+    );
 }
-
-
-
-
-
-
-
-
-
 
 export async function endGiveaway(client, giveaway, guildId, endedBy) {
     try {
@@ -370,8 +287,7 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
 
         const participants = giveaway.participants || [];
         const winners = selectWinners(participants, giveaway.winnerCount || 1);
-        
-        
+
         const updatedGiveaway = {
             ...giveaway,
             ended: true,
@@ -405,11 +321,6 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
     }
 }
 
-/**
- * Check for ended giveaways across all guilds and process them
- * Uses SQL queries to find only giveaways that have ended (optimized with index)
- * @param {Object} client - The Discord client
- */
 export async function checkGiveaways(client) {
   try {
     if (!client.db) {
@@ -417,7 +328,6 @@ export async function checkGiveaways(client) {
       return;
     }
 
-    // Get all giveaways that have ended (uses SQL index on ends_at)
     const endedGiveaways = await getEndedGiveaways(client);
     
     if (endedGiveaways.length === 0) {
@@ -456,7 +366,6 @@ export async function checkGiveaways(client) {
           ? winners.map(id => `<@${id}>`).join(', ')
           : 'No valid entries!';
 
-        
         const endedEmbed = createGiveawayEmbed(giveaway, 'ended', winners);
 
         await message.edit({
@@ -464,13 +373,11 @@ export async function checkGiveaways(client) {
           components: [createGiveawayButtons(true)]
         });
 
-        
         giveaway.ended = true;
         giveaway.isEnded = true;
         giveaway.winnerIds = winners;
         giveaway.endedAt = new Date().toISOString();
-        
-        // Update in database with SQL
+
         const markedSuccess = await markGiveawayEnded(client, giveawayId, giveaway);
         if (!markedSuccess) {
           logger.warn(`Failed to mark giveaway ${messageId} as ended in database`);
@@ -482,7 +389,6 @@ export async function checkGiveaways(client) {
           giveaway.winnerPingMessageId = winnerPingMsg.id;
           await markGiveawayEnded(client, giveawayId, giveaway);
 
-          
           try {
             await logEvent({
               client,
@@ -526,6 +432,3 @@ export async function checkGiveaways(client) {
     logger.error('Error checking giveaways:', error);
   }
 }
-
-
-

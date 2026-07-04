@@ -1,5 +1,4 @@
-import { MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { EmbedBuilder } from 'discord.js';
 import { deleteBirthday } from '../../../services/birthdayService.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
@@ -13,23 +12,23 @@ export default {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            
             const result = await deleteBirthday(client, guildId, userId);
 
             if (result.success) {
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('Birthday Removed')
+                    .setDescription('Your birthday has been successfully removed from the server.');
                 await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed(
-                        "Your birthday has been successfully removed from the server.",
-                        "Birthday Removed 🗑️"
-                    )]
+                    embeds: [embed]
                 });
             } else if (result.notFound) {
+                const embed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('No Birthday Found')
+                    .setDescription('You don\'t have a birthday set to remove.');
                 await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [createEmbed({
-                        title: '❌ No Birthday Found',
-                        description: "You don't have a birthday set to remove.",
-                        color: 'error'
-                    })]
+                    embeds: [embed]
                 });
             }
         } catch (error) {
@@ -47,6 +46,3 @@ export default {
         }
     }
 };
-
-
-

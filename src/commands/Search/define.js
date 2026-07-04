@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import axios from 'axios';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -30,10 +30,7 @@ export default {
                     word: word,
                     guildId: interaction.guildId
                 });
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Error', 'Please enter a word with at least 2 characters.')],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Please enter a word with at least 2 characters.' });
             }
             
             const response = await axios.get(
@@ -42,9 +39,7 @@ export default {
             );
             
             if (!response.data || response.data.length === 0) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Not Found', `No definitions found for "${word}".`)]
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'No definitions found for "${word}".' });
             }
             
             const data = response.data[0];
@@ -60,7 +55,7 @@ export default {
                     .map((def, idx) => {
                         let text = `${idx + 1}. ${def.definition}`;
                         if (def.example) {
-                            text += `\n   *Example: ${def.example}*`;
+                            text += `\n *Example: ${def.example}*`;
                         }
                         return text;
                     })
@@ -95,12 +90,9 @@ export default {
                 guildId: interaction.guildId,
                 commandName: 'define'
             });
-            
-            
+
             if (error.response?.status === 404) {
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Not Found', `No definitions found for "${interaction.options.getString('word')}".`)]
-                });
+                await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'No definitions found for "${interaction.options.getString(\'word\')}".' });
             } else {
                 await handleInteractionError(interaction, error, {
                     commandName: 'define',
@@ -110,5 +102,3 @@ export default {
         }
     },
 };
-
-

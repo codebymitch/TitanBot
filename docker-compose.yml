@@ -8,11 +8,29 @@ services:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
+      - MULTI_GUILD=${MULTI_GUILD:-false}
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - LAVALINK_HOST=lavalink
+      - LAVALINK_PORT=2333
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      - LAVALINK_SECURE=false
       - PORT=3000
     depends_on:
       db:
         condition: service_healthy
+      lavalink:
+        condition: service_started
+    networks:
+      - titan-network
+
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4
+    container_name: titanbot-lavalink
+    restart: unless-stopped
+    environment:
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+    volumes:
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml
     networks:
       - titan-network
 

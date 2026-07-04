@@ -38,7 +38,7 @@ export default {
                     guildId: interaction.guildId
                 });
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed("First Message", "No messages found in this channel!")],
+                    embeds: [successEmbed('First Message', "No messages found in this channel!")],
                 });
             }
             
@@ -75,5 +75,3 @@ export default {
         }
     },
 };
-
-

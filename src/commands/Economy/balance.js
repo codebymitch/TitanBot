@@ -19,38 +19,43 @@ export default {
     execute: withErrorHandling(async (interaction, config, client) => {
         const deferred = await InteractionHelper.safeDefer(interaction);
         if (!deferred) return;
-            
-            const targetUser = interaction.options.getUser("user") || interaction.user;
-            const guildId = interaction.guildId;
 
-            logger.debug(`[ECONOMY] Balance check for ${targetUser.id}`, { userId: targetUser.id, guildId });
+        const userOption = interaction.options.getUser("user");
+        const targetUser = userOption || interaction.user;
+        const guildId = interaction.guildId;
 
-            if (targetUser.bot) {
-                throw createError(
-                    "Bot user queried for balance",
-                    ErrorTypes.VALIDATION,
-                    "Bots don't have an economy balance."
-                );
-            }
+        logger.info(`[ECONOMY] Balance check - userOption: ${userOption?.id || 'null'}, targetUser: ${targetUser.id}, guildId: ${guildId}, isPrefix: ${!!interaction._commandStartTime}`);
 
-            const userData = await getEconomyData(client, guildId, targetUser.id);
-            
-            if (!userData) {
-                throw createError(
-                    "Failed to load economy data",
-                    ErrorTypes.DATABASE,
-                    "Failed to load economy data. Please try again later.",
-                    { userId: targetUser.id, guildId }
-                );
-            }
+        logger.debug(`[ECONOMY] Balance check for ${targetUser.id}`, { userId: targetUser.id, guildId });
 
-            const maxBank = getMaxBankCapacity(userData);
+        if (targetUser.bot) {
+            throw createError(
+                "Bot user queried for balance",
+                ErrorTypes.VALIDATION,
+                "Bots don't have an economy balance."
+            );
+        }
 
-            const wallet = typeof userData.wallet === 'number' ? userData.wallet : 0;
-            const bank = typeof userData.bank === 'number' ? userData.bank : 0;
+        const userData = await getEconomyData(client, guildId, targetUser.id);
+
+        logger.info(`[ECONOMY] Economy data retrieved - userData:`, userData);
+
+        if (!userData) {
+            throw createError(
+                "Failed to load economy data",
+                ErrorTypes.DATABASE,
+                "Failed to load economy data. Please try again later.",
+                { userId: targetUser.id, guildId }
+            );
+        }
+
+        const maxBank = getMaxBankCapacity(userData);
+
+        const wallet = typeof userData.wallet === 'number' ? userData.wallet : 0;
+        const bank = typeof userData.bank === 'number' ? userData.bank : 0;
 
             const embed = createEmbed({
-                title: `💰 ${targetUser.username}'s Balance`,
+                title: `${targetUser.username}'s Balance`,
                 description: `Here is the current financial status for ${targetUser.username}.`,
             })
                 .addFields(
@@ -65,7 +70,7 @@ export default {
                         inline: true,
                     },
                     {
-                        name: "💎 Total",
+                        name: "💰 Total",
                         value: `$${(wallet + bank).toLocaleString()}`,
                         inline: true,
                     }
@@ -80,7 +85,3 @@ export default {
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'balance' })
 };
-
-
-
-

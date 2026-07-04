@@ -1,3 +1,5 @@
+// safeMathParser.js
+
 const SUPPORTED_FUNCTIONS = Object.freeze({
   sin: Math.sin,
   cos: Math.cos,
@@ -59,7 +61,7 @@ function tokenize(expression) {
   while (index < expression.length) {
     const character = expression[index];
 
-    if (character === ' ' || character === '\t' || character === '\n') {
+    if (character === '' || character === '\t' || character === '\n') {
       index += 1;
       continue;
     }

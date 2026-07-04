@@ -1,24 +1,13 @@
-﻿import { EmbedBuilder, ChannelType } from 'discord.js';
+// ticketLogging.js
+
+import { ChannelType } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from './logger.js';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+import {
+  buildStandardLogEmbed,
+  formatRatingStars,
+  resolveUserAuthor,
+} from './logEmbeds.js';
 
 export async function logTicketEvent({ client, guildId, event }) {
   try {
@@ -48,26 +37,44 @@ export async function logTicketEvent({ client, guildId, event }) {
     }
 
     const embed = await createTicketLogEmbed(guild, event);
-    
+
     const messageOptions = { embeds: [embed] };
-    
+
     if (event.attachments && event.attachments.length > 0) {
       messageOptions.files = event.attachments;
     }
 
     await channel.send(messageOptions);
     logger.info(`Ticket event logged: ${event.type} in guild ${guildId}`);
-
   } catch (error) {
     logger.error('Error logging ticket event:', error);
   }
 }
 
-
-
-
-
-
+export async function logTicketFeedback({
+  client,
+  guildId,
+  ticketNumber,
+  ticketChannelId,
+  userId,
+  rating = null,
+  comment = null,
+}) {
+  await logTicketEvent({
+    client,
+    guildId,
+    event: {
+      type: 'feedback',
+      ticketId: ticketChannelId,
+      ticketNumber,
+      userId,
+      metadata: {
+        rating,
+        comment,
+      },
+    },
+  });
+}
 
 function getLogChannelForEventType(config, eventType) {
   switch (eventType) {
@@ -80,6 +87,9 @@ function getLogChannelForEventType(config, eventType) {
     case 'claim':
     case 'unclaim':
     case 'priority':
+    case 'pin':
+    case 'unpin':
+    case 'feedback':
       return config.ticketLogsChannelId || null;
 
     default:
@@ -87,190 +97,154 @@ function getLogChannelForEventType(config, eventType) {
   }
 }
 
-function mapTicketEventType(eventType) {
-  switch (eventType) {
-    case 'open':
-      return EVENT_TYPES.TICKET_CREATE;
-    case 'close':
-      return EVENT_TYPES.TICKET_CLOSE;
-    case 'delete':
-      return EVENT_TYPES.TICKET_DELETE;
-    case 'claim':
-    case 'unclaim':
-      return EVENT_TYPES.TICKET_CLAIM;
-    case 'priority':
-      return EVENT_TYPES.TICKET_PRIORITY;
-    case 'transcript':
-      return EVENT_TYPES.TICKET_TRANSCRIPT;
-    default:
-      return null;
-  }
-}
-
-
-
-
-
-
+const TICKET_EVENT_STYLES = {
+  open: { color: 0x5865F2, title: 'Ticket Created' },
+  close: { color: 0xED4245, title: 'Ticket Closed' },
+  delete: { color: 0x8b0000, title: 'Ticket Deleted' },
+  claim: { color: 0x5865F2, title: 'Ticket Claimed' },
+  unclaim: { color: 0xFAA61A, title: 'Ticket Unclaimed' },
+  priority: { color: 0x9b59b6, title: 'Priority Updated' },
+  transcript: { color: 0x57F287, title: 'Transcript Generated' },
+  feedback: { color: 0x57F287, title: 'Feedback Received' },
+};
 
 async function createTicketLogEmbed(guild, event) {
-  const embed = new EmbedBuilder();
-  
-  const eventColors = {
-open: 0x2ecc71,
-close: 0xe74c3c,
-delete: 0x8b0000,
-claim: 0x3498db,
-unclaim: 0xf39c12,
-priority: 0x9b59b6,
-transcript: 0x1abc9c
-  };
-  
-  embed.setColor(eventColors[event.type] || 0x95a5a6);
-  
-  const eventInfo = getEventDisplayInfo(event);
-  embed.setTitle(eventInfo.title);
-  embed.setDescription(eventInfo.description);
-  
-  embed.setTimestamp();
-  
-  if (event.ticketId || event.ticketNumber) {
-    embed.setFooter({ 
-      text: `Ticket ID: ${event.ticketNumber || event.ticketId || 'Unknown'}` 
-    });
-  }
-  
-  const fields = [];
-  
-  if (event.userId) {
-    try {
-      const user = await guild.client.users.fetch(event.userId).catch(() => null);
-      if (user) {
-        fields.push({
-          name: '👤 Ticket User',
-          value: `${user.tag} (${event.userId})`,
-          inline: true
-        });
+  const style = TICKET_EVENT_STYLES[event.type] || { color: 0x95a5a6, title: 'Ticket Event' };
+  const ticketNumber = event.ticketNumber || event.ticketId;
+  const ticketRef = ticketNumber ? `#${ticketNumber}` : 'Unknown';
+  const channelMention = event.ticketId ? `<#${event.ticketId}>` : null;
+  const executorMention = event.executorId ? `<@${event.executorId}>` : null;
+  const userMention = event.userId ? `<@${event.userId}>` : null;
+
+  let inlineFields = [];
+  let fields = [];
+  let author = null;
+  let footer = { text: 'TitanBot Ticketing' };
+
+  switch (event.type) {
+    case 'open':
+      author = await resolveUserAuthor(guild.client, event.userId);
+      inlineFields = [
+        { name: 'Ticket', value: ticketRef, inline: true },
+        { name: 'Creator', value: userMention || 'Unknown', inline: true },
+      ];
+      if (channelMention) {
+        inlineFields.push({ name: 'Channel', value: channelMention, inline: true });
       }
-    } catch (error) {
-      fields.push({
-        name: '👤 Ticket User',
-        value: `<@${event.userId}> (${event.userId})`,
-        inline: true
-      });
+      if (event.reason) {
+        fields.push({ name: 'Reason', value: String(event.reason).slice(0, 1024), inline: false });
+      }
+      break;
+
+    case 'close':
+      author = await resolveUserAuthor(guild.client, event.executorId);
+      inlineFields = [
+        { name: 'Ticket', value: ticketRef, inline: true },
+        { name: 'Closed by', value: executorMention || 'Unknown', inline: true },
+      ];
+      if (channelMention) {
+        inlineFields.push({ name: 'Channel', value: channelMention, inline: true });
+      }
+      if (event.reason) {
+        fields.push({ name: 'Reason', value: String(event.reason).slice(0, 1024), inline: false });
+      }
+      break;
+
+    case 'delete':
+      author = await resolveUserAuthor(guild.client, event.executorId);
+      inlineFields = [
+        { name: 'Ticket', value: ticketRef, inline: true },
+        { name: 'Deleted by', value: executorMention || 'Unknown', inline: true },
+      ];
+      break;
+
+    case 'claim':
+    case 'unclaim':
+      author = await resolveUserAuthor(guild.client, event.executorId);
+      inlineFields = [
+        { name: 'Ticket', value: ticketRef, inline: true },
+        {
+          name: event.type === 'claim' ? 'Claimed by' : 'Unclaimed by',
+          value: executorMention || 'Unknown',
+          inline: true,
+        },
+      ];
+      break;
+
+    case 'priority': {
+      const priorityEmojis = { none: '⚪', low: '🔵', medium: '🟢', high: '🟡', urgent: '🔴' };
+      const priorityLabel = event.priority
+        ? `${priorityEmojis[event.priority] || '⚪'} ${event.priority.charAt(0).toUpperCase()}${event.priority.slice(1)}`
+        : 'Unknown';
+      author = await resolveUserAuthor(guild.client, event.executorId);
+      inlineFields = [
+        { name: 'Ticket', value: ticketRef, inline: true },
+        { name: 'Priority', value: priorityLabel, inline: true },
+        { name: 'Updated by', value: executorMention || 'Unknown', inline: true },
+      ];
+      break;
     }
-  }
-  
-  if (event.executorId) {
-    try {
-      const executor = await guild.client.users.fetch(event.executorId).catch(() => null);
-      if (executor) {
+
+    case 'transcript':
+      inlineFields = [
+        { name: 'Ticket', value: ticketRef, inline: true },
+        { name: 'Creator', value: userMention || 'Unknown', inline: true },
+      ];
+      if (event.metadata?.messageCount) {
+        inlineFields.push({ name: 'Messages', value: String(event.metadata.messageCount), inline: true });
+      }
+      if (event.metadata?.duration) {
+        fields.push({ name: 'Duration', value: String(event.metadata.duration), inline: false });
+      }
+      if (event.metadata?.subject || event.reason) {
         fields.push({
-          name: '🔨 Executed By',
-          value: `${executor.tag} (${event.executorId})`,
-          inline: true
+          name: 'Subject',
+          value: String(event.metadata?.subject || event.reason).slice(0, 1024),
+          inline: false,
         });
       }
-    } catch (error) {
-      fields.push({
-        name: '🔨 Executed By',
-        value: `<@${event.executorId}> (${event.executorId})`,
-        inline: true
-      });
+      break;
+
+    case 'feedback': {
+      const rating = event.metadata?.rating ?? event.rating;
+      const comment = event.metadata?.comment;
+      const ratingDisplay = formatRatingStars(rating) || 'No rating';
+
+      author = await resolveUserAuthor(guild.client, event.userId);
+      inlineFields = [
+        { name: 'Ticket', value: ticketRef, inline: true },
+        { name: 'Rating', value: ratingDisplay, inline: true },
+      ];
+
+      if (comment) {
+        fields.push({
+          name: 'Comment',
+          value: String(comment).slice(0, 1024),
+          inline: false,
+        });
+      }
+      break;
     }
-  }
-  
-  if (event.reason) {
-    fields.push({
-      name: '📝 Reason',
-      value: event.reason,
-      inline: false
-    });
-  }
-  
-  if (event.priority) {
-    const priorityEmojis = {
-      none: '⚪',
-      low: '🔵',
-      medium: '🟢',
-      high: '🟡',
-      urgent: '🔴'
-    };
-    
-    fields.push({
-      name: '🎯 Priority',
-      value: `${priorityEmojis[event.priority] || '⚪'} ${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}`,
-      inline: true
-    });
-  }
-  
-  if (event.metadata) {
-    Object.entries(event.metadata).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        fields.push({
-          name: `📊 ${key.charAt(0).toUpperCase() + key.slice(1)}`,
-          value: String(value),
-          inline: true
-        });
+
+    default:
+      inlineFields = [
+        { name: 'Ticket', value: ticketRef, inline: true },
+      ];
+      if (event.reason) {
+        fields.push({ name: 'Details', value: String(event.reason).slice(0, 1024), inline: false });
       }
-    });
   }
-  
-  embed.addFields(fields);
-  
-  return embed;
+
+  const titlePrefix = event.type === 'feedback' ? '⭐ ' : '';
+  return buildStandardLogEmbed({
+    color: style.color,
+    title: `${titlePrefix}${style.title}`,
+    inlineFields,
+    fields,
+    author,
+    footer,
+  });
 }
-
-
-
-
-
-
-function getEventDisplayInfo(event) {
-  const ticketRef = event.ticketNumber ? `#${event.ticketNumber}` : event.ticketId ? `<#${event.ticketId}>` : 'Unknown';
-  
-  const eventMessages = {
-    open: {
-      title: '🎫 Ticket Opened',
-      description: `A new ticket has been created: ${ticketRef}`
-    },
-    close: {
-      title: '🔒 Ticket Closed',
-      description: `Ticket ${ticketRef} has been closed`
-    },
-    delete: {
-      title: '🗑️ Ticket Deleted',
-      description: `Ticket ${ticketRef} has been permanently deleted`
-    },
-    claim: {
-      title: '🙋 Ticket Claimed',
-      description: `Ticket ${ticketRef} has been claimed`
-    },
-    unclaim: {
-      title: '🔓 Ticket Unclaimed',
-      description: `Ticket ${ticketRef} has been unclaimed`
-    },
-    priority: {
-      title: '🎯 Priority Updated',
-      description: `Priority changed for ticket ${ticketRef}`
-    },
-    transcript: {
-      title: '📜 Transcript Created',
-      description: `Transcript generated for ticket ${ticketRef}`
-    }
-  };
-  
-  return eventMessages[event.type] || {
-    title: '🎫 Ticket Event',
-    description: `An event occurred for ticket ${ticketRef}`
-  };
-}
-
-
-
-
-
-
 
 export async function getTicketLoggingConfig(client, guildId) {
   const config = await getGuildConfig(client, guildId);
@@ -281,34 +255,26 @@ export async function getTicketLoggingConfig(client, guildId) {
   };
 }
 
-
-
-
-
-
-
 export function validateLogChannel(channel, botMember) {
   if (!channel || channel.type !== ChannelType.GuildText) {
     return {
       valid: false,
-      error: 'Channel must be a text channel.'
+      error: 'Channel must be a text channel.',
     };
   }
-  
+
   const permissions = channel.permissionsFor(botMember);
   const requiredPermissions = ['SendMessages', 'EmbedLinks'];
-  
-  const missing = requiredPermissions.filter(perm => !permissions.has(perm));
-  
+
+  const missing = requiredPermissions.filter((perm) => !permissions.has(perm));
+
   if (missing.length > 0) {
     return {
       valid: false,
-      error: `Missing permissions: ${missing.join(', ')}`
+      error: `Missing permissions: ${missing.join(', ')}`,
     };
   }
-  
+
   return { valid: true };
 }
-
-
 

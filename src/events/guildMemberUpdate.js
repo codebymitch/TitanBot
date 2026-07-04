@@ -10,37 +10,21 @@ export default {
     try {
       if (!newMember.guild) return;
 
-      const fields = [];
-
-      
-      fields.push({
-        name: '👤 Member',
-        value: `${newMember.user.tag} (${newMember.user.id})`,
-        inline: true
-      });
-
-      
       if (oldMember.nickname !== newMember.nickname) {
-        fields.push({
-          name: '🏷️ Old Nickname',
-          value: oldMember.nickname || '*(no nickname)*',
-          inline: true
-        });
-
-        fields.push({
-          name: '🏷️ New Nickname',
-          value: newMember.nickname || '*(no nickname)*',
-          inline: true
-        });
-
         await logEvent({
           client: newMember.client,
           guildId: newMember.guild.id,
           eventType: EVENT_TYPES.MEMBER_NAME_CHANGE,
           data: {
-            description: `Member nickname changed: ${newMember.user.tag}`,
+            title: 'Nickname changed',
+            lines: [
+              `**User:** ${newMember.user.toString()} (${newMember.user.tag})`,
+              `**ID:** \`${newMember.user.id}\``,
+              `**Before:** ${oldMember.nickname || '*(no nickname)*'}`,
+              `**After:** ${newMember.nickname || '*(no nickname)*'}`,
+            ],
+            thumbnail: newMember.user.displayAvatarURL({ dynamic: true }),
             userId: newMember.user.id,
-            fields
           }
         });
 

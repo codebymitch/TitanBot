@@ -34,7 +34,6 @@ export default {
             const target = interaction.options.getUser("target");
             const guildId = interaction.guildId;
 
-            
             const validWarnings = await WarningService.getWarnings(guildId, target.id);
             const totalWarns = validWarnings.length;
 
@@ -43,7 +42,7 @@ export default {
                     embeds: [
                         createEmbed({ 
                             title: `Warnings: ${target.tag}`, 
-                            description: "✅ This user has no recorded warnings." 
+                            description: "This user has no recorded warnings." 
                         }).setColor(getColor('success')),
                     ],
                 });
@@ -102,6 +101,3 @@ export default {
         }
     }
 };
-
-
-

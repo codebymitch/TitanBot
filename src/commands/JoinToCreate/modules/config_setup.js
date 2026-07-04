@@ -11,9 +11,9 @@ import {
     ButtonStyle
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { TitanBotError, ErrorTypes, replyUserError } from '../../../utils/errorHandler.js';
 import { 
     getJoinToCreateConfig, 
     updateJoinToCreateConfig,
@@ -38,22 +38,22 @@ export default {
         }
 
         const embed = new EmbedBuilder()
-            .setTitle('⚙️ Join to Create Configuration')
+            .setTitle('Join to Create Configuration')
             .setDescription(`Configure settings for ${triggerChannel}`)
             .setColor(getColor('info'))
             .addFields(
                 {
-                    name: '📝 Current Channel Name Template',
+                    name: 'Current Channel Name Template',
                     value: `\`${currentConfig.channelOptions?.[triggerChannel.id]?.nameTemplate || currentConfig.channelNameTemplate}\``,
                     inline: false
                 },
                 {
-                    name: '👥 Current User Limit',
+                    name: 'Current User Limit',
                     value: `${currentConfig.channelOptions?.[triggerChannel.id]?.userLimit || currentConfig.userLimit === 0 ? 'No limit' : currentConfig.userLimit + ' users'}`,
                     inline: true
                 },
                 {
-                    name: '🎵 Current Bitrate',
+                    name: 'Current Bitrate',
                     value: `${(currentConfig.channelOptions?.[triggerChannel.id]?.bitrate || currentConfig.bitrate) / 1000} kbps`,
                     inline: true
                 }
@@ -136,9 +136,9 @@ time: 60000
                     ? error.userMessage || 'An error occurred while processing your selection.'
                     : 'An error occurred while processing your selection.';
                     
-                await selectInteraction.followUp({
-                    embeds: [errorEmbed('Configuration Error', errorMessage)],
-                    flags: MessageFlags.Ephemeral,
+                await replyUserError(selectInteraction, {
+                    type: ErrorTypes.CONFIGURATION,
+                    message: errorMessage
                 }).catch(() => {});
             }
         });
@@ -170,7 +170,7 @@ time: 60000
 
 async function handleNameTemplateChange(interaction, triggerChannel, currentConfig, client) {
     const embed = new EmbedBuilder()
-        .setTitle('📝 Channel Name Template Configuration')
+        .setTitle('Channel Name Template Configuration')
         .setDescription('Please enter the new channel name template.')
         .addFields(
             {
@@ -200,9 +200,9 @@ time: 600_000,
             const newTemplate = message.content.trim();
             
             if (!newTemplate || newTemplate.length > 100) {
-                await interaction.followUp({
-                    embeds: [errorEmbed('Invalid Template', 'Template must be between 1 and 100 characters.')],
-                    flags: MessageFlags.Ephemeral,
+                await replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'Template must be between 1 and 100 characters.'
                 });
                 return;
             }
@@ -218,7 +218,7 @@ time: 600_000,
             });
 
             await interaction.followUp({
-                embeds: [successEmbed('✅ Template Updated', `Channel name template changed to \`${newTemplate}\``)],
+                embeds: [successEmbed('Template Updated', `Channel name template changed to \`${newTemplate}\``)],
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -234,18 +234,18 @@ time: 600_000,
                 ? error.userMessage || 'Could not update the channel name template.'
                 : 'Could not update the channel name template.';
                 
-            await interaction.followUp({
-                embeds: [errorEmbed('Update Failed', errorMessage)],
-                flags: MessageFlags.Ephemeral,
+            await replyUserError(interaction, {
+                type: ErrorTypes.CONFIGURATION,
+                message: errorMessage
             }).catch(() => {});
         }
     });
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                embeds: [errorEmbed('Timeout', 'No response received. Template update cancelled.')],
-                flags: MessageFlags.Ephemeral,
+            replyUserError(interaction, {
+                type: ErrorTypes.RATE_LIMIT,
+                message: 'No response received. Template update cancelled.'
             }).catch(() => {});
         }
     });
@@ -253,7 +253,7 @@ time: 600_000,
 
 async function handleUserLimitChange(interaction, triggerChannel, currentConfig, client) {
     const embed = new EmbedBuilder()
-        .setTitle('👥 User Limit Configuration')
+        .setTitle('User Limit Configuration')
         .setDescription('Please enter the new user limit (0-99, where 0 = no limit).')
         .addFields(
             {
@@ -278,9 +278,9 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
             const newLimit = parseInt(message.content.trim());
             
             if (newLimit < 0 || newLimit > 99) {
-                await interaction.followUp({
-                    embeds: [errorEmbed('Invalid Limit', 'User limit must be between 0 and 99.')],
-                    flags: MessageFlags.Ephemeral,
+                await replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'User limit must be between 0 and 99.'
                 });
                 return;
             }
@@ -296,7 +296,7 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
             });
 
             await interaction.followUp({
-                embeds: [successEmbed('✅ Limit Updated', `User limit changed to ${newLimit === 0 ? 'No limit' : newLimit + ' users'}`)],
+                embeds: [successEmbed('Limit Updated', `User limit changed to ${newLimit === 0 ? 'No limit' : newLimit + ' users'}`)],
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -312,18 +312,18 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
                 ? error.userMessage || 'Could not update the user limit.'
                 : 'Could not update the user limit.';
                 
-            await interaction.followUp({
-                embeds: [errorEmbed('Update Failed', errorMessage)],
-                flags: MessageFlags.Ephemeral,
+            await replyUserError(interaction, {
+                type: ErrorTypes.CONFIGURATION,
+                message: errorMessage
             }).catch(() => {});
         }
     });
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                embeds: [errorEmbed('Timeout', 'No valid response received. Update cancelled.')],
-                flags: MessageFlags.Ephemeral,
+            replyUserError(interaction, {
+                type: ErrorTypes.RATE_LIMIT,
+                message: 'No valid response received. Update cancelled.'
             }).catch(() => {});
         }
     });
@@ -331,7 +331,7 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
 
 async function handleBitrateChange(interaction, triggerChannel, currentConfig, client) {
     const embed = new EmbedBuilder()
-        .setTitle('🎵 Bitrate Configuration')
+        .setTitle('Bitrate Configuration')
         .setDescription('Please enter the new bitrate in kbps (8-384).')
         .addFields(
             {
@@ -361,9 +361,9 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
             const newBitrate = parseInt(message.content.trim());
             
             if (newBitrate < 8 || newBitrate > 384) {
-                await interaction.followUp({
-                    embeds: [errorEmbed('Invalid Bitrate', 'Bitrate must be between 8 and 384 kbps.')],
-                    flags: MessageFlags.Ephemeral,
+                await replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'Bitrate must be between 8 and 384 kbps.'
                 });
                 return;
             }
@@ -379,7 +379,7 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
             });
 
             await interaction.followUp({
-                embeds: [successEmbed('✅ Bitrate Updated', `Bitrate changed to ${newBitrate} kbps`)],
+                embeds: [successEmbed('Bitrate Updated', `Bitrate changed to ${newBitrate} kbps`)],
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -395,18 +395,18 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
                 ? error.userMessage || 'Could not update the bitrate.'
                 : 'Could not update the bitrate.';
                 
-            await interaction.followUp({
-                embeds: [errorEmbed('Update Failed', errorMessage)],
-                flags: MessageFlags.Ephemeral,
+            await replyUserError(interaction, {
+                type: ErrorTypes.CONFIGURATION,
+                message: errorMessage
             }).catch(() => {});
         }
     });
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                embeds: [errorEmbed('Timeout', 'No valid response received. Update cancelled.')],
-                flags: MessageFlags.Ephemeral,
+            replyUserError(interaction, {
+                type: ErrorTypes.RATE_LIMIT,
+                message: 'No valid response received. Update cancelled.'
             }).catch(() => {});
         }
     });
@@ -414,7 +414,7 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
 
 async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, client) {
     const embed = new EmbedBuilder()
-        .setTitle('⚠️ Remove Trigger Channel')
+        .setTitle('Remove Trigger Channel')
         .setDescription(`Are you sure you want to remove ${triggerChannel} from the Join to Create system?`)
         .setColor('#ff6600')
         .setFooter({ text: 'This action cannot be undone' });
@@ -453,13 +453,13 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
                 
                 if (success) {
                     await buttonInteraction.followUp({
-                        embeds: [successEmbed('✅ Channel Removed', `${triggerChannel} has been removed from the Join to Create system.`)],
+                        embeds: [successEmbed('Channel Removed', `${triggerChannel} has been removed from the Join to Create system.`)],
                         flags: MessageFlags.Ephemeral,
                     });
                 } else {
-                    await buttonInteraction.followUp({
-                        embeds: [errorEmbed('Removal Failed', 'Could not remove the trigger channel.')],
-                        flags: MessageFlags.Ephemeral,
+                    await replyUserError(buttonInteraction, {
+                        type: ErrorTypes.CONFIGURATION,
+                        message: 'Could not remove the trigger channel.'
                     });
                 }
             } catch (error) {
@@ -473,14 +473,14 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
                     ? error.userMessage || 'An error occurred while removing the trigger channel.'
                     : 'An error occurred while removing the trigger channel.';
                     
-                await buttonInteraction.followUp({
-                    embeds: [errorEmbed('Removal Failed', errorMessage)],
-                    flags: MessageFlags.Ephemeral,
+                await replyUserError(buttonInteraction, {
+                    type: ErrorTypes.CONFIGURATION,
+                    message: errorMessage
                 }).catch(() => {});
             }
         } else {
             await buttonInteraction.followUp({
-                embeds: [successEmbed('✅ Cancelled', 'Channel removal has been cancelled.')],
+                embeds: [successEmbed('Cancelled', 'Channel removal has been cancelled.')],
                 flags: MessageFlags.Ephemeral,
             });
         }
@@ -488,9 +488,9 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                embeds: [errorEmbed('Timeout', 'No response received. Removal cancelled.')],
-                flags: MessageFlags.Ephemeral,
+            replyUserError(interaction, {
+                type: ErrorTypes.RATE_LIMIT,
+                message: 'No response received. Removal cancelled.'
             }).catch(() => {});
         }
     });
@@ -500,42 +500,42 @@ async function handleViewSettings(interaction, triggerChannel, currentConfig, cl
     const channelConfig = currentConfig.channelOptions?.[triggerChannel.id] || {};
     
     const embed = new EmbedBuilder()
-        .setTitle('📋 Current Settings')
+        .setTitle('Current Settings')
         .setDescription(`Configuration for ${triggerChannel}`)
         .setColor(getColor('info'))
         .addFields(
             {
-                name: '🎯 Trigger Channel',
+                name: 'Trigger Channel',
                 value: `${triggerChannel} (${triggerChannel.id})`,
                 inline: false
             },
             {
-                name: '📝 Channel Name Template',
+                name: 'Channel Name Template',
                 value: `\`${channelConfig.nameTemplate || currentConfig.channelNameTemplate}\``,
                 inline: false
             },
             {
-                name: '👥 User Limit',
+                name: 'User Limit',
                 value: `${channelConfig.userLimit || currentConfig.userLimit === 0 ? 'No limit' : (channelConfig.userLimit || currentConfig.userLimit) + ' users'}`,
                 inline: true
             },
             {
-                name: '🎵 Bitrate',
+                name: 'Bitrate',
                 value: `${(channelConfig.bitrate || currentConfig.bitrate) / 1000} kbps`,
                 inline: true
             },
             {
-                name: '📁 Category',
+                name: 'Category',
                 value: currentConfig.categoryId ? `<#${currentConfig.categoryId}>` : 'Not set',
                 inline: true
             },
             {
-                name: '📊 System Status',
+                name: 'System Status',
                 value: currentConfig.enabled ? '✅ Enabled' : '❌ Disabled',
                 inline: true
             },
             {
-                name: '🔢 Active Temporary Channels',
+                name: 'Active Temporary Channels',
                 value: Object.keys(currentConfig.temporaryChannels || {}).length.toString(),
                 inline: true
             }
@@ -547,7 +547,3 @@ async function handleViewSettings(interaction, triggerChannel, currentConfig, cl
         flags: MessageFlags.Ephemeral 
     });
 }
-
-
-
-

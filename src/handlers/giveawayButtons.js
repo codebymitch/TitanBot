@@ -1,5 +1,5 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { errorEmbed, successEmbed } from '../utils/embeds.js';
+import { successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError } from '../utils/errorHandler.js';
 import { 
@@ -17,27 +17,16 @@ import {
 } from '../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 
-
-
-
 export const giveawayJoinHandler = {
     customId: 'giveaway_join',
     async execute(interaction, client) {
         try {
             
             if (isUserRateLimited(interaction.user.id, interaction.message.id)) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            'Rate Limited',
-                            'Please wait a moment before interacting with this giveaway again.'
-                        )
-                    ],
-                    flags: MessageFlags.Ephemeral
-                });
+                return replyUserError(interaction, { type: ErrorTypes.RATE_LIMIT, message: 'Please wait a moment before interacting with this giveaway again.' });
             }
 
-            recordUserInteraction(interaction.user.id, interaction.message.id);
+            await recordUserInteraction(interaction.user.id, interaction.message.id);
 
             const lockKey = `giveaway:${interaction.message.id}`;
             await Mutex.runExclusive(lockKey, async () => {
@@ -53,39 +42,20 @@ export const giveawayJoinHandler = {
                     );
                 }
 
-                // Double check end status inside lock
                 const endedByTime = isGiveawayEnded(giveaway);
                 const endedByFlag = giveaway.ended || giveaway.isEnded;
 
                 if (endedByTime || endedByFlag) {
-                    return interaction.reply({
-                        embeds: [
-                            errorEmbed(
-                                'Giveaway Ended',
-                                'This giveaway has already ended.'
-                            )
-                        ],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This giveaway has already ended.' });
                 }
 
                 const participants = giveaway.participants || [];
                 const userId = interaction.user.id;
 
-                // Check if user already joined
                 if (participants.includes(userId)) {
-                    return interaction.reply({
-                        embeds: [
-                            errorEmbed(
-                                'Already Entered',
-                                'You have already entered this giveaway! 🎉'
-                            )
-                        ],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You have already entered this giveaway! 🎉' });
                 }
 
-                // Atomically update participants
                 participants.push(userId);
                 giveaway.participants = participants;
 
@@ -93,7 +63,6 @@ export const giveawayJoinHandler = {
 
                 logger.debug(`User ${interaction.user.tag} joined giveaway ${interaction.message.id}`);
 
-                // Send response
                 const updatedEmbed = createGiveawayEmbed(giveaway, 'active');
                 const updatedRow = createGiveawayButtons(false);
 
@@ -123,9 +92,6 @@ export const giveawayJoinHandler = {
     }
 };
 
-
-
-
 export const giveawayEndHandler = {
     customId: 'giveaway_end',
     async execute(interaction, client) {
@@ -140,12 +106,8 @@ export const giveawayEndHandler = {
                 );
             }
 
-            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                return interaction.reply({
-                    embeds: [errorEmbed('Permission Denied', "You need the 'Manage Server' permission to end a giveaway.")],
-                    flags: MessageFlags.Ephemeral
-                });
+                return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the \'Manage Server\' permission to end a giveaway.' });
             }
 
             const guildGiveaways = await getGuildGiveaways(client, interaction.guildId);
@@ -172,7 +134,6 @@ export const giveawayEndHandler = {
             const participants = giveaway.participants || [];
             const winners = selectWinners(participants, giveaway.winnerCount);
 
-            
             giveaway.ended = true;
             giveaway.isEnded = true;
             giveaway.winnerIds = winners;
@@ -183,7 +144,6 @@ export const giveawayEndHandler = {
 
             logger.info(`Giveaway ended via button by ${interaction.user.tag}: ${interaction.message.id}`);
 
-            
             const updatedEmbed = createGiveawayEmbed(giveaway, 'ended', winners);
             const updatedRow = createGiveawayButtons(true);
 
@@ -193,7 +153,6 @@ export const giveawayEndHandler = {
                 components: [updatedRow]
             });
 
-            
             try {
                 await logEvent({
                     client,
@@ -249,9 +208,6 @@ export const giveawayEndHandler = {
     }
 };
 
-
-
-
 export const giveawayRerollHandler = {
     customId: 'giveaway_reroll',
     async execute(interaction, client) {
@@ -266,12 +222,8 @@ export const giveawayRerollHandler = {
                 );
             }
 
-            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                return interaction.reply({
-                    embeds: [errorEmbed('Permission Denied', "You need the 'Manage Server' permission to reroll a giveaway.")],
-                    flags: MessageFlags.Ephemeral
-                });
+                return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the \'Manage Server\' permission to reroll a giveaway.' });
             }
 
             const guildGiveaways = await getGuildGiveaways(client, interaction.guildId);
@@ -308,7 +260,6 @@ export const giveawayRerollHandler = {
 
             const newWinners = selectWinners(participants, giveaway.winnerCount);
 
-            
             giveaway.winnerIds = newWinners;
             giveaway.rerolledAt = new Date().toISOString();
             giveaway.rerolledBy = interaction.user.id;
@@ -317,7 +268,6 @@ export const giveawayRerollHandler = {
 
             logger.info(`Giveaway rerolled via button by ${interaction.user.tag}: ${interaction.message.id}`);
 
-            
             const updatedEmbed = createGiveawayEmbed(giveaway, 'reroll', newWinners);
             const updatedRow = createGiveawayButtons(true);
 
@@ -327,7 +277,6 @@ export const giveawayRerollHandler = {
                 components: [updatedRow]
             });
 
-            
             try {
                 await logEvent({
                     client,
@@ -407,15 +356,7 @@ export const giveawayViewHandler = {
             }
 
             if (!giveaway.ended && !giveaway.isEnded && !isGiveawayEnded(giveaway)) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            'Giveaway Still Active',
-                            'This giveaway has not ended yet, so winners are not available.'
-                        )
-                    ],
-                    flags: MessageFlags.Ephemeral
-                });
+                return replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This giveaway has not ended yet, so winners are not available.' });
             }
 
             const winnerIds = Array.isArray(giveaway.winnerIds) ? giveaway.winnerIds : [];
@@ -442,6 +383,3 @@ export const giveawayViewHandler = {
         }
     }
 };
-
-
-

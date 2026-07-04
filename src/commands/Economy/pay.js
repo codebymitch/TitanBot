@@ -4,7 +4,6 @@ import { getEconomyData, addMoney, removeMoney, setEconomyData } from '../../uti
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import EconomyService from '../../services/economyService.js';
 
 export default {
@@ -91,8 +90,6 @@ export default {
                 );
             }
 
-            
-            
             const result = await EconomyService.transferMoney(
                 client, 
                 guildId, 
@@ -101,22 +98,21 @@ export default {
                 amount
             );
 
-            
             const updatedSenderData = await getEconomyData(client, guildId, senderId);
             const updatedReceiverData = await getEconomyData(client, guildId, receiver.id);
 
-            const embed = MessageTemplates.SUCCESS.DATA_UPDATED(
-                "payment",
+            const embed = successEmbed(
+                'Payment Successful',
                 `You successfully paid **${receiver.username}** the amount of **$${amount.toLocaleString()}**!`
             )
                 .addFields(
                     {
-                        name: "💳 Payment Amount",
+                        name: "Payment Amount",
                         value: `$${amount.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "💵 Your New Balance",
+                        name: "Your New Balance",
                         value: `$${updatedSenderData.wallet.toLocaleString()}`,
                         inline: true,
                     },
@@ -138,7 +134,7 @@ export default {
 
             try {
                 const receiverEmbed = createEmbed({ 
-                    title: "💰 Incoming Payment!", 
+                    title: "Incoming Payment!", 
                     description: `${interaction.user.username} paid you **$${amount.toLocaleString()}**.` 
                 }).addFields({
                     name: "Your New Cash",
@@ -151,8 +147,3 @@ export default {
             }
     }, { command: 'pay' })
 };
-
-
-
-
-

@@ -1,7 +1,4 @@
-
-
-
-
+// leveling.js
 
 import { EmbedBuilder } from 'discord.js';
 import { logger } from '../utils/logger.js';
@@ -9,17 +6,10 @@ import { getGuildConfig, setGuildConfig } from '../services/guildConfig.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { addXp } from './xpSystem.js';
 
-
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
 const MAX_LEVEL = 1000;
 const MIN_LEVEL = 0;
-
-
-
-
-
-
 
 export function getXpForLevel(level) {
   if (!Number.isInteger(level) || level < 0 || level > MAX_LEVEL) {
@@ -31,11 +21,6 @@ export function getXpForLevel(level) {
   }
   return 5 * Math.pow(level, 2) + 50 * level + 50;
 }
-
-
-
-
-
 
 export function getLevelFromXp(xp) {
   if (!Number.isInteger(xp) || xp < 0) {
@@ -62,19 +47,6 @@ export function getLevelFromXp(xp) {
   };
 }
 
-
-
-
-
-
-
-
-/**
- * Calculate the total XP required for a specific level and current XP
- * @param {number} level - The target level
- * @param {number} currentXp - Current XP progress towards next level
- * @returns {number} Total accumulated XP
- */
 export function calculateTotalXp(level, currentXp = 0) {
   let total = currentXp;
   for (let i = 0; i < level; i++) {
@@ -144,12 +116,6 @@ export async function getLeaderboard(client, guildId, limit = 10) {
   }
 }
 
-
-
-
-
-
-
 export function createLeaderboardEmbed(leaderboard, guild) {
   const embed = new EmbedBuilder()
     .setTitle(`🏆 ${guild.name} Leaderboard`)
@@ -179,12 +145,6 @@ export function createLeaderboardEmbed(leaderboard, guild) {
   
   return embed;
 }
-
-
-
-
-
-
 
 export async function getLevelingConfig(client, guildId) {
   try {
@@ -219,13 +179,6 @@ export async function getLevelingConfig(client, guildId) {
     };
   }
 }
-
-
-
-
-
-
-
 
 export async function getUserLevelData(client, guildId, userId) {
   try {
@@ -267,14 +220,6 @@ export async function getUserLevelData(client, guildId, userId) {
   }
 }
 
-
-
-
-
-
-
-
-
 export async function saveUserLevelData(client, guildId, userId, data) {
   try {
     if (!guildId || !userId) {
@@ -284,7 +229,6 @@ export async function saveUserLevelData(client, guildId, userId, data) {
       );
     }
 
-    
     if (!data || typeof data !== 'object') {
       throw new TitanBotError(
         'Invalid user level data',
@@ -292,7 +236,6 @@ export async function saveUserLevelData(client, guildId, userId, data) {
       );
     }
 
-    
     const sanitizedData = {
       xp: Math.max(0, Number(data.xp) || 0),
       level: Math.max(0, Math.min(Number(data.level) || 0, MAX_LEVEL)),
@@ -314,13 +257,6 @@ export async function saveUserLevelData(client, guildId, userId, data) {
   }
 }
 
-
-
-
-
-
-
-
 export async function saveLevelingConfig(client, guildId, config) {
   try {
     if (!guildId || !config) {
@@ -331,8 +267,7 @@ export async function saveLevelingConfig(client, guildId, config) {
     }
 
     const guildConfig = await getGuildConfig(client, guildId);
-    
-    
+
     if (config.xpCooldown && (config.xpCooldown < 0 || config.xpCooldown > 3600)) {
       throw new TitanBotError(
         'XP cooldown must be between 0 and 3600 seconds',
@@ -364,14 +299,6 @@ export async function saveLevelingConfig(client, guildId, config) {
   }
 }
 
-
-
-
-
-
-
-
-
 export async function addLevels(client, guildId, userId, levels) {
   try {
     const levelingConfig = await getLevelingConfig(client, guildId);
@@ -383,7 +310,6 @@ export async function addLevels(client, guildId, userId, levels) {
       );
     }
 
-    
     if (!Number.isInteger(levels) || levels <= 0) {
       throw new TitanBotError(
         `Invalid level amount: ${levels}`,
@@ -425,14 +351,6 @@ export async function addLevels(client, guildId, userId, levels) {
   }
 }
 
-
-
-
-
-
-
-
-
 export async function removeLevels(client, guildId, userId, levels) {
   try {
     const levelingConfig = await getLevelingConfig(client, guildId);
@@ -444,7 +362,6 @@ export async function removeLevels(client, guildId, userId, levels) {
       );
     }
 
-    
     if (!Number.isInteger(levels) || levels <= 0) {
       throw new TitanBotError(
         `Invalid level amount: ${levels}`,
@@ -478,14 +395,6 @@ export async function removeLevels(client, guildId, userId, levels) {
   }
 }
 
-
-
-
-
-
-
-
-
 export async function setUserLevel(client, guildId, userId, level) {
   try {
     const levelingConfig = await getLevelingConfig(client, guildId);
@@ -497,7 +406,6 @@ export async function setUserLevel(client, guildId, userId, level) {
       );
     }
 
-    
     if (!Number.isInteger(level) || level < MIN_LEVEL || level > MAX_LEVEL) {
       throw new TitanBotError(
         `Invalid level: ${level}`,
@@ -530,9 +438,6 @@ export async function setUserLevel(client, guildId, userId, level) {
   }
 }
 
-
-
-
 export async function deleteUserLevelData(client, guildId, userId) {
   try {
     if (!guildId || !userId) {
@@ -552,6 +457,3 @@ export async function deleteUserLevelData(client, guildId, userId) {
     logger.warn(`Could not delete level data for user ${userId} in guild ${guildId}`);
   }
 }
-
-
-

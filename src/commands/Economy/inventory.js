@@ -61,14 +61,10 @@ export default {
             });
 
             const embed = createEmbed({ 
-                title: `📦 ${interaction.user.username}'s Inventory`, 
+                title: `🎒 ${interaction.user.username}'s Inventory`, 
                 description: inventoryDescription, 
             }).setThumbnail(interaction.user.displayAvatarURL());
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'inventory' })
 };
-
-
-
-

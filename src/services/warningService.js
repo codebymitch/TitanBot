@@ -1,15 +1,9 @@
+// warningService.js
+
 import { getFromDb, setInDb } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
-
-
-
-
 export class WarningService {
-  
-
-
-
 
   static async addWarning({
     guildId,
@@ -20,18 +14,15 @@ export class WarningService {
   }) {
     try {
       const key = `moderation:warnings:${guildId}:${userId}`;
-      
-      
+
       const warnings = await getFromDb(key, []);
-      
-      
+
       if (!Array.isArray(warnings)) {
         logger.warn(`Warnings for ${userId} in ${guildId} corrupted, resetting`);
         await setInDb(key, []);
         return { success: false, error: 'Corrupted data' };
       }
 
-      
       const warning = {
         id: Date.now(),
         guildId,
@@ -42,10 +33,8 @@ export class WarningService {
         status: 'active'
       };
 
-      
       warnings.push(warning);
 
-      
       await setInDb(key, warnings);
 
       logger.info(`Warning added: ${userId} in ${guildId} by ${moderatorId}`);
@@ -61,18 +50,11 @@ export class WarningService {
     }
   }
 
-  
-
-
-
-
-
   static async getWarnings(guildId, userId) {
     try {
       const key = `moderation:warnings:${guildId}:${userId}`;
       const warnings = await getFromDb(key, []);
-      
-      // Filter out deleted warnings and validate schema
+
       return Array.isArray(warnings) 
         ? warnings.filter(w => w && w.status !== 'deleted')
         : [];
@@ -82,23 +64,10 @@ export class WarningService {
     }
   }
 
-  
-
-
-
-
-
   static async getWarningCount(guildId, userId) {
     const warnings = await this.getWarnings(guildId, userId);
     return warnings.length;
   }
-
-  
-
-
-
-
-
 
   static async removeWarning(guildId, userId, warningId) {
     try {
@@ -121,12 +90,6 @@ export class WarningService {
     }
   }
 
-  
-
-
-
-
-
   static async clearWarnings(guildId, userId) {
     try {
       const key = `moderation:warnings:${guildId}:${userId}`;
@@ -143,19 +106,11 @@ export class WarningService {
     }
   }
 
-  
-
-
-
-
-
   static async getGuildWarnings(guildId, filters = {}) {
     try {
       const { moderatorId, limit = 100 } = filters;
       const prefix = `moderation:warnings:${guildId}:`;
-      
-      // This implementation assumes database has list() method
-      
+
       const allWarnings = [];
       
       logger.debug(`Fetched guild warnings for ${guildId} with ${allWarnings.length} total`);

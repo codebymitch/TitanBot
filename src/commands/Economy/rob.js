@@ -1,8 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { successEmbed, warningEmbed, buildUserErrorEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const ROB_COOLDOWN = 4 * 60 * 60 * 1000;
@@ -92,8 +91,8 @@ export default {
 
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
-                        MessageTemplates.ERRORS.CONFIGURATION_REQUIRED(
-                            "robbery protection",
+                        warningEmbed(
+                            'Robbery Blocked',
                             `${victimUser.username} was prepared! Your attempt failed because they own a **Personal Safe**. You got away clean but didn't gain anything.`
                         )
                     ],
@@ -109,8 +108,8 @@ export default {
                 robberData.wallet = (robberData.wallet || 0) + amountStolen;
                 victimData.wallet = (victimData.wallet || 0) - amountStolen;
 
-                resultEmbed = MessageTemplates.SUCCESS.DATA_UPDATED(
-                    "robbery",
+                resultEmbed = successEmbed(
+                    'Robbery Successful',
                     `You successfully stole **$${amountStolen.toLocaleString()}** from ${victimUser.username}!`
                 );
             } else {
@@ -122,9 +121,10 @@ export default {
                     robberData.wallet = (robberData.wallet || 0) - fineAmount;
                 }
 
-                resultEmbed = MessageTemplates.ERRORS.INSUFFICIENT_PERMISSIONS(
-                    "robbery failed",
-                    `You failed the robbery and were caught! You were fined **$${fineAmount.toLocaleString()}** of your own cash.`
+                resultEmbed = buildUserErrorEmbed(
+                    'unknown',
+                    `You failed the robbery and were caught! You were fined **$${fineAmount.toLocaleString()}** of your own cash.`,
+                    { titleOverride: 'Robbery Failed' }
                 );
             }
 
@@ -151,6 +151,3 @@ export default {
             await InteractionHelper.safeEditReply(interaction, { embeds: [resultEmbed] });
     }, { command: 'rob' })
 };
-
-
-

@@ -1,8 +1,3 @@
-
-
-
-
-
 import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -32,17 +27,10 @@ export default {
     .setDMPermission(false),
   category: 'Leveling',
 
-  
-
-
-
-
-
   async execute(interaction, config, client) {
     try {
       await InteractionHelper.safeDefer(interaction);
 
-      
       const hasPermission = await checkUserPermissions(
         interaction,
         PermissionFlagsBits.ManageGuild,
@@ -66,7 +54,6 @@ export default {
       const targetUser = interaction.options.getUser('user');
       const levelsToRemove = interaction.options.getInteger('levels');
 
-      
       const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
       if (!member) {
         throw new TitanBotError(
@@ -76,7 +63,6 @@ export default {
         );
       }
 
-      
       const userData = await getUserLevelData(client, interaction.guildId, targetUser.id);
       if (userData.level === 0) {
         throw new TitanBotError(
@@ -86,13 +72,12 @@ export default {
         );
       }
 
-      
       const updatedData = await removeLevels(client, interaction.guildId, targetUser.id, levelsToRemove);
 
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           createEmbed({
-            title: '✅ Levels Removed',
+            title: 'Levels Removed',
             description: `Successfully removed ${levelsToRemove} levels from ${targetUser.tag}.\n**New Level:** ${updatedData.level}`,
             color: 'success'
           })
@@ -111,5 +96,3 @@ export default {
     }
   }
 };
-
-

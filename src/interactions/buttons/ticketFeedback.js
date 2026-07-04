@@ -1,26 +1,27 @@
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { getTicketData, saveTicketData } from '../../utils/database.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
-import { getGuildConfig } from '../../services/guildConfig.js';
+import { logTicketFeedback } from '../../utils/ticketLogging.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const STAR_LABELS = {
     '1': '⭐ 1 — Poor',
-    '2': '⭐⭐ 2 — Below Average',
-    '3': '⭐⭐⭐ 3 — Average',
-    '4': '⭐⭐⭐⭐ 4 — Good',
-    '5': '⭐⭐⭐⭐⭐ 5 — Excellent',
+    '2': '⭐ 2 — Below Average',
+    '3': '⭐ 3 — Average',
+    '4': '⭐ 4 — Good',
+    '5': '⭐ 5 — Excellent',
 };
 
 const feedbackHandler = {
     name: 'ticket_feedback',
 
     async execute(interaction, client, args) {
-        // args = [guildId, channelId, rating]
+        
         const [guildId, channelId, ratingStr] = args;
 
         if (!guildId || !channelId || !ratingStr) {
-            await interaction.update({
+            await InteractionHelper.safeReply(interaction, {
                 embeds: [
                     new EmbedBuilder()
                         .setTitle('⚠️ Invalid Feedback Link')
@@ -32,6 +33,13 @@ const feedbackHandler = {
             return;
         }
 
+        try {
+            await interaction.deferUpdate();
+        } catch (err) {
+            logger.warn('ticketFeedback: interaction expired before deferUpdate', { guildId, channelId, error: err.message });
+            return;
+        }
+
         let ticketData;
         try {
             ticketData = await getTicketData(guildId, channelId);
@@ -40,7 +48,7 @@ const feedbackHandler = {
         }
 
         if (!ticketData) {
-            await interaction.update({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     new EmbedBuilder()
                         .setTitle('⚠️ Ticket Not Found')
@@ -53,20 +61,20 @@ const feedbackHandler = {
         }
 
         if (interaction.user.id !== ticketData.userId) {
-            await interaction.reply({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     new EmbedBuilder()
                         .setTitle('❌ Not Allowed')
                         .setDescription('Only the ticket creator can submit feedback for this ticket.')
                         .setColor(getColor('error')),
                 ],
-                ephemeral: true,
+                components: [],
             });
             return;
         }
 
         if (ticketData.feedback?.rating) {
-            await interaction.update({
+            await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     new EmbedBuilder()
                         .setTitle('✅ Already Submitted')
@@ -91,34 +99,20 @@ const feedbackHandler = {
             logger.error('ticketFeedback: failed to save feedback', { guildId, channelId, rating, error: err.message });
         }
 
-        // Send feedback to logs channel
         try {
-            const guildConfig = await getGuildConfig(interaction.client, guildId);
-            if (guildConfig.ticketLogsChannelId) {
-                const logsChannel = await interaction.client.channels.fetch(guildConfig.ticketLogsChannelId).catch(() => null);
-                if (logsChannel && logsChannel.isSendable()) {
-                    const feedbackEmbed = new EmbedBuilder()
-                        .setTitle('📋 Ticket Feedback Received')
-                        .setDescription('User submitted feedback for a ticket')
-                        .setColor(getColor('info'))
-                        .addFields(
-                            { name: 'Ticket ID', value: `\`${channelId}\``, inline: true },
-                            { name: 'Rating', value: ratingLabel, inline: true },
-                            { name: 'User', value: `<@${interaction.user.id}>`, inline: true },
-                            { name: 'Submitted', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
-                        )
-                        .setThumbnail(interaction.user.displayAvatarURL())
-                        .setFooter({ text: `User ID: ${interaction.user.id}` })
-                        .setTimestamp();
-
-                    await logsChannel.send({ embeds: [feedbackEmbed] });
-                }
-            }
+            await logTicketFeedback({
+                client: interaction.client,
+                guildId,
+                ticketNumber: ticketData.id,
+                ticketChannelId: channelId,
+                userId: interaction.user.id,
+                rating,
+            });
         } catch (err) {
             logger.warn('ticketFeedback: failed to send log', { guildId, channelId, error: err.message });
         }
 
-        await interaction.update({
+        await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 new EmbedBuilder()
                     .setTitle('✅ Thanks for your feedback!')
@@ -139,6 +133,43 @@ const feedbackHandler = {
     },
 };
 
+const commentHandler = {
+    name: 'ticket_feedback_comment',
+
+    async execute(interaction, client, args) {
+        const [guildId, channelId] = args;
+
+        if (!guildId || !channelId) {
+            await interaction.update({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle('⚠️ Invalid Feedback Link')
+                        .setDescription('This feedback action appears to be malformed.')
+                        .setColor(getColor('error')),
+                ],
+                components: [],
+            });
+            return;
+        }
+
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket_feedback_comment_modal:${guildId}:${channelId}`)
+            .setTitle('Add Ticket Feedback');
+
+        const commentInput = new TextInputBuilder()
+            .setCustomId('feedback_comment')
+            .setLabel('Your feedback')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('Share what went well or how we can improve...')
+            .setRequired(true)
+            .setMaxLength(1000);
+
+        modal.addComponents(new ActionRowBuilder().addComponents(commentInput));
+
+        await interaction.showModal(modal);
+    },
+};
+
 const declineHandler = {
     name: 'ticket_feedback_decline',
 
@@ -155,4 +186,4 @@ const declineHandler = {
     },
 };
 
-export default [feedbackHandler, declineHandler];
+export default [feedbackHandler, commentHandler, declineHandler];

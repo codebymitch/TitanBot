@@ -143,7 +143,6 @@ async function handleSetup(interaction, guild, client) {
             );
         }
 
-        
         validateAutoVerifyCriteria(criteria, criteria === 'account_age' ? accountAgeDays : 1);
         
         if (!guildConfig.verification) {
@@ -189,4 +188,3 @@ async function handleSetup(interaction, guild, client) {
         throw error;
     }
 }
-

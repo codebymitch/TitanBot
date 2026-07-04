@@ -6,11 +6,8 @@ import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-
-
-
-
+const MAX_COMMANDS = 100;
+const COMMAND_COUNT_WARN_THRESHOLD = 90;
 
 function getSubcommandInfo(commandData) {
     const subcommands = [];
@@ -34,12 +31,6 @@ if (subOption.type === 1) {
     return subcommands;
 }
 
-
-
-
-
-
-
 async function getAllFiles(directory, fileList = []) {
     const files = await fs.readdir(directory, { withFileTypes: true });
     
@@ -58,11 +49,6 @@ async function getAllFiles(directory, fileList = []) {
     
     return fileList;
 }
-
-
-
-
-
 
 export async function loadCommands(client) {
     client.commands = new Collection();
@@ -133,174 +119,221 @@ export async function loadCommands(client) {
     return client.commands;
 }
 
+function collectCommandPayloads(client) {
+    const commands = [];
+    let totalSubcommands = 0;
+    const registeredNames = new Set();
 
+    for (const command of client.commands.values()) {
+        if (!command.data || typeof command.data.toJSON !== 'function') {
+            logger.warn(`Command missing data or toJSON method: ${command}`);
+            continue;
+        }
 
+        const commandName = command.data.name;
+        logger.debug(`Processing command for registration: ${commandName}`);
 
+        if (registeredNames.has(commandName)) {
+            logger.debug(`Skipping duplicate command: ${commandName}`);
+            continue;
+        }
 
+        registeredNames.add(commandName);
+        const commandJson = command.data.toJSON();
+        commands.push(commandJson);
+        totalSubcommands += getSubcommandInfo(commandJson).length;
 
+        if (process.env.NODE_ENV !== 'production') {
+            logger.debug(`Registering command: ${commandName}`);
+        }
+    }
 
-export async function registerCommands(client, guildId) {
+    return { commands, totalSubcommands };
+}
+
+function validateCommands(commands) {
+    const validationErrors = [];
+
+    for (const cmd of commands) {
+        if (cmd.name && cmd.name.length > 32) {
+            validationErrors.push(`Command ${cmd.name} has name longer than 32 chars: "${cmd.name}" (${cmd.name.length} chars)`);
+        }
+        if (cmd.description && cmd.description.length > 110) {
+            validationErrors.push(`Command ${cmd.name} has description longer than 110 chars: "${cmd.description}" (${cmd.description.length} chars)`);
+        }
+
+        if (!cmd.options) {
+            continue;
+        }
+
+        for (const option of cmd.options) {
+            if (option.name && option.name.length > 32) {
+                validationErrors.push(`Command ${cmd.name} option ${option.name} has name longer than 32 chars: "${option.name}" (${option.name.length} chars)`);
+            }
+            if (option.description && option.description.length > 110) {
+                validationErrors.push(`Command ${cmd.name} option ${option.name} has description longer than 110 chars: "${option.description}" (${option.description.length} chars)`);
+            }
+
+            if (option.choices) {
+                for (const choice of option.choices) {
+                    if (choice.name && choice.name.length > 110) {
+                        validationErrors.push(`Command ${cmd.name} option ${option.name} choice ${choice.name} has name longer than 110 chars: "${choice.name}" (${choice.name.length} chars)`);
+                    }
+                    if (choice.value && choice.value.length > 100) {
+                        validationErrors.push(`Command ${cmd.name} option ${option.name} choice ${choice.name} has value longer than 100 chars: "${choice.value}" (${choice.value.length} chars)`);
+                    }
+                }
+            }
+
+            if (!option.options) {
+                continue;
+            }
+
+            for (const subOption of option.options) {
+                if (subOption.name && subOption.name.length > 32) {
+                    validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} has name longer than 32 chars: "${subOption.name}" (${subOption.name.length} chars)`);
+                }
+                if (subOption.description && subOption.description.length > 110) {
+                    validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} has description longer than 110 chars: "${subOption.description}" (${subOption.description.length} chars)`);
+                }
+
+                if (!subOption.choices) {
+                    continue;
+                }
+
+                for (const choice of subOption.choices) {
+                    if (choice.name && choice.name.length > 110) {
+                        validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} choice ${choice.name} has name longer than 110 chars: "${choice.name}" (${choice.name.length} chars)`);
+                    }
+                    if (choice.value && choice.value.length > 100) {
+                        validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} choice ${choice.name} has value longer than 100 chars: "${choice.value}" (${choice.value.length} chars)`);
+                    }
+                }
+            }
+        }
+    }
+
+    if (validationErrors.length > 0) {
+        logger.error('Command validation failed. Errors:');
+        validationErrors.forEach((error) => logger.error(`  - ${error}`));
+        throw new Error(`Command validation failed with ${validationErrors.length} errors`);
+    }
+}
+
+function prepareCommandsForRegistration(commands, { multiGuild = false } = {}) {
+    if (commands.length >= COMMAND_COUNT_WARN_THRESHOLD) {
+        logger.warn(
+            `Command count (${commands.length}) is near Discord's ${MAX_COMMANDS} limit` +
+            (multiGuild ? ' for global registration' : ' for guild registration')
+        );
+    }
+
+    if (commands.length <= MAX_COMMANDS) {
+        return commands;
+    }
+
+    logger.warn(`Command count (${commands.length}) exceeds Discord limit (${MAX_COMMANDS}), truncating...`);
+    const truncated = commands.slice(0, MAX_COMMANDS);
+    logger.info(`Truncated to ${truncated.length} commands for registration`);
+    return truncated;
+}
+
+async function registerGlobalCommands(client, clientId, commands, totalSubcommands) {
+    if (!clientId) {
+        throw new Error('CLIENT_ID is required for global command registration when MULTI_GUILD=true');
+    }
+
+    if (!client.rest) {
+        throw new Error('Discord REST client is not available for global command registration');
+    }
+
+    logger.info(`Preparing to register ${totalSubcommands + commands.length} commands globally (multi-guild mode)`);
+    logger.info('Validating commands before registration...');
+    validateCommands(commands);
+    logger.info('Command validation passed');
+
+    const commandsToRegister = prepareCommandsForRegistration(commands, { multiGuild: true });
+
+    logger.info(`Registering ${commandsToRegister.length} global commands...`);
+    await client.rest.put(`/applications/${clientId}/commands`, { body: commandsToRegister });
+    logger.info(`Successfully registered ${commandsToRegister.length} global commands`);
+    logger.info('Global commands may take up to an hour to appear in all servers on first deploy');
+}
+
+async function registerGuildCommands(client, guildId, commands, totalSubcommands) {
+    logger.info(`Preparing to register ${totalSubcommands + commands.length} commands for guild ${guildId}`);
+    logger.info('Validating commands before registration...');
+    validateCommands(commands);
+    logger.info('Command validation passed');
+
+    const guild = await client.guilds.fetch(guildId);
+    const existingCommands = await guild.commands.fetch();
+    logger.info(`Found ${existingCommands.size} existing guild commands`);
+
+    const commandsToRegister = prepareCommandsForRegistration(commands, { multiGuild: false });
+
+    if (process.env.NODE_ENV !== 'production') {
+        logger.info(`Registering ${commandsToRegister.length} commands for guild ${guild.name} (${guild.id})`);
+    }
+
     try {
-        const commands = [];
-        let totalSubcommands = 0;
-const registeredNames = new Set();
-        
-        for (const command of client.commands.values()) {
-            if (command.data && typeof command.data.toJSON === 'function') {
-                const commandName = command.data.name;
-                
-                logger.debug(`Processing command for registration: ${commandName}`);
-                
-                if (!registeredNames.has(commandName)) {
-                    registeredNames.add(commandName);
-                    const commandJson = command.data.toJSON();
-                    commands.push(commandJson);
-                    
-                    const subcommands = getSubcommandInfo(commandJson);
-                    totalSubcommands += subcommands.length;
-                    
-                    if (process.env.NODE_ENV !== 'production') {
-                        logger.debug(`Registering command: ${commandName}`);
-                    }
-                } else {
-                    logger.debug(`Skipping duplicate command: ${commandName}`);
-                }
-            } else {
-                logger.warn(`Command missing data or toJSON method: ${command}`);
-            }
-        }
-        
-        const totalCommandsWithSubs = commands.length + totalSubcommands;
-        
-        if (guildId) {
-            
-            logger.info(`Preparing to register ${totalCommandsWithSubs} commands for guild ${guildId}`);
-            
-            logger.info('Validating commands before registration...');
-            
-            let validationErrors = [];
-            commands.forEach((cmd, index) => {
-                if (cmd.name && cmd.name.length > 32) {
-                    validationErrors.push(`Command ${cmd.name} has name longer than 32 chars: "${cmd.name}" (${cmd.name.length} chars)`);
-                }
-                if (cmd.description && cmd.description.length > 110) {
-                    validationErrors.push(`Command ${cmd.name} has description longer than 110 chars: "${cmd.description}" (${cmd.description.length} chars)`);
-                }
-                
-                if (cmd.options) {
-                    cmd.options.forEach((option, optIndex) => {
-                        if (option.name && option.name.length > 32) {
-                            validationErrors.push(`Command ${cmd.name} option ${option.name} has name longer than 32 chars: "${option.name}" (${option.name.length} chars)`);
-                        }
-                        if (option.description && option.description.length > 110) {
-                            validationErrors.push(`Command ${cmd.name} option ${option.name} has description longer than 110 chars: "${option.description}" (${option.description.length} chars)`);
-                        }
-                        
-                        if (option.choices) {
-                            option.choices.forEach((choice, choiceIndex) => {
-                                if (choice.name && choice.name.length > 110) {
-                                    validationErrors.push(`Command ${cmd.name} option ${option.name} choice ${choice.name} has name longer than 110 chars: "${choice.name}" (${choice.name.length} chars)`);
-                                }
-                                if (choice.value && choice.value.length > 100) {
-                                    validationErrors.push(`Command ${cmd.name} option ${option.name} choice ${choice.name} has value longer than 100 chars: "${choice.value}" (${choice.value.length} chars)`);
-                                }
-                            });
-                        }
-                        
-                        if (option.options) {
-                            option.options.forEach((subOption, subOptIndex) => {
-                                if (subOption.name && subOption.name.length > 32) {
-                                    validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} has name longer than 32 chars: "${subOption.name}" (${subOption.name.length} chars)`);
-                                }
-                                if (subOption.description && subOption.description.length > 110) {
-                                    validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} has description longer than 110 chars: "${subOption.description}" (${subOption.description.length} chars)`);
-                                }
-                                
-                                if (subOption.choices) {
-                                    subOption.choices.forEach((choice, choiceIndex) => {
-                                        if (choice.name && choice.name.length > 110) {
-                                            validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} choice ${choice.name} has name longer than 110 chars: "${choice.name}" (${choice.name.length} chars)`);
-                                        }
-                                        if (choice.value && choice.value.length > 100) {
-                                            validationErrors.push(`Command ${cmd.name} subcommand ${option.name} option ${subOption.name} choice ${choice.name} has value longer than 100 chars: "${choice.value}" (${choice.value.length} chars)`);
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-            
-            if (validationErrors.length > 0) {
-                logger.error('Command validation failed. Errors:');
-                validationErrors.forEach(error => logger.error(`  - ${error}`));
-                throw new Error(`Command validation failed with ${validationErrors.length} errors`);
-            }
-            
-            logger.info('Command validation passed');
-            
-            const guild = await client.guilds.fetch(guildId);
-            
-            const existingCommands = await guild.commands.fetch();
-            logger.info(`Found ${existingCommands.size} existing guild commands`);
-            
-            const MAX_COMMANDS = 100;
-            let commandsToRegister = commands;
-            
-            if (commands.length > MAX_COMMANDS) {
-                logger.warn(`Command count (${commands.length}) exceeds Discord limit (${MAX_COMMANDS}), truncating...`);
-                commandsToRegister = commands.slice(0, MAX_COMMANDS);
-                logger.info(`Truncated to ${commandsToRegister.length} commands for registration`);
-            }
-            
-            if (process.env.NODE_ENV !== 'production') {
-                logger.info(`Registering ${totalCommandsWithSubs} commands for guild ${guild.name} (${guild.id})`);
-            }
-            
-            try {
-                logger.info(`Registering ${commandsToRegister.length} new commands...`);
-                
-                await guild.commands.set(commandsToRegister);
-                
-                logger.info(`Successfully registered ${commandsToRegister.length} guild commands`);
-                
-                const registeredCommands = await guild.commands.fetch();
-                if (registeredCommands.size !== commandsToRegister.length) {
-                    logger.warn(`Warning: Expected ${commandsToRegister.length} commands, but Discord reports ${registeredCommands.size} registered`);
-                } else {
-                    logger.info(`Verification passed: ${registeredCommands.size} commands successfully registered`);
-                }
-                
-            } catch (error) {
-                logger.error('Failed to register commands:', error);
-                
-                if (existingCommands.size > 0) {
-                    logger.info('Attempting to restore previous commands due to registration failure...');
-                    try {
-                        await guild.commands.set(existingCommands.map(cmd => cmd));
-                        logger.info('Successfully restored previous commands');
-                    } catch (restoreError) {
-                        logger.error('Failed to restore previous commands:', restoreError);
-                    }
-                }
-                
-                throw error;
-            }
+        logger.info(`Registering ${commandsToRegister.length} guild commands...`);
+        await guild.commands.set(commandsToRegister);
+        logger.info(`Successfully registered ${commandsToRegister.length} guild commands`);
+
+        const registeredCommands = await guild.commands.fetch();
+        if (registeredCommands.size !== commandsToRegister.length) {
+            logger.warn(`Warning: Expected ${commandsToRegister.length} commands, but Discord reports ${registeredCommands.size} registered`);
         } else {
-            logger.info('Skipping global command registration - bot is guild-only');
+            logger.info(`Verification passed: ${registeredCommands.size} commands successfully registered`);
         }
+    } catch (error) {
+        logger.error('Failed to register commands:', error);
+
+        if (existingCommands.size > 0) {
+            logger.info('Attempting to restore previous commands due to registration failure...');
+            try {
+                await guild.commands.set(existingCommands.map((cmd) => cmd));
+                logger.info('Successfully restored previous commands');
+            } catch (restoreError) {
+                logger.error('Failed to restore previous commands:', restoreError);
+            }
+        }
+
+        throw error;
+    }
+}
+
+export async function registerCommands(client, options = {}) {
+    const {
+        clientId = null,
+        guildId = null,
+        multiGuild = false,
+    } = options;
+
+    try {
+        const { commands, totalSubcommands } = collectCommandPayloads(client);
+
+        if (multiGuild) {
+            logger.info('Command registration mode: multi-guild (global commands)');
+            await registerGlobalCommands(client, clientId, commands, totalSubcommands);
+            return;
+        }
+
+        if (!guildId) {
+            logger.warn(
+                'Command registration skipped: set GUILD_ID for single-server setup, or MULTI_GUILD=true for multi-server support'
+            );
+            return;
+        }
+
+        logger.info(`Command registration mode: single-guild (GUILD_ID=${guildId})`);
+        await registerGuildCommands(client, guildId, commands, totalSubcommands);
     } catch (error) {
         logger.error('Error registering commands:', error);
         throw error;
     }
 }
-
-
-
-
-
-
 
 export async function reloadCommand(client, commandName) {
     const command = client.commands.get(commandName);
@@ -325,5 +358,3 @@ export async function reloadCommand(client, commandName) {
         return { success: false, message: `Error reloading command: ${error.message}` };
     }
 }
-
-

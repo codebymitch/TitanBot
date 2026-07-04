@@ -1,3 +1,5 @@
+// abuseProtection.js
+
 import { checkRateLimit, getRateLimitStatus, clearAllRateLimits } from './rateLimiter.js';
 import { logger } from './logger.js';
 

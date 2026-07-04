@@ -1,13 +1,9 @@
+// reactionRoleService.js
+
 import { logger } from '../utils/logger.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 
-
-
-
 const MAX_ROLES_PER_MESSAGE = 25;
-
-
-
 
 const DANGEROUS_PERMISSIONS = [
     'Administrator',
@@ -18,11 +14,6 @@ const DANGEROUS_PERMISSIONS = [
     'BanMembers',
     'KickMembers'
 ];
-
-
-
-
-
 
 function validateGuildId(guildId) {
     if (!guildId || typeof guildId !== 'string' || !/^\d{17,19}$/.test(guildId)) {
@@ -35,11 +26,6 @@ function validateGuildId(guildId) {
     }
 }
 
-
-
-
-
-
 function validateMessageId(messageId) {
     if (!messageId || typeof messageId !== 'string' || !/^\d{17,19}$/.test(messageId)) {
         throw createError(
@@ -51,11 +37,6 @@ function validateMessageId(messageId) {
     }
 }
 
-
-
-
-
-
 function validateRoleId(roleId) {
     if (!roleId || typeof roleId !== 'string' || !/^\d{17,19}$/.test(roleId)) {
         throw createError(
@@ -66,11 +47,6 @@ function validateRoleId(roleId) {
         );
     }
 }
-
-
-
-
-
 
 export function hasDangerousPermissions(role) {
     if (!role || !role.permissions) return false;
@@ -124,14 +100,6 @@ async function validateRoleSafety(client, guildId, roleId) {
     }
 }
 
-/**
- * Get the reaction role message from the database
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @param {string} messageId - The message ID
- * @returns {Promise<Object|null>} The reaction role message or null if not found
- * @throws {TitanBotError} If validation fails or database error occurs
- */
 export async function getReactionRoleMessage(client, guildId, messageId) {
     try {
         validateGuildId(guildId);
@@ -153,16 +121,6 @@ export async function getReactionRoleMessage(client, guildId, messageId) {
         );
     }
 }
-
-
-
-
-
-
-
-
-
-
 
 export async function createReactionRoleMessage(client, guildId, channelId, messageId, roleIds) {
     try {
@@ -195,8 +153,7 @@ export async function createReactionRoleMessage(client, guildId, channelId, mess
                 { roleIds, limit: MAX_ROLES_PER_MESSAGE }
             );
         }
-        
-        
+
         for (const roleId of roleIds) {
             validateRoleId(roleId);
             await validateRoleSafety(client, guildId, roleId);
@@ -228,16 +185,6 @@ export async function createReactionRoleMessage(client, guildId, channelId, mess
         );
     }
 }
-
-
-
-
-
-
-
-
-
-
 
 export async function addReactionRole(client, guildId, messageId, emoji, roleId) {
     try {
@@ -273,14 +220,6 @@ export async function addReactionRole(client, guildId, messageId, emoji, roleId)
     }
 }
 
-
-
-
-
-
-
-
-
 export async function deleteReactionRoleMessage(client, guildId, messageId) {
     try {
         validateGuildId(guildId);
@@ -290,7 +229,7 @@ export async function deleteReactionRoleMessage(client, guildId, messageId) {
         const data = await getReactionRoleMessage(client, guildId, messageId);
         
         if (!data) {
-            // Data doesn't exist - this is fine, just return (idempotent delete)
+            
             logger.debug(`Reaction role message ${messageId} does not exist in guild ${guildId}, nothing to delete`);
             return true;
         }
@@ -311,15 +250,6 @@ export async function deleteReactionRoleMessage(client, guildId, messageId) {
         );
     }
 }
-
-
-
-
-
-
-
-
-
 
 export async function removeReactionRole(client, guildId, messageId, emoji) {
     try {
@@ -358,13 +288,6 @@ export async function removeReactionRole(client, guildId, messageId, emoji) {
     }
 }
 
-/**
- * Get all reaction role messages for a guild
- * @param {Object} client - The Discord client
- * @param {string} guildId - The guild ID
- * @returns {Promise<Array>} Array of reaction role messages
- * @throws {TitanBotError} If validation fails or database error occurs
- */
 export async function getAllReactionRoleMessages(client, guildId) {
     try {
         validateGuildId(guildId);
@@ -451,15 +374,6 @@ export async function getAllReactionRoleMessages(client, guildId) {
     }
 }
 
-
-
-
-
-
-
-
-
-
 export async function setReactionRoleChannel(client, guildId, messageId, channelId) {
     try {
         validateGuildId(guildId);
@@ -500,13 +414,6 @@ export async function setReactionRoleChannel(client, guildId, messageId, channel
     }
 }
 
-/**
- * Reconcile reaction role messages against Discord state and remove stale database entries.
- * Useful on startup to clean records for messages/channels deleted while the bot was offline.
- * @param {Object} client - The Discord client
- * @param {string} [guildId] - Optional guild ID to reconcile. If omitted, reconciles all guilds.
- * @returns {Promise<Object>} Cleanup summary
- */
 export async function reconcileReactionRoleMessages(client, guildId = null) {
     const summary = {
         scannedGuilds: 0,
@@ -586,5 +493,3 @@ export async function reconcileReactionRoleMessages(client, guildId = null) {
         return summary;
     }
 }
-
-

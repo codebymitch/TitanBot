@@ -1,7 +1,7 @@
 import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
-import { buildRoleAuditFields } from '../utils/roleLogFields.js';
+import { buildRoleAuditLines } from '../utils/logEmbeds.js';
 
 export default {
   name: Events.GuildRoleCreate,
@@ -11,16 +11,17 @@ export default {
     try {
       if (!role.guild) return;
 
-      const fields = buildRoleAuditFields(role);
+      const lines = buildRoleAuditLines(role);
 
       await logEvent({
         client: role.client,
         guildId: role.guild.id,
         eventType: EVENT_TYPES.ROLE_CREATE,
         data: {
-          description: `A new role was created: ${role.toString()}`,
-          fields
-        }
+          title: 'Role Created',
+          headline: `${role.toString()} was created`,
+          lines,
+        },
       });
 
     } catch (error) {

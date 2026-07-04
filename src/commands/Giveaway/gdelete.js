@@ -32,7 +32,6 @@ export default {
                 );
             }
 
-            
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
@@ -46,7 +45,6 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new TitanBotError(
                     'Invalid message ID format',
@@ -87,7 +85,6 @@ export default {
                 return true;
             };
 
-            
             try {
                 const channel = await interaction.client.channels.fetch(giveaway.channelId).catch(() => null);
                 if (await tryDeleteFromChannel(channel)) {
@@ -111,7 +108,6 @@ export default {
                 logger.warn(`Could not delete giveaway message: ${error.message}`);
             }
 
-            
             const removedFromDatabase = await deleteGiveaway(
                 interaction.client,
                 interaction.guildId,
@@ -155,7 +151,6 @@ export default {
 
             logger.info(`Giveaway deleted: ${messageId} in ${channelName}`);
 
-            
             try {
                 await logEvent({
                     client: interaction.client,
@@ -167,12 +162,12 @@ export default {
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prize',
+                                name: 'Prize',
                                 value: giveaway.prize || 'Unknown',
                                 inline: true
                             },
                             {
-                                name: '📊 Entries',
+                                name: 'Entries',
                                 value: (giveaway.participants?.length || 0).toString(),
                                 inline: true
                             }
@@ -203,5 +198,3 @@ export default {
         }
     },
 };
-
-

@@ -1,25 +1,16 @@
 import { MessageFlags } from 'discord.js';
-import { successEmbed, errorEmbed } from '../utils/embeds.js';
+import { successEmbed } from '../utils/embeds.js';
 import { verifyUser } from '../services/verificationService.js';
 import { handleInteractionError } from '../utils/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
-
-
-
-
-
-
-
 
 export async function handleVerificationButton(interaction, client) {
     try {
         await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
 
         if (!interaction.guild) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Guild Only", "This button can only be used in a server.")],
-            });
+            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This button can only be used in a server.' });
         }
 
         const guild = interaction.guild;
@@ -31,7 +22,6 @@ export async function handleVerificationButton(interaction, client) {
             userTag: interaction.user.tag
         });
 
-        
         const result = await verifyUser(client, guild.id, userId, {
             source: 'button_click',
             moderatorId: null
@@ -39,23 +29,12 @@ export async function handleVerificationButton(interaction, client) {
 
         if (!result.success) {
             if (result.alreadyVerified) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        "Already Verified",
-                        "You are already verified and have access to all server channels."
-                    )],
-                });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You are already verified and have access to all server channels.' });
             }
 
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(
-                    "Verification Failed",
-                    "An error occurred during verification. Please try again or contact an administrator."
-                )],
-            });
+            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred during verification. Please try again or contact an administrator.' });
         }
 
-        
         logger.info('User verified via button', {
             guildId: guild.id,
             userId,
@@ -76,7 +55,6 @@ export async function handleVerificationButton(interaction, client) {
             userId: interaction.user.id
         });
 
-        
         await handleInteractionError(
             interaction,
             error,

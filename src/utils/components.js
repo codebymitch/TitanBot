@@ -1,3 +1,5 @@
+// components.js
+
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
 import { getColor } from '../config/bot.js';
 
@@ -65,12 +67,10 @@ export function createButton(customId, label, style = 'primary', emoji = null, d
     if (!label || typeof label !== 'string' || label.length === 0) {
         throw new Error('label must be a non-empty string');
     }
-    
-    
+
     const validCustomId = customId.substring(0, 100);
     const validLabel = label.substring(0, 80);
-    
-    
+
     const normalizedStyle = style.charAt(0).toUpperCase() + style.slice(1).toLowerCase();
     const buttonStyle = ButtonStyle[normalizedStyle] || ButtonStyle.Primary;
     
@@ -124,8 +124,7 @@ export function createButtonRow(buttons) {
     if (!Array.isArray(buttons) || buttons.length === 0) {
         return row;
     }
-    
-    
+
     for (const button of buttons.slice(0, 5)) {
         if (!button) continue;
         
@@ -149,6 +148,3 @@ export function createButtonRow(buttons) {
     
     return row;
 }
-
-
-

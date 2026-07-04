@@ -14,9 +14,9 @@ import {
     EmbedBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { TitanBotError, ErrorTypes, replyUserError } from '../../../utils/errorHandler.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
 import { getWelcomeConfig } from '../../../utils/database.js';
 import { validateAutoVerifyCriteria } from '../../../services/verificationService.js';
@@ -26,8 +26,6 @@ const autoVerifyDefaults = botConfig.verification?.autoVerify || {};
 const minAccountAgeDays = autoVerifyDefaults.minAccountAge ?? 1;
 const maxAccountAgeDays = autoVerifyDefaults.maxAccountAge ?? 365;
 const defaultAccountAgeDays = autoVerifyDefaults.defaultAccountAgeDays ?? 7;
-
-// ─── Embed & Menu Builders ────────────────────────────────────────────────────
 
 function buildDashboardEmbed(cfg, guild, conflictSummary = '') {
     const autoVerify = cfg.verification?.autoVerify;
@@ -50,16 +48,16 @@ function buildDashboardEmbed(cfg, guild, conflictSummary = '') {
         .setDescription(`Manage auto-verification settings for **${guild.name}**.\nSelect an option below to modify a setting.`)
         .setColor(getColor('info'))
         .addFields(
-            { name: '⚙️ System Status', value: autoVerify?.enabled ? '✅ Enabled' : '❌ Disabled', inline: true },
-            { name: '🏷️ Target Role', value: autoVerifyRole ? autoVerifyRole.toString() : '`Not set`', inline: true },
-            { name: '🎯 Criteria', value: criteriaDescription, inline: true },
-            { name: '📅 Account Age', value: autoVerify?.accountAgeDays ? `\`${autoVerify.accountAgeDays}\` days` : '`N/A`', inline: true },
+            { name: 'System Status', value: autoVerify?.enabled ? 'Enabled' : 'Disabled', inline: true },
+            { name: 'Target Role', value: autoVerifyRole ? autoVerifyRole.toString() : '`Not set`', inline: true },
+            { name: 'Criteria', value: criteriaDescription, inline: true },
+            { name: 'Account Age', value: autoVerify?.accountAgeDays ? `\`${autoVerify.accountAgeDays}\` days` : '`N/A`', inline: true },
             { name: '\u200B', value: '\u200B', inline: true },
             { name: '\u200B', value: '\u200B', inline: true },
         );
 
     if (conflictSummary) {
-        embed.addFields({ name: '⚠️ Setup Conflicts', value: conflictSummary, inline: false });
+        embed.addFields({ name: 'Setup Conflicts', value: conflictSummary, inline: false });
     }
 
     return embed
@@ -103,13 +101,10 @@ function buildButtonRow(cfg, guildId, disabled = false) {
     );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 async function refreshDashboard(rootInteraction, cfg, guildId, client) {
     try {
         const selectMenu = buildSelectMenu(guildId);
-        
-        // Get conflict summary
+
         let conflictSummary = '';
         try {
             const welcomeConfig = await getWelcomeConfig(client, guildId);
@@ -141,17 +136,15 @@ async function refreshDashboard(rootInteraction, cfg, guildId, client) {
     }
 }
 
-// ─── Main Export ──────────────────────────────────────────────────────────────
-
 export default {
+    prefixOnly: false,
     async execute(interaction, config, client) {
         try {
             const guildId = interaction.guild.id;
             const guildConfig = await getGuildConfig(client, guildId);
 
-            // Check if auto-verification is configured
             if (!guildConfig.verification?.autoVerify?.enabled) {
-                // Check for blocking systems
+                
                 const welcomeConfig = await getWelcomeConfig(client, guildId);
                 const verificationEnabled = Boolean(guildConfig.verification?.enabled);
                 const autoRoleConfigured = Boolean(guildConfig.autoRole) || (Array.isArray(welcomeConfig.roleIds) && welcomeConfig.roleIds.length > 0);
@@ -161,7 +154,7 @@ export default {
                 if (autoRoleConfigured) blockingMessage.push('AutoRole is configured');
 
                 const blockingText = blockingMessage.length > 0 
-                    ? `\n\n⚠️ **To enable AutoVerify, you must first disable:**\n${blockingMessage.map(msg => `• ${msg}`).join('\n')}`
+                    ? `\n\n⚠️ **To enable AutoVerify, you must first disable:**\n${blockingMessage.map(msg =>`• ${msg}`).join('\n')}`
                     : '';
 
                 return await InteractionHelper.safeReply(interaction, {
@@ -180,8 +173,7 @@ export default {
             await InteractionHelper.safeDefer(interaction, { ephemeral: true });
 
             const selectMenu = buildSelectMenu(guildId);
-            
-            // Get conflict summary
+
             let conflictSummary = '';
             try {
                 const welcomeConfig = await getWelcomeConfig(client, guildId);
@@ -209,7 +201,6 @@ export default {
                 flags: MessageFlags.Ephemeral,
             });
 
-            // ── Select collector ──────────────────────────────────────────────
             const collector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
                 filter: i =>
@@ -244,16 +235,13 @@ export default {
                         await selectInteraction.deferUpdate().catch(() => {});
                     }
 
-                    await selectInteraction
-                        .followUp({
-                            embeds: [errorEmbed('Configuration Error', errorMessage)],
-                            flags: MessageFlags.Ephemeral,
-                        })
-                        .catch(() => {});
+                    await replyUserError(selectInteraction, {
+                        type: ErrorTypes.CONFIGURATION,
+                        message: errorMessage,
+                    }).catch(() => {});
                 }
             });
 
-            // ── Button collector for buttons ─────────────────────────────────────
             const btnCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.Button,
                 filter: i =>
@@ -293,7 +281,7 @@ export default {
                     btnCollector.stop();
                     try {
                         const timeoutEmbed = new EmbedBuilder()
-                            .setTitle('⏰ Dashboard Timed Out')
+                            .setTitle('Dashboard Timed Out')
                             .setDescription('This dashboard has been closed due to inactivity. Please run the command again to continue.')
                             .setColor(getColor('error'));
                         await InteractionHelper.safeEditReply(interaction, {
@@ -318,16 +306,14 @@ export default {
     },
 };
 
-// ─── Handle Criteria ──────────────────────────────────────────────────────────
-
 async function handleCriteria(selectInteraction, rootInteraction, guildConfig, guildId, client) {
-    // Defer the interaction if it's a button, otherwise it was already deferred by select menu
+    
     if (!selectInteraction.deferred) {
         await selectInteraction.deferUpdate().catch(() => null);
     }
     
     const criteriaEmbed = new EmbedBuilder()
-        .setTitle('🎯 Select Verification Criteria')
+        .setTitle('Select Verification Criteria')
         .setDescription('Choose the criteria for automatic verification')
         .setColor(getColor('info'));
 
@@ -364,8 +350,7 @@ async function handleCriteria(selectInteraction, rootInteraction, guildConfig, g
         const newCriteria = criteriaInteraction.values[0];
 
         guildConfig.verification.autoVerify.criteria = newCriteria;
-        
-        // Reset age-related fields if not using them
+
         if (newCriteria !== 'account_age') {
             guildConfig.verification.autoVerify.accountAgeDays = null;
         } else if (!guildConfig.verification.autoVerify.accountAgeDays) {
@@ -385,7 +370,7 @@ async function handleCriteria(selectInteraction, rootInteraction, guildConfig, g
         }
 
         await criteriaInteraction.followUp({
-            embeds: [successEmbed('✅ Criteria Updated', `Auto-verification criteria changed to **${criteriaDisplay}**.`)],
+            embeds: [successEmbed('Criteria Updated', `Auto-verification criteria changed to **${criteriaDisplay}**.`)],
             flags: MessageFlags.Ephemeral,
         });
 
@@ -394,17 +379,13 @@ async function handleCriteria(selectInteraction, rootInteraction, guildConfig, g
 
     criteriaCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Timed Out', 'No criteria selected. The setting was not changed.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            replyUserError(selectInteraction, {
+                type: ErrorTypes.RATE_LIMIT,
+                message: 'No criteria selected. The setting was not changed.',
+            }).catch(() => {});
         }
     });
 }
-
-// ─── Handle Role ──────────────────────────────────────────────────────────────
 
 async function handleRole(selectInteraction, rootInteraction, guildConfig, guildId, client) {
     await selectInteraction.deferUpdate();
@@ -417,7 +398,7 @@ async function handleRole(selectInteraction, rootInteraction, guildConfig, guild
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('🏷️ Auto-Verification Role')
+                .setTitle('Auto-Verification Role')
                 .setDescription('Select the role to assign to auto-verified users.')
                 .setColor(getColor('info')),
         ],
@@ -438,28 +419,18 @@ async function handleRole(selectInteraction, rootInteraction, guildConfig, guild
         const role = roleInteraction.roles.first();
 
         if (role.id === rootInteraction.guild.id || role.managed) {
-            await roleInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Invalid Role',
-                        'Please choose a normal assignable role (not @everyone or a bot-managed role).',
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
+            await replyUserError(roleInteraction, {
+                type: ErrorTypes.VALIDATION,
+                message: 'Please choose a normal assignable role (not @everyone or a bot-managed role).',
             });
             return;
         }
 
         const botMember = rootInteraction.guild.members.me;
         if (role.position >= botMember.roles.highest.position) {
-            await roleInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Role Too High',
-                        'The selected role must be below my highest role in the server role hierarchy.',
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
+            await replyUserError(roleInteraction, {
+                type: ErrorTypes.PERMISSION,
+                message: 'The selected role must be below my highest role in the server role hierarchy.',
             });
             return;
         }
@@ -468,7 +439,7 @@ async function handleRole(selectInteraction, rootInteraction, guildConfig, guild
         await setGuildConfig(client, guildId, guildConfig);
 
         await roleInteraction.followUp({
-            embeds: [successEmbed('✅ Role Updated', `Auto-verification role set to ${role}.`)],
+            embeds: [successEmbed('Role Updated', `Auto-verification role set to ${role}.`)],
             flags: MessageFlags.Ephemeral,
         });
 
@@ -477,17 +448,13 @@ async function handleRole(selectInteraction, rootInteraction, guildConfig, guild
 
     roleCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Timed Out', 'No role was selected. The setting was not changed.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            replyUserError(selectInteraction, {
+                type: ErrorTypes.RATE_LIMIT,
+                message: 'No role was selected. The setting was not changed.',
+            }).catch(() => {});
         }
     });
 }
-
-// ─── Handle Account Age ────────────────────────────────────────────────────────
 
 async function handleAccountAge(selectInteraction, rootInteraction, guildConfig, guildId, client) {
     const modal = new ModalBuilder()
@@ -521,10 +488,7 @@ async function handleAccountAge(selectInteraction, rootInteraction, guildConfig,
     const days = parseInt(inputValue, 10);
 
     if (isNaN(days) || days < minAccountAgeDays || days > maxAccountAgeDays) {
-        await submitted.reply({
-            embeds: [errorEmbed('Invalid Input', `Please enter a number between ${minAccountAgeDays} and ${maxAccountAgeDays}.`)],
-            flags: MessageFlags.Ephemeral,
-        });
+        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'Please enter a number between ${minAccountAgeDays} and ${maxAccountAgeDays}.' });
         return;
     }
 
@@ -532,13 +496,9 @@ async function handleAccountAge(selectInteraction, rootInteraction, guildConfig,
     await setGuildConfig(client, guildId, guildConfig);
 
     await submitted.reply({
-        embeds: [successEmbed('✅ Account Age Updated', `Minimum account age requirement set to **${days} days**.`)],
+        embeds: [successEmbed('Account Age Updated', `Minimum account age requirement set to **${days} days**.`)],
         flags: MessageFlags.Ephemeral,
     });
 
     await refreshDashboard(rootInteraction, guildConfig, guildId, client);
 }
-
-// ─── Handle Member Duration ────────────────────────────────────────────────────
-
-

@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const MINE_COOLDOWN = 60 * 60 * 1000;
@@ -83,7 +82,7 @@ userData.lastMine = now;
                 `You explored a **${location}** and managed to find minerals worth **$${finalEarned.toLocaleString()}**!${multiplierMessage}`,
             )
                 .addFields({
-                    name: "💵 New Cash Balance",
+                    name: "New Cash Balance",
                     value: `$${userData.wallet.toLocaleString()}`,
                     inline: true,
                 })
@@ -92,7 +91,3 @@ userData.lastMine = now;
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'mine' })
 };
-
-
-
-

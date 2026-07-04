@@ -26,7 +26,6 @@ export default {
       const challenger = interaction.user;
       const opponent = interaction.options.getUser("opponent");
 
-      
       if (challenger.id === opponent.id) {
         const embed = warningEmbed(
           `**${challenger.username}**, you can't fight yourself! That's a draw before it even starts.`,
@@ -35,7 +34,6 @@ export default {
         return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       }
 
-      
       if (opponent.bot) {
         const embed = warningEmbed(
           "You can't fight bots! Challenge a real person instead.",
@@ -92,8 +90,3 @@ export default {
     }
   },
 };
-
-
-
-
-

@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
+import { handleInteractionError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getColor } from '../../config/bot.js';
 
@@ -136,10 +136,9 @@ export default {
                 : numberStr;
             
             if (!cleanNumber) {
-                const embed = errorEmbed('❌ Empty Input', 'You must provide a number to convert.\n\n**Example:** `/baseconvert number:1010 from:BIN to:DEC`');
-                embed.setColor(getColor('error'));
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [embed],
+                return replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'You must provide a number to convert.\n\n**Example:** `/baseconvert number:1010 from:BIN to:DEC`',
                 });
             }
             
@@ -157,14 +156,10 @@ export default {
                 } else if (fromBase === 'HEX') {
                     examples = '\n\n**Valid:** FF, A1B2, DEADBEEF | **Invalid:** G (only 0-9, A-F)';
                 }
-                const embed = errorEmbed(
-                    `❌ Invalid ${fromName}`,
-                    `You provided: \`${cleanNumber}\`\n\nValid characters: \`${alphabet}\`${examples}`
-                );
-                embed.setColor(getColor('error'));
                 logger.warn(`Invalid base conversion input: ${cleanNumber} for base ${fromBase}`);
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [embed],
+                return replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: `You provided: \`${cleanNumber}\`\n\nValid characters: \`${alphabet}\`${examples}`,
                 });
             }
             
@@ -177,10 +172,9 @@ export default {
                 }
             } catch (error) {
                 logger.error('Base conversion parse error:', error);
-                const embed = errorEmbed('⚠️ Conversion Failed', 'The number is too large to process.\n\nTry with a smaller number.');
-                embed.setColor(getColor('error'));
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [embed],
+                return replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'The number is too large to process.\n\nTry with a smaller number.',
                 });
             }
             
@@ -203,10 +197,9 @@ export default {
                     
                 } catch (error) {
                     logger.error(`Base conversion error to ${toName}:`, error);
-                    const embed = errorEmbed(`⚠️ Failed to Convert to ${toName}`, 'The result would be too large or incompatible.\n\nTry with a smaller number or different target base.');
-                    embed.setColor(getColor('error'));
-                    await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [embed]
+                    await replyUserError(interaction, {
+                        type: ErrorTypes.VALIDATION,
+                        message: 'The result would be too large or incompatible.\n\nTry with a smaller number or different target base.',
                     });
                 }
                 
@@ -243,6 +236,3 @@ export default {
         }
     },
 };
-
-
-

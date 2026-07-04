@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getFromDb, setInDb } from '../../utils/database.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -212,15 +212,11 @@ export default {
                         
                         const listData = await getOrCreateSharedList(listId);
                         if (!listData) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Shared list not found.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Shared list not found.' });
                         }
                         
                         if (listData.creatorId !== userId) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Only the list creator can add members.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Only the list creator can add members.' });
                         }
                         
                         if (!listData.members.includes(memberToAdd.id)) {
@@ -236,15 +232,13 @@ export default {
                             
                             return await InteractionHelper.safeEditReply(interaction, {
                                 embeds: [
-                                    successEmbed("Member Added", 
+                                    successEmbed('Member Added', 
                                         `Added ${memberToAdd.username} to the shared list "${listData.name}"`
                                     )
                                 ]
                             });
                         } else {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "User is already a member of this list.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'User is already a member of this list.' });
                         }
                     }
                     
@@ -253,22 +247,18 @@ export default {
                         const listData = await getOrCreateSharedList(listId);
                         
                         if (!listData) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Shared list not found.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Shared list not found.' });
                         }
                         
                         if (!listData.members.includes(userId)) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "You don't have access to this list.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You don\'t have access to this list.' });
                         }
                         
                         if (listData.tasks.length === 0) {
                             const memberList = listData.members.map(memberId => {
                                 const member = interaction.guild.members.cache.get(memberId);
                                 return member ? member.user.username : `<@${memberId}>`;
-                            }).join(', ');
+                            }).join(',');
                             
                             const owner = interaction.guild.members.cache.get(listData.creatorId);
                             const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
@@ -304,16 +294,16 @@ export default {
                         
                         const taskList = listData.tasks
                             .map(task => 
-                                `${task.completed ? '✅' : '📝'} #${task.id} ${task.text} ` +
+                                `${task.completed ? '✅' : '📝'} #${task.id} ${task.text}` +
                                 `\`[${new Date(task.createdAt).toLocaleDateString()}]` +
-                                (task.completed ? ` • Completed by ${task.completedBy}` : '') + '`'
+                                (task.completed ? `• Completed by ${task.completedBy}` : '') + '`'
                             )
                             .join('\n');
 
                         const memberList = listData.members.map(memberId => {
                             const member = interaction.guild.members.cache.get(memberId);
                             return member ? member.user.username : `<@${memberId}>`;
-                        }).join(', ');
+                        }).join(',');
                         
                         const owner = interaction.guild.members.cache.get(listData.creatorId);
                         const ownerName = owner ? owner.user.username : `<@${listData.creatorId}>`;
@@ -325,7 +315,7 @@ export default {
 
                         return await InteractionHelper.safeEditReply(interaction, {
                             embeds: [
-                                successEmbed(fullListDisplay, `Shared List (ID: \`${listId}\`)`)
+                                successEmbed(`Shared List (ID: \`${listId}\`)`, fullListDisplay)
                             ],
                             components: [
                                 new ActionRowBuilder().addComponents(
@@ -353,15 +343,11 @@ export default {
                         const listData = await getOrCreateSharedList(listId);
                         
                         if (!listData) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Shared list not found.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Shared list not found.' });
                         }
                         
                         if (!listData.members.includes(userId)) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "You don't have access to this list.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You don\'t have access to this list.' });
                         }
                         
                         const newTask = {
@@ -377,7 +363,7 @@ export default {
                         
                         return await InteractionHelper.safeEditReply(interaction, {
                             embeds: [
-                                successEmbed("Task Added", `Added "${taskText}" to the shared list "${listData.name}"`)
+                                successEmbed('Task Added', `Added "${taskText}" to the shared list "${listData.name}"`)
                             ]
                         });
                     }
@@ -389,22 +375,16 @@ export default {
                         const listData = await getOrCreateSharedList(listId);
 
                         if (!listData) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Shared list not found.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Shared list not found.' });
                         }
 
                         if (!listData.members.includes(userId)) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "You don't have access to this list.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You don\'t have access to this list.' });
                         }
 
                         const taskIndex = listData.tasks.findIndex(task => task.id === taskNumber);
                         if (taskIndex === -1) {
-                            return await InteractionHelper.safeEditReply(interaction, {
-                                embeds: [errorEmbed("Error", "Task not found.")]
-                            });
+                            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Task not found.' });
                         }
 
                         const [removedTask] = listData.tasks.splice(taskIndex, 1);
@@ -412,7 +392,7 @@ export default {
 
                         return await InteractionHelper.safeEditReply(interaction, {
                             embeds: [
-                                successEmbed("Task Removed", `Removed "${removedTask.text}" from the shared list "${listData.name}".`)
+                                successEmbed('Task Removed', `Removed "${removedTask.text}" from the shared list "${listData.name}".`)
                             ]
                         });
                     }
@@ -457,20 +437,20 @@ export default {
                 case 'list': {
                     if (userData.tasks.length === 0) {
                         return await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [successEmbed("Your to-do list is empty!", "Your To-Do List")],
+                            embeds: [successEmbed('Your to-do list is empty!', "Your To-Do List")],
                         });
                     }
 
                     const taskList = userData.tasks
                         .map(task => 
-                            `${task.completed ? '✅' : '📝'} #${task.id} ${task.text} ` +
+                            `${task.completed ? '✅' : '📝'} #${task.id} ${task.text}` +
                             `\`[${new Date(task.createdAt).toLocaleDateString()}\``
                         )
                         .join('\n');
 
                     return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [
-                            successEmbed(taskList, "Your To-Do List")
+                            successEmbed('Your To-Do List', taskList)
                         ],
                     });
                 }
@@ -480,15 +460,11 @@ export default {
                     const task = userData.tasks.find(t => t.id === taskNumber);
                     
                     if (!task) {
-                        return await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed("Error", "Task not found.")],
-                        });
+                        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Task not found.' });
                     }
 
                     if (task.completed) {
-                        return await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed("Task Already Completed", `Task #${task.id} is already completed.`)],
-                        });
+                        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Task #${task.id} is already completed.' });
                     }
                     
                     task.completed = true;
@@ -496,7 +472,7 @@ export default {
                     
                     return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [
-                            successEmbed("Task Completed", `Marked "${task.text}" as complete!`)
+                            successEmbed('Task Completed', `Marked "${task.text}" as complete!`)
                         ],
                     });
                 }
@@ -506,9 +482,7 @@ export default {
                     const taskIndex = userData.tasks.findIndex(t => t.id === taskNumber);
                     
                     if (taskIndex === -1) {
-                        return await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed("Error", "Task not found.")],
-                        });
+                        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Task not found.' });
                     }
                     
                     const [removedTask] = userData.tasks.splice(taskIndex, 1);
@@ -516,15 +490,13 @@ export default {
                     
                     return await InteractionHelper.safeEditReply(interaction, {
                         embeds: [
-                            successEmbed("Task Removed", `Removed "${removedTask.text}" from your to-do list.`)
+                            successEmbed('Task Removed', `Removed "${removedTask.text}" from your to-do list.`)
                         ],
                     });
                 }
 
                 default:
-                    return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed("Error", "Invalid subcommand.")],
-                    });
+                    return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Invalid subcommand.' });
             }
         } catch (error) {
             logger.error(`Todo command execution failed`, {
@@ -541,7 +513,3 @@ export default {
         }
     },
 };
-
-
-
-

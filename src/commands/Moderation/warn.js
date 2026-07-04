@@ -3,7 +3,8 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
+import { ModerationService } from '../../services/moderationService.js';
+import { handleInteractionError, TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
@@ -36,21 +37,47 @@ export default {
         }
 
         try {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-                    throw new Error("You need the `Moderate Members` permission to issue warnings.");
-                }
-
                 const target = interaction.options.getUser("target");
                 const member = interaction.options.getMember("target");
                 const reason = interaction.options.getString("reason");
                 const moderator = interaction.user;
                 const guildId = interaction.guildId;
 
-                if (!member) {
-                    throw new Error("The target user is not currently in this server.");
+                if (!target) {
+                    throw new TitanBotError(
+                        'Missing target user',
+                        ErrorTypes.USER_INPUT,
+                        'You must specify a user to warn.',
+                        { subtype: 'invalid_user' },
+                    );
                 }
 
-                
+                if (!reason) {
+                    throw new TitanBotError(
+                        'Missing warning reason',
+                        ErrorTypes.VALIDATION,
+                        'You must provide a reason for the warning.',
+                        { subtype: 'missing_required' },
+                    );
+                }
+
+                if (!member) {
+                    throw new TitanBotError(
+                        "Target not found",
+                        ErrorTypes.USER_INPUT,
+                        "The target user is not currently in this server."
+                    );
+                }
+
+                const hierarchyCheck = ModerationService.validateHierarchy(interaction.member, member, 'warn');
+                if (!hierarchyCheck.valid) {
+                    throw new TitanBotError(
+                        hierarchyCheck.error,
+                        ErrorTypes.PERMISSION,
+                        hierarchyCheck.error
+                    );
+                }
+
                 const result = await WarningService.addWarning({
                     guildId,
                     userId: target.id,
@@ -97,6 +124,3 @@ export default {
         }
     }
 };
-
-
-

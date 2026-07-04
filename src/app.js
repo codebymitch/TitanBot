@@ -12,6 +12,10 @@ import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
+import { initializeMusic } from './services/music/riffySetup.js';
+import { shutdownMusic } from './services/music/playerHandler.js';
+import pkg from '../package.json' with { type: 'json' };
+import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/schemaVersion.js';
 
 class TitanBot extends Client {
   constructor() {
@@ -20,15 +24,14 @@ class TitanBot extends Client {
         
         GatewayIntentBits.Guilds,                        
         GatewayIntentBits.GuildMembers,                 
-        
-        
+
         GatewayIntentBits.GuildMessages,                
         GatewayIntentBits.GuildMessageReactions,        
         GatewayIntentBits.MessageContent,               
-        
+        GatewayIntentBits.DirectMessages,
+
         GatewayIntentBits.GuildVoiceStates,             
-        
-        
+
         GatewayIntentBits.GuildBans,                    
       ],
     });
@@ -52,7 +55,7 @@ class TitanBot extends Client {
       startupLog('Initializing database...');
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
-      
+
       // Check database status and report
       const dbStatus = this.db.getStatus();
       if (dbStatus.isDegraded) {
@@ -79,6 +82,8 @@ class TitanBot extends Client {
       startupLog('Loading handlers...');
       await this.loadHandlers();
       startupLog('Handlers loaded');
+
+      initializeMusic(this);
       
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
@@ -86,6 +91,11 @@ class TitanBot extends Client {
       
       startupLog('Registering slash commands...');
       await this.registerCommands();
+      if (this.config.bot.multiGuild) {
+        startupLog('Multi-guild mode enabled — slash commands registered globally');
+      } else if (this.config.bot.guildId) {
+        startupLog(`Single-guild mode — slash commands registered for guild ${this.config.bot.guildId}`);
+      }
       startupLog('Slash commands registration complete');
       
       const databaseMode = dbStatus.isDegraded
@@ -166,26 +176,40 @@ class TitanBot extends Client {
     });
 
     app.get('/ready', (req, res) => {
-      const dbStatus = this.db?.getStatus?.() || { isDegraded: true };
+      const dbStatus = this.db?.getStatus?.() || { isDegraded: true, connectionType: 'none' };
       const isReady = this.isReady() && !dbStatus.isDegraded;
+
+      const metrics = {
+        guildCount: this.guilds?.cache?.size ?? 0,
+        commandCount: this.commands?.size ?? 0,
+        database: {
+          mode: dbStatus.connectionType,
+          degraded: dbStatus.isDegraded,
+          degradedReason: dbStatus.degradedReason ?? null,
+        },
+        schemaVersion: EXPECTED_SCHEMA_VERSION,
+        schemaLabel: EXPECTED_SCHEMA_LABEL,
+      };
 
       if (isReady) {
         return res.status(200).json({
           ready: true,
-          message: 'Bot is ready'
+          message: 'Bot is ready',
+          metrics,
         });
       }
 
       res.status(503).json({
         ready: false,
-        reason: !this.isReady() ? 'Bot not Ready' : 'Database degraded'
+        reason: !this.isReady() ? 'Bot not Ready' : 'Database degraded',
+        metrics,
       });
     });
 
     app.get('/', (req, res) => {
       res.status(200).json({ 
         message: 'TitanBot System Online',
-        version: '2.0.0',
+        version: pkg.version,
         timestamp: new Date().toISOString()
       });
     });
@@ -196,8 +220,8 @@ class TitanBot extends Client {
         hasStartedListening = true;
         this.webServer = server;
         startupLog(`✅ Web Server running on ${host}:${port}`);
-        startupLog(`Health endpoint: http://localhost:${port}/health`);
-        startupLog(`Ready endpoint: http://localhost:${port}/ready`);
+        startupLog(`Health endpoint: http://${host}:${port}/health`);
+        startupLog(`Ready endpoint: http://${host}:${port}/ready`);
       });
 
       server.on('error', (error) => {
@@ -259,6 +283,7 @@ class TitanBot extends Client {
         }
         
         // Save cleaned counters if any were orphaned
+        // Save cleaned counters if any were orphaned
         if (orphanedCounters.length > 0) {
           await saveServerCounters(this, guildId, validCounters);
           logger.info(`Cleaned up ${orphanedCounters.length} orphaned counter(s) from guild ${guildId} during scheduled update`);
@@ -270,6 +295,7 @@ class TitanBot extends Client {
   }
 
   async loadHandlers() {
+    startupLog('Loading handlers...');
     const handlers = [
       { path: 'events', type: 'default', required: true },
       { path: 'interactions', type: 'default', required: true }
@@ -277,14 +303,15 @@ class TitanBot extends Client {
 
     for (const handler of handlers) {
       try {
+        startupLog(`Loading handler: ${handler.path}`);
         const module = await import(`./handlers/${handler.path}.js`);
-        const loaderFn = handler.type.startsWith('named:') 
-          ? module[handler.type.split(':')[1]] 
+        const loaderFn = handler.type.startsWith('named:')
+          ? module[handler.type.split(':')[1]]
           : module.default;
-        
+
         if (typeof loaderFn === 'function') {
           await loaderFn(this);
-          logger.info(`✅ Loaded ${handler.path}`);
+          startupLog(`✅ Loaded ${handler.path}`);
         } else {
           throw new Error(`Invalid loader export from ${handler.path}`);
         }
@@ -301,7 +328,8 @@ class TitanBot extends Client {
 
   async registerCommands() {
     try {
-      await registerSlashCommands(this, this.config.bot.guildId);
+      const { clientId, guildId, multiGuild } = this.config.bot;
+      await registerSlashCommands(this, { clientId, guildId, multiGuild });
     } catch (error) {
       logger.error('Error registering commands:', error);
     }
@@ -319,6 +347,11 @@ class TitanBot extends Client {
       cron.getTasks().forEach(task => task.stop());
       logger.info('✅ Cron jobs stopped');
 
+      logger.info('Stopping music players...');
+      await shutdownMusic(this);
+      logger.info('✅ Music players stopped');
+
+      // Close database connection
       // Close database connection
       if (this.db && this.db.db) {
         logger.info('Closing database connection...');
@@ -332,15 +365,13 @@ class TitanBot extends Client {
         }
       }
 
-      
       logger.info('Destroying Discord client...');
       if (this.isReady()) {
         try {
           this.destroy();
           logger.info('✅ Discord client destroyed');
         } catch (error) {
-          
-          
+
           logger.warn('Discord client destroy warning (non-critical):', error.message);
         }
       }
@@ -368,19 +399,28 @@ try {
     });
     
     process.on('unhandledRejection', (reason, promise) => {
+      const code = reason?.code;
+      if (code === 10062 || code === 40060 || code === 50027) {
+        logger.warn('Recoverable Discord interaction rejection:', reason?.message || reason);
+        return;
+      }
+      if (reason?.message?.includes('Queue is empty')) {
+        return;
+      }
+
       logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
       bot.shutdown('UNHANDLED_REJECTION');
     });
   };
   
   setupShutdown();
-  bot.start();
+  bot.start().catch((error) => {
+    logger.error('Fatal error during bot startup:', error);
+    bot.shutdown('STARTUP_ERROR');
+  });
 } catch (error) {
   logger.error('Fatal error during bot startup:', error);
   process.exit(1);
 }
 
 export default TitanBot;
-
-
-

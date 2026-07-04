@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { successEmbed, errorEmbed } from '../utils/embeds.js';
+import { successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 
 function createControlButtons(countdownId, isPaused = false) {
@@ -179,10 +179,7 @@ async function countdownButtonHandler(interaction, client, args) {
         logger.error('Countdown button handler error:', error);
         try {
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    embeds: [errorEmbed('Error', 'An error occurred controlling the countdown.')],
-                    flags: ['Ephemeral']
-                });
+                await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred controlling the countdown.' });
             }
         } catch (err) {
             logger.error('Failed to send error message:', err);

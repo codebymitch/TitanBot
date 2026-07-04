@@ -1,5 +1,4 @@
-import { MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { EmbedBuilder } from 'discord.js';
 import { setBirthday } from '../../../services/birthdayService.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
@@ -15,14 +14,15 @@ export default {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            
             const result = await setBirthday(client, guildId, userId, month, day);
             
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('Birthday Set!')
+                .setDescription(`Your birthday has been set to **${result.data.monthName} ${result.data.day}**!`);
+            
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [successEmbed(
-                    `Your birthday has been set to **${result.data.monthName} ${result.data.day}**!`,
-                    "Birthday Set! 🎂"
-                )]
+                embeds: [embed]
             });
         } catch (error) {
             logger.error("Birthday set command execution failed", {
@@ -39,6 +39,3 @@ export default {
         }
     }
 };
-
-
-

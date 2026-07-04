@@ -20,7 +20,7 @@ export default {
 
       await InteractionHelper.safeReply(interaction, {
         embeds: [
-          createEmbed({ title: "🚑 Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!" }),
+          createEmbed({ title: "Need Help?", description: "Join our official support server for assistance, report bugs, or suggest features. If you are customizing this bot, remember to change the link in the code!" }),
         ],
         components: [actionRow],
         flags: MessageFlags.Ephemeral,
@@ -39,8 +39,3 @@ export default {
     }
   },
 };
-
-
-
-
-

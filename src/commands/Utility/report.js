@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, ChannelType } from 'discord.js';
-import { errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -56,10 +55,7 @@ export default {
                 return await reportSetchannel.execute(interaction, config, client);
             }
 
-            return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Error', 'Unknown subcommand.')],
-                ephemeral: true,
-            });
+            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Unknown subcommand.' });
         } catch (error) {
             logger.error('report command error:', error);
             await handleInteractionError(interaction, error, { commandName: 'report', source: 'report_command' });
