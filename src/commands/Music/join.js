@@ -5,7 +5,7 @@ import { joinVoiceChannel, replyMusicSuccess } from '../../services/music/musicA
 import { deferMusicCommand } from '../../services/music/prefixSupport.js';
 
 export default {
-    category: 'Music',
+    category: '≻⇾ music',
     data: new SlashCommandBuilder()
         .setName('join')
         .setDescription('Join your voice channel without starting playback'),
