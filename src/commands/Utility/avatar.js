@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -17,34 +16,20 @@ export default {
     ),
 
   async execute(interaction) {
-    try {
-      const user = interaction.options.getUser("target") || interaction.user;
-      const avatarUrl = user.displayAvatarURL({ size: 2048, dynamic: true });
+    const user = interaction.options.getUser("target") || interaction.user;
+    const avatarUrl = user.displayAvatarURL({ size: 2048, dynamic: true });
 
-      const embed = createEmbed({ 
-        title: `${user.username}'s Avatar`, 
-        description: `[Download Link](${avatarUrl})` 
-      })
-        .setImage(avatarUrl);
+    const embed = createEmbed({ 
+      title: `${user.username}'s Avatar`, 
+      description: `[Download Link](${avatarUrl})` 
+    })
+      .setImage(avatarUrl);
 
-      await InteractionHelper.safeReply(interaction, { embeds: [embed] });
-      logger.info(`Avatar command executed`, {
-        userId: interaction.user.id,
-        targetUserId: user.id,
-        guildId: interaction.guildId
-      });
-    } catch (error) {
-      logger.error(`Avatar command execution failed`, {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId,
-        commandName: 'avatar'
-      });
-      await handleInteractionError(interaction, error, {
-        commandName: 'avatar',
-        source: 'avatar_command'
-      });
-    }
+    await InteractionHelper.safeReply(interaction, { embeds: [embed] });
+    logger.info(`Avatar command executed`, {
+      userId: interaction.user.id,
+      targetUserId: user.id,
+      guildId: interaction.guildId
+    });
   }
 };

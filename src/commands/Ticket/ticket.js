@@ -1,7 +1,7 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getGuildConfig } from '../../services/guildConfig.js';
+import { getGuildConfig, setGuildConfig } from '../../services/config/guildConfig.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -94,27 +94,25 @@ export default {
     category: "ticket",
 
     async execute(interaction, config, client) {
-        try {
-            
-            const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
-            if (!deferred) {
-                return;
-            }
+        const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+        if (!deferred) {
+            return;
+        }
 
-            if (
-                !interaction.member.permissions.has(
-                    PermissionFlagsBits.ManageChannels,
-                )
-            ) {
-                logger.warn('Ticket command permission denied', {
-                    userId: interaction.user.id,
-                    guildId: interaction.guildId,
-                    commandName: 'ticket'
-                });
-                return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the `Manage Channels` permission for this action.' });
-            }
+        if (
+            !interaction.member.permissions.has(
+                PermissionFlagsBits.ManageChannels,
+            )
+        ) {
+            logger.warn('Ticket command permission denied', {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'ticket'
+            });
+            return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the `Manage Channels` permission for this action.' });
+        }
 
-            const subcommand = interaction.options.getSubcommand();
+        const subcommand = interaction.options.getSubcommand();
 
         if (subcommand === "dashboard") {
             return ticketConfig.execute(interaction, config, client);
@@ -170,18 +168,20 @@ description: panelMessage,
                     currentConfig.maxTicketsPerUser = maxTicketsPerUser;
                     currentConfig.dmOnClose = dmOnClose;
 
-                const { getGuildConfigKey } = await import('../../utils/database.js');
-                const configKey = getGuildConfigKey(interaction.guildId);
-                await client.db.set(configKey, currentConfig);
-                logger.info('Ticket configuration saved', {
-                    guildId: interaction.guildId,
-                    categoryId: categoryChannel?.id,
-                    closedCategoryId: closedCategoryChannel?.id,
-                    staffRoleId: staffRole?.id,
-                    maxTickets: maxTicketsPerUser,
-                    dmOnClose: dmOnClose
-                });
-            }
+                    await setGuildConfig(client, interaction.guildId, currentConfig);
+                    logger.info('Ticket configuration saved', {
+                        guildId: interaction.guildId,
+                        categoryId: categoryChannel?.id,
+                        closedCategoryId: closedCategoryChannel?.id,
+                        staffRoleId: staffRole?.id,
+                        maxTickets: maxTicketsPerUser,
+                        dmOnClose: dmOnClose,
+                    });
+                } else {
+                    logger.error('Ticket setup: database unavailable, panel sent but configuration was NOT saved', {
+                        guildId: interaction.guildId,
+                    });
+                }
 
                 let successMessage = `The ticket creation panel has been sent to ${panelChannel}.`;
                 
@@ -294,19 +294,6 @@ description: panelMessage,
                     });
                 }
             }
-        }
-        } catch (error) {
-            logger.error('Error executing ticket command', {
-                error: error.message,
-                stack: error.stack,
-                userId: interaction.user.id,
-                guildId: interaction.guildId,
-                commandName: 'ticket'
-            });
-            await handleInteractionError(interaction, error, {
-                commandName: 'ticket',
-                source: 'ticket_command_main'
-            });
         }
     }
 };

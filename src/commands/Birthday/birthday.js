@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, MessageFlags, ChannelType } from 'discord.js';
 import { createEmbed, successEmbed } from '../../utils/embeds.js';
-import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 import birthdaySet from './modules/birthday_set.js';
 import birthdayInfo from './modules/birthday_info.js';
@@ -76,38 +75,23 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        try {
-            const subcommand = interaction.options.getSubcommand();
-            
-            switch (subcommand) {
-                case 'set':
-                    return await birthdaySet.execute(interaction, config, client);
-                case 'info':
-                    return await birthdayInfo.execute(interaction, config, client);
-                case 'list':
-                    return await birthdayList.execute(interaction, config, client);
-                case 'remove':
-                    return await birthdayRemove.execute(interaction, config, client);
-                case 'next':
-                    return await nextBirthdays.execute(interaction, config, client);
-                case 'setchannel':
-                    return await birthdaySetchannel.execute(interaction, config, client);
-                default:
-                    return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Unknown subcommand' });
-            }
-        } catch (error) {
-            logger.error('Birthday command execution failed', {
-                error: error.message,
-                stack: error.stack,
-                userId: interaction.user.id,
-                guildId: interaction.guildId,
-                commandName: 'birthday',
-                subcommand: interaction.options.getSubcommand()
-            });
-            await handleInteractionError(interaction, error, {
-                commandName: 'birthday',
-                source: 'birthday_command'
-            });
+        const subcommand = interaction.options.getSubcommand();
+
+        switch (subcommand) {
+            case 'set':
+                return await birthdaySet.execute(interaction, config, client);
+            case 'info':
+                return await birthdayInfo.execute(interaction, config, client);
+            case 'list':
+                return await birthdayList.execute(interaction, config, client);
+            case 'remove':
+                return await birthdayRemove.execute(interaction, config, client);
+            case 'next':
+                return await nextBirthdays.execute(interaction, config, client);
+            case 'setchannel':
+                return await birthdaySetchannel.execute(interaction, config, client);
+            default:
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Unknown subcommand' });
         }
     }
 };

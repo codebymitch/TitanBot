@@ -1,9 +1,9 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { TitanBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { ModerationService } from '../../services/moderationService.js';
+import { ModerationService } from '../../services/moderation/moderationService.js';
 
 const durationChoices = [
     { name: "5 minutes", value: 5 },
@@ -31,12 +31,12 @@ export default {
                     .setName("duration")
                     .setDescription("Duration of the timeout")
                     .setRequired(true)
-.addChoices(...durationChoices),
+                    .addChoices(...durationChoices),
         )
         .addStringOption((option) =>
             option.setName("reason").setDescription("Reason for the timeout"),
         )
-.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     category: "moderation",
 
     async execute(interaction, config, client) {
@@ -45,72 +45,67 @@ export default {
             logger.warn(`Timeout interaction defer failed`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                commandName: 'timeout'
+                commandName: 'timeout',
             });
             return;
         }
 
-        try {
-            const targetUser = interaction.options.getUser("target");
-            const member = interaction.options.getMember("target");
-            const durationMinutes = interaction.options.getInteger("duration");
-            const reason = interaction.options.getString("reason") || "No reason provided";
+        const targetUser = interaction.options.getUser("target");
+        const member = interaction.options.getMember("target");
+        const durationMinutes = interaction.options.getInteger("duration");
+        const reason = interaction.options.getString("reason") || "No reason provided";
 
-            if (!targetUser) {
-                throw new TitanBotError(
-                    'Missing target user',
-                    ErrorTypes.USER_INPUT,
-                    'You must specify a user to timeout.',
-                    { subtype: 'invalid_user' },
-                );
-            }
-
-            if (targetUser.id === interaction.user.id) {
-                throw new TitanBotError(
-                    "Cannot timeout self",
-                    ErrorTypes.VALIDATION,
-                    "You cannot timeout yourself."
-                );
-            }
-            if (targetUser.id === client.user.id) {
-                throw new TitanBotError(
-                    "Cannot timeout bot",
-                    ErrorTypes.VALIDATION,
-                    "You cannot timeout the bot."
-                );
-            }
-            if (!member) {
-                throw new TitanBotError(
-                    "Target not found",
-                    ErrorTypes.USER_INPUT,
-                    "The target user is not currently in this server."
-                );
-            }
-
-            const durationMs = durationMinutes * 60 * 1000;
-            const result = await ModerationService.timeoutUser({
-                guild: interaction.guild,
-                member,
-                moderator: interaction.member,
-                durationMs,
-                reason,
-            });
-
-            const durationDisplay =
-                durationChoices.find((c) => c.value === durationMinutes)
-                    ?.name || `${durationMinutes} minutes`;
-
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
-                        `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
-                    ),
-                ],
-            });
-        } catch (error) {
-            logger.error('Timeout command error:', error);
-            await handleInteractionError(interaction, error, { subtype: 'timeout_failed' });
+        if (!targetUser) {
+            throw new TitanBotError(
+                'Missing target user',
+                ErrorTypes.USER_INPUT,
+                'You must specify a user to timeout.',
+                { subtype: 'invalid_user' },
+            );
         }
-    }
+
+        if (targetUser.id === interaction.user.id) {
+            throw new TitanBotError(
+                "Cannot timeout self",
+                ErrorTypes.VALIDATION,
+                "You cannot timeout yourself.",
+            );
+        }
+        if (targetUser.id === client.user.id) {
+            throw new TitanBotError(
+                "Cannot timeout bot",
+                ErrorTypes.VALIDATION,
+                "You cannot timeout the bot.",
+            );
+        }
+        if (!member) {
+            throw new TitanBotError(
+                "Target not found",
+                ErrorTypes.USER_INPUT,
+                "The target user is not currently in this server.",
+            );
+        }
+
+        const durationMs = durationMinutes * 60 * 1000;
+        const result = await ModerationService.timeoutUser({
+            guild: interaction.guild,
+            member,
+            moderator: interaction.member,
+            durationMs,
+            reason,
+        });
+
+        const durationDisplay =
+            durationChoices.find((c) => c.value === durationMinutes)
+                ?.name || `${durationMinutes} minutes`;
+
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [
+                successEmbed(
+                    `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
+                    `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
+                ),
+            ],
+        });
+    },
 };

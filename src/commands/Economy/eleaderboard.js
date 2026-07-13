@@ -3,6 +3,7 @@ import { createEmbed } from '../../utils/embeds.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getEconomyPrefix } from '../../utils/database.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -18,7 +19,7 @@ export default {
 
             logger.debug(`[ECONOMY] Leaderboard requested`, { guildId });
 
-            const prefix = `economy:${guildId}:`;
+            const prefix = getEconomyPrefix(guildId);
 
             let allKeys = await client.db.list(prefix);
 

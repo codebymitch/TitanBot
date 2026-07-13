@@ -100,6 +100,11 @@ async function handleMusicButton(interaction, client) {
                 await applyResume(client, interaction.guild.id);
                 break;
             case MUSIC_BUTTON_IDS.SKIP:
+                // Under track-loop, stop() would replay the same track. Clear it so the
+                // skip advances; trackStart re-applies the stored loop to the next track.
+                if (player.loop === 'track') {
+                    player.setLoop('none');
+                }
                 player.stop();
                 break;
             case MUSIC_BUTTON_IDS.STOP:
@@ -132,7 +137,11 @@ async function handleMusicButton(interaction, client) {
                 break;
         }
     } catch (error) {
-        logger.error('Music button handler error:', error);
+        await handleInteractionError(interaction, error, {
+            type: 'button',
+            customId: interaction.customId,
+            handler: 'music',
+        });
     }
 }
 

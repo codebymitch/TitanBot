@@ -5,6 +5,7 @@ import { getServerCounters, saveServerCounters, getCounterEmoji as getCounterTyp
 import { logger } from '../../../utils/logger.js';
 
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
+import { replyUserError, ErrorTypes } from '../../../utils/errorHandler.js';
 export async function handleList(interaction, client) {
     const guild = interaction.guild;
 
@@ -45,7 +46,7 @@ export async function handleList(interaction, client) {
         if (validCounters.length === 0) {
             const embed = createEmbed({
                 title: "Server Counters",
-                description: "No counters have been set up for this server yet.\n\nUse `/counter create` to set up your first counter!",
+                description: "No counters have been set up for this server yet.\n\nUse `/serverstats create` to set up your first counter!",
                 color: getColor('warning')
             });
 
@@ -57,7 +58,7 @@ export async function handleList(interaction, client) {
 
             embed.addFields({
                 name: "**Usage Examples**",
-                value: "`/counter create type:members channel_type:voice category:Stats`\n`/counter create type:bots channel_type:text category:Server Info`\n`/counter list`",
+                value: "`/serverstats create type:members channel_type:voice category:Stats`\n`/serverstats create type:bots channel_type:text category:Server Info`\n`/serverstats list`",
                 inline: false
             });
 
@@ -106,7 +107,7 @@ export async function handleList(interaction, client) {
 
         embed.addFields({
             name: "**Management Commands**",
-            value: "`/counter create` - Create new counter\n`/counter update` - Update existing counter\n`/counter delete` - Delete counter",
+            value: "`/serverstats create` - Create new counter\n`/serverstats update` - Update existing counter\n`/serverstats delete` - Delete counter",
             inline: false
         });
 

@@ -1,5 +1,5 @@
-import { PermissionsBitField, EmbedBuilder } from 'discord.js';
-import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
+import { PermissionsBitField, EmbedBuilder, MessageFlags } from 'discord.js';
+import { getGuildConfig, setGuildConfig } from '../../../services/config/guildConfig.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
 

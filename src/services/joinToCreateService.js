@@ -10,7 +10,7 @@ import {
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
-import { formatLogLine } from '../utils/logEmbeds.js';
+import { formatLogLine } from '../utils/logging/logEmbeds.js';
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
 
 const CHANNEL_NAME_MAX_LENGTH = 100;

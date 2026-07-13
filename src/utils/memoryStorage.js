@@ -41,7 +41,7 @@ class MemoryStorage {
 
     async list(prefix) {
         const keys = [];
-        for (const [key] of this.data.keys()) {
+        for (const key of this.data.keys()) {
             if (key.startsWith(prefix)) {
                 if (this.expirationTimes.has(key)) {
                     const expirationTime = this.expirationTimes.get(key);

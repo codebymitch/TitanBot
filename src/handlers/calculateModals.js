@@ -2,6 +2,7 @@ import { successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 import { evaluateMathExpression } from '../utils/safeMathParser.js';
 
+import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
 function evaluate(expression) {
     return evaluateMathExpression(expression);
 }

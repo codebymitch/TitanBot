@@ -18,9 +18,9 @@ import {
   updateIgnoreList,
   getIgnoreList,
 } from '../services/loggingService.js';
-import { getGuildConfig } from '../services/guildConfig.js';
+import { getGuildConfig } from '../services/config/guildConfig.js';
 import { successEmbed } from '../utils/embeds.js';
-import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
+import { replyUserError, ErrorTypes, handleInteractionError } from '../utils/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import {
   buildLoggingDashboardView,
@@ -77,11 +77,11 @@ export default {
         return handleToggle(interaction);
       }
     } catch (error) {
-      logger.error('Error in logging button handler:', error);
-      await interaction.reply({
-        content: '❌ An error occurred while processing your request.',
-        ephemeral: true,
-      }).catch(() => {});
+      await handleInteractionError(interaction, error, {
+        type: 'button',
+        customId: interaction.customId,
+        handler: 'logging',
+      });
     }
   },
 };
@@ -365,11 +365,11 @@ async function showChannelModal(interaction, destination) {
     if (error.code === 'INTERACTION_TIMEOUT') {
       return;
     }
-    logger.error('Error in logging channel modal:', error);
-    await interaction.followUp({
-      content: '❌ Failed to update the log channel.',
-      flags: MessageFlags.Ephemeral,
-    }).catch(() => {});
+    await handleInteractionError(interaction, error, {
+      type: 'modal',
+      customId: interaction.customId,
+      handler: 'logging_channel',
+    });
   }
 }
 

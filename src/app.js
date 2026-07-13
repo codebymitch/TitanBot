@@ -6,16 +6,17 @@ import cron from 'node-cron';
 
 import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
-import { getGuildConfig } from './services/guildConfig.js';
+import { getGuildConfig } from './services/config/guildConfig.js';
 import { getServerCounters, saveServerCounters, updateCounter } from './services/serverstatsService.js';
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
-import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
+import { loadCommands, registerCommands as registerSlashCommands } from './handlers/loaders/commandLoader.js';
+import { runSafeTask, handleTaskError, ErrorCodes } from './utils/errorHandler.js';
 import { initializeMusic } from './services/music/riffySetup.js';
 import { shutdownMusic } from './services/music/playerHandler.js';
 import pkg from '../package.json' with { type: 'json' };
-import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/schemaVersion.js';
+import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/database/schemaVersion.js';
 
 class TitanBot extends Client {
   constructor() {
@@ -89,13 +90,8 @@ class TitanBot extends Client {
       await this.login(this.config.bot.token);
       startupLog('Discord login successful');
       
-      startupLog('Registering slash commands...');
+      startupLog('Registering slash commands globally...');
       await this.registerCommands();
-      if (this.config.bot.multiGuild) {
-        startupLog('Multi-guild mode enabled — slash commands registered globally');
-      } else if (this.config.bot.guildId) {
-        startupLog(`Single-guild mode — slash commands registered for guild ${this.config.bot.guildId}`);
-      }
       startupLog('Slash commands registration complete');
       
       const databaseMode = dbStatus.isDegraded
@@ -137,7 +133,7 @@ class TitanBot extends Client {
     });
 
     const requestCounts = new Map();
-    const windowMs = 60000; 
+    const windowMs = this.config.api?.rateLimit?.windowMs || 60000;
     const maxRequests = this.config.api?.rateLimit?.max || 100;
     
     app.use((req, res, next) => {
@@ -252,9 +248,9 @@ class TitanBot extends Client {
   }
 
   setupCronJobs() {
-    cron.schedule('0 6 * * *', () => checkBirthdays(this));
-    cron.schedule('* * * * *', () => checkGiveaways(this));
-    cron.schedule('*/15 * * * *', () => this.updateAllCounters());
+    cron.schedule('0 6 * * *', runSafeTask('birthday_check', () => checkBirthdays(this)));
+    cron.schedule('* * * * *', runSafeTask('giveaway_check', () => checkGiveaways(this)));
+    cron.schedule('*/15 * * * *', runSafeTask('counter_update', () => this.updateAllCounters()));
   }
 
   async updateAllCounters() {
@@ -304,7 +300,7 @@ class TitanBot extends Client {
     for (const handler of handlers) {
       try {
         startupLog(`Loading handler: ${handler.path}`);
-        const module = await import(`./handlers/${handler.path}.js`);
+        const module = await import(`./handlers/loaders/${handler.path}.js`);
         const loaderFn = handler.type.startsWith('named:')
           ? module[handler.type.split(':')[1]]
           : module.default;
@@ -328,8 +324,7 @@ class TitanBot extends Client {
 
   async registerCommands() {
     try {
-      const { clientId, guildId, multiGuild } = this.config.bot;
-      await registerSlashCommands(this, { clientId, guildId, multiGuild });
+      await registerSlashCommands(this, { clientId: this.config.bot.clientId });
     } catch (error) {
       logger.error('Error registering commands:', error);
     }
@@ -350,6 +345,12 @@ class TitanBot extends Client {
       logger.info('Stopping music players...');
       await shutdownMusic(this);
       logger.info('✅ Music players stopped');
+
+      if (this.webServer) {
+        logger.info('Closing web server...');
+        await new Promise((resolve) => this.webServer.close(resolve));
+        logger.info('✅ Web server closed');
+      }
 
       // Close database connection
       // Close database connection
@@ -394,11 +395,12 @@ try {
     process.on('SIGINT', () => bot.shutdown('SIGINT'));
     
     process.on('uncaughtException', (error) => {
-      logger.error('Uncaught Exception:', error);
+      // Process state may be corrupt after an uncaught throw; log and shut down cleanly.
+      handleTaskError('uncaught_exception', error, { fatal: true });
       bot.shutdown('UNCAUGHT_EXCEPTION');
     });
-    
-    process.on('unhandledRejection', (reason, promise) => {
+
+    process.on('unhandledRejection', (reason) => {
       const code = reason?.code;
       if (code === 10062 || code === 40060 || code === 50027) {
         logger.warn('Recoverable Discord interaction rejection:', reason?.message || reason);
@@ -408,8 +410,11 @@ try {
         return;
       }
 
-      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      bot.shutdown('UNHANDLED_REJECTION');
+      // A stray rejection is a bug to fix, not a reason to take the bot down.
+      // Log loudly with full context; the central task handler categorizes it.
+      handleTaskError('unhandled_rejection', reason instanceof Error ? reason : new Error(String(reason)), {
+        errorCode: ErrorCodes.UNHANDLED_REJECTION,
+      });
     });
   };
   

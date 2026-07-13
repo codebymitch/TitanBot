@@ -1,9 +1,15 @@
 import { Events, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { getGuildConfig } from '../services/guildConfig.js';
+import { getGuildConfig } from '../services/config/guildConfig.js';
+import {
+  getBotMessage,
+  isBotOwner,
+  isCommandCategoryEnabled,
+  isMaintenanceMode,
+} from '../config/bot.js';
+import botConfig from '../config/bot.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
-import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
-import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
+import { handleInteractionError, createError, ErrorTypes, ErrorCodes } from '../utils/errorHandler.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createInteractionTraceContext, runWithTraceContext } from '../utils/logger.js';
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
@@ -13,6 +19,22 @@ import { resolveSlashAccessKey } from '../utils/messageAdapter.js';
 import { isCollectorManagedComponent } from '../utils/collectorComponents.js';
 import { ResponseCoordinator } from '../utils/responseCoordinator.js';
 import { enforceDefaultCommandPermissions } from '../utils/permissionGuard.js';
+
+const COMMAND_ERROR_SUBTYPES = {
+  warn: 'warn_failed',
+  kick: 'kick_failed',
+  ban: 'ban_failed',
+  unban: 'unban_failed',
+  timeout: 'timeout_failed',
+  untimeout: 'untimeout_failed',
+  warnings: 'warnings_view_failed',
+  ticket: 'ticket_failed',
+  serverstats: 'serverstats_failed',
+  gcreate: 'giveaway_failed',
+  gend: 'giveaway_failed',
+  gdelete: 'giveaway_failed',
+  greroll: 'giveaway_failed',
+};
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -62,6 +84,42 @@ export default {
               );
             }
 
+            if (isMaintenanceMode() && !isBotOwner(interaction.user.id)) {
+              throw createError(
+                'Bot is in maintenance mode',
+                ErrorTypes.CONFIGURATION,
+                getBotMessage('maintenanceMode'),
+                withTraceContext({ commandName: interaction.commandName }, interactionTraceContext)
+              );
+            }
+
+            if (!isCommandCategoryEnabled(command.category)) {
+              throw createError(
+                `Feature disabled for category ${command.category}`,
+                ErrorTypes.CONFIGURATION,
+                getBotMessage('commandDisabled'),
+                withTraceContext({ commandName: interaction.commandName, category: command.category }, interactionTraceContext)
+              );
+            }
+
+            const defaultCooldownSec = Number(botConfig.commands?.defaultCooldown) || 0;
+            if (defaultCooldownSec > 0 && !isBotOwner(interaction.user.id)) {
+              const cooldownKey = `${interaction.user.id}:${interaction.commandName}`;
+              const expiresAt = client.cooldowns.get(cooldownKey);
+
+              if (expiresAt && Date.now() < expiresAt) {
+                const remainingSec = Math.ceil((expiresAt - Date.now()) / 1000);
+                throw createError(
+                  `Default command cooldown active for ${interaction.commandName}`,
+                  ErrorTypes.RATE_LIMIT,
+                  getBotMessage('cooldownActive', { time: `${remainingSec}s` }),
+                  withTraceContext({ commandName: interaction.commandName, remainingSec }, interactionTraceContext)
+                );
+              }
+
+              client.cooldowns.set(cooldownKey, Date.now() + defaultCooldownSec * 1000);
+            }
+
             const abuseProtection = await enforceAbuseProtection(interaction, command, interaction.commandName);
             if (!abuseProtection.allowed) {
               const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
@@ -106,7 +164,8 @@ export default {
           } catch (error) {
             await handleInteractionError(interaction, error, withTraceContext({
               type: 'command',
-              commandName: interaction.commandName
+              commandName: interaction.commandName,
+              subtype: COMMAND_ERROR_SUBTYPES[interaction.commandName] || error?.context?.subtype,
             }, interactionTraceContext));
           }
         } else if (interaction.isAutocomplete()) {
@@ -339,21 +398,9 @@ export default {
             return;
           }
 
-          if (interaction.customId.startsWith('app_review_')) {
-            try {
-              await handleApplicationReviewModal(interaction);
-            } catch (error) {
-              await handleInteractionError(interaction, error, withTraceContext({
-                type: 'modal',
-                customId: interaction.customId,
-                handler: 'application_review'
-              }, interactionTraceContext));
-            }
-            return;
-          }
-
           if (
-            interaction.customId.startsWith('jtc_')
+            interaction.customId.startsWith('app_review_')
+            || interaction.customId.startsWith('jtc_')
             || interaction.customId.startsWith('config_wizard_modal:')
             || interaction.customId.startsWith('log_dash_channel_modal:')
             || interaction.customId.startsWith('log_dash_filter_modal:')
@@ -395,7 +442,7 @@ export default {
       } catch (error) {
         logger.error('Unhandled error in interactionCreate:', {
           event: 'interaction.unhandled_error',
-          errorCode: 'INTERACTION_UNHANDLED_ERROR',
+          errorCode: ErrorCodes.INTERACTION_UNHANDLED,
           error,
           traceId: interactionTraceContext.traceId,
           interactionId: interaction.id,
@@ -413,7 +460,7 @@ export default {
         } catch (replyError) {
           logger.error('Failed to send fallback error response:', {
             event: 'interaction.error_response_failed',
-            errorCode: 'INTERACTION_ERROR_RESPONSE_FAILED',
+            errorCode: ErrorCodes.INTERACTION_RESPONSE_FAILED,
             error: replyError,
             traceId: interactionTraceContext.traceId
           });

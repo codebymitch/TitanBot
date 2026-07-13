@@ -1,7 +1,7 @@
 // birthdayService.js
 
-import { getGuildConfig } from './guildConfig.js';
-import { getGuildBirthdays, setBirthday as dbSetBirthday, deleteBirthday as dbDeleteBirthday, getMonthName } from '../utils/database.js';
+import { getGuildConfig } from './config/guildConfig.js';
+import { getGuildBirthdays, setBirthday as dbSetBirthday, deleteBirthday as dbDeleteBirthday, getMonthName, getBirthdayTrackingKey } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 
@@ -82,7 +82,6 @@ export async function setBirthday(client, guildId, userId, month, day) {
     });
 
     return {
-      success: true,
       data: {
         month,
         day,
@@ -164,9 +163,7 @@ export async function deleteBirthday(client, guildId, userId) {
     
     if (!birthday) {
       return {
-        success: false,
-        notFound: true,
-        message: 'No birthday found to remove'
+        status: 'not_found',
       };
     }
 
@@ -187,8 +184,7 @@ export async function deleteBirthday(client, guildId, userId) {
     });
 
     return {
-      success: true,
-      message: 'Birthday removed successfully'
+      status: 'removed',
     };
   } catch (error) {
     logger.error('Error in deleteBirthday service', {
@@ -289,9 +285,10 @@ export async function checkBirthdays(client) {
       const config = await getGuildConfig(client, guildId);
       const { birthdayChannelId, birthdayRoleId } = config;
 
-      if (!birthdayChannelId || !birthdayRoleId) {
+      // A channel is required for announcements; the birthday role is optional.
+      if (!birthdayChannelId) {
         if (process.env.NODE_ENV !== 'production') {
-          logger.debug(`Skipping birthday check for ${guild.name}: Missing channel or role config.`);
+          logger.debug(`Skipping birthday check for ${guild.name}: Missing channel config.`);
         }
         continue;
       }
@@ -299,15 +296,17 @@ export async function checkBirthdays(client) {
       const channel = await guild.channels.fetch(birthdayChannelId).catch(() => null);
       if (!channel) continue;
 
-      const trackingKey = `bday-role-tracking-${guildId}`;
+      const trackingKey = getBirthdayTrackingKey(guildId);
       const trackingData = (await client.db.get(trackingKey)) || {};
       const updatedTrackingData = { ...trackingData };
       
       for (const userId of Object.keys(trackingData)) {
         try {
-          const member = await guild.members.fetch(userId).catch(() => null);
-          if (member && member.roles.cache.has(birthdayRoleId)) {
-            await member.roles.remove(birthdayRoleId, "Birthday role expired");
+          if (birthdayRoleId) {
+            const member = await guild.members.fetch(userId).catch(() => null);
+            if (member && member.roles.cache.has(birthdayRoleId)) {
+              await member.roles.remove(birthdayRoleId, "Birthday role expired");
+            }
           }
           delete updatedTrackingData[userId];
         } catch (error) {
@@ -319,19 +318,21 @@ export async function checkBirthdays(client) {
         await client.db.set(trackingKey, updatedTrackingData);
       }
 
-      const birthdaysKey = `birthdays:${guildId}`;
-      const birthdays = (await client.db.get(birthdaysKey)) || {};
+      // Use the canonical birthday storage (guild:<id>:birthdays) that set/remove commands write to.
+      const birthdays = (await getGuildBirthdays(client, guildId)) || {};
       const birthdayMembers = [];
       for (const [userId, userData] of Object.entries(birthdays)) {
         if (userData.month === currentMonth && userData.day === currentDay) {
           const member = await guild.members.fetch(userId).catch(() => null);
           if (member) {
             birthdayMembers.push(member);
-            try {
-              await member.roles.add(birthdayRoleId, "Happy Birthday! 🎉");
-              updatedTrackingData[userId] = true;
-            } catch (error) {
-                logger.error(`Error adding birthday role to ${member.user.tag}:`, error);
+            if (birthdayRoleId) {
+              try {
+                await member.roles.add(birthdayRoleId, "Happy Birthday! 🎉");
+                updatedTrackingData[userId] = true;
+              } catch (error) {
+                  logger.error(`Error adding birthday role to ${member.user.tag}:`, error);
+              }
             }
           }
         }

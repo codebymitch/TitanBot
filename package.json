@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
-    "test": "node --test tests/**/*.test.js",
     "migrate": "node scripts/migrate.js apply",
     "migrate:check": "node scripts/migrate.js check",
     "migrate:status": "node scripts/migrate.js status",
+    "migrate:keys": "node scripts/migrate-keys.js",
+    "migrate:keys:dry": "node scripts/migrate-keys.js --dry-run",
     "backup:db": "node scripts/backup.js",
     "restore:db": "node scripts/restore.js",
     "backup:drill": "node scripts/restore-drill.js"
@@ -28,6 +29,10 @@
     "riffy": "1.0.12"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.10.0"
+  },
+  "overrides": {
+    "form-data": "^4.0.6",
+    "undici": "^6.27.0"
   }
 }

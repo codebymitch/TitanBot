@@ -3,11 +3,12 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
-import { getColor } from '../config/bot.js';
+import { getColor, botConfig } from '../config/bot.js';
 import { getEndedGiveaways, markGiveawayEnded } from '../utils/database.js';
 import { checkRateLimit, getRateLimitStatus } from '../utils/rateLimiter.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
+const GIVEAWAY_CONFIG = botConfig.giveaways || {};
 const GIVEAWAY_INTERACTION_COOLDOWN = 1000;
 
 function getGiveawayInteractionKey(userId, giveawayId) {
@@ -71,22 +72,22 @@ export function parseDuration(durationString) {
             );
     }
 
-    const maxDuration = 30 * 24 * 60 * 60 * 1000; 
+    const maxDuration = GIVEAWAY_CONFIG.maximumDuration ?? 30 * 24 * 60 * 60 * 1000;
     if (ms > maxDuration) {
         throw new TitanBotError(
             `Duration exceeds maximum: ${ms}ms > ${maxDuration}ms`,
             ErrorTypes.VALIDATION,
-            'Maximum duration is 30 days.',
+            `Maximum duration is ${Math.floor(maxDuration / (24 * 60 * 60 * 1000))} days.`,
             { requestedMs: ms, maxMs: maxDuration }
         );
     }
 
-    const minDuration = 10 * 1000; 
+    const minDuration = GIVEAWAY_CONFIG.minimumDuration ?? 10 * 1000;
     if (ms < minDuration) {
         throw new TitanBotError(
             `Duration below minimum: ${ms}ms < ${minDuration}ms`,
             ErrorTypes.VALIDATION,
-            'Minimum duration is 10 seconds.',
+            `Minimum duration is ${Math.ceil(minDuration / 1000)} seconds.`,
             { requestedMs: ms, minMs: minDuration }
         );
     }
@@ -118,12 +119,15 @@ export function validatePrize(prize) {
 }
 
 export function validateWinnerCount(winnerCount) {
-    if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 10) {
+    const minimumWinners = GIVEAWAY_CONFIG.minimumWinners ?? 1;
+    const maximumWinners = GIVEAWAY_CONFIG.maximumWinners ?? 10;
+
+    if (!Number.isInteger(winnerCount) || winnerCount < minimumWinners || winnerCount > maximumWinners) {
         throw new TitanBotError(
             `Invalid winner count: ${winnerCount}`,
             ErrorTypes.VALIDATION,
-            'Winner count must be between 1 and 10.',
-            { winnerCount }
+            `Winner count must be between ${minimumWinners} and ${maximumWinners}.`,
+            { winnerCount, minimumWinners, maximumWinners }
         );
     }
 }
@@ -301,7 +305,6 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
         logger.info(`Ending giveaway ${giveaway.messageId}: selected ${winners.length} winners from ${participants.length} entries`);
 
         return {
-            success: true,
             giveaway: updatedGiveaway,
             winners: winners,
             participantCount: participants.length

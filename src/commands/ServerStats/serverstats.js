@@ -9,6 +9,7 @@ import { handleUpdate } from './modules/serverstats_update.js';
 import { handleDelete } from './modules/serverstats_delete.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("serverstats")
@@ -89,37 +90,21 @@ export default {
     async execute(interaction, guildConfig, client) {
         const subcommand = interaction.options.getSubcommand();
 
-        try {
-            switch (subcommand) {
-                case "create":
-                    await handleCreate(interaction, client);
-                    break;
-                case "list":
-                    await handleList(interaction, client);
-                    break;
-                case "update":
-                    await handleUpdate(interaction, client);
-                    break;
-                case "delete":
-                    await handleDelete(interaction, client);
-                    break;
-                default:
-                    await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Unknown subcommand.' });
-            }
-        } catch (error) {
-            logger.error(`Error in serverstats ${subcommand}:`, error);
-            
-            const errorEmbedMsg = createEmbed({ 
-                title: "❌ Error", 
-                description: "An error occurred while processing your request.",
-                color: getColor('error')
-            });
-
-            if (!interaction.replied && !interaction.deferred) {
-                await InteractionHelper.safeReply(interaction, { embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
-            } else {
-                await interaction.followUp({ embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
-            }
+        switch (subcommand) {
+            case "create":
+                await handleCreate(interaction, client);
+                break;
+            case "list":
+                await handleList(interaction, client);
+                break;
+            case "update":
+                await handleUpdate(interaction, client);
+                break;
+            case "delete":
+                await handleDelete(interaction, client);
+                break;
+            default:
+                await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Unknown subcommand.' });
         }
     }
 };

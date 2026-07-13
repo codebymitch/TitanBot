@@ -5,10 +5,8 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const CRIME_COOLDOWN = 60 * 60 * 1000;
-const MIN_CRIME_AMOUNT = 100;
-const MAX_CRIME_AMOUNT = 2000;
-const FAILURE_RATE = 0.4;
 const JAIL_TIME = 2 * 60 * 60 * 1000;
+const FINE_RATE = 0.2;
 
 const CRIME_TYPES = [
     { name: "Pickpocketing", min: 100, max: 500, risk: 0.3 },
@@ -101,7 +99,9 @@ export default {
                 
                 await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             } else {
-                const fine = Math.floor(amountEarned * 0.2);
+                // Fine is based on the potential haul of the attempted crime
+                const potentialHaul = Math.floor((crime.min + crime.max) / 2);
+                const fine = Math.min(Math.floor(potentialHaul * FINE_RATE), userData.wallet || 0);
                 userData.wallet = Math.max(0, (userData.wallet || 0) - fine);
                 userData.jailedUntil = now + JAIL_TIME;
                 
@@ -109,8 +109,8 @@ export default {
                 
                 const embed = warningEmbed(
                     "🚔 Crime Failed!",
-                    `You were caught while attempting ${crime.name} and have been sent to jail!` +
-                    `You were fined ${fine} coins and will be in jail for 2 hours.`
+                    `You were caught while attempting ${crime.name} and have been sent to jail! ` +
+                    `You were fined ${fine.toLocaleString()} coins and will be in jail for 2 hours.`
                 );
                 
                 await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });

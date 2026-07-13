@@ -8,16 +8,46 @@ import {
   PermissionFlagsBits,
   AttachmentBuilder,
 } from 'discord.js';
-import { buildStandardLogEmbed, formatLogLine } from '../utils/logEmbeds.js';
-import { getGuildConfig } from './guildConfig.js';
+import { buildStandardLogEmbed, formatLogLine } from '../utils/logging/logEmbeds.js';
+import { getGuildConfig } from './config/guildConfig.js';
 import { getTicketData, saveTicketData, deleteTicketData, getOpenTicketCountForUser, incrementTicketCounter } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 import { createEmbed, errorEmbed } from '../utils/embeds.js';
-import { logTicketEvent } from '../utils/ticketLogging.js';
-import { ensureTypedServiceError } from '../utils/serviceErrorBoundary.js';
+import { logTicketEvent } from '../utils/ticket/ticketLogging.js';
+import { createError, ErrorTypes } from '../utils/errorHandler.js';
+import { ensureTypedServiceError, wrapServiceBoundary } from '../utils/serviceErrorBoundary.js';
 import { PRIORITY_MAP } from '../utils/helpers.js';
 const TICKET_DELETE_DELAY_MS = 3000;
 const TICKET_DELETE_DELAY_SECONDS = Math.floor(TICKET_DELETE_DELAY_MS / 1000);
+const TICKET_SERVICE = 'ticketService';
+
+function ticketUserError(message, userMessage, type = ErrorTypes.VALIDATION, context = {}) {
+  throw createError(message, type, userMessage, { service: TICKET_SERVICE, ...context });
+}
+
+function requireTicket(ticketData, channel) {
+  if (!ticketData) {
+    ticketUserError(
+      'Not a ticket channel',
+      'This is not a ticket channel.',
+      ErrorTypes.VALIDATION,
+      { channelId: channel?.id, guildId: channel?.guild?.id }
+    );
+  }
+  return ticketData;
+}
+
+function rethrowTicketError(error, operation, userMessage, context = {}) {
+  throw ensureTypedServiceError(error, {
+    service: TICKET_SERVICE,
+    operation,
+    message: `Ticket operation failed: ${operation}`,
+    userMessage,
+    context,
+  });
+}
+
+
 
 function buildTicketControlRow({ claimedBy = null } = {}) {
   return new ActionRowBuilder().addComponents(
@@ -40,26 +70,14 @@ function buildTicketControlRow({ claimedBy = null } = {}) {
   );
 }
 
-export async function getUserTicketCount(guildId, userId) {
-  try {
-    return await getOpenTicketCountForUser(guildId, userId);
-  } catch (error) {
-    const typedError = ensureTypedServiceError(error, {
-      service: 'ticketService',
-      operation: 'getUserTicketCount',
-      message: 'Ticket operation failed: getUserTicketCount',
-      userMessage: 'Failed to count open tickets.',
-      context: { guildId, userId }
-    });
-    logger.error('Error counting user tickets:', {
-      guildId,
-      userId,
-      error: typedError.message,
-      errorCode: typedError.context?.errorCode
-    });
-    return 0;
-  }
-}
+export const getUserTicketCount = wrapServiceBoundary(async function getUserTicketCount(guildId, userId) {
+  return await getOpenTicketCountForUser(guildId, userId);
+}, {
+  service: TICKET_SERVICE,
+  operation: 'getUserTicketCount',
+  userMessage: 'Failed to count open tickets.',
+  context: {},
+});
 
 export async function createTicket(guild, member, categoryId, reason = 'No reason provided', priority = 'none') {
   try {
@@ -70,10 +88,12 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     const currentTicketCount = await getUserTicketCount(guild.id, member.id);
     
     if (currentTicketCount >= maxTicketsPerUser) {
-      return {
-        success: false,
-        error: `You have reached the maximum number of open tickets (${maxTicketsPerUser}). Please close your existing tickets before creating a new one.`
-      };
+      ticketUserError(
+        `Max open tickets reached for ${member.id}`,
+        `You have reached the maximum number of open tickets (${maxTicketsPerUser}). Please close your existing tickets before creating a new one.`,
+        ErrorTypes.VALIDATION,
+        { guildId: guild.id, userId: member.id, operation: 'createTicket' }
+      );
     }
     
     let category = categoryId ? 
@@ -209,36 +229,16 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       }
     });
     
-    return { success: true, channel, ticketData };
+    return { channel, ticketData };
     
   } catch (error) {
-    const typedError = ensureTypedServiceError(error, {
-      service: 'ticketService',
-      operation: 'createTicket',
-      message: 'Ticket operation failed: createTicket',
-      userMessage: 'Failed to create ticket. Please try again in a moment.',
-      context: { guildId: guild?.id, userId: member?.id }
-    });
-    logger.error('Error creating ticket:', {
-      guildId: guild?.id,
-      userId: member?.id,
-      error: typedError.message,
-      errorCode: typedError.context?.errorCode
-    });
-    return { 
-      success: false, 
-      error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
-    };
+    rethrowTicketError(error, 'createTicket', 'Failed to create ticket. Please try again in a moment.', { guildId: guild?.id, userId: member?.id });
   }
 }
 
 export async function closeTicket(channel, closer, reason = 'No reason provided') {
   try {
-    const ticketData = await getTicketData(channel.guild.id, channel.id);
-    if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
-    }
+    const ticketData = requireTicket(await getTicketData(channel.guild.id, channel.id), channel);
     
     const config = await getGuildConfig(channel.client, channel.guild.id);
     const dmOnClose = config.dmOnClose !== false;
@@ -411,43 +411,24 @@ components: []
       }
     });
     
-    return { success: true, ticketData };
+    return ticketData;
     
   } catch (error) {
-    const typedError = ensureTypedServiceError(error, {
-      service: 'ticketService',
-      operation: 'closeTicket',
-      message: 'Ticket operation failed: closeTicket',
-      userMessage: 'Failed to close ticket. Please try again in a moment.',
-      context: { guildId: channel?.guild?.id, channelId: channel?.id, closerId: closer?.id }
-    });
-    logger.error('Error closing ticket:', {
-      guildId: channel?.guild?.id,
-      channelId: channel?.id,
-      userId: closer?.id,
-      error: typedError.message,
-      errorCode: typedError.context?.errorCode
-    });
-    return { 
-      success: false, 
-      error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
-    };
+    rethrowTicketError(error, 'closeTicket', 'Failed to close ticket. Please try again in a moment.', { guildId: channel?.guild?.id, channelId: channel?.id, closerId: closer?.id });
   }
 }
 
 export async function claimTicket(channel, claimer) {
   try {
-    const ticketData = await getTicketData(channel.guild.id, channel.id);
-    if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
-    }
+    const ticketData = requireTicket(await getTicketData(channel.guild.id, channel.id), channel);
     
     if (ticketData.claimedBy) {
-      return { 
-        success: false, 
-        error: `This ticket is already claimed by <@${ticketData.claimedBy}>` 
-      };
+      ticketUserError(
+        'Ticket already claimed',
+        `This ticket is already claimed by <@${ticketData.claimedBy}>`,
+        ErrorTypes.VALIDATION,
+        { channelId: channel.id, claimedBy: ticketData.claimedBy, operation: 'claimTicket' }
+      );
     }
     
     ticketData.claimedBy = claimer.id;
@@ -517,43 +498,24 @@ export async function claimTicket(channel, claimer) {
       }
     });
     
-    return { success: true, ticketData };
+    return ticketData;
     
   } catch (error) {
-    const typedError = ensureTypedServiceError(error, {
-      service: 'ticketService',
-      operation: 'claimTicket',
-      message: 'Ticket operation failed: claimTicket',
-      userMessage: 'Failed to claim ticket. Please try again in a moment.',
-      context: { guildId: channel?.guild?.id, channelId: channel?.id, claimerId: claimer?.id }
-    });
-    logger.error('Error claiming ticket:', {
-      guildId: channel?.guild?.id,
-      channelId: channel?.id,
-      userId: claimer?.id,
-      error: typedError.message,
-      errorCode: typedError.context?.errorCode
-    });
-    return { 
-      success: false, 
-      error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
-    };
+    rethrowTicketError(error, 'claimTicket', 'Failed to claim ticket. Please try again in a moment.', { guildId: channel?.guild?.id, channelId: channel?.id, claimerId: claimer?.id });
   }
 }
 
 export async function reopenTicket(channel, reopener) {
   try {
-    const ticketData = await getTicketData(channel.guild.id, channel.id);
-    if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
-    }
+    const ticketData = requireTicket(await getTicketData(channel.guild.id, channel.id), channel);
     
     if (ticketData.status !== 'closed') {
-      return { 
-        success: false, 
-        error: 'This ticket is not currently closed' 
-      };
+      ticketUserError(
+        'Ticket not closed',
+        'This ticket is not currently closed.',
+        ErrorTypes.VALIDATION,
+        { channelId: channel.id, operation: 'reopenTicket' }
+      );
     }
 
     const config = await getGuildConfig(channel.client, channel.guild.id);
@@ -641,33 +603,10 @@ export async function reopenTicket(channel, reopener) {
       await channel.send({ embeds: [reopenEmbed] });
     }
     
-    return {
-      success: true,
-      ticketData,
-      movedToOpenCategory,
-      openCategoryMoveFailed
-    };
+    return { ticketData, movedToOpenCategory, openCategoryMoveFailed };
     
   } catch (error) {
-    const typedError = ensureTypedServiceError(error, {
-      service: 'ticketService',
-      operation: 'reopenTicket',
-      message: 'Ticket operation failed: reopenTicket',
-      userMessage: 'Failed to reopen ticket. Please try again in a moment.',
-      context: { guildId: channel?.guild?.id, channelId: channel?.id, reopenerId: reopener?.id }
-    });
-    logger.error('Error reopening ticket:', {
-      guildId: channel?.guild?.id,
-      channelId: channel?.id,
-      userId: reopener?.id,
-      error: typedError.message,
-      errorCode: typedError.context?.errorCode
-    });
-    return { 
-      success: false, 
-      error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
-    };
+    rethrowTicketError(error, 'reopenTicket', 'Failed to reopen ticket. Please try again in a moment.', { guildId: channel?.guild?.id, channelId: channel?.id, reopenerId: reopener?.id });
   }
 }
 
@@ -768,10 +707,7 @@ ${rows}
 
 export async function deleteTicket(channel, deleter) {
   try {
-    const ticketData = await getTicketData(channel.guild.id, channel.id);
-    if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
-    }
+    const ticketData = requireTicket(await getTicketData(channel.guild.id, channel.id), channel);
     
     const deleteEmbed = createEmbed({
       title: 'Ticket Deleted',
@@ -913,50 +849,33 @@ export async function deleteTicket(channel, deleter) {
       }
     }, TICKET_DELETE_DELAY_MS);
     
-    return { success: true, ticketData };
+    return ticketData;
     
   } catch (error) {
-    const typedError = ensureTypedServiceError(error, {
-      service: 'ticketService',
-      operation: 'deleteTicket',
-      message: 'Ticket operation failed: deleteTicket',
-      userMessage: 'Failed to delete ticket. Please try again in a moment.',
-      context: { guildId: channel?.guild?.id, channelId: channel?.id, deleterId: deleter?.id }
-    });
-    logger.error('Error deleting ticket:', {
-      guildId: channel?.guild?.id,
-      channelId: channel?.id,
-      userId: deleter?.id,
-      error: typedError.message,
-      errorCode: typedError.context?.errorCode
-    });
-    return { 
-      success: false, 
-      error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
-    };
+    rethrowTicketError(error, 'deleteTicket', 'Failed to delete ticket. Please try again in a moment.', { guildId: channel?.guild?.id, channelId: channel?.id, deleterId: deleter?.id });
   }
 }
 
 export async function unclaimTicket(channel, unclaimer) {
   try {
-    const ticketData = await getTicketData(channel.guild.id, channel.id);
-    if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
-    }
+    const ticketData = requireTicket(await getTicketData(channel.guild.id, channel.id), channel);
     
     if (!ticketData.claimedBy) {
-      return { 
-        success: false, 
-        error: 'This ticket is not currently claimed' 
-      };
+      ticketUserError(
+        'Ticket not claimed',
+        'This ticket is not currently claimed.',
+        ErrorTypes.VALIDATION,
+        { channelId: channel.id, operation: 'unclaimTicket' }
+      );
     }
     
     if (ticketData.claimedBy !== unclaimer.id && !unclaimer.permissions.has(PermissionFlagsBits.ManageChannels)) {
-      return { 
-        success: false, 
-        error: 'You can only unclaim your own tickets or need Manage Channels permission.' 
-      };
+      ticketUserError(
+        'Cannot unclaim ticket',
+        'You can only unclaim your own tickets or need Manage Channels permission.',
+        ErrorTypes.PERMISSION,
+        { channelId: channel.id, operation: 'unclaimTicket' }
+      );
     }
     
     const previousClaimer = ticketData.claimedBy;
@@ -1028,28 +947,10 @@ export async function unclaimTicket(channel, unclaimer) {
       }
     });
     
-    return { success: true, ticketData };
+    return ticketData;
     
   } catch (error) {
-    const typedError = ensureTypedServiceError(error, {
-      service: 'ticketService',
-      operation: 'unclaimTicket',
-      message: 'Ticket operation failed: unclaimTicket',
-      userMessage: 'Failed to unclaim ticket. Please try again in a moment.',
-      context: { guildId: channel?.guild?.id, channelId: channel?.id, unclaimerId: unclaimer?.id }
-    });
-    logger.error('Error unclaiming ticket:', {
-      guildId: channel?.guild?.id,
-      channelId: channel?.id,
-      userId: unclaimer?.id,
-      error: typedError.message,
-      errorCode: typedError.context?.errorCode
-    });
-    return { 
-      success: false, 
-      error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
-    };
+    rethrowTicketError(error, 'unclaimTicket', 'Failed to unclaim ticket. Please try again in a moment.', { guildId: channel?.guild?.id, channelId: channel?.id, unclaimerId: unclaimer?.id });
   }
 }
 
@@ -1059,14 +960,16 @@ async function getNextTicketNumber(guildId) {
 
 export async function updateTicketPriority(channel, priority, updater) {
   try {
-    const ticketData = await getTicketData(channel.guild.id, channel.id);
-    if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
-    }
+    const ticketData = requireTicket(await getTicketData(channel.guild.id, channel.id), channel);
     
     const priorityInfo = PRIORITY_MAP[priority];
     if (!priorityInfo) {
-      return { success: false, error: 'Invalid priority level' };
+      ticketUserError(
+      'Invalid priority level',
+      'Invalid priority level.',
+      ErrorTypes.VALIDATION,
+      { channelId: channel.id, priority, operation: 'updateTicketPriority' }
+    );
     }
     
     ticketData.priority = priority;
@@ -1136,27 +1039,9 @@ export async function updateTicketPriority(channel, priority, updater) {
       }
     });
     
-    return { success: true, ticketData };
+    return ticketData;
     
   } catch (error) {
-    const typedError = ensureTypedServiceError(error, {
-      service: 'ticketService',
-      operation: 'updateTicketPriority',
-      message: 'Ticket operation failed: updateTicketPriority',
-      userMessage: 'Failed to update ticket priority. Please try again in a moment.',
-      context: { guildId: channel?.guild?.id, channelId: channel?.id, updaterId: updater?.id, priority }
-    });
-    logger.error('Error updating ticket priority:', {
-      guildId: channel?.guild?.id,
-      channelId: channel?.id,
-      userId: updater?.id,
-      error: typedError.message,
-      errorCode: typedError.context?.errorCode
-    });
-    return { 
-      success: false, 
-      error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
-    };
+    rethrowTicketError(error, 'updateTicketPriority', 'Failed to update ticket priority. Please try again in a moment.', { guildId: channel?.guild?.id, channelId: channel?.id, updaterId: updater?.id, priority });
   }
 }

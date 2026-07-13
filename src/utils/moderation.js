@@ -1,7 +1,7 @@
 // moderation.js
 
 import { logEvent as logAuditEvent, EVENT_TYPES } from '../services/loggingService.js';
-import { formatLogLine } from './logEmbeds.js';
+import { formatLogLine } from './logging/logEmbeds.js';
 import { logger } from './logger.js';
 import { getFromDb, setInDb } from './database.js';
 
@@ -17,6 +17,7 @@ const ACTION_TO_EVENT_TYPE = {
   'Channel Locked': EVENT_TYPES.MODERATION_LOCK,
   'Channel Unlocked': EVENT_TYPES.MODERATION_UNLOCK,
   'DM Sent': EVENT_TYPES.MODERATION_DM,
+  'Bot Message Sent': EVENT_TYPES.MODERATION_CONFIG,
   'Log Channel Activated': EVENT_TYPES.MODERATION_CONFIG,
   'Log Filter Updated': EVENT_TYPES.MODERATION_CONFIG,
   'Case Created': EVENT_TYPES.MODERATION_CONFIG,

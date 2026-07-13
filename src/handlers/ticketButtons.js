@@ -1,13 +1,13 @@
 import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
 import { createEmbed, successEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
-import { getGuildConfig } from '../services/guildConfig.js';
-import { logTicketEvent } from '../utils/ticketLogging.js';
+import { getGuildConfig } from '../services/config/guildConfig.js';
+import { logTicketEvent } from '../utils/ticket/ticketLogging.js';
 import { logger } from '../utils/logger.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
-import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
-import { getTicketPermissionContext } from '../utils/ticketPermissions.js';
+import { replyUserError, ErrorTypes, handleInteractionError, createError } from '../utils/errorHandler.js';
+import { getTicketPermissionContext } from '../utils/ticket/ticketPermissions.js';
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -31,47 +31,52 @@ async function ensureGuildContext(interaction) {
   return false;
 }
 
-async function replyPermissionCheckFailure(interaction, permissionCheck) {
-  let type = ErrorTypes.UNKNOWN;
-  if (permissionCheck.error === 'Permission Denied') {
-    type = ErrorTypes.PERMISSION;
-  } else if (permissionCheck.error === 'Request Timeout') {
-    type = ErrorTypes.RATE_LIMIT;
-  }
-
-  await replyUserError(interaction, { type, message: permissionCheck.details });
-}
-
-async function checkTicketPermissionWithTimeout(interaction, client, actionLabel, options = {}, timeoutMs = 2500) {
+async function assertTicketPermission(interaction, client, actionLabel, options = {}, timeoutMs = 2500) {
   const { allowTicketCreator = false } = options;
 
+  let context;
   try {
     const contextPromise = getTicketPermissionContext({ client, interaction });
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Timeout')), timeoutMs)
     );
-
-    const context = await Promise.race([contextPromise, timeoutPromise]);
-
-    if (!context.ticketData) {
-      return { success: false, error: 'Not a Ticket Channel', details: 'This action can only be used in a valid ticket channel.' };
-    }
-
-    const allowed = allowTicketCreator ? context.canCloseTicket : context.canManageTicket;
-    if (!allowed) {
-      const permissionMessage = allowTicketCreator
-        ? 'You must have **Manage Channels**, the configured **Ticket Staff Role**, or be the **ticket creator**.'
-        : 'You must have **Manage Channels** or the configured **Ticket Staff Role**.';
-      return { success: false, error: 'Permission Denied', details: `${permissionMessage}\n\nYou cannot ${actionLabel}.` };
-    }
-
-    return { success: true, context };
+    context = await Promise.race([contextPromise, timeoutPromise]);
   } catch (error) {
     if (error.message === 'Timeout') {
-      return { success: false, error: 'Request Timeout', details: 'The permission check took too long. Please try again.' };
+      throw createError(
+        'Ticket permission timeout',
+        ErrorTypes.RATE_LIMIT,
+        'The permission check took too long. Please try again.'
+      );
     }
-    return { success: false, error: 'Error', details: `Failed to check permissions: ${error.message}` };
+    throw createError(
+      'Ticket permission check failed',
+      ErrorTypes.UNKNOWN,
+      `Failed to check permissions: ${error.message}`
+    );
   }
+
+  if (!context.ticketData) {
+    throw createError(
+      'Not a ticket channel',
+      ErrorTypes.VALIDATION,
+      'This action can only be used in a valid ticket channel.'
+    );
+  }
+
+  const allowed = allowTicketCreator ? context.canCloseTicket : context.canManageTicket;
+  if (!allowed) {
+    const permissionMessage = allowTicketCreator
+      ? 'You must have **Manage Channels**, the configured **Ticket Staff Role**, or be the **ticket creator**.'
+      : 'You must have **Manage Channels** or the configured **Ticket Staff Role**.';
+    throw createError(
+      'Ticket permission denied',
+      ErrorTypes.PERMISSION,
+      `${permissionMessage}\n\nYou cannot ${actionLabel}.`
+    );
+  }
+
+  return context;
 }
 
 async function ensureTicketPermission(interaction, client, actionLabel, options = {}) {
@@ -158,26 +163,20 @@ const createTicketModalHandler = {
       const config = await getGuildConfig(client, interaction.guildId);
       const categoryId = config.ticketCategoryId || null;
       
-      const result = await createTicket(
+      const { channel } = await createTicket(
         interaction.guild,
         interaction.member,
         categoryId,
         reason
       );
-      
-      if (result.success) {
-        await interaction.editReply({
-          embeds: [successEmbed(
-            'Ticket Created',
-            `Your ticket has been created in ${result.channel}!`
-          )]
-        });
-      } else {
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to create ticket.' });
-      }
+      await interaction.editReply({
+        embeds: [successEmbed(
+          'Ticket Created',
+          `Your ticket has been created in ${channel}!`
+        )]
+      });
     } catch (error) {
-      logger.error('Error creating ticket:', error);
-      await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while creating your ticket.' });
+      await handleInteractionError(interaction, error, { type: 'button', handler: 'ticket', customId: interaction.customId });
     }
   }
 };
@@ -188,18 +187,7 @@ const closeTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'close this ticket',
-        { allowTicketCreator: true },
-        2000 
-      );
-
-      if (!permissionCheck.success) {
-        await replyPermissionCheckFailure(interaction, permissionCheck);
-        return;
-      }
+      await assertTicketPermission(interaction, client, 'close this ticket', { allowTicketCreator: true }, 2000);
 
       const modal = new ModalBuilder()
         .setCustomId('ticket_close_modal')
@@ -233,18 +221,7 @@ const closeTicketModalHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'close this ticket',
-        { allowTicketCreator: true },
-        2000
-      );
-
-      if (!permissionCheck.success) {
-        await replyPermissionCheckFailure(interaction, permissionCheck);
-        return;
-      }
+      await assertTicketPermission(interaction, client, 'close this ticket', { allowTicketCreator: true }, 2000);
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -252,16 +229,8 @@ const closeTicketModalHandler = {
       const providedReason = interaction.fields.getTextInputValue('reason')?.trim();
       const reason = providedReason || 'Closed via ticket button without a specific reason.';
 
-      const result = await closeTicket(interaction.channel, interaction.user, reason);
-
-      if (result.success) {
-        await interaction.editReply({
-          embeds: [successEmbed('Ticket Closed', 'This ticket has been closed.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else {
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to close ticket.' });
-      }
+      await closeTicket(interaction.channel, interaction.user, reason);
+      await interaction.editReply({ embeds: [successEmbed('Ticket Closed', 'This ticket has been closed.')] });
     } catch (error) {
       logger.error('Error submitting close ticket modal:', error);
       if (!interaction.replied && !interaction.deferred) {
@@ -279,32 +248,13 @@ const claimTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'claim tickets',
-        {},
-        2000
-      );
-
-      if (!permissionCheck.success) {
-        await replyPermissionCheckFailure(interaction, permissionCheck);
-        return;
-      }
+      await assertTicketPermission(interaction, client, 'claim tickets', {}, 2000);
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
-      const result = await claimTicket(interaction.channel, interaction.user);
-      
-      if (result.success) {
-        await interaction.editReply({
-          embeds: [successEmbed('Ticket Claimed', 'You have successfully claimed this ticket!')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else {
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to claim ticket.' });
-      }
+      await claimTicket(interaction.channel, interaction.user);
+      await interaction.editReply({ embeds: [successEmbed('Ticket Claimed', 'You have claimed this ticket.')] });
     } catch (error) {
       logger.error('Error claiming ticket:', error);
       if (!interaction.replied && !interaction.deferred) {
@@ -322,18 +272,7 @@ const priorityTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'change ticket priority',
-        {},
-        2000
-      );
-
-      if (!permissionCheck.success) {
-        await replyPermissionCheckFailure(interaction, permissionCheck);
-        return;
-      }
+      await assertTicketPermission(interaction, client, 'change ticket priority', {}, 2000);
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -344,16 +283,8 @@ const priorityTicketHandler = {
         return;
       }
 
-      const result = await updateTicketPriority(interaction.channel, priority, interaction.user);
-      
-      if (result.success) {
-        await interaction.editReply({
-          embeds: [successEmbed('Priority Updated', `Ticket priority set to ${priority}.`)],
-          flags: MessageFlags.Ephemeral
-        });
-      } else {
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to update priority.' });
-      }
+      await updateTicketPriority(interaction.channel, priority, interaction.user);
+      await interaction.editReply({ embeds: [successEmbed('Priority Updated', `Ticket priority set to **${priority.toUpperCase()}**.`)] });
     } catch (error) {
       logger.error('Error updating ticket priority:', error);
       if (!interaction.replied && !interaction.deferred) {
@@ -371,18 +302,7 @@ const pinTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'pin tickets',
-        {},
-        2000
-      );
-
-      if (!permissionCheck.success) {
-        await replyPermissionCheckFailure(interaction, permissionCheck);
-        return;
-      }
+      await assertTicketPermission(interaction, client, 'pin tickets', {}, 2000);
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -478,33 +398,14 @@ const unclaimTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'unclaim tickets',
-        {},
-        2000
-      );
-
-      if (!permissionCheck.success) {
-        await replyPermissionCheckFailure(interaction, permissionCheck);
-        return;
-      }
+      await assertTicketPermission(interaction, client, 'unclaim tickets', {}, 2000);
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const { unclaimTicket } = await import('../services/ticket.js');
-      const result = await unclaimTicket(interaction.channel, interaction.member);
-      
-      if (result.success) {
-        await interaction.editReply({
-          embeds: [successEmbed('Ticket Unclaimed', 'You have successfully unclaimed this ticket!')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else {
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to unclaim ticket.' });
-      }
+      await unclaimTicket(interaction.channel, interaction.member);
+      await interaction.editReply({ embeds: [successEmbed('Ticket Unclaimed', 'This ticket has been unclaimed.')] });
     } catch (error) {
       logger.error('Error unclaiming ticket:', error);
       if (!interaction.replied && !interaction.deferred) {
@@ -522,38 +423,18 @@ const reopenTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'reopen tickets',
-        {},
-        2000
-      );
-
-      if (!permissionCheck.success) {
-        await replyPermissionCheckFailure(interaction, permissionCheck);
-        return;
-      }
+      await assertTicketPermission(interaction, client, 'reopen tickets', {}, 2000);
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const { reopenTicket } = await import('../services/ticket.js');
-      const result = await reopenTicket(interaction.channel, interaction.member);
-      
-      if (result.success) {
-        let reopenMessage = 'You have successfully reopened this ticket!';
-        if (result.openCategoryMoveFailed) {
-          reopenMessage += '\n\n⚠️ The ticket was reopened, but it could not be moved to the configured open ticket category.';
-        }
-
-        await interaction.editReply({
-          embeds: [successEmbed('Ticket Reopened', reopenMessage)],
-          flags: MessageFlags.Ephemeral
-        });
-      } else {
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to reopen ticket.' });
+      const { movedToOpenCategory, openCategoryMoveFailed } = await reopenTicket(interaction.channel, interaction.member);
+      let reopenMessage = 'This ticket has been reopened.';
+      if (openCategoryMoveFailed) {
+        reopenMessage += ' Note: Could not move the channel back to the open tickets category.';
       }
+      await interaction.editReply({ embeds: [successEmbed('Ticket Reopened', reopenMessage)] });
     } catch (error) {
       logger.error('Error reopening ticket:', error);
       if (!interaction.replied && !interaction.deferred) {
@@ -571,33 +452,14 @@ const deleteTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'delete tickets',
-        {},
-        2000
-      );
-
-      if (!permissionCheck.success) {
-        await replyPermissionCheckFailure(interaction, permissionCheck);
-        return;
-      }
+      await assertTicketPermission(interaction, client, 'delete tickets', {}, 2000);
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const { deleteTicket } = await import('../services/ticket.js');
-      const result = await deleteTicket(interaction.channel, interaction.member);
-      
-      if (result.success) {
-        await interaction.editReply({
-          embeds: [successEmbed('Ticket Deleted', 'This ticket will be permanently deleted in 3 seconds.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else {
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: result.error || 'Failed to delete ticket.' });
-      }
+      await deleteTicket(interaction.channel, interaction.member);
+      await interaction.editReply({ embeds: [successEmbed('Ticket Deleted', 'This ticket will be deleted shortly.')] });
     } catch (error) {
       logger.error('Error deleting ticket:', error);
       if (!interaction.replied && !interaction.deferred) {

@@ -7,7 +7,6 @@ Thank you for your interest in contributing to TitanBot! This guide covers local
 - Bug fixes and reliability improvements
 - New commands or enhancements to existing features
 - Documentation updates
-- Test coverage for behavior that is easy to regress
 
 Before starting large features, open an issue or discuss in the [support server](https://discord.gg/8kJBYhTGW9) so we can align on scope and avoid duplicate work.
 
@@ -15,7 +14,7 @@ Before starting large features, open an issue or discuss in the [support server]
 
 ### Prerequisites
 
-- **Node.js 18+** (CI uses Node 20)
+- **Node.js 20+** (Docker and CI use Node 20)
 - **PostgreSQL** (recommended for development; the bot can fall back to in-memory storage if PostgreSQL is unavailable)
 - A **Discord bot application** with the intents listed in [README.md](README.md#required-bot-intents)
 
@@ -46,30 +45,13 @@ For Docker-based setup, see [README.md](README.md#docker-deployment-recommended)
 
 1. **Fork the repository** and create a branch from `main`.
 2. **Make focused changes** — one logical change per pull request when possible.
-3. **Run tests** before opening a PR (see below).
-4. **Open a pull request** with a clear description of what changed and why.
+3. **Open a pull request** with a clear description of what changed and why.
 
 Use descriptive branch names, for example:
 
 - `fix/ticket-panel-refresh`
 - `feat/economy-shop-filter`
 - `docs/contributing-guide`
-
-## Running Tests
-
-Tests use Node's built-in test runner:
-
-```bash
-npm test
-```
-
-Test files live in `tests/` and follow the `*.test.js` naming pattern. When adding or changing behavior, add or update tests for:
-
-- Permission checks and command access rules
-- Parsing, validation, and utility logic
-- UI/panel builders and status helpers
-
-CI runs `npm test` on every pull request and on pushes to `main` and `master`. A separate workflow also validates database migrations against PostgreSQL when migration-related code changes.
 
 ## Database & Migrations
 
@@ -91,7 +73,7 @@ Test features that read or write guild data with **both** PostgreSQL and the mem
 
 - **Match existing style** — ES modules (`import`/`export`), async/await, and the conventions used in neighboring files.
 - **Handle errors gracefully** — catch failures, log with context, and send user-friendly embed replies where appropriate.
-- **Avoid breaking guild isolation** — guild-specific config and data must stay scoped per server, especially when `MULTI_GUILD=true`.
+- **Avoid breaking guild isolation** — guild-specific config and data must stay scoped per server (`guild:{guildId}:...` keys, `interaction.guildId`).
 - **Keep changes minimal** — prefer extending existing utilities and services over duplicating logic.
 - **Document user-facing behavior** — update README.md when setup steps or configuration change; mention new env vars in `.env.example`.
 

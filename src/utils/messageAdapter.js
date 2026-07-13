@@ -2,9 +2,11 @@
 
 import { mapArgumentsToOptions } from './prefixParser.js';
 import { createEmbed } from './embeds.js';
+import { handleInteractionError } from './errorHandler.js';
 import { logger } from './logger.js';
 import { InteractionHelper } from './interactionHelper.js';
-import { SLASH_ONLY_COMMANDS } from '../config/prefixRestrictions.js';
+import { SLASH_ONLY_COMMANDS } from '../config/commands/prefixRestrictions.js';
+import { getCommandPrefix } from '../config/bot.js';
 import { ResponseCoordinator, buildPrefixUsage } from './responseCoordinator.js';
 import { enforceDefaultCommandPermissions } from './permissionGuard.js';
 
@@ -189,7 +191,7 @@ export function supportsPrefixExecution(command) {
 export async function executePrefixCommand(command, message, args, client, prefixOverride = null, guildConfig = null) {
   const mockInteraction = createMockInteraction(message, command.data, args);
   const coordinator = mockInteraction._responseCoordinator;
-  const prefix = prefixOverride || message.client?.config?.bot?.prefix || '!';
+  const prefix = prefixOverride || getCommandPrefix();
 
   try {
     const permissionAllowed = await enforceDefaultCommandPermissions(mockInteraction, command, {
@@ -212,22 +214,10 @@ export async function executePrefixCommand(command, message, args, client, prefi
       await command.execute(mockInteraction, guildConfig, client);
     }
   } catch (error) {
-    logger.error('Prefix command execution error:', {
-      command: command.data.name,
-      args,
-      error: error.message,
-      stack: error.stack,
+    await handleInteractionError(mockInteraction, error, {
+      type: 'prefix_command',
+      command: command.data?.name,
+      source: 'messageAdapter.executePrefixCommand',
     });
-
-    if (!coordinator.hasResponded()) {
-      const embed = createEmbed({
-        title: 'Command Execution Failed',
-        description: `An error occurred while executing this command.\n\n${error.message}`,
-        color: 'error',
-      });
-      await coordinator.respond({ embeds: [embed] });
-    }
-
-    throw error;
   }
 }

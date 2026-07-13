@@ -83,7 +83,8 @@ export default {
 
             if (win) {
                 const amountWon = Math.floor(betAmount * PAYOUT_MULTIPLIER);
-cashChange = amountWon;
+                // Net change: the bet is replaced by the payout (bet was at stake, not pre-deducted)
+                cashChange = amountWon - betAmount;
 
                 resultEmbed = successEmbed(
                     "🎉 You Won!",

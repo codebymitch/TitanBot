@@ -204,7 +204,6 @@ class EconomyService {
       });
 
       return {
-        success: true,
         senderNewBalance: senderData.wallet,
         receiverNewBalance: receiverData.wallet
       };

@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getColor } from '../../config/bot.js';
 
@@ -124,115 +124,107 @@ export default {
             return;
         }
 
-        try {
-            const numberStr = interaction.options.getString('number').trim();
-            const fromBase = interaction.options.getString('from');
-            const toBase = interaction.options.getString('to');
-            
-            const { prefix: fromPrefix, name: fromName } = BASE_ALPHABETS[fromBase];
-            
-            const cleanNumber = fromPrefix && numberStr.startsWith(fromPrefix) 
-                ? numberStr.slice(fromPrefix.length) 
-                : numberStr;
-            
-            if (!cleanNumber) {
-                return replyUserError(interaction, {
-                    type: ErrorTypes.VALIDATION,
-                    message: 'You must provide a number to convert.\n\n**Example:** `/baseconvert number:1010 from:BIN to:DEC`',
-                });
-            }
-            
-            const alphabet = BASE_ALPHABETS[fromBase].alphabet;
-            const regex = new RegExp(`^[${alphabet}]+$`, 'i');
-            
-            if (!regex.test(cleanNumber)) {
-                let examples = '';
-                if (fromBase === 'BIN') {
-                    examples = '\n\n**Valid:** 101, 1010, 11111 | **Invalid:** 5 (digit 5 not allowed)';
-                } else if (fromBase === 'OCT') {
-                    examples = '\n\n**Valid:** 77, 123, 755 | **Invalid:** 8 (only 0-7 allowed)';
-                } else if (fromBase === 'DEC') {
-                    examples = '\n\n**Valid:** 42, 123, 999 | **Invalid:** 12.34 (no decimals)';
-                } else if (fromBase === 'HEX') {
-                    examples = '\n\n**Valid:** FF, A1B2, DEADBEEF | **Invalid:** G (only 0-9, A-F)';
-                }
-                logger.warn(`Invalid base conversion input: ${cleanNumber} for base ${fromBase}`);
-                return replyUserError(interaction, {
-                    type: ErrorTypes.VALIDATION,
-                    message: `You provided: \`${cleanNumber}\`\n\nValid characters: \`${alphabet}\`${examples}`,
-                });
-            }
-            
-            let decimalValue;
-            try {
-                if (fromBase === 'B64') {
-                    decimalValue = parseBigIntFromBase(cleanNumber, fromBase);
-                } else {
-                    decimalValue = parseBigIntFromBase(cleanNumber, fromBase);
-                }
-            } catch (error) {
-                logger.error('Base conversion parse error:', error);
-                return replyUserError(interaction, {
-                    type: ErrorTypes.VALIDATION,
-                    message: 'The number is too large to process.\n\nTry with a smaller number.',
-                });
-            }
-            
-            if (toBase) {
-                const { prefix: toPrefix, name: toName } = BASE_ALPHABETS[toBase];
-                let result;
-                
-                try {
-                    result = formatBigIntToBase(decimalValue, toBase);
-                    
-                    const embed = successEmbed(
-                        '🔄 Base Conversion Result',
-                        `**From ${fromName} (${fromBase}):** \`${fromPrefix}${cleanNumber}\`\n` +
-                        `**To ${toName} (${toBase}):** \`${toPrefix}${result}\`\n` +
-                        `**Decimal:** \`${decimalValue.toLocaleString()}\``
-                    );
-                    embed.setColor(getColor('success'));
-                    
-                    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-                    
-                } catch (error) {
-                    logger.error(`Base conversion error to ${toName}:`, error);
-                    await replyUserError(interaction, {
-                        type: ErrorTypes.VALIDATION,
-                        message: 'The result would be too large or incompatible.\n\nTry with a smaller number or different target base.',
-                    });
-                }
-                
-            } else {
-                let description = `**Input (${fromName}):** \`${fromPrefix}${cleanNumber}\`\n`;
-                description += `**Decimal:** \`${decimalValue.toLocaleString()}\`\n\n`;
-                
-                for (const [baseKey, { prefix, name }] of Object.entries(BASE_ALPHABETS)) {
-                    if (baseKey === fromBase) continue;
-                    
-                    try {
-                        let value = formatBigIntToBase(decimalValue, baseKey);
-                        
-                        description += `**${name} (${baseKey}):** \`${prefix}${value}\`\n`;
-                    } catch (error) {
-                        description += `**${name} (${baseKey}):** *Too large to convert*\n`;
-                    }
-                }
-                
-                const embed = successEmbed(
-                    '🔄 Base Conversion Results',
-                    description
-                );
-                embed.setColor(getColor('primary'));
-                
-                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-            }
-            
-        } catch (error) {
-            await handleInteractionError(interaction, error, {
-                type: 'command',
-                commandName: 'baseconvert'
+        const numberStr = interaction.options.getString('number').trim();
+        const fromBase = interaction.options.getString('from');
+        const toBase = interaction.options.getString('to');
+
+        const { prefix: fromPrefix, name: fromName } = BASE_ALPHABETS[fromBase];
+
+        const cleanNumber = fromPrefix && numberStr.startsWith(fromPrefix)
+            ? numberStr.slice(fromPrefix.length)
+            : numberStr;
+
+        if (!cleanNumber) {
+            return replyUserError(interaction, {
+                type: ErrorTypes.VALIDATION,
+                message: 'You must provide a number to convert.\n\n**Example:** `/baseconvert number:1010 from:BIN to:DEC`',
             });
+        }
+
+        const alphabet = BASE_ALPHABETS[fromBase].alphabet;
+        const regex = new RegExp(`^[${alphabet}]+$`, 'i');
+
+        if (!regex.test(cleanNumber)) {
+            let examples = '';
+            if (fromBase === 'BIN') {
+                examples = '\n\n**Valid:** 101, 1010, 11111 | **Invalid:** 5 (digit 5 not allowed)';
+            } else if (fromBase === 'OCT') {
+                examples = '\n\n**Valid:** 77, 123, 755 | **Invalid:** 8 (only 0-7 allowed)';
+            } else if (fromBase === 'DEC') {
+                examples = '\n\n**Valid:** 42, 123, 999 | **Invalid:** 12.34 (no decimals)';
+            } else if (fromBase === 'HEX') {
+                examples = '\n\n**Valid:** FF, A1B2, DEADBEEF | **Invalid:** G (only 0-9, A-F)';
+            }
+            logger.warn(`Invalid base conversion input: ${cleanNumber} for base ${fromBase}`);
+            return replyUserError(interaction, {
+                type: ErrorTypes.VALIDATION,
+                message: `You provided: \`${cleanNumber}\`\n\nValid characters: \`${alphabet}\`${examples}`,
+            });
+        }
+
+        let decimalValue;
+        try {
+            if (fromBase === 'B64') {
+                decimalValue = parseBigIntFromBase(cleanNumber, fromBase);
+            } else {
+                decimalValue = parseBigIntFromBase(cleanNumber, fromBase);
+            }
+        } catch (error) {
+            logger.error('Base conversion parse error:', error);
+            return replyUserError(interaction, {
+                type: ErrorTypes.VALIDATION,
+                message: 'The number is too large to process.\n\nTry with a smaller number.',
+            });
+        }
+
+        if (toBase) {
+            const { prefix: toPrefix, name: toName } = BASE_ALPHABETS[toBase];
+            let result;
+
+            try {
+                result = formatBigIntToBase(decimalValue, toBase);
+
+                const embed = successEmbed(
+                    '🔄 Base Conversion Result',
+                    `**From ${fromName} (${fromBase}):** \`${fromPrefix}${cleanNumber}\`\n` +
+                    `**To ${toName} (${toBase}):** \`${toPrefix}${result}\`\n` +
+                    `**Decimal:** \`${decimalValue.toLocaleString()}\``
+                );
+                embed.setColor(getColor('success'));
+
+                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+
+            } catch (error) {
+                logger.error(`Base conversion error to ${toName}:`, error);
+                await replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'The result would be too large or incompatible.\n\nTry with a smaller number or different target base.',
+                });
+            }
+
+        } else {
+            let description = `**Input (${fromName}):** \`${fromPrefix}${cleanNumber}\`\n`;
+            description += `**Decimal:** \`${decimalValue.toLocaleString()}\`\n\n`;
+
+            for (const [baseKey, { prefix, name }] of Object.entries(BASE_ALPHABETS)) {
+                if (baseKey === fromBase) continue;
+
+                try {
+                    let value = formatBigIntToBase(decimalValue, baseKey);
+
+                    description += `**${name} (${baseKey}):** \`${prefix}${value}\`\n`;
+                } catch (error) {
+                    description += `**${name} (${baseKey}):** *Too large to convert*\n`;
+                }
+            }
+
+            const embed = successEmbed(
+                '🔄 Base Conversion Results',
+                description
+            );
+            embed.setColor(getColor('primary'));
+
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
         }
     },
 };

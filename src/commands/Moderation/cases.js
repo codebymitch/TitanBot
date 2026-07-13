@@ -3,6 +3,7 @@ import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { getModerationCases } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('cases')
@@ -150,7 +151,7 @@ time: 120000
                     currentPage++;
                 }
 
-                await buttonInteraction.editReply({
+                await interaction.editReply({
                     embeds: [createCasesEmbed(currentPage)],
                     components: [createNavigationRow(currentPage)]
                 });

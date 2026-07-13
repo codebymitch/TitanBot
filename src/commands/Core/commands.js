@@ -6,7 +6,7 @@ import {
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import {
   disableCategory,
   enableCategory,
@@ -154,121 +154,111 @@ export default {
   },
 
   async execute(interaction, config, client) {
-    try {
-      if (!(await ensureManageGuild(interaction))) {
-        return;
-      }
+    if (!(await ensureManageGuild(interaction))) {
+      return;
+    }
 
-      const subcommand = interaction.options.getSubcommand();
+    const subcommand = interaction.options.getSubcommand();
 
-      if (subcommand === 'dashboard') {
-        const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
-        if (!deferred) {
-          return;
-        }
-
-        const view = await buildDashboardView(client, interaction.guildId, interaction.guild, 'overview');
-        await InteractionHelper.safeEditReply(interaction, {
-          embeds: [view.embed],
-          components: view.components,
-        });
-
-        const replyMessage = await interaction.fetchReply().catch(() => null);
-        if (!replyMessage) {
-          return;
-        }
-
-        const collector = replyMessage.createMessageComponentCollector({
-          filter: createDashboardCollectorFilter(interaction.user.id, interaction.guildId),
-          time: DASHBOARD_TIMEOUT_MS,
-        });
-
-        collector.on('collect', async (componentInteraction) => {
-          try {
-            if (!isCommandAccessCustomId(componentInteraction.customId)) {
-              return;
-            }
-            await handleDashboardComponent(componentInteraction, client);
-          } catch (error) {
-            logger.error('Command access dashboard interaction failed', {
-              error: error.message,
-              customId: componentInteraction.customId,
-              guildId: interaction.guildId,
-            });
-            await replyUserError(componentInteraction, {
-              type: ErrorTypes.UNKNOWN,
-              message: error.message || 'Failed to update command access.',
-            }).catch(() => {});
-          }
-        });
-
-        collector.on('end', async () => {
-          const finalView = await buildDashboardView(client, interaction.guildId, interaction.guild, 'overview');
-          const disabledComponents = finalView.components.map((row) => {
-            const newRow = row.toJSON();
-            newRow.components = newRow.components.map((component) => ({ ...component, disabled: true }));
-            return newRow;
-          });
-
-          await replyMessage.edit({ components: disabledComponents }).catch(() => {});
-        });
-
-        return;
-      }
-
-      const scope = interaction.options.getString('scope');
-      const target = interaction.options.getString('target');
-      const isDisable = subcommand === 'disable';
-
+    if (subcommand === 'dashboard') {
       const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferred) {
         return;
       }
 
-      if (scope === 'category') {
-        const category = resolveCategoryChoice(client, target);
-        if (!category) {
-          return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'No category matched \\`${target}\\`. Use \\`/commands dashboard\\` to browse categories.' });
-        }
+      const view = await buildDashboardView(client, interaction.guildId, interaction.guild, 'overview');
+      await InteractionHelper.safeEditReply(interaction, {
+        embeds: [view.embed],
+        components: view.components,
+      });
 
-        if (isDisable) {
-          await disableCategory(client, interaction.guildId, category.key);
-          return InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-              successEmbed(
-                'Category Disabled',
-                `All **${category.displayName}** commands are now disabled.\nProtected commands remain available.`,
-              ),
-            ],
+      const replyMessage = await interaction.fetchReply().catch(() => null);
+      if (!replyMessage) {
+        return;
+      }
+
+      const collector = replyMessage.createMessageComponentCollector({
+        filter: createDashboardCollectorFilter(interaction.user.id, interaction.guildId),
+        time: DASHBOARD_TIMEOUT_MS,
+      });
+
+      collector.on('collect', async (componentInteraction) => {
+        try {
+          if (!isCommandAccessCustomId(componentInteraction.customId)) {
+            return;
+          }
+          await handleDashboardComponent(componentInteraction, client);
+        } catch (error) {
+          logger.error('Command access dashboard interaction failed', {
+            error: error.message,
+            customId: componentInteraction.customId,
+            guildId: interaction.guildId,
           });
+          await replyUserError(componentInteraction, {
+            type: ErrorTypes.UNKNOWN,
+            message: error.message || 'Failed to update command access.',
+          }).catch(() => {});
         }
-
-        await enableCategory(client, interaction.guildId, category.key);
-        return InteractionHelper.safeEditReply(interaction, {
-          embeds: [successEmbed('Category Enabled', `**${category.displayName}** commands are now enabled (except individually disabled commands).`)],
-        });
-      }
-
-      const commandName = target.toLowerCase();
-      if (isDisable) {
-        await disableCommand(client, interaction.guildId, commandName);
-        return InteractionHelper.safeEditReply(interaction, {
-          embeds: [successEmbed('Command Disabled', `\`/${commandName}\` is now disabled in this server.`)],
-        });
-      }
-
-      await enableCommand(client, interaction.guildId, commandName);
-      return InteractionHelper.safeEditReply(interaction, {
-        embeds: [successEmbed('Command Enabled', `\`/${commandName}\` is now enabled in this server.`)],
       });
-    } catch (error) {
-      logger.error('commands command failed', {
-        error: error.message,
-        stack: error.stack,
-        guildId: interaction.guildId,
-        userId: interaction.user.id,
+
+      collector.on('end', async () => {
+        const finalView = await buildDashboardView(client, interaction.guildId, interaction.guild, 'overview');
+        const disabledComponents = finalView.components.map((row) => {
+          const newRow = row.toJSON();
+          newRow.components = newRow.components.map((component) => ({ ...component, disabled: true }));
+          return newRow;
+        });
+
+        await replyMessage.edit({ components: disabledComponents }).catch(() => {});
       });
-      await handleInteractionError(interaction, error, { commandName: 'commands' });
+
+      return;
     }
+
+    const scope = interaction.options.getString('scope');
+    const target = interaction.options.getString('target');
+    const isDisable = subcommand === 'disable';
+
+    const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+    if (!deferred) {
+      return;
+    }
+
+    if (scope === 'category') {
+      const category = resolveCategoryChoice(client, target);
+      if (!category) {
+        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `No category matched \`${target}\`. Use \`/commands dashboard\` to browse categories.` });
+      }
+
+      if (isDisable) {
+        await disableCategory(client, interaction.guildId, category.key);
+        return InteractionHelper.safeEditReply(interaction, {
+          embeds: [
+            successEmbed(
+              'Category Disabled',
+              `All **${category.displayName}** commands are now disabled.\nProtected commands remain available.`,
+            ),
+          ],
+        });
+      }
+
+      await enableCategory(client, interaction.guildId, category.key);
+      return InteractionHelper.safeEditReply(interaction, {
+        embeds: [successEmbed('Category Enabled', `**${category.displayName}** commands are now enabled (except individually disabled commands).`)],
+      });
+    }
+
+    const commandName = target.toLowerCase();
+    if (isDisable) {
+      await disableCommand(client, interaction.guildId, commandName);
+      return InteractionHelper.safeEditReply(interaction, {
+        embeds: [successEmbed('Command Disabled', `\`/${commandName}\` is now disabled in this server.`)],
+      });
+    }
+
+    await enableCommand(client, interaction.guildId, commandName);
+    return InteractionHelper.safeEditReply(interaction, {
+      embeds: [successEmbed('Command Enabled', `\`/${commandName}\` is now enabled in this server.`)],
+    });
   },
 };

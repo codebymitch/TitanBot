@@ -1,13 +1,13 @@
-import { getColor } from '../../config/bot.js';
+import { getColor, getDefaultApplicationQuestions } from '../../config/bot.js';
 import { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { handleInteractionError, withErrorHandling, createError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
 import ApplicationService from '../../services/applicationService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logEvent, EVENT_TYPES, resolveApplicationLogChannel } from '../../services/loggingService.js';
-import { formatLogLine, resolveUserAuthor } from '../../utils/logEmbeds.js';
-import { getGuildConfig } from '../../services/guildConfig.js';
+import { formatLogLine, resolveUserAuthor } from '../../utils/logging/logEmbeds.js';
+import { getGuildConfig } from '../../services/config/guildConfig.js';
 import { 
     getApplicationSettings, 
     getUserApplications, 
@@ -137,7 +137,7 @@ export async function handleApplicationModal(interaction) {
     const answers = [];
     const settings = await getApplicationSettings(interaction.client, interaction.guild.id);
 
-    let questions = settings.questions || ["Why do you want this role?", "What is your experience?"];
+    let questions = settings.questions?.length ? settings.questions : getDefaultApplicationQuestions();
     const roleSettings = await getApplicationRoleSettings(interaction.client, interaction.guild.id, roleId);
     if (roleSettings.questions && roleSettings.questions.length > 0) {
         questions = roleSettings.questions;
@@ -300,7 +300,7 @@ async function handleSubmit(interaction, settings) {
         .setCustomId(`app_modal_${applicationRole.roleId}`)
         .setTitle(`Application for ${applicationRole.name}`);
 
-    let questions = settings.questions || ["Why do you want this role?", "What is your experience?"];
+    let questions = settings.questions?.length ? settings.questions : getDefaultApplicationQuestions();
     const roleSettings = await getApplicationRoleSettings(interaction.client, interaction.guild.id, applicationRole.roleId);
     if (roleSettings.questions && roleSettings.questions.length > 0) {
         questions = roleSettings.questions;

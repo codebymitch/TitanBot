@@ -149,7 +149,7 @@ export async function playQuery(client, interaction, query) {
             added += 1;
         }
 
-        if (!player.playing && !player.paused && !player.current) {
+        if (!player.playing && !player.paused) {
             player.play();
         }
 
@@ -181,16 +181,21 @@ export async function playQuery(client, interaction, query) {
         }
 
         track.info.requester = interaction.user;
-        player.queue.add(track);
 
-        if (!player.playing && !player.paused && !player.current) {
+        const willPlayNow = !player.playing && !player.paused;
+        player.queue.add(track);
+        const queuePosition = player.queue.length;
+
+        if (willPlayNow) {
             player.play();
         }
 
         return {
             embed: successEmbed(
-                'Track Added',
-                `**${track.info.title}**\n${track.info.author}\nPosition: #${player.queue.length} in queue`,
+                willPlayNow ? 'Now Playing' : 'Track Added',
+                willPlayNow
+                    ? `**${track.info.title}**\n${track.info.author}`
+                    : `**${track.info.title}**\n${track.info.author}\nPosition: #${queuePosition} in queue`,
             ),
         };
     }
@@ -205,6 +210,11 @@ export async function skipTrack(client, interaction) {
     }
     assertCanControl(interaction.member, player);
     const title = player.current.info?.title || 'Unknown';
+    // Under track-loop, stop() would replay the same track. Clear it so the skip
+    // advances; trackStart re-applies the stored loop mode to the next track.
+    if (player.loop === 'track') {
+        player.setLoop('none');
+    }
     player.stop();
     return successEmbed('Skipped', `Skipped **${title}**.`);
 }
@@ -244,7 +254,6 @@ export async function applyPause(client, guildId) {
     }
 
     player.pause(true);
-    getGuildMusicData(guildId).wasPaused = true;
     await refreshPlayerMessage(client, guildId);
     return true;
 }
@@ -256,7 +265,6 @@ export async function applyResume(client, guildId) {
     }
 
     player.pause(false);
-    getGuildMusicData(guildId).wasPaused = false;
     await refreshPlayerMessage(client, guildId);
     return true;
 }
@@ -351,7 +359,24 @@ export async function seekTrack(client, interaction, seconds) {
     }
     assertCanControl(interaction.member, player);
 
+    const info = player.current.info || {};
+    if (info.isStream || info.isSeekable === false) {
+        throw new TitanBotError(
+            'Not seekable',
+            ErrorTypes.USER_INPUT,
+            'This track cannot be seeked (it may be a live stream).',
+        );
+    }
+
     const position = Math.max(0, seconds * 1000);
+    if (info.length && position > info.length) {
+        throw new TitanBotError(
+            'Seek out of range',
+            ErrorTypes.USER_INPUT,
+            `You can only seek up to ${Math.floor(info.length / 1000)}s for this track.`,
+        );
+    }
+
     player.seek(position);
     await refreshPlayerMessage(client, interaction.guild.id);
     return successEmbed('Seeked', `Seeked to **${seconds}s**.`);
@@ -371,6 +396,7 @@ export async function removeFromQueue(client, interaction, index) {
 
     const removed = player.queue[queueIndex];
     player.queue.remove(queueIndex);
+    await refreshPlayerMessage(client, interaction.guild.id);
     return successEmbed('Removed', `Removed **${removed.info?.title || 'track'}** from the queue.`);
 }
 
@@ -390,6 +416,7 @@ export async function moveInQueue(client, interaction, from, to) {
     const track = player.queue[fromIndex];
     player.queue.remove(fromIndex);
     player.queue.splice(toIndex, 0, track);
+    await refreshPlayerMessage(client, interaction.guild.id);
     return successEmbed('Moved', `Moved **${track.info?.title || 'track'}** to position #${to}.`);
 }
 
@@ -452,6 +479,8 @@ export async function destroyPlayerSession(client, guildId, player, guildData, {
 
     guildData.previousTracks = [];
     guildData.stopConfirmPending = null;
+    guildData.autoPaused = false;
+    guildData.queuePages?.clear();
 
     if (guildData.playerMessageId && guildData.playerChannelId) {
         try {

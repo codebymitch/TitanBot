@@ -1,6 +1,6 @@
 // serviceErrorBoundary.js
 
-import { createError, ErrorTypes, TitanBotError } from './errorHandler.js';
+import { createError, ErrorTypes, TitanBotError, categorizeError } from './errorHandler.js';
 import { resolveErrorCode, getErrorMetadata } from './errorRegistry.js';
 
 function normalizeBoundaryContext(context = {}) {
@@ -11,39 +11,6 @@ function normalizeBoundaryContext(context = {}) {
   return context;
 }
 
-function inferErrorType(error, fallbackType = ErrorTypes.UNKNOWN) {
-  const message = error?.message?.toLowerCase?.() || '';
-  const code = error?.code;
-
-  if (typeof code === 'string') {
-    if (code.includes('PERMISSION') || code.includes('FORBIDDEN')) {
-      return ErrorTypes.PERMISSION;
-    }
-
-    if (code.includes('VALIDATION') || code.includes('INVALID')) {
-      return ErrorTypes.VALIDATION;
-    }
-
-    if (code.includes('DB') || code.includes('SQL') || code.includes('POSTGRES')) {
-      return ErrorTypes.DATABASE;
-    }
-  }
-
-  if (message.includes('permission') || message.includes('forbidden')) {
-    return ErrorTypes.PERMISSION;
-  }
-
-  if (message.includes('database') || message.includes('sql') || message.includes('connection') || message.includes('timeout')) {
-    return ErrorTypes.DATABASE;
-  }
-
-  if (message.includes('validation') || message.includes('invalid') || message.includes('required')) {
-    return ErrorTypes.VALIDATION;
-  }
-
-  return fallbackType;
-}
-
 export function ensureTypedServiceError(error, options = {}) {
   if (error instanceof TitanBotError) {
     return error;
@@ -51,7 +18,8 @@ export function ensureTypedServiceError(error, options = {}) {
 
   const context = normalizeBoundaryContext(options.context);
   const fallbackType = options.type || ErrorTypes.UNKNOWN;
-  const type = inferErrorType(error, fallbackType);
+  const categorized = categorizeError(error);
+  const type = categorized === ErrorTypes.UNKNOWN ? fallbackType : categorized;
   const service = options.service || 'unknown_service';
   const operation = options.operation || 'unknown_operation';
   const errorCode = resolveErrorCode({

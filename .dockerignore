@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+.git
+.github
+.cursor
+tests
+backups
+logs
+*.md
+!README.md
+.DS_Store
+coverage
+.agent-tools

@@ -1,24 +1,24 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { logModerationAction } from '../../utils/moderation.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { ModerationService } from '../../services/moderationService.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
+import { ModerationService } from '../../services/moderation/moderationService.js';
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("unban")
         .setDescription("Unban a user from the server")
-        .addUserOption(option =>
+        .addStringOption(option =>
             option
                 .setName("target")
-                .setDescription("The user to unban (can be ID or mention)")
-                .setRequired(true)
+                .setDescription("The ID (or mention) of the user to unban")
+                .setRequired(true),
         )
         .addStringOption(option =>
             option.setName("reason")
                 .setDescription("Reason for the unban")
-                .setRequired(false)
+                .setRequired(false),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
     category: "moderation",
@@ -29,33 +29,45 @@ export default {
             logger.warn(`Unban interaction defer failed`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                commandName: 'unban'
+                commandName: 'unban',
             });
             return;
         }
 
-        try {
-                const targetUser = interaction.options.getUser("target");
-                const reason = interaction.options.getString("reason") || "No reason provided";
+        const rawTarget = interaction.options.getString("target");
+        const targetId = rawTarget.replace(/[<@!>]/g, '').trim();
 
-                const result = await ModerationService.unbanUser({
-                    guild: interaction.guild,
-                    user: targetUser,
-                    moderator: interaction.member,
-                    reason
-                });
-
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        successEmbed(
-                            "✅ User Unbanned",
-                            `Successfully unbanned **${targetUser.tag}** from the server.\n\n**Reason:** ${reason}\n**Case ID:** #${result.caseId}`
-                        )
-                    ]
-                });
-        } catch (error) {
-            logger.error('Unban command error:', error);
-            await handleInteractionError(interaction, error, { subtype: 'unban_failed' });
+        if (!/^\d{17,20}$/.test(targetId)) {
+            return replyUserError(interaction, {
+                type: ErrorTypes.USER_INPUT,
+                message: 'Please provide a valid user ID or mention.',
+            });
         }
-    }
+
+        const targetUser = await client.users.fetch(targetId).catch(() => null);
+        if (!targetUser) {
+            return replyUserError(interaction, {
+                type: ErrorTypes.USER_INPUT,
+                message: `Could not find a user with the ID \`${targetId}\`.`,
+            });
+        }
+
+        const reason = interaction.options.getString("reason") || "No reason provided";
+
+        const result = await ModerationService.unbanUser({
+            guild: interaction.guild,
+            user: targetUser,
+            moderator: interaction.member,
+            reason,
+        });
+
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [
+                successEmbed(
+                    "✅ User Unbanned",
+                    `Successfully unbanned **${targetUser.tag}** from the server.\n\n**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
+                ),
+            ],
+        });
+    },
 };

@@ -3,27 +3,43 @@ services:
     build: .
     container_name: titanbot
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      - MULTI_GUILD=${MULTI_GUILD:-false}
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - LAVALINK_HOST=lavalink
-      - LAVALINK_PORT=2333
-      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-      - LAVALINK_SECURE=false
+      - DATABASE_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-titanbot}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-titanbot}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-titanbot}
+      - POSTGRES_USER=${POSTGRES_USER:-titanbot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_SSL=false
+      - AUTO_MIGRATE=true
+      - LOG_LEVEL=${LOG_LEVEL:-warn}
+      - LAVALINK_NODES_FILE=lavalink/nodes.json
       - PORT=3000
+      - WEB_HOST=0.0.0.0
+    ports:
+      - "${PORT:-3000}:3000"
     depends_on:
       db:
         condition: service_healthy
-      lavalink:
-        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     networks:
       - titan-network
 
   lavalink:
+    profiles:
+      - local-lavalink
     image: ghcr.io/lavalink-devs/lavalink:4
     container_name: titanbot-lavalink
     restart: unless-stopped

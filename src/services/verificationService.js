@@ -3,7 +3,7 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { botConfig } from '../config/bot.js';
 import { logger } from '../utils/logger.js';
-import { getGuildConfig, setGuildConfig } from './guildConfig.js';
+import { getGuildConfig, setGuildConfig } from './config/guildConfig.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { insertVerificationAudit } from '../utils/database.js';
 import { ensureTypedServiceError } from '../utils/serviceErrorBoundary.js';
@@ -81,11 +81,10 @@ export async function verifyUser(client, guildId, userId, options = {}) {
 
         if (member.roles.cache.has(verifiedRole.id)) {
             return {
-                success: false,
-                alreadyVerified: true,
-                message: "User already verified",
+                status: 'already_verified',
                 userId,
-                roleId: verifiedRole.id
+                roleId: verifiedRole.id,
+                roleName: verifiedRole.name,
             };
         }
 
@@ -110,11 +109,10 @@ export async function verifyUser(client, guildId, userId, options = {}) {
         });
 
         return {
-            success: true,
+            status: 'verified',
             userId,
             roleId: verifiedRole.id,
             roleName: verifiedRole.name,
-            message: "User verified successfully"
         };
 
     } catch (error) {
@@ -350,10 +348,8 @@ export async function removeVerification(client, guildId, userId, options = {}) 
 
         if (!member.roles.cache.has(verifiedRole.id)) {
             return {
-                success: false,
-                notVerified: true,
-                message: "User doesn't have the verified role",
-                userId
+                status: 'not_verified',
+                userId,
             };
         }
 
@@ -377,10 +373,9 @@ export async function removeVerification(client, guildId, userId, options = {}) 
         });
 
         return {
-            success: true,
+            status: 'removed',
             userId,
             roleId: verifiedRole.id,
-            message: "Verification removed successfully"
         };
 
     } catch (error) {

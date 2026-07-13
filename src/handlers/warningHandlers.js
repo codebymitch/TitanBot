@@ -1,9 +1,10 @@
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
+import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } from 'discord.js';
 import { successEmbed } from '../utils/embeds.js';
-import { WarningService } from '../services/warningService.js';
+import { WarningService } from '../services/moderation/warningService.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
 
+import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
 const warningDeleteSpecificHandler = {
   name: 'warning_delete_specific',
   async execute(interaction, client) {
@@ -96,15 +97,11 @@ async function warningDeleteModalHandler(interaction, client) {
     const warnings = await WarningService.getWarnings(guildId, targetUserId);
 
     if (warningNumber > warnings.length) {
-      return await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'Warning #${warningNumber} does not exist. This user only has ${warnings.length} warning(s).' });
+      return await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: `Warning #${warningNumber} does not exist. This user only has ${warnings.length} warning(s).` });
     }
 
     const warningToDelete = warnings[warningNumber - 1];
-    const result = await WarningService.removeWarning(guildId, targetUserId, warningToDelete.id);
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to delete warning');
-    }
+    await WarningService.removeWarning(guildId, targetUserId, warningToDelete.id);
 
     const targetUser = await client.users.fetch(targetUserId).catch(() => null);
     const targetName = targetUser ? targetUser.username : 'the user';
@@ -138,14 +135,10 @@ async function warningClearConfirmModalHandler(interaction, client) {
       return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You must type "DELETE" exactly to confirm clearing all warnings.' });
     }
 
-    await interaction.deferReply({ flags: ['Ephemeral'] });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const guildId = interaction.guildId;
-    const result = await WarningService.clearWarnings(guildId, targetUserId);
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to clear warnings');
-    }
+    const { count } = await WarningService.clearWarnings(guildId, targetUserId);
 
     const targetUser = await client.users.fetch(targetUserId).catch(() => null);
     const targetName = targetUser ? targetUser.username : 'the user';
@@ -153,7 +146,7 @@ async function warningClearConfirmModalHandler(interaction, client) {
     logger.info(`[MODERATION] All warnings cleared for ${targetUserId} in ${guildId} by ${interaction.user.id}`);
 
     await interaction.editReply({
-      embeds: [successEmbed('✅ Warnings Cleared', `All warnings for **${targetName}** have been cleared. **${result.count}** warning(s) removed.`)]
+      embeds: [successEmbed('✅ Warnings Cleared', `All warnings for **${targetName}** have been cleared. **${count}** warning(s) removed.`)]
     });
   } catch (error) {
     logger.error('Warning clear confirm modal handler error:', error);

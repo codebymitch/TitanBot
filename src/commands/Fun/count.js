@@ -13,6 +13,7 @@ import {
 } from '../../services/countingGameService.js';
 import { logger } from '../../utils/logger.js';
 
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('count')
@@ -84,7 +85,7 @@ export default {
         }
 
         if (config.enabled && config.channelId && config.channelId !== channel.id) {
-          return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'This server already has an active counting channel configured: <#${config.channelId}>. Disable the current counting game first, or use that existing channel.' });
+          return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `This server already has an active counting channel configured: <#${config.channelId}>. Disable the current counting game first, or use that existing channel.` });
         }
 
         await activateCountingGame(interaction.client, guildId, channel.id, system);

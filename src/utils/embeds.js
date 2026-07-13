@@ -1,7 +1,7 @@
 // embeds.js
 
 import { EmbedBuilder } from 'discord.js';
-import { getColor } from '../config/bot.js';
+import { getColor, botConfig } from '../config/bot.js';
 
 const EMOJI_REGEX = /[\p{Extended_Pictographic}\uFE0F]/gu;
 const EMBED_FOOTER_SYMBOL = Symbol('titanbotFooterText');
@@ -157,6 +157,12 @@ export function createEmbed({
     } catch (error) {
       
     }
+  } else if (botConfig.embeds?.author?.name) {
+    embed.setAuthor({
+      name: botConfig.embeds.author.name,
+      ...(botConfig.embeds.author.icon ? { iconURL: botConfig.embeds.author.icon } : {}),
+      ...(botConfig.embeds.author.url ? { url: botConfig.embeds.author.url } : {}),
+    });
   }
 
   if (footer) {
@@ -169,6 +175,12 @@ export function createEmbed({
     } catch (error) {
       
     }
+  } else if (botConfig.embeds?.footer?.text) {
+    const defaultFooter = {
+      text: botConfig.embeds.footer.text,
+      ...(botConfig.embeds.footer.icon ? { iconURL: botConfig.embeds.footer.icon } : {}),
+    };
+    embed.setFooter(defaultFooter);
   }
 
   if (thumbnail) {
@@ -181,6 +193,8 @@ export function createEmbed({
     } catch (error) {
       
     }
+  } else if (botConfig.embeds?.thumbnail) {
+    embed.setThumbnail(botConfig.embeds.thumbnail);
   }
 
   if (image) {

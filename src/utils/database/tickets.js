@@ -20,7 +20,7 @@ export async function getOpenTicketCountForUser(guildId, userId) {
         }
 
         if (db.db?.pool && typeof db.db.isAvailable === 'function' && db.db.isAvailable()) {
-            const { pgConfig } = await import('../../config/postgres.js');
+            const { pgConfig } = await import('../../config/database/postgres.js');
             const result = await db.db.pool.query(
                 `SELECT COUNT(*)::int AS count FROM ${pgConfig.tables.tickets}
                  WHERE guild_id = $1
@@ -102,7 +102,7 @@ async function listGuildTickets(guildId) {
     }
 
     if (db.db?.pool && typeof db.db.isAvailable === 'function' && db.db.isAvailable()) {
-        const { pgConfig } = await import('../../config/postgres.js');
+        const { pgConfig } = await import('../../config/database/postgres.js');
         const result = await db.db.pool.query(
             `SELECT data FROM ${pgConfig.tables.tickets} WHERE guild_id = $1`,
             [guildId],

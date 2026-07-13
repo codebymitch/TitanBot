@@ -72,25 +72,63 @@ export function setupPlayerHandler(client) {
         return;
     }
 
+    // Lavalink nodes often flap (reconnect -> error -> reconnect). Throttle all
+    // per-node messages to one line per interval, log the first connect only,
+    // and skip reconnect noise entirely since it is meaningless during flapping.
+    const nodeLogState = new Map();
+    const NODE_LOG_INTERVAL_MS = 5 * 60 * 1000;
+
+    const shouldLogNodeEvent = (nodeName) => {
+        const prev = nodeLogState.get(nodeName) ?? { lastLogAt: 0, hasConnected: false };
+        const now = Date.now();
+        if (now - prev.lastLogAt < NODE_LOG_INTERVAL_MS) {
+            return false;
+        }
+        nodeLogState.set(nodeName, { ...prev, lastLogAt: now });
+        return true;
+    };
+
+    const markNodeConnected = (nodeName) => {
+        const prev = nodeLogState.get(nodeName) ?? { lastLogAt: 0, hasConnected: false };
+        nodeLogState.set(nodeName, { ...prev, hasConnected: true });
+    };
+
     client.riffy.on('nodeConnect', (node) => {
+        const prev = nodeLogState.get(node.name) ?? { lastLogAt: 0, hasConnected: false };
+        if (prev.hasConnected) {
+            return;
+        }
+        markNodeConnected(node.name);
         logger.info(`Lavalink node "${node.name}" connected.`);
     });
 
+    client.riffy.on('nodeReconnect', () => {
+        // Intentionally silent — reconnect spam is not actionable during flapping.
+    });
+
     client.riffy.on('nodeError', (node, error) => {
-        logger.error(`Lavalink node "${node.name}" error:`, error?.message || error);
+        if (!shouldLogNodeEvent(node.name)) {
+            return;
+        }
+        logger.warn(`Lavalink node "${node.name}" error: ${error?.message || error}`);
     });
 
     client.riffy.on('nodeDisconnect', (node) => {
+        if (!shouldLogNodeEvent(node.name)) {
+            return;
+        }
         logger.warn(`Lavalink node "${node.name}" disconnected.`);
-    });
-
-    client.riffy.on('nodeReconnect', (node) => {
-        logger.info(`Lavalink node "${node.name}" reconnected.`);
     });
 
     client.riffy.on('trackStart', async (player, track) => {
         try {
             const guildData = getGuildMusicData(player.guildId);
+
+            // Keep the Lavalink player's loop mode aligned with the stored preference.
+            // Skip temporarily clears track-loop so it can advance; restore it here.
+            if (guildData.loop && player.loop !== guildData.loop) {
+                player.setLoop(guildData.loop);
+            }
 
             if (player.previous) {
                 guildData.previousTracks.push(player.previous);
@@ -178,6 +216,7 @@ export function setupPlayerHandler(client) {
         guildData.playerMessageId = null;
         guildData.playerChannelId = null;
         guildData.previousTracks = [];
+        guildData.autoPaused = false;
         if (guildData.idleTimeout) {
             clearTimeout(guildData.idleTimeout);
             guildData.idleTimeout = null;

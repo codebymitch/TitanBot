@@ -13,7 +13,7 @@ export class GuildMusicData {
         this.queuePages = new Map();
         this.updateInterval = null;
         this.idleTimeout = null;
-        this.wasPaused = false;
+        this.autoPaused = false;
         this.stopConfirmPending = null;
     }
 }

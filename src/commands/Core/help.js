@@ -174,7 +174,7 @@ export default {
                     components: [],
                 });
             } catch (error) {
-                
+                logger.debug('Help menu close edit failed (interaction may have expired):', error?.message);
             }
         }, HELP_MENU_TIMEOUT_MS);
     },

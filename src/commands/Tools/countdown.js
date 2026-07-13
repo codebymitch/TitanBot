@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { createControlButtons, formatTime, startCountdown } from '../../handlers/countdownButtons.js';
 
@@ -47,58 +46,51 @@ export default {
             return;
         }
 
-        try {
-            const minutes = interaction.options.getInteger("minutes") || 0;
-            const seconds = interaction.options.getInteger("seconds") || 0;
-            const title = interaction.options.getString("title") || "Countdown Timer";
+        const minutes = interaction.options.getInteger("minutes") || 0;
+        const seconds = interaction.options.getInteger("seconds") || 0;
+        const title = interaction.options.getString("title") || "Countdown Timer";
 
-            const totalSeconds = minutes * 60 + seconds;
+        const totalSeconds = minutes * 60 + seconds;
 
-            if (totalSeconds <= 0) {
-                throw new Error("Please specify a duration of at least 1 second.");
-            }
-
-            if (totalSeconds > 86400) {
-                throw new Error("Countdown cannot be longer than 24 hours.");
-            }
-
-            const endTime = Date.now() + totalSeconds * 1000;
-            const countdownId = `${interaction.channelId}-${Date.now()}`;
-
-            const row = createControlButtons(countdownId);
-
-            const initialEmbed = successEmbed(
-                `⏱️ ${title}`,
-                `Time remaining: **${formatTime(totalSeconds)}**`,
-            );
-
-            const message = await interaction.channel.send({
-                embeds: [initialEmbed],
-                components: [row],
-            });
-
-            const countdownData = {
-                message,
-                endTime,
-                remainingTime: totalSeconds * 1000,
-                isPaused: false,
-                title,
-                lastUpdate: Date.now(),
-                interval: null,
-            };
-
-            activeCountdowns.set(countdownId, countdownData);
-            startCountdown(countdownId, countdownData, activeCountdowns);
-
-            await InteractionHelper.safeEditReply(interaction, {
-                content: "✅ Countdown started!",
-                flags: MessageFlags.Ephemeral,
-            });
-        } catch (error) {
-            await handleInteractionError(interaction, error, {
-                type: 'command',
-                commandName: 'countdown'
-            });
+        if (totalSeconds <= 0) {
+            throw new Error("Please specify a duration of at least 1 second.");
         }
+
+        if (totalSeconds > 86400) {
+            throw new Error("Countdown cannot be longer than 24 hours.");
+        }
+
+        const endTime = Date.now() + totalSeconds * 1000;
+        const countdownId = `${interaction.channelId}-${Date.now()}`;
+
+        const row = createControlButtons(countdownId);
+
+        const initialEmbed = successEmbed(
+            `⏱️ ${title}`,
+            `Time remaining: **${formatTime(totalSeconds)}**`,
+        );
+
+        const message = await interaction.channel.send({
+            embeds: [initialEmbed],
+            components: [row],
+        });
+
+        const countdownData = {
+            message,
+            endTime,
+            remainingTime: totalSeconds * 1000,
+            isPaused: false,
+            title,
+            lastUpdate: Date.now(),
+            interval: null,
+        };
+
+        activeCountdowns.set(countdownId, countdownData);
+        startCountdown(countdownId, countdownData, activeCountdowns);
+
+        await InteractionHelper.safeEditReply(interaction, {
+            content: "✅ Countdown started!",
+            flags: MessageFlags.Ephemeral,
+        });
     },
 };

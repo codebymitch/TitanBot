@@ -1,17 +1,11 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { getFromDb, setInDb, deleteFromDb } from '../../utils/database.js';
+import { getFromDb, setInDb, deleteFromDb, getUserNotesKey, getUserNotesListKey } from '../../utils/database.js';
 import { sanitizeInput } from '../../utils/validation.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-function getUserNotesKey(guildId, userId) {
-    return `moderation_user_notes_${guildId}_${userId}`;
-}
-
-function getGuildNotesListKey(guildId) {
-    return `moderation_user_notes_list_${guildId}`;
-}
+import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -206,14 +200,18 @@ async function handleViewNotes(interaction, targetUser, notes) {
 }
 
 async function handleRemoveNote(interaction, targetUser, notes, guildId) {
-const index = interaction.options.getInteger("index") - 1;
+    const index = interaction.options.getInteger("index") - 1;
 
     if (index < 0 || index >= notes.length) {
-        return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Please provide a valid note index (1-${notes.length}).' });
+        return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: `Please provide a valid note index (1-${notes.length}).` });
     }
 
-    const removedNote = notes[index];
-    notes.splice(index, 1);
+    // The view command displays notes sorted newest-first, so resolve the index
+    // against the same ordering to delete the note the user actually sees.
+    const sortedNotes = [...notes].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const removedNote = sortedNotes[index];
+    const originalIndex = notes.indexOf(removedNote);
+    notes.splice(originalIndex, 1);
 
     const notesKey = getUserNotesKey(guildId, targetUser.id);
     await setInDb(notesKey, notes);

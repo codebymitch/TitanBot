@@ -2,9 +2,7 @@
 
 import { pgDb } from './postgresDatabase.js';
 import { logger } from './logger.js';
-import { BotConfig } from '../config/bot.js';
-import { normalizeGuildConfig, validateGuildConfigOrThrow } from './schemas.js';
-import { DEFAULT_GUILD_CONFIG } from './constants.js';
+import { BotConfig, getDefaultApplicationQuestions } from '../config/bot.js';
 
 export {
     db,
@@ -17,6 +15,8 @@ export {
 export {
     getGuildConfigKey,
     getGuildBirthdaysKey,
+    getBirthdayLeftBackupKey,
+    getBirthdayTrackingKey,
     getTicketKey,
     getTicketCounterKey,
     getInviteTrackingKey,
@@ -24,16 +24,30 @@ export {
     getInviteUsesKey,
     getFakeAccountKey,
     getEconomyKey,
+    getEconomyPrefix,
     getAFKKey,
     getWelcomeConfigKey,
     getLevelingKey,
     getUserLevelKey,
+    getUserLevelPrefix,
     getApplicationRolesKey,
     getApplicationSettingsKey,
     getUserApplicationsKey,
     getApplicationKey,
+    getApplicationsPrefix,
     getJoinToCreateConfigKey,
     getJoinToCreateChannelsKey,
+    getWarningsKey,
+    getWarningsPrefix,
+    getUserNotesKey,
+    getUserNotesListKey,
+    getReactionRoleKey,
+    getReactionRolesPrefix,
+    getServerCountersKey,
+    getGiveawayEntryKey,
+    getGiveawayLockKey,
+    canonicalizeKey,
+    getLegacyVariantsForCanonical,
 } from './database/keys.js';
 
 export {
@@ -61,6 +75,7 @@ import {
     getWelcomeConfigKey,
     getEconomyKey,
     getAFKKey,
+    getUserLevelPrefix,
 } from './database/keys.js';
 
 export async function insertVerificationAudit(record) {
@@ -107,51 +122,8 @@ export function unwrapReplitData(data) {
     return data;
 }
 
-export async function getGuildConfig(client, guildId, context = {}) {
-    try {
-        if (!client.db || typeof client.db.get !== "function") {
-            return {};
-        }
-
-        const configKey = getGuildConfigKey(guildId);
-        const rawConfig = await client.db.get(configKey, {});
-        const cleanedConfig = unwrapReplitData(rawConfig);
-
-        return normalizeGuildConfig(cleanedConfig, DEFAULT_GUILD_CONFIG);
-    } catch (error) {
-        logger.error(`Error fetching config for guild ${guildId}`, {
-            error,
-            traceId: context.traceId,
-            guildId,
-            userId: context.userId,
-            command: context.command
-        });
-        return {};
-    }
-}
-
-export async function setGuildConfig(client, guildId, config, context = {}) {
-    try {
-        if (!client.db || typeof client.db.set !== "function") {
-            logger.error("Database client is not available for setGuildConfig");
-            return false;
-        }
-
-        const key = getGuildConfigKey(guildId);
-        const validated = validateGuildConfigOrThrow(config, { guildId, ...context });
-        await client.db.set(key, validated);
-        return true;
-    } catch (error) {
-        logger.error(`Error saving config for guild ${guildId}`, {
-            error,
-            traceId: context.traceId,
-            guildId,
-            userId: context.userId,
-            command: context.command
-        });
-        return false;
-    }
-}
+// Guild config access: import from services/config/guildConfig.js only.
+// Low-level storage lives in ./database/guildConfigStorage.js
 
 export { pgDb };
 
@@ -304,7 +276,7 @@ export async function getEndedGiveaways(client) {
         }
 
         if (isPostgresSqlReady(wrapper)) {
-            const { pgConfig } = await import('../config/postgres.js');
+            const { pgConfig } = await import('../config/database/postgres.js');
 
             const result = await wrapper.db.pool.query(
                 `SELECT id, guild_id, message_id, data, ends_at 
@@ -340,7 +312,7 @@ export async function markGiveawayEnded(client, giveawayId, endedData) {
         }
 
         if (isPostgresSqlReady(wrapper)) {
-            const { pgConfig } = await import('../config/postgres.js');
+            const { pgConfig } = await import('../config/database/postgres.js');
 
             await wrapper.db.pool.query(
                 `UPDATE ${pgConfig.tables.giveaways} 
@@ -433,6 +405,11 @@ export async function getWelcomeConfig(client, guildId) {
 export async function saveWelcomeConfig(client, guildId, config) {
     const key = getWelcomeConfigKey(guildId);
     try {
+        if (!client.db || typeof client.db.set !== 'function') {
+            logger.error('Database client is not available for saveWelcomeConfig.');
+            return false;
+        }
+
         const existingConfig = await getWelcomeConfig(client, guildId);
         const mergedConfig = { ...existingConfig, ...config };
         
@@ -570,7 +547,7 @@ export async function getLeaderboard(client, guildId, limit = 10) {
             return [];
         }
 
-        const prefix = `guild:${guildId}:leveling:users:`;
+        const prefix = getUserLevelPrefix(guildId);
         let keys = await client.db.list(prefix);
         
         if (!Array.isArray(keys)) {
@@ -654,19 +631,35 @@ export async function saveApplicationRoles(client, guildId, roles) {
     }
 }
 
+function buildApplicationSettingsDefaults() {
+    return {
+        enabled: false,
+        applicationChannelId: null,
+        logChannelId: null,
+        questions: getDefaultApplicationQuestions(),
+        roles: {
+            admin: null,
+            reviewer: null,
+            accepted: null,
+            denied: null
+        },
+        requiredRoles: [],
+        deniedRoles: [],
+        minAccountAge: 0,
+        maxApplications: 1,
+        cooldown: BotConfig.applications?.applicationCooldown ?? 7,
+        allowMultipleApplications: false,
+        requireVerification: false,
+        customWelcomeMessage: "",
+        pendingApplicationRetentionDays: 30,
+        reviewedApplicationRetentionDays: BotConfig.applications?.deleteApprovedAfter ?? 14,
+    };
+}
+
 export async function getApplicationSettings(client, guildId) {
     if (!client.db) {
         logger.warn('Database not available for getApplicationSettings');
-        return {
-            enabled: false,
-            applicationChannelId: null,
-            logChannelId: null,
-            questions: [
-                "Why do you want to join our staff team?",
-                "What experience do you have that would make you a good fit?",
-                "How much time can you dedicate to this role?"
-            ]
-        };
+        return buildApplicationSettingsDefaults();
     }
     
     const key = getApplicationSettingsKey(guildId);
@@ -674,62 +667,12 @@ export async function getApplicationSettings(client, guildId) {
         const settings = await client.db.get(key, {});
         const unwrapped = unwrapReplitData(settings);
         
-        const defaultSettings = {
-            enabled: false,
-            applicationChannelId: null,
-            logChannelId: null,
-            questions: [
-                "Why do you want to join our staff team?",
-                "What experience do you have that would make you a good fit?",
-                "How much time can you dedicate to this role?"
-            ],
-            roles: {
-                admin: null,
-                reviewer: null,
-                accepted: null,
-                denied: null
-            },
-            requiredRoles: [],
-            deniedRoles: [],
-minAccountAge: 0,
-            maxApplications: 1,
-cooldown: 7,
-            allowMultipleApplications: false,
-            requireVerification: false,
-            customWelcomeMessage: "",
-            pendingApplicationRetentionDays: 30,
-            reviewedApplicationRetentionDays: 14
-        };
+        const defaultSettings = buildApplicationSettingsDefaults();
         
         return { ...defaultSettings, ...unwrapped };
     } catch (error) {
         logger.error(`Error getting application settings for guild ${guildId}:`, error);
-        return {
-            enabled: false,
-            applicationChannelId: null,
-            logChannelId: null,
-            questions: [
-                "Why do you want to join our staff team?",
-                "What experience do you have that would make you a good fit?",
-                "How much time can you dedicate to this role?"
-            ],
-            roles: {
-                admin: null,
-                reviewer: null,
-                accepted: null,
-                denied: null
-            },
-            requiredRoles: [],
-            deniedRoles: [],
-            minAccountAge: 0,
-            maxApplications: 1,
-            cooldown: 7,
-            allowMultipleApplications: false,
-            requireVerification: false,
-            customWelcomeMessage: "",
-            pendingApplicationRetentionDays: 30,
-            reviewedApplicationRetentionDays: 14
-        };
+        return buildApplicationSettingsDefaults();
     }
 }
 

@@ -2,7 +2,7 @@ import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, RoleSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType, EmbedBuilder, LabelBuilder, CheckboxBuilder, TextDisplayBuilder } from 'discord.js';
 import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError, createError, TitanBotError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
+import { createError, TitanBotError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { createReactionRoleMessage, hasDangerousPermissions, getAllReactionRoleMessages, deleteReactionRoleMessage } from '../../services/reactionRoleService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
@@ -11,8 +11,16 @@ import {
     formatPanelStatusField,
 } from '../../utils/panelStatus.js';
 import { startDashboardSession } from '../../utils/dashboardSession.js';
+import { getReactionRoleKey } from '../../utils/database/keys.js';
 
 const DASHBOARD_EPHEMERAL = MessageFlags.Ephemeral;
+const SELECT_OPTION_LABEL_LIMIT = 100;
+const SELECT_OPTION_DESCRIPTION_LIMIT = 100;
+
+function truncateText(value, maxLength) {
+    const text = String(value ?? '');
+    return text.length > maxLength ? text.substring(0, maxLength) : text;
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -26,6 +34,7 @@ export default {
                 .addChannelOption(option => 
                     option.setName('channel')
                         .setDescription('The channel to send the reaction role message to')
+                        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
                         .setRequired(true)
                 )
                 .addStringOption(option =>
@@ -80,19 +89,11 @@ export default {
     async execute(interaction) {
         const subcommand = interaction.options.getSubcommand();
 
-        try {
-            if (subcommand === 'setup') {
-                await handleSetup(interaction);
-            } else if (subcommand === 'dashboard') {
-                const selectedPanelId = interaction.options.getString('panel');
-                await handleDashboard(interaction, selectedPanelId);
-            }
-        } catch (error) {
-            await handleInteractionError(interaction, error, {
-                type: 'command',
-                commandName: 'reactroles',
-                subcommand: subcommand
-            });
+        if (subcommand === 'setup') {
+            await handleSetup(interaction);
+        } else if (subcommand === 'dashboard') {
+            const selectedPanelId = interaction.options.getString('panel');
+            await handleDashboard(interaction, selectedPanelId);
         }
     },
 
@@ -100,77 +101,45 @@ export default {
         if (interaction.commandName !== 'reactroles') return;
         if (interaction.options.getSubcommand() !== 'dashboard') return;
 
+        // Autocomplete must respond within 3s. Build choices from stored panel data and
+        // cached channels/messages only — no network fetches — to avoid DiscordAPIError 10062.
         try {
             const guildId = interaction.guild.id;
             const client = interaction.client;
-            
+            const guild = interaction.guild;
+
             let panels;
             try {
                 panels = await getAllReactionRoleMessages(client, guildId);
-            } catch (dbError) {
-                
+            } catch {
                 await interaction.respond([]).catch(() => {});
                 return;
             }
 
-            if (!panels || panels.length === 0) {
+            if (!panels?.length) {
                 await interaction.respond([]).catch(() => {});
                 return;
             }
 
-            const guild = interaction.guild;
-
-            const validPanels = [];
+            const choices = [];
             for (const panel of panels) {
-                
-                if (!panel.messageId || !panel.channelId) {
-                    continue;
-                }
+                if (!panel.messageId || !panel.channelId) continue;
 
                 const channel = guild.channels.cache.get(panel.channelId);
-                if (!channel) {
-                    await deleteReactionRoleMessage(client, guildId, panel.messageId).catch(() => {});
-                    continue;
-                }
-                
-                const msg = await channel.messages.fetch(panel.messageId).catch(() => null);
-                if (!msg) {
-                    await deleteReactionRoleMessage(client, guildId, panel.messageId).catch(() => {});
-                    continue;
-                }
-                validPanels.push(panel);
+                if (!channel) continue;
+
+                const cachedTitle = channel.messages?.cache?.get(panel.messageId)?.embeds?.[0]?.title;
+                const roleCount = Array.isArray(panel.roles) ? panel.roles.length : 0;
+                const label = cachedTitle
+                    ? `${cachedTitle} (#${channel.name})`
+                    : `#${channel.name} · ${roleCount} role${roleCount === 1 ? '' : 's'}`;
+
+                choices.push({ name: label.substring(0, 100), value: panel.messageId });
+                if (choices.length >= 25) break;
             }
 
-            if (validPanels.length === 0) {
-                await interaction.respond([]).catch(() => {});
-                return;
-            }
-
-            const choices = await Promise.all(
-                validPanels.slice(0, 25).map(async panel => {
-                    try {
-                        const channel = guild.channels.cache.get(panel.channelId);
-                        if (!channel) return null;
-                        
-                        const msg = await channel.messages.fetch(panel.messageId).catch(() => null);
-                        if (!msg) return null;
-                        
-                        const title = msg?.embeds?.[0]?.title ?? 'Untitled Panel';
-                        const channelName = channel?.name ?? 'unknown';
-                        
-                        return {
-                            name: `${title} (${channelName})`.substring(0, 100),
-                            value: panel.messageId
-                        };
-                    } catch (e) {
-                        return null;
-                    }
-                })
-            );
-
-            const validChoices = choices.filter(c => c !== null);
-            await interaction.respond(validChoices).catch(() => {});
-        } catch (error) {
+            await interaction.respond(choices).catch(() => {});
+        } catch {
             await interaction.respond([]).catch(() => {});
         }
     }
@@ -225,10 +194,16 @@ async function handleSetup(interaction) {
 
     const roles = [];
     const roleValidationErrors = [];
+    const seenRoleIds = new Set();
     
     for (let i = 1; i <= 5; i++) {
         const role = interaction.options.getRole(`role${i}`);
         if (role) {
+            if (seenRoleIds.has(role.id)) {
+                roleValidationErrors.push(`**${role.name}** - This role was selected more than once`);
+                continue;
+            }
+
             if (role.position >= interaction.guild.members.me.roles.highest.position) {
                 roleValidationErrors.push(`**${role.name}** - My bot's role is positioned lower than this role in your server's role hierarchy and cannot assign it`);
                 continue;
@@ -249,6 +224,7 @@ async function handleSetup(interaction) {
                 continue;
             }
             
+            seenRoleIds.add(role.id);
             roles.push(role);
         }
     }
@@ -267,7 +243,7 @@ async function handleSetup(interaction) {
         
         await interaction.followUp({
             embeds: [warningEmbed('Role Validation Warning', errorMsg)],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -288,8 +264,8 @@ async function handleSetup(interaction) {
             .setMaxValues(roles.length)
             .addOptions(
                 roles.map(role => ({
-                    label: role.name,
-                    description: `Add/remove the ${role.name} role`,
+                    label: truncateText(role.name, SELECT_OPTION_LABEL_LIMIT),
+                    description: truncateText(`Add/remove the ${role.name} role`, SELECT_OPTION_DESCRIPTION_LIMIT),
                     value: role.id,
                     emoji: '🎭'
                 }))
@@ -312,14 +288,21 @@ async function handleSetup(interaction) {
     });
 
     const roleIds = roles.map(role => role.id);
-    await createReactionRoleMessage(
-        interaction.client,
-        interaction.guildId,
-        channel.id,
-        message.id,
-        roleIds
-    );
-    
+    try {
+        await createReactionRoleMessage(
+            interaction.client,
+            interaction.guildId,
+            channel.id,
+            message.id,
+            roleIds
+        );
+    } catch (saveError) {
+        // The panel is already posted but its data failed to persist, so the dropdown
+        // would not work. Remove the orphaned message before surfacing the error.
+        await message.delete().catch(() => {});
+        throw saveError;
+    }
+
     logger.info(`Reaction role message created: ${message.id} with ${roles.length} roles by ${interaction.user.tag}`);
 
     try {
@@ -521,9 +504,9 @@ function buildReactionRoleDashboardPayload(panelData, discordMsg, guildId, guild
 
 async function migrateReactionRoleMessageId(client, guildId, panelData, newMessageId) {
     if (!newMessageId || panelData.messageId === newMessageId) return;
-    const oldKey = `reaction_roles:${guildId}:${panelData.messageId}`;
+    const oldKey = getReactionRoleKey(guildId, panelData.messageId);
     panelData.messageId = newMessageId;
-    await client.db.set(`reaction_roles:${guildId}:${newMessageId}`, panelData);
+    await client.db.set(getReactionRoleKey(guildId, newMessageId), panelData);
     await client.db.delete(oldKey).catch(() => {});
 }
 
@@ -842,7 +825,7 @@ async function handleAddRole(selectInteraction, rootInteraction, panelData, guil
         }
 
         panelData.roles.push(role.id);
-        const key = `reaction_roles:${guildId}:${panelData.messageId}`;
+        const key = getReactionRoleKey(guildId, panelData.messageId);
         await client.db.set(key, panelData);
 
         await rebuildLivePanelMessage(guild, panelData);
@@ -971,7 +954,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
                 });
             }
         } else {
-            const key = `reaction_roles:${guildId}:${panelData.messageId}`;
+            const key = getReactionRoleKey(guildId, panelData.messageId);
             await client.db.set(key, panelData);
             await rebuildLivePanelMessage(guild, panelData);
 

@@ -1,8 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ComponentType, LabelBuilder, RoleSelectMenuBuilder } from 'discord.js';
 import { createEmbed, successEmbed } from '../../utils/embeds.js';
-import { getColor } from '../../config/bot.js';
+import { getColor, getApplicationStatusColor } from '../../config/bot.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError, withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { withErrorHandling, createError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
 import ApplicationService from '../../services/applicationService.js';
 import { 
     getApplicationSettings, 
@@ -238,7 +238,7 @@ async function handleSetup(interaction) {
 
     const existingRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
     if (existingRoles.some(r => r.roleId === roleId)) {
-        await replyUserError(submitted, { type: ErrorTypes.CONFIGURATION, message: 'The role ${role} is already configured as an application.' });
+        await replyUserError(submitted, { type: ErrorTypes.CONFIGURATION, message: `The role ${role} is already configured as an application.` });
         return;
     }
 
@@ -377,14 +377,14 @@ async function handleReview(interaction) {
 
             try {
                 const user = await reasonSubmit.client.users.fetch(application.userId);
-                const statusColor = status === "approved" ? getColor('success') : getColor('error');
+                const statusColor = getApplicationStatusColor(status);
                 const reviewStatus = getApplicationStatusPresentation(status);
-                const dmEmbed = createEmbed(
-                    `${reviewStatus.statusEmoji} Application ${reviewStatus.statusLabel}`,
-                    `Your application for **${application.roleName}** has been **${status}**\n` +
+                const dmEmbed = createEmbed({
+                    title: `${reviewStatus.statusEmoji} Application ${reviewStatus.statusLabel}`,
+                    description: `Your application for **${application.roleName}** has been **${status}**\n` +
                         `**Note:** ${reason}\n\n` +
                         `Use \`/apply status id:${appId}\` to view details.`
-                ).setColor(statusColor);
+                }).setColor(statusColor);
 
                 await user.send({ embeds: [dmEmbed] });
             } catch (error) {
@@ -397,7 +397,7 @@ async function handleReview(interaction) {
 
             if (application.logMessageId && application.logChannelId) {
                 try {
-                    const statusColor = status === "approved" ? getColor('success') : getColor('error');
+                    const statusColor = getApplicationStatusColor(status);
                     const logChannel = interaction.guild.channels.cache.get(
                         application.logChannelId,
                     );
@@ -542,7 +542,11 @@ async function handleList(interaction) {
 
             return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
         } else {
-            return await replyUserError(interaction, { type: ErrorTypes.CONFIGURATION, message: '"No applications found and no application roles configured.\\n" +\n                        "Use `/app-admin roles add` to configure application roles first."' });
+            return await replyUserError(interaction, {
+                type: ErrorTypes.CONFIGURATION,
+                message: 'No applications found and no application roles configured.\n' +
+                    'Use `/app-admin roles add` to configure application roles first.'
+            });
         }
     }
 
@@ -577,95 +581,3 @@ async function handleList(interaction) {
     });
 }
 
-export async function handleApplicationReviewModal(interaction) {
-    if (!interaction.isModalSubmit()) return;
-    
-    const customId = interaction.customId;
-    if (!customId.startsWith('app_review_')) return;
-    
-    const [, appId, action] = customId.split('_');
-    const reason = interaction.fields.getTextInputValue('reason') || 'No reason provided.';
-    const isApprove = action === 'approve';
-    
-    try {
-        const application = await getApplication(interaction.client, interaction.guild.id, appId);
-        if (!application) {
-            return await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'Application not found.' });
-        }
-        
-        const status = isApprove ? 'approved' : 'denied';
-        await updateApplication(interaction.client, interaction.guild.id, appId, {
-            status,
-            reviewer: interaction.user.id,
-            reviewMessage: reason,
-            reviewedAt: new Date().toISOString()
-        });
-        
-        try {
-            const user = await interaction.client.users.fetch(application.userId);
-            const reviewStatus = getApplicationStatusPresentation(status);
-            const dmEmbed = createEmbed(
-                `${reviewStatus.statusEmoji} Application ${reviewStatus.statusLabel}`,
-                `Your application for **${application.roleName}** has been **${status}**.\n` +
-                `**Note:** ${reason}\n\n` +
-                `Use \`/apply status id:${appId}\` to view details.`,
-                isApprove ? '#00FF00' : '#FF0000'
-            );
-            
-            await user.send({ embeds: [dmEmbed] });
-        } catch (error) {
-            logger.error('Error sending DM to user:', error);
-        }
-        
-        if (application.logMessageId && application.logChannelId) {
-            try {
-                const logChannel = interaction.guild.channels.cache.get(application.logChannelId);
-                if (logChannel) {
-                    const logMessage = await logChannel.messages.fetch(application.logMessageId);
-                    if (logMessage) {
-                        const embed = logMessage.embeds[0];
-                        if (embed) {
-                            const reviewStatus = getApplicationStatusPresentation(status);
-                            const newEmbed = EmbedBuilder.from(embed)
-                                .setColor(isApprove ? '#00FF00' : '#FF0000')
-                                .spliceFields(0, 1, {
-                                    name: 'Status',
-                                    value: `${reviewStatus.statusEmoji} ${reviewStatus.statusLabel}`
-                                });
-                            
-                            await logMessage.edit({
-                                embeds: [newEmbed],
-                                components: []
-                            });
-                        }
-                    }
-                }
-            } catch (error) {
-                logger.error('Error updating log message:', error);
-            }
-        }
-        
-        if (isApprove) {
-            try {
-                const member = await interaction.guild.members.fetch(application.userId);
-                await member.roles.add(application.role);
-            } catch (error) {
-                logger.error('Error assigning role:', error);
-            }
-        }
-        
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                successEmbed(
-                    `${getApplicationStatusPresentation(status).statusEmoji} Application ${getApplicationStatusPresentation(status).statusLabel}`,
-                    `The application has been marked as ${getApplicationStatusPresentation(status).statusLabel}.`
-                )
-            ],
-            flags: ["Ephemeral"]
-        });
-        
-    } catch (error) {
-        logger.error('Error processing application review:', error);
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while processing the application.' });
-    }
-}

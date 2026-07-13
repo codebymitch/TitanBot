@@ -6,8 +6,8 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const COOLDOWN = 30 * 60 * 1000;
-const MIN_WIN = 50;
-const MAX_WIN = 200;
+const MIN_WIN = Number(botConfig?.economy?.begMin) || 50;
+const MAX_WIN = Number(botConfig?.economy?.begMax) || 200;
 const SUCCESS_CHANCE = 0.7;
 
 export default {

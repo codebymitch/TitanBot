@@ -18,6 +18,7 @@ import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes, replyUserError } from '../../../utils/errorHandler.js';
+import { getEconomyPrefix } from '../../../utils/database.js';
 import { getEconomyData, addMoney, removeMoney, getMaxBankCapacity } from '../../../utils/economy.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -34,7 +35,7 @@ async function buildDashboardEmbed(guild, client) {
     let userCount = 0;
 
     try {
-        const economyKeys = await client.db.list(`economy:${guild.id}:`);
+        const economyKeys = await client.db.list(getEconomyPrefix(guild.id));
 
         if (economyKeys && economyKeys.length > 0) {
             for (const key of economyKeys) {
@@ -111,7 +112,7 @@ async function refreshDashboard(rootInteraction, guild, client) {
 
 async function updateConfigFile(currencySymbol, currencyName) {
     try {
-        const configPath = path.join(__dirname, '../../config/bot.js');
+        const configPath = path.join(__dirname, '../../../config/bot.js');
         let configContent = await fs.readFile(configPath, 'utf-8');
 
         configContent = configContent.replace(
@@ -300,17 +301,12 @@ async function handleAddCurrency(selectInteraction, rootInteraction, guild, clie
         return;
     }
 
-    const result = await addMoney(client, guild.id, userId, amount, type);
-
-    if (!result.success) {
-        await replyUserError(submitted, { type: ErrorTypes.UNKNOWN, message: 'result.error || \'An error occurred.\'' });
-        return;
-    }
+    const { newBalance } = await addMoney(client, guild.id, userId, amount, type);
 
     const currencySymbol = BotConfig.economy.currency.symbol;
 
     await submitted.reply({
-        embeds: [successEmbed('Currency Added', `Successfully added ${currencySymbol}${amount.toLocaleString()} to ${member.user.tag}'s ${type}.\n**New Balance:** ${currencySymbol}${result.newBalance.toLocaleString()}`)],
+        embeds: [successEmbed('Currency Added', `Successfully added ${currencySymbol}${amount.toLocaleString()} to ${member.user.tag}'s ${type}.\n**New Balance:** ${currencySymbol}${newBalance.toLocaleString()}`)],
         flags: MessageFlags.Ephemeral,
     });
 
@@ -319,7 +315,7 @@ async function handleAddCurrency(selectInteraction, rootInteraction, guild, clie
         targetUserId: userId,
         amount,
         type,
-        newBalance: result.newBalance
+        newBalance,
     });
 
     await refreshDashboard(rootInteraction, guild, client);
@@ -402,17 +398,12 @@ async function handleRemoveCurrency(selectInteraction, rootInteraction, guild, c
         return;
     }
 
-    const result = await removeMoney(client, guild.id, userId, amount, type);
-
-    if (!result.success) {
-        await replyUserError(submitted, { type: ErrorTypes.UNKNOWN, message: 'result.error || \'An error occurred.\'' });
-        return;
-    }
+    const { newBalance } = await removeMoney(client, guild.id, userId, amount, type);
 
     const currencySymbol = BotConfig.economy.currency.symbol;
 
     await submitted.reply({
-        embeds: [successEmbed('Currency Removed', `Successfully removed ${currencySymbol}${amount.toLocaleString()} from ${member.user.tag}'s ${type}.\n**New Balance:** ${currencySymbol}${result.newBalance.toLocaleString()}`)],
+        embeds: [successEmbed('Currency Removed', `Successfully removed ${currencySymbol}${amount.toLocaleString()} from ${member.user.tag}'s ${type}.\n**New Balance:** ${currencySymbol}${newBalance.toLocaleString()}`)],
         flags: MessageFlags.Ephemeral,
     });
 
@@ -421,7 +412,7 @@ async function handleRemoveCurrency(selectInteraction, rootInteraction, guild, c
         targetUserId: userId,
         amount,
         type,
-        newBalance: result.newBalance
+        newBalance,
     });
 
     await refreshDashboard(rootInteraction, guild, client);

@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
 import {
     skipTrack,
     stopPlayback,
@@ -106,88 +105,84 @@ export default {
         ),
 
     async execute(interaction, config, client) {
-        try {
-            await deferMusicCommand(interaction);
-            const subcommand = interaction.options.getSubcommand();
+        await deferMusicCommand(interaction);
+        const subcommand = interaction.options.getSubcommand();
 
-            switch (subcommand) {
-                case 'pause': {
-                    const embed = await pausePlayback(client, interaction);
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'resume': {
-                    const embed = await resumePlayback(client, interaction);
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'skip': {
-                    const embed = await skipTrack(client, interaction);
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'stop': {
-                    const embed = await stopPlayback(client, interaction);
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'shuffle': {
-                    const embed = await shuffleQueue(client, interaction);
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'loop': {
-                    const embed = await setLoopMode(client, interaction, interaction.options.getString('mode'));
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'volume': {
-                    const embed = await setVolume(client, interaction, interaction.options.getInteger('level'));
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'seek': {
-                    const embed = await seekTrack(client, interaction, interaction.options.getInteger('seconds'));
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'remove': {
-                    const embed = await removeFromQueue(client, interaction, interaction.options.getInteger('position'));
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'move': {
-                    const embed = await moveInQueue(
-                        client,
-                        interaction,
-                        interaction.options.getInteger('from'),
-                        interaction.options.getInteger('to'),
-                    );
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'clear': {
-                    const embed = await clearQueue(client, interaction);
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case 'leave': {
-                    const embed = await leaveVoiceChannel(client, interaction);
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                case '247': {
-                    const embed = await setTwentyFourSeven(client, interaction, interaction.options.getBoolean('enabled'));
-                    await replyMusicSuccess(interaction, embed);
-                    break;
-                }
-                default:
-                    await InteractionHelper.safeEditReply(interaction, {
-                        content: 'Unknown music subcommand.',
-                    });
+        switch (subcommand) {
+            case 'pause': {
+                const embed = await pausePlayback(client, interaction);
+                await replyMusicSuccess(interaction, embed);
+                break;
             }
-        } catch (error) {
-            await handleInteractionError(interaction, error, { command: 'music' });
+            case 'resume': {
+                const embed = await resumePlayback(client, interaction);
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'skip': {
+                const embed = await skipTrack(client, interaction);
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'stop': {
+                const embed = await stopPlayback(client, interaction);
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'shuffle': {
+                const embed = await shuffleQueue(client, interaction);
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'loop': {
+                const embed = await setLoopMode(client, interaction, interaction.options.getString('mode'));
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'volume': {
+                const embed = await setVolume(client, interaction, interaction.options.getInteger('level'));
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'seek': {
+                const embed = await seekTrack(client, interaction, interaction.options.getInteger('seconds'));
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'remove': {
+                const embed = await removeFromQueue(client, interaction, interaction.options.getInteger('position'));
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'move': {
+                const embed = await moveInQueue(
+                    client,
+                    interaction,
+                    interaction.options.getInteger('from'),
+                    interaction.options.getInteger('to'),
+                );
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'clear': {
+                const embed = await clearQueue(client, interaction);
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case 'leave': {
+                const embed = await leaveVoiceChannel(client, interaction);
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            case '247': {
+                const embed = await setTwentyFourSeven(client, interaction, interaction.options.getBoolean('enabled'));
+                await replyMusicSuccess(interaction, embed);
+                break;
+            }
+            default:
+                await InteractionHelper.safeEditReply(interaction, {
+                    content: 'Unknown music subcommand.',
+                });
         }
     },
 };

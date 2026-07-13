@@ -1,17 +1,30 @@
-// errorHandler.js
+// errorHandler.js — the single entry point for all error handling.
 //
-// User-facing error rules:
-// 1. Use replyUserError or handleInteractionError — not raw errorEmbed in commands/handlers
-// 2. Set a specific userMessage when you know the cause
-// 3. Use ErrorTypes — don't invent custom title strings
-// 4. Put guidance in the description, not embed tip fields
-// 5. Success/info/warning replies use successEmbed / infoEmbed / warningEmbed
+// Rules:
+// 1. Commands/handlers: throw TitanBotError (via createError) or let errors propagate;
+//    interactionCreate routes them through handleInteractionError. For expected user-facing
+//    failures (validation, cooldowns), use replyUserError.
+//    Do NOT wrap a command's execute() body in a try/catch whose only purpose is to call
+//    handleInteractionError — that is redundant because interactionCreate already catches
+//    command.execute errors and calls handleInteractionError with COMMAND_ERROR_SUBTYPES.
+//    Only keep a local try/catch when the catch does something more (custom recovery,
+//    typed re-throw, status-code branching) or when it lives in a standalone handler
+//    (collector callbacks, modal/component handlers) not reached via the command path.
+// 2. Services: throw, never return { success: false }. Wrap exports with wrapServiceBoundary
+//    (re-exported here) so unknown errors get typed with service/operation context.
+// 3. Background tasks (cron, timers): wrap with handleTaskError / runSafeTask.
+// 4. Set a specific userMessage when you know the cause; use ErrorTypes, don't invent titles.
+// 5. Success/info/warning replies use successEmbed / infoEmbed / warningEmbed.
 
 import { logger } from './logger.js';
 import { buildUserErrorEmbed } from './embeds.js';
 import { MessageFlags } from 'discord.js';
 import { getErrorMetadata, getDefaultErrorCodeByType, resolveErrorCode, ErrorCodes } from './errorRegistry.js';
 import { InteractionHelper } from './interactionHelper.js';
+
+// Re-export so consumers only ever need to import from errorHandler.js
+export { ErrorCodes, getErrorMetadata, resolveErrorCode, getDefaultErrorCodeByType } from './errorRegistry.js';
+export { ensureTypedServiceError, wrapServiceBoundary, wrapServiceClassMethods } from './serviceErrorBoundary.js';
 
 export const ErrorTypes = {
     VALIDATION: 'validation',
@@ -37,40 +50,66 @@ export class TitanBotError extends Error {
     }
 }
 
+// Discord API error codes that indicate a permission problem rather than a bug.
+const DISCORD_PERMISSION_CODES = new Set([
+    50001, // Missing Access
+    50013, // Missing Permissions
+    50007, // Cannot send messages to this user (DMs closed)
+    160002, // Cannot reply without permission to read message history
+]);
+
+// PostgreSQL / node-postgres error codes and errno values that indicate database trouble.
+const DATABASE_ERROR_CODES = new Set([
+    'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT',
+    '57014', // query_canceled (statement timeout)
+    '53300', // too_many_connections
+    '08006', '08001', '08003', // connection failures
+    '40001', '40P01', // serialization failure / deadlock
+]);
+
 export function categorizeError(error) {
     if (error instanceof TitanBotError) {
         return error.type;
     }
 
-    const message = error.message?.toLowerCase() || '';
-    const code = error.code;
+    const message = error?.message?.toLowerCase() || '';
+    const code = error?.code;
 
-    if (code >= 10000 && code < 20000) {
-        return ErrorTypes.DISCORD_API;
-    }
-
-    if (message.includes('rate limit') || code === 50001) {
-        return ErrorTypes.RATE_LIMIT;
-    }
-
-    if (message.includes('permission') || message.includes('missing') || code === 50013) {
-        return ErrorTypes.PERMISSION;
-    }
-
-    if (message.includes('database') || message.includes('connection') || message.includes('timeout')) {
+    if (typeof code === 'string' && DATABASE_ERROR_CODES.has(code)) {
         return ErrorTypes.DATABASE;
     }
 
-    if (message.includes('network') || message.includes('fetch') || message.includes('enotconn')) {
+    if (message.includes('rate limit') || code === 429) {
+        return ErrorTypes.RATE_LIMIT;
+    }
+
+    if (DISCORD_PERMISSION_CODES.has(code)) {
+        return ErrorTypes.PERMISSION;
+    }
+
+    // Remaining numeric codes in Discord's ranges (unknown entity 10xxx, request-level 5xxxx, etc.)
+    if (typeof code === 'number' && code >= 10000) {
+        return ErrorTypes.DISCORD_API;
+    }
+
+    if (error?.name === 'AbortError' || message.includes('network') || message.includes('fetch failed') || message.includes('enotconn')) {
         return ErrorTypes.NETWORK;
     }
 
-    if (message.includes('config') || message.includes('not found') || message.includes('invalid')) {
-        return ErrorTypes.CONFIGURATION;
+    if (message.includes('permission') || message.includes('missing access') || message.includes('missing permissions')) {
+        return ErrorTypes.PERMISSION;
+    }
+
+    if (message.includes('database') || message.includes('postgres') || message.includes('sql') || message.includes('connection') || message.includes('timeout')) {
+        return ErrorTypes.DATABASE;
     }
 
     if (message.includes('validation') || message.includes('invalid') || message.includes('required')) {
         return ErrorTypes.VALIDATION;
+    }
+
+    if (message.includes('config') || message.includes('not found')) {
+        return ErrorTypes.CONFIGURATION;
     }
 
     return ErrorTypes.UNKNOWN;
@@ -183,12 +222,7 @@ function buildErrorLogData(interaction, error, errorType, context = {}) {
 }
 
 function logInteractionError(error, errorType, logData) {
-    const isUserError = [
-        ErrorTypes.VALIDATION,
-        ErrorTypes.RATE_LIMIT,
-        ErrorTypes.USER_INPUT,
-        ErrorTypes.PERMISSION
-    ].includes(errorType);
+    const isUserError = USER_ERROR_TYPES.has(errorType);
     const isExpectedError = Boolean(error?.context?.expected === true || error?.context?.suppressErrorLog === true);
 
     if (isUserError || isExpectedError) {
@@ -245,13 +279,16 @@ async function sendErrorResponse(interaction, embed, context = {}) {
         }
 
         const useEphemeral = context.ephemeral !== false;
-        if (useEphemeral && !interaction.deferred && !interaction.replied) {
-            errorMessage.flags = MessageFlags.Ephemeral;
-        }
 
-        if (interaction.deferred || interaction.replied) {
+        if (interaction.replied) {
+            // A visible reply already exists; don't overwrite it — follow up ephemerally.
+            await interaction.followUp({ ...errorMessage, flags: MessageFlags.Ephemeral });
+        } else if (interaction.deferred) {
             await interaction.editReply(errorMessage);
         } else {
+            if (useEphemeral) {
+                errorMessage.flags = MessageFlags.Ephemeral;
+            }
             await interaction.reply(errorMessage);
         }
 
@@ -312,15 +349,71 @@ export async function replyUserError(interaction, {
     return sendErrorResponse(interaction, embed, { ...context, traceId, ephemeral, subtype });
 }
 
+const USER_ERROR_TYPES = new Set([
+    ErrorTypes.VALIDATION,
+    ErrorTypes.RATE_LIMIT,
+    ErrorTypes.USER_INPUT,
+    ErrorTypes.PERMISSION
+]);
+
+function buildErrorReference(resolvedErrorCode, traceId) {
+    const shortTrace = traceId ? String(traceId).slice(0, 8) : null;
+    return shortTrace ? `${resolvedErrorCode} · ${shortTrace}` : resolvedErrorCode;
+}
+
 export async function handleInteractionError(interaction, error, context = {}) {
     const errorType = categorizeError(error);
     const userMessage = getUserMessage(error, context);
-    const { logData, traceId } = buildErrorLogData(interaction, error, errorType, context);
+    const { logData, traceId, resolvedErrorCode } = buildErrorLogData(interaction, error, errorType, context);
 
     logInteractionError(error, errorType, logData);
 
-    const embed = buildUserErrorEmbed(errorType, userMessage);
+    // System errors get a reference code so users can report them and we can grep logs.
+    const isUserError = USER_ERROR_TYPES.has(errorType) || error?.context?.expected === true;
+    const description = isUserError
+        ? userMessage
+        : `${userMessage}\n\n-# Ref: \`${buildErrorReference(resolvedErrorCode, traceId)}\``;
+
+    const embed = buildUserErrorEmbed(errorType, description);
     await sendErrorResponse(interaction, embed, { ...context, traceId });
+}
+
+/**
+ * Central error handler for non-interaction contexts (cron jobs, timers, event
+ * side-effects). Logs with the same structured fields as interaction errors.
+ */
+export function handleTaskError(taskName, error, context = {}) {
+    const errorType = categorizeError(error);
+    const resolvedErrorCode = resolveErrorCode({ error, errorType, context });
+    const errorMetadata = getErrorMetadata(resolvedErrorCode);
+
+    logger.error(`Task Error [${taskName}] [${errorType.toUpperCase()}]`, {
+        event: 'task.error',
+        task: taskName,
+        errorCode: resolvedErrorCode || ErrorCodes.TASK_ERROR,
+        remediationHint: errorMetadata.remediation,
+        severity: errorMetadata.severity,
+        retryable: errorMetadata.retryable,
+        type: errorType,
+        error: error?.message || String(error),
+        stack: error?.stack,
+        context
+    });
+}
+
+/**
+ * Wrap a background task so it can never produce an unhandled rejection.
+ * Usage: cron.schedule('* * * * *', runSafeTask('giveaways', () => checkGiveaways(client)))
+ */
+export function runSafeTask(taskName, fn, context = {}) {
+    return async (...args) => {
+        try {
+            return await fn(...args);
+        } catch (error) {
+            handleTaskError(taskName, error, context);
+            return null;
+        }
+    };
 }
 
 export function withErrorHandling(fn, context = {}) {
@@ -332,6 +425,12 @@ export function withErrorHandling(fn, context = {}) {
                 arg && typeof arg === 'object' &&
                 (arg.isCommand || arg.isButton || arg.isModalSubmit || arg.isStringSelectMenu || arg.isChatInputCommand || arg._isPrefixCommand)
             );
+
+            // Slash commands are handled by interactionCreate — re-throw so the
+            // central handler can attach trace context and command subtypes.
+            if (interaction?.isChatInputCommand?.()) {
+                throw error;
+            }
 
             if (interaction) {
                 await handleInteractionError(interaction, error, context);
@@ -360,6 +459,8 @@ export default {
     getUserMessage,
     replyUserError,
     handleInteractionError,
+    handleTaskError,
+    runSafeTask,
     withErrorHandling,
     createError
 };

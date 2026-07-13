@@ -2,7 +2,9 @@
 
 import { logger } from '../utils/logger.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
-import { formatLogLine } from '../utils/logEmbeds.js';
+import { formatLogLine } from '../utils/logging/logEmbeds.js';
+import { getServerCountersKey } from '../utils/database/keys.js';
+import botConfig from '../config/bot.js';
 
 export const COUNTER_TYPE_CONFIG = {
   members: {
@@ -40,6 +42,26 @@ export function getCounterBaseName(type) {
 
 export function getCounterEmoji(type) {
   return getCounterConfig(type).emoji;
+}
+
+export function formatCounterChannelName(type, count) {
+  const template = botConfig.counters?.defaults?.channelName || '{name}-{count}';
+  const baseName = getCounterBaseName(type);
+  return template
+    .replaceAll('{name}', baseName)
+    .replaceAll('{count}', String(count));
+}
+
+export function getCounterActionMessage(action, values = {}) {
+  const template = botConfig.counters?.messages?.[action];
+  if (!template) {
+    return null;
+  }
+
+  return Object.entries(values).reduce(
+    (message, [key, value]) => message.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
 }
 
 export async function getGuildCounterStats(guild) {
@@ -150,7 +172,7 @@ export async function updateCounter(client, guild, counter) {
       logger.debug(`Base name: "${baseName}", Current name: "${channel.name}"`);
     }
     
-    const newName = `${baseName}: ${count}`;
+    const newName = formatCounterChannelName(type, count);
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`New name would be: "${newName}"`);
     }
@@ -204,7 +226,7 @@ export async function getServerCounters(client, guildId) {
       return [];
     }
     
-    const data = await client.db.get(`counters:${guildId}`);
+    const data = await client.db.get(getServerCountersKey(guildId));
     
     let counters = [];
     
@@ -248,7 +270,7 @@ export async function saveServerCounters(client, guildId, counters) {
       logger.debug(`Saving ${sanitizedCounters.length} counters for guild ${guildId}:`, sanitizedCounters);
     }
 
-    await client.db.set(`counters:${guildId}`, sanitizedCounters);
+    await client.db.set(getServerCountersKey(guildId), sanitizedCounters);
     if (process.env.NODE_ENV !== 'production') {
       logger.debug('Counters saved successfully');
     }

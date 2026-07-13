@@ -27,6 +27,9 @@ export const botConfig = {
         name: "Made by DIO",
         // Activity type number (0 = Playing).
         type: 0,
+        name: "Custom Status", // required by Discord API, not shown in the client
+        state: "stalking",     // this is what people actually see
+        type: 4,               // Custom
       },
     ],
   },
@@ -37,7 +40,7 @@ export const botConfig = {
   commands: {
     // Bot owner user IDs (comma-separated in OWNER_IDS env var).
     // Owners can access owner/admin-level bot commands.
-    owners: process.env.OWNER_IDS?.split(",") || [],
+    owners: process.env.OWNER_IDS?.split(",").map((id) => id.trim()).filter(Boolean) || [],
 
     // Default wait time between command uses (in seconds).
     defaultCooldown: 3,
@@ -45,8 +48,11 @@ export const botConfig = {
     // If true, old commands are removed before re-registering.
     deleteCommands: false,
 
-    // Optional server ID used for testing slash commands quickly.
+    // Optional server ID retained for tutorial compatibility; not used for command registration.
     testGuildId: process.env.TEST_GUILD_ID,
+
+    // When true (or MAINTENANCE_MODE=true), only bot owners can run commands.
+    maintenanceMode: process.env.MAINTENANCE_MODE === "true",
 
     // Command prefix for text-based commands (e.g., "!" for "!ping").
     // Supports both slash commands and prefix commands.
@@ -182,6 +188,14 @@ export const botConfig = {
     // Beg command random payout range.
     begMin: 5,
     begMax: 50,
+
+    // Command cooldowns (milliseconds).
+    cooldowns: {
+      daily: 24 * 60 * 60 * 1000,
+      work: 60 * 60 * 1000,
+      crime: 2 * 60 * 60 * 1000,
+      rob: 4 * 60 * 60 * 1000,
+    },
 
     // Chance to succeed when robbing (0.4 = 40%).
     robSuccessRate: 0.4,
@@ -463,6 +477,7 @@ export const botConfig = {
     utility: true,
     community: true,
     fun: true,
+    music: true,
   },
 };
 
@@ -488,14 +503,20 @@ export function validateConfig(config) {
   }
 
   if (process.env.NODE_ENV === 'production') {
-    if (!process.env.POSTGRES_HOST) {
-      errors.push("PostgreSQL host is required in production (POSTGRES_HOST environment variable)");
-    }
-    if (!process.env.POSTGRES_USER) {
-      errors.push("PostgreSQL user is required in production (POSTGRES_USER environment variable)");
-    }
-    if (!process.env.POSTGRES_PASSWORD) {
-      errors.push("PostgreSQL password is required in production (POSTGRES_PASSWORD environment variable)");
+    // A full connection URL (DATABASE_URL / POSTGRES_URL) satisfies all Postgres
+    // requirements, matching how src/config/database/postgres.js resolves the pool config.
+    const hasConnectionUrl = Boolean(process.env.POSTGRES_URL || process.env.DATABASE_URL);
+
+    if (!hasConnectionUrl) {
+      if (!process.env.POSTGRES_HOST) {
+        errors.push("PostgreSQL connection is required in production (set DATABASE_URL/POSTGRES_URL, or POSTGRES_HOST)");
+      }
+      if (!process.env.POSTGRES_USER) {
+        errors.push("PostgreSQL user is required in production (set DATABASE_URL/POSTGRES_URL, or POSTGRES_USER)");
+      }
+      if (!process.env.POSTGRES_PASSWORD) {
+        errors.push("PostgreSQL password is required in production (set DATABASE_URL/POSTGRES_URL, or POSTGRES_PASSWORD)");
+      }
     }
   }
 
@@ -511,6 +532,98 @@ if (configErrors.length > 0) {
 }
 
 export const BotConfig = botConfig;
+
+const COMMAND_CATEGORY_FEATURE_MAP = {
+  birthday: "birthday",
+  community: "community",
+  economy: "economy",
+  fun: "fun",
+  giveaway: "giveaways",
+  jointocreate: "joinToCreate",
+  leveling: "leveling",
+  logging: "logging",
+  moderation: "moderation",
+  music: "music",
+  reaction_roles: "reactionRoles",
+  search: "search",
+  serverstats: "counter",
+  ticket: "tickets",
+  tools: "tools",
+  utility: "utility",
+  verification: "verification",
+  welcome: "welcome",
+};
+
+function normalizeCategoryKey(category) {
+  return String(category || "").trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+export function getCommandPrefix() {
+  return botConfig.commands?.prefix ?? "!";
+}
+
+export function getBotOwners() {
+  return (botConfig.commands?.owners ?? [])
+    .map((id) => String(id).trim())
+    .filter(Boolean);
+}
+
+export function isBotOwner(userId) {
+  if (!userId) {
+    return false;
+  }
+
+  return getBotOwners().includes(String(userId));
+}
+
+export function isMaintenanceMode() {
+  return botConfig.commands?.maintenanceMode === true;
+}
+
+export function getBotMessage(key, replacements = {}) {
+  let message = botConfig.messages?.[key] || key;
+
+  for (const [placeholder, value] of Object.entries(replacements)) {
+    message = message.replace(new RegExp(`\\{${placeholder}\\}`, "g"), String(value));
+  }
+
+  return message;
+}
+
+export function isFeatureEnabled(featureKey) {
+  if (!featureKey) {
+    return true;
+  }
+
+  return botConfig.features?.[featureKey] !== false;
+}
+
+export function isCommandCategoryEnabled(category) {
+  const normalized = normalizeCategoryKey(category);
+
+  if (!normalized || normalized === "core") {
+    return true;
+  }
+
+  const featureKey = COMMAND_CATEGORY_FEATURE_MAP[normalized];
+  if (!featureKey) {
+    return true;
+  }
+
+  return isFeatureEnabled(featureKey);
+}
+
+export function getApplicationStatusColor(status) {
+  const colors = botConfig.applications?.statusColors || {};
+  const hex = colors[status];
+  return hex ? getColor(hex) : getColor(status === "approved" ? "success" : status === "denied" ? "error" : "warning");
+}
+
+export function getDefaultApplicationQuestions() {
+  return (botConfig.applications?.defaultQuestions || []).map((entry) =>
+    typeof entry === "string" ? entry : entry.question,
+  ).filter(Boolean);
+}
 
 export function getColor(path, fallback = "#99AAB5") {
   

@@ -14,7 +14,7 @@ import {
   enableCommand,
   resetCategoryCommands,
 } from '../../../services/commandAccessService.js';
-import { getGuildConfig } from '../../../services/guildConfig.js';
+import { getGuildConfig } from '../../../services/config/guildConfig.js';
 
 export const DASHBOARD_CATEGORY_SELECT = 'cmdaccess_category';
 export const DASHBOARD_COMMAND_SELECT = 'cmdaccess_command';

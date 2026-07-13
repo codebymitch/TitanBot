@@ -1,7 +1,7 @@
 import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
-import { buildRoleAuditLines } from '../utils/logEmbeds.js';
+import { buildRoleAuditLines } from '../utils/logging/logEmbeds.js';
 
 export default {
   name: Events.GuildRoleDelete,

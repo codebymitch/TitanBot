@@ -27,7 +27,7 @@ export async function handleMusicVoiceState(client, oldState, newState) {
     const hasUsers = humansInChannel.size > 0;
 
     if (!hasUsers && !player.paused && player.playing) {
-        guildData.wasPaused = true;
+        guildData.autoPaused = true;
         await applyPause(client, guildId);
         if (guildData.playerChannelId) {
             const channel = client.channels.cache.get(guildData.playerChannelId);
@@ -38,8 +38,9 @@ export async function handleMusicVoiceState(client, oldState, newState) {
         return;
     }
 
-    if (hasUsers && guildData.wasPaused && player.paused) {
+    if (hasUsers && guildData.autoPaused && player.paused) {
         await applyResume(client, guildId);
+        guildData.autoPaused = false;
         if (guildData.playerChannelId) {
             const channel = client.channels.cache.get(guildData.playerChannelId);
             if (channel) {
