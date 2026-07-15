@@ -8,11 +8,11 @@ import { logger } from '../utils/logger.js';
 import { getGuildConfig, setGuildConfig } from '../services/guildConfig.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { addXp } from './xpSystem.js';
+import { MAX_LEVEL } from '../utils/levelLimits.js';
 
 
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
-const MAX_LEVEL = 1000;
 const MIN_LEVEL = 0;
 
 
@@ -552,6 +552,5 @@ export async function deleteUserLevelData(client, guildId, userId) {
     logger.warn(`Could not delete level data for user ${userId} in guild ${guildId}`);
   }
 }
-
 
 
