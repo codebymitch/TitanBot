@@ -79,7 +79,7 @@ After every completed coding task, unless the user explicitly says otherwise:
 2. Run the full test suite and any focused validation appropriate to the change.
 3. Commit only the task's intended files and push the current branch.
 4. Rebuild and restart the bot with Docker Compose.
-5. Publish exactly one Hebrew bot-update announcement through the persistent update system.
+5. If the pushed commit contains a user-facing bot update or bug fix, publish exactly one Hebrew bot-update announcement through the persistent update system. Do not announce documentation-only, tests-only, formatting, refactoring-without-behavior-change, or routine maintenance commits.
 6. Verify PostgreSQL recorded the announced version and message ID, inspect the Discord message for correct Hebrew/UTF-8 content, and check the readiness endpoint.
 7. Report the commit, branch, test results, deployment health, announced version, and Discord message ID.
 
