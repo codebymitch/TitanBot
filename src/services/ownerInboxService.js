@@ -102,20 +102,29 @@ export async function handleOwnerInboxReply(message) {
     return true;
   }
   const caseId = match[1].toUpperCase(), replyText = match[2].trim();
-  const record = await message.client.db.get(caseKey(caseId));
-  if (!record) { await message.reply('מזהה המקרה לא נמצא.'); return true; }
+  const result = await replyToOwnerInboxCase(message.client, message.author.id, caseId, replyText);
+  await message.reply(result.message);
+  return true;
+}
+
+export async function replyToOwnerInboxCase(client, ownerId, caseId, replyText) {
+  if (ownerId !== OWNER_INBOX_USER_ID) return { ok: false, code: 'FORBIDDEN', message: 'אין לך הרשאה להשתמש בפקודה זו.' };
+  caseId = String(caseId || '').trim().toUpperCase();
+  replyText = String(replyText || '').trim();
+  if (!/^(?:SUG|REP)-\d{6}$/.test(caseId) || !replyText) return { ok: false, code: 'INVALID', message: 'מזהה המקרה או תוכן התגובה אינם תקינים.' };
+  const record = await client.db.get(caseKey(caseId));
+  if (!record) return { ok: false, code: 'NOT_FOUND', message: 'מזהה המקרה לא נמצא.' };
   try {
-    const user = await message.client.users.fetch(record.authorId);
+    const user = await client.users.fetch(record.authorId);
     await user.send({ embeds: [new EmbedBuilder().setColor(0x5865F2).setTitle('📩 תגובה מצוות EditIL')
       .addFields({ name: '🆔 Case ID', value: `\`${caseId}\`` }, { name: '💬 תגובת הצוות', value: replyText },
         { name: '🕒 זמן', value: `<t:${Math.floor(Date.now() / 1000)}:F>` }).setTimestamp()], allowedMentions: { parse: [] } });
-    record.replies = [...(record.replies || []), { authorId: message.author.id, content: replyText, createdAt: new Date().toISOString() }];
-    await message.client.db.set(caseKey(caseId), record);
+    record.replies = [...(record.replies || []), { authorId: ownerId, content: replyText, createdAt: new Date().toISOString() }];
+    await client.db.set(caseKey(caseId), record);
     logger.info('Owner replied', { caseId, recipientId: record.authorId });
-    await message.reply(`התגובה למקרה \`${caseId}\` נשלחה בהצלחה.`);
+    return { ok: true, code: 'SENT', message: `התגובה למקרה \`${caseId}\` נשלחה בהצלחה.` };
   } catch (error) {
     logger.error('Owner reply failed', { caseId, error: error.stack || error.message });
-    await message.reply('שליחת התגובה נכשלה. המקרה נשמר במסד הנתונים.');
+    return { ok: false, code: 'DM_FAILED', message: 'שליחת התגובה נכשלה. המקרה נשמר במסד הנתונים.' };
   }
-  return true;
 }

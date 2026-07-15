@@ -4,6 +4,7 @@ import { Collection, MessageFlags } from 'discord.js';
 import communityModal from '../src/modules/interactions/modals/community_form.js';
 import { handleOwnerInboxReply, OWNER_INBOX_GUILD_ID, OWNER_INBOX_USER_ID } from '../src/services/ownerInboxService.js';
 import { communityCommand } from '../src/commands/community/factory.js';
+import replyCommand from '../src/commands/owner/reply.js';
 
 function memoryClient({ dmFails = false } = {}) {
   const records = new Map(); let sequence = 0; const sent = [];
@@ -53,4 +54,11 @@ for (const name of ['suggest', 'report']) test(`${name} can open its modal witho
     options:{},showModal:async value=>{modal=value;},reply:async()=>{throw new Error('access was denied');}};
   await communityCommand(name).execute(interaction,ctx.client);
   assert.equal(modal.data.custom_id,`community_form:${name}`);
+});
+
+test('/reply is a real slash command and delivers the owner response', async () => {
+  const json=replyCommand.data.toJSON();assert.equal(json.name,'reply');assert.deepEqual(json.options.map(option=>option.name),['case_id','message']);
+  const ctx=memoryClient();ctx.records.set('owner_inbox:case:REP-000001',{caseId:'REP-000001',authorId:'user-1',replies:[]});let response;
+  const interaction={user:{id:OWNER_INBOX_USER_ID},options:{getString:name=>name==='case_id'?'REP-000001':'הדיווח טופל'},reply:async payload=>{response=payload;}};
+  await replyCommand.execute(interaction,ctx.client);assert.equal(ctx.sent[0].id,'user-1');assert.match(response.content,/נשלחה בהצלחה/);assert.equal(ctx.records.get('owner_inbox:case:REP-000001').replies.length,1);
 });
