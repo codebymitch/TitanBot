@@ -6,6 +6,7 @@ import { createEmbed } from '../../utils/embeds.js';
 import { getConfig } from '../../modules/community/store.js';
 import { requireAccess, AccessLevel, memberAccessLevel } from '../../modules/community/permissions.js';
 import { schedulePollClosure } from '../../services/communityPollService.js';
+import { OWNER_INBOX_GUILD_ID } from '../../services/ownerInboxService.js';
 
 const descriptions = {
   suggest: 'שליחת הצעה לקהילה', feedback: 'שליחת משוב על השרת או הבוט', report: 'שליחת דיווח פרטי לצוות',
@@ -46,7 +47,10 @@ export function communityCommand(name) {
   return { data, async execute(interaction, client) {
     const config = await getConfig(client, interaction.guildId);
     if (config.community.enabled === false) return interaction.reply({ content: 'מודול פקודות הקהילה מושבת.', flags: MessageFlags.Ephemeral });
-    let required = name === 'poll' && config.community.publicPolls ? AccessLevel.EVERYONE : name === 'poll' ? AccessLevel.HELPER : AccessLevel.VERIFIED;
+    const privateInboxCommand = interaction.guildId === OWNER_INBOX_GUILD_ID && ['suggest', 'report'].includes(name);
+    let required = privateInboxCommand || (name === 'poll' && config.community.publicPolls)
+      ? AccessLevel.EVERYONE
+      : name === 'poll' ? AccessLevel.HELPER : AccessLevel.VERIFIED;
     if (!await requireAccess(interaction, client, required)) return;
     if (name === 'editingtype') {
       const roles = (config.community.editingRoleIds || []).map(id => interaction.guild.roles.cache.get(id)).filter(role => role && !role.managed && role.position < interaction.guild.members.me.roles.highest.position);

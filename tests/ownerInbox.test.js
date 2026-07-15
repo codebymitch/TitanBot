@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Collection, MessageFlags } from 'discord.js';
 import communityModal from '../src/modules/interactions/modals/community_form.js';
 import { handleOwnerInboxReply, OWNER_INBOX_GUILD_ID, OWNER_INBOX_USER_ID } from '../src/services/ownerInboxService.js';
+import { communityCommand } from '../src/commands/community/factory.js';
 
 function memoryClient({ dmFails = false } = {}) {
   const records = new Map(); let sequence = 0; const sent = [];
@@ -44,4 +45,12 @@ test('only the configured owner can reply to a stored case in DMs', async () => 
   assert.equal(await handleOwnerInboxReply(message), true); assert.equal(ctx.sent[0].id, 'user-1');
   assert.equal(ctx.records.get('owner_inbox:case:SUG-000001').replies.length, 1); assert.match(response,/נשלחה בהצלחה/);
   assert.equal(await handleOwnerInboxReply({ ...message, author:{id:'someone-else'} }), false);
+});
+
+for (const name of ['suggest', 'report']) test(`${name} can open its modal without a verified role in the target guild`, async () => {
+  const ctx=memoryClient();let modal;const interaction={guildId:OWNER_INBOX_GUILD_ID,commandName:name,
+    inGuild:()=>true,guild:{ownerId:'owner'},user:{id:'unverified'},member:{permissions:{has:()=>false},roles:{cache:new Collection()}},
+    options:{},showModal:async value=>{modal=value;},reply:async()=>{throw new Error('access was denied');}};
+  await communityCommand(name).execute(interaction,ctx.client);
+  assert.equal(modal.data.custom_id,`community_form:${name}`);
 });
