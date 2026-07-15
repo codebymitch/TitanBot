@@ -70,3 +70,17 @@ In Docker Compose the bot service must set `POSTGRES_HOST=db` and `POSTGRES_URL=
 - `src/utils/interactionHelper.js` — use `InteractionHelper.safeReply/safeDeferReply/safeEdit` instead of raw Discord.js methods to handle already-acknowledged interaction errors gracefully.
 - `src/utils/abuseProtection.js` — rate limiting applied per command before `execute()` is called.
 - `src/utils/embeds.js` — `createEmbed({ title, description, color })` for consistent embed styling.
+
+## Completion Workflow
+
+After every completed coding task, unless the user explicitly says otherwise:
+
+1. Update the bot version and add accurate Hebrew release notes for the completed work.
+2. Run the full test suite and any focused validation appropriate to the change.
+3. Commit only the task's intended files and push the current branch.
+4. Rebuild and restart the bot with Docker Compose.
+5. Publish exactly one Hebrew bot-update announcement through the persistent update system.
+6. Verify PostgreSQL recorded the announced version and message ID, inspect the Discord message for correct Hebrew/UTF-8 content, and check the readiness endpoint.
+7. Report the commit, branch, test results, deployment health, announced version, and Discord message ID.
+
+Never publish an automatic update while PostgreSQL is unavailable or the bot is using in-memory degraded storage. Never start a second local bot process when the Docker bot service is already running. Do not stage, commit, or overwrite unrelated user changes.
