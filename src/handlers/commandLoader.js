@@ -51,7 +51,7 @@ async function getAllFiles(directory, fileList = []) {
                 continue;
             }
             await getAllFiles(filePath, fileList);
-        } else if (file.name.endsWith('.js')) {
+        } else if (file.name.endsWith('.js') && file.name !== 'factory.js') {
             fileList.push(filePath);
         }
     }
@@ -321,7 +321,8 @@ export async function reloadCommand(client, commandName) {
         moduleUrl.searchParams.set('t', Date.now().toString());
 
         const newCommand = (await import(moduleUrl.href)).default;
-        
+        newCommand.category = command.category;
+        newCommand.filePath = command.filePath;
         client.commands.set(commandName, newCommand);
         
         logger.info(`Reloaded command: ${commandName}`);
@@ -331,5 +332,3 @@ export async function reloadCommand(client, commandName) {
         return { success: false, message: `Error reloading command: ${error.message}` };
     }
 }
-
-
