@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, ChannelType, MessageFlags } from 'discord.js';
 import { updateConfig } from '../../modules/community/store.js';
 import { ticketPanel, success } from '../../modules/community/ui.js';
 import ticketOpen from '../../modules/interactions/buttons/ticket_open.js';
@@ -16,9 +16,9 @@ export default {
     const sub = i.options.getSubcommand();
     if (!await requireAccess(i, client, sub === 'open' ? AccessLevel.VERIFIED : AccessLevel.ADMIN, `ticket.${sub}`)) return;
     if (sub === 'open') return ticketOpen.execute(i, client);
-    if (sub === 'disable') { await updateConfig(client, i.guildId, { tickets: { enabled: false } }); return i.reply(success('פניות', 'מערכת הפניות כובתה.')); }
+    if (sub === 'disable') { await updateConfig(client, i.guildId, { tickets: { enabled: false } }); return i.reply({...success('פניות', 'מערכת הפניות כובתה.'), flags:MessageFlags.Ephemeral}); }
     const channel = i.options.getChannel('channel'), category = i.options.getChannel('category'), role = i.options.getRole('support_role');
     await updateConfig(client, i.guildId, { tickets: { enabled: true, panelChannelId: channel.id, categoryId: category.id, supportRoleId: role.id } });
-    await channel.send(ticketPanel()); await i.reply(success('פניות', 'לוח הפניות נשלח והמערכת הופעלה.'));
+    await channel.send(ticketPanel()); await i.reply({...success('פניות', 'לוח הפניות נשלח והמערכת הופעלה.'), flags:MessageFlags.Ephemeral});
   }
 };

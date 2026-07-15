@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { requireAccess, AccessLevel } from '../../modules/community/permissions.js';
 
@@ -20,6 +20,6 @@ export function generalCommand(name) {
     }[name];
     const embed = createEmbed({ title: payload[0], description: payload[1], color: 'primary' });
     if (name === 'avatar') embed.setImage(user.displayAvatarURL({ size: 1024 }));
-    await i.reply({ embeds: [embed] });
+    await i.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   }};
 }
