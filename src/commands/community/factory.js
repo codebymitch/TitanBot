@@ -34,9 +34,10 @@ export function communityCommand(name) {
   if (name === 'feedback') data.addBooleanOption(o => o.setName('anonymous').setDescription('שליחת המשוב באופן אנונימי'));
   if (name === 'poll') {
     data.addStringOption(o => o.setName('question').setDescription('שאלת הסקר').setRequired(true).setMaxLength(300));
-    for (let n = 1; n <= 5; n++) data.addStringOption(o => o.setName(`option_${n}`).setDescription(`אפשרות ${n}`).setRequired(n <= 2).setMaxLength(100));
+    for (let n = 1; n <= 2; n++) data.addStringOption(o => o.setName(`option_${n}`).setDescription(`אפשרות ${n}`).setRequired(true).setMaxLength(100));
     data.addStringOption(o => o.setName('duration').setDescription('משך: 10m, 2h, 1d (עד 7 ימים)').setRequired(true));
     data.addBooleanOption(o => o.setName('allow_multiple_choices').setDescription('לאפשר מספר בחירות').setRequired(true));
+    for (let n = 3; n <= 5; n++) data.addStringOption(o => o.setName(`option_${n}`).setDescription(`אפשרות ${n}`).setMaxLength(100));
   }
   if (['lookingforeditor', 'lookingforteam'].includes(name)) {
     data.addBooleanOption(o => o.setName('paid').setDescription('האם העבודה בתשלום?').setRequired(true));
