@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import logging
+import secrets
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from ..embeds import error
 from ..logging import log
+
+logger = logging.getLogger(__name__)
 
 
 class Core(commands.Cog):
@@ -44,9 +49,13 @@ class Core(commands.Cog):
         elif isinstance(exception, app_commands.CommandOnCooldown):
             message = error("יש להמתין מעט לפני ניסיון נוסף.")
         else:
-            message = error("אירעה שגיאה בעת ביצוע הפקודה. הצוות קיבל רישום על כך.")
+            reference = secrets.token_hex(4).upper()
+            self.bot.last_error_reference = reference
+            original = getattr(exception, "original", exception)
+            logger.error("Unhandled application command error [%s]", reference, exc_info=(type(original), original, original.__traceback__))
+            message = error(f"אירעה שגיאה בעת ביצוע הפקודה. השגיאה נרשמה לבדיקה. מזהה: `{reference}`")
             if interaction.guild:
-                await log(interaction.guild, self.bot.settings.log_channel_id, "⚠️ שגיאת פקודה", f"פקודה: `/{interaction.command.qualified_name if interaction.command else 'לא ידוע'}`\nמשתמש: {interaction.user.mention}\nשגיאה: `{exception}`")
+                await log(interaction.guild, self.bot.settings.log_channel_id, "⚠️ שגיאת פקודה", f"פקודה: `/{interaction.command.qualified_name if interaction.command else 'לא ידוע'}`\nמשתמש: {interaction.user.mention}\nמזהה: `{reference}`")
         if interaction.response.is_done():
             await interaction.followup.send(embed=message, ephemeral=True)
         else:

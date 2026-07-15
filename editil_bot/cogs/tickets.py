@@ -54,24 +54,7 @@ class CloseTicketView(discord.ui.View):
 
     @discord.ui.button(label="סגירת כרטיס", emoji="🔒", style=discord.ButtonStyle.danger, custom_id="editil:ticket:close")
     async def close(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
-        if not isinstance(interaction.channel, discord.TextChannel) or not interaction.guild:
-            return
-        row = await self.cog.bot.db.fetchone("SELECT opener_id FROM tickets WHERE channel_id = ? AND status = 'open'", (interaction.channel.id,))
-        if not row:
-            await interaction.response.send_message("זה אינו כרטיס פעיל.", ephemeral=True)
-            return
-        staff = interaction.guild.get_role(self.cog.bot.settings.ticket_staff_role_id)
-        if interaction.user.id != row[0] and not (staff and staff in interaction.user.roles):
-            await interaction.response.send_message(embed=error("רק פותח הכרטיס או הצוות יכולים לסגור אותו."), ephemeral=True)
-            return
-        await interaction.response.defer()
-        messages = [f"[{m.created_at:%Y-%m-%d %H:%M}] {m.author}: {m.clean_content}" async for m in interaction.channel.history(limit=None, oldest_first=True)]
-        transcript = discord.File(io.BytesIO("\n".join(messages).encode("utf-8")), filename=f"ticket-{interaction.channel.id}.txt")
-        log_channel = interaction.guild.get_channel(self.cog.bot.settings.log_channel_id)
-        if isinstance(log_channel, discord.TextChannel):
-            await log_channel.send(embed=embed("🔒 כרטיס נסגר", f"נסגר על ידי {interaction.user.mention}.\nערוץ: {interaction.channel.name}", PURPLE), file=transcript)
-        await self.cog.bot.db.execute("UPDATE tickets SET status = 'closed' WHERE channel_id = ?", (interaction.channel.id,))
-        await interaction.channel.delete(reason=f"Ticket closed by {interaction.user}")
+        await self.cog.close_ticket(interaction)
 
 
 class Tickets(commands.Cog):
@@ -79,6 +62,71 @@ class Tickets(commands.Cog):
         self.bot = bot
         bot.add_view(TicketView(self))
         bot.add_view(CloseTicketView(self))
+
+    async def _ticket_row(self, interaction: discord.Interaction):
+        if not interaction.channel:
+            return None
+        return await self.bot.db.fetchone("SELECT opener_id FROM tickets WHERE channel_id = ? AND status = 'open'", (interaction.channel.id,))
+
+    async def _is_staff(self, interaction: discord.Interaction) -> bool:
+        if not interaction.guild or not isinstance(interaction.user, discord.Member): return False
+        role_id = int(await self.bot.db.get_guild_setting(interaction.guild_id, "ticket_staff_role_id", self.bot.settings.ticket_staff_role_id) or 0)
+        return interaction.user.guild_permissions.manage_channels or bool(role_id and interaction.user.get_role(role_id))
+
+    async def close_ticket(self, interaction: discord.Interaction) -> None:
+        if not isinstance(interaction.channel, discord.TextChannel) or not interaction.guild:
+            return
+        row = await self._ticket_row(interaction)
+        if not row:
+            await interaction.response.send_message("זה אינו כרטיס פעיל.", ephemeral=True)
+            return
+        if interaction.user.id != row[0] and not await self._is_staff(interaction):
+            await interaction.response.send_message(embed=error("רק פותח הכרטיס או הצוות יכולים לסגור אותו."), ephemeral=True)
+            return
+        await interaction.response.defer()
+        messages = [f"[{m.created_at:%Y-%m-%d %H:%M}] {m.author}: {m.clean_content}" async for m in interaction.channel.history(limit=None, oldest_first=True)]
+        content = "\n".join(messages)
+        transcript = discord.File(io.BytesIO(content.encode("utf-8")), filename=f"ticket-{interaction.channel.id}.txt")
+        log_id = int(await self.bot.db.get_guild_setting(interaction.guild_id, "log_channel_id", self.bot.settings.log_channel_id) or 0)
+        log_channel = interaction.guild.get_channel(log_id)
+        if isinstance(log_channel, discord.TextChannel):
+            await log_channel.send(embed=embed("🔒 כרטיס נסגר", f"נסגר על ידי {interaction.user.mention}.\nערוץ: {interaction.channel.name}", PURPLE), file=transcript)
+        await self.bot.db.execute("INSERT OR REPLACE INTO ticket_transcripts (channel_id, guild_id, closed_by, content) VALUES (?, ?, ?, ?)", (interaction.channel.id, interaction.guild.id, interaction.user.id, content))
+        await self.bot.db.execute("UPDATE tickets SET status = 'closed' WHERE channel_id = ?", (interaction.channel.id,))
+        await interaction.channel.delete(reason=f"Ticket closed by {interaction.user}")
+
+    @app_commands.command(name="ticket", description="פתיחת לוח כרטיסים")
+    async def ticket(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(embed=embed("🎫 פתיחת כרטיס", "בחרו את סוג הכרטיס המבוקש.", PURPLE), view=TicketView(self), ephemeral=True)
+
+    @app_commands.command(name="close", description="סגירת הכרטיס הנוכחי")
+    async def close_command(self, interaction: discord.Interaction) -> None:
+        await self.close_ticket(interaction)
+
+    @app_commands.command(name="transcript", description="יצירת תמליל של הכרטיס")
+    async def transcript(self, interaction: discord.Interaction) -> None:
+        if not await self._ticket_row(interaction) or not await self._is_staff(interaction):
+            await interaction.response.send_message(embed=error("הפקודה זמינה לצוות בתוך כרטיס פעיל בלבד."), ephemeral=True); return
+        await interaction.response.defer(ephemeral=True)
+        messages = [f"[{m.created_at:%Y-%m-%d %H:%M}] {m.author}: {m.clean_content}" async for m in interaction.channel.history(limit=None, oldest_first=True)]
+        file = discord.File(io.BytesIO("\n".join(messages).encode("utf-8")), filename=f"ticket-{interaction.channel.id}.txt")
+        await interaction.followup.send(file=file, ephemeral=True)
+
+    @app_commands.command(name="add", description="הוספת משתמש לכרטיס")
+    async def add(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        if not await self._ticket_row(interaction) or not await self._is_staff(interaction):
+            await interaction.response.send_message(embed=error("הפקודה זמינה לצוות בתוך כרטיס פעיל בלבד."), ephemeral=True); return
+        await interaction.channel.set_permissions(member, view_channel=True, send_messages=True, read_message_history=True)
+        await self.bot.db.execute("INSERT OR IGNORE INTO ticket_members (channel_id, user_id) VALUES (?, ?)", (interaction.channel.id, member.id))
+        await interaction.response.send_message(embed=success(f"{member.mention} נוסף לכרטיס."), ephemeral=True)
+
+    @app_commands.command(name="remove", description="הסרת משתמש מכרטיס")
+    async def remove(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        if not await self._ticket_row(interaction) or not await self._is_staff(interaction):
+            await interaction.response.send_message(embed=error("הפקודה זמינה לצוות בתוך כרטיס פעיל בלבד."), ephemeral=True); return
+        await interaction.channel.set_permissions(member, overwrite=None)
+        await self.bot.db.execute("DELETE FROM ticket_members WHERE channel_id = ? AND user_id = ?", (interaction.channel.id, member.id))
+        await interaction.response.send_message(embed=success(f"{member.mention} הוסר מהכרטיס."), ephemeral=True)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Tickets(bot))

@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from ..embeds import PURPLE, embed
+from ..embeds import PURPLE, embed, error, success
 
 REWARDS = {5: "🌱 עורך מתחיל", 15: "🎬 עורך", 30: "⭐ עורך מקצועי", 50: "💎 עורך אגדי"}
 
@@ -45,6 +45,33 @@ class Levels(commands.Cog):
                        f"**תוכנה:** {software}\n**עריכות שפורסמו:** {edits}\n"
                        f"**ניצחונות בתחרויות:** {wins}\n**תאריך הצטרפות:** <t:{int(member.joined_at.timestamp())}:D>")
         await interaction.response.send_message(embed=embed("🎬 פרופיל עורך", description, PURPLE))
+
+    @app_commands.command(name="rank", description="הצגת הרמה וה־XP")
+    async def rank(self, interaction: discord.Interaction, member: discord.Member | None = None) -> None:
+        member = member or interaction.user
+        row = await self.bot.db.fetchone("SELECT xp FROM profiles WHERE user_id = ?", (member.id,))
+        xp = row[0] if row else 0
+        await interaction.response.send_message(embed=embed("📈 דירוג", f"{member.mention}\n**רמה:** {xp // 100}\n**XP:** {xp}\n**לרמה הבאה:** {100 - xp % 100}", PURPLE))
+
+    @app_commands.command(name="leaderboard", description="טבלת מובילי XP")
+    async def leaderboard(self, interaction: discord.Interaction) -> None:
+        rows = await self.bot.db.fetchall("SELECT user_id, xp FROM profiles ORDER BY xp DESC LIMIT 10")
+        lines = [f"**{index}.** <@{user_id}> — {xp} XP" for index, (user_id, xp) in enumerate(rows, 1)]
+        await interaction.response.send_message(embed=embed("🏅 טבלת מובילים", "\n".join(lines) or "עדיין אין נתוני XP.", PURPLE))
+
+    @app_commands.command(name="setxp", description="קביעת XP למשתמש")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def setxp(self, interaction: discord.Interaction, member: discord.Member, amount: app_commands.Range[int, 0, 10_000_000]) -> None:
+        await self.bot.db.execute("INSERT OR IGNORE INTO profiles (user_id) VALUES (?)", (member.id,))
+        await self.bot.db.execute("UPDATE profiles SET xp = ? WHERE user_id = ?", (amount, member.id))
+        await interaction.response.send_message(embed=success(f"ה־XP של {member.mention} נקבע ל־{amount}."), ephemeral=True)
+
+    @app_commands.command(name="resetxp", description="איפוס XP למשתמש")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def resetxp(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        await self.bot.db.execute("INSERT OR IGNORE INTO profiles (user_id) VALUES (?)", (member.id,))
+        await self.bot.db.execute("UPDATE profiles SET xp = 0 WHERE user_id = ?", (member.id,))
+        await interaction.response.send_message(embed=success(f"ה־XP של {member.mention} אופס."), ephemeral=True)
 
 
 async def setup(bot: commands.Bot) -> None:

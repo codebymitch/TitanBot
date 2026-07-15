@@ -54,6 +54,20 @@ class Contests(commands.Cog):
             return
         await interaction.response.send_message(embed=success("ההצבעה שלך נשמרה!"), ephemeral=True)
 
+    @contest.command(name="end", description="סיום תחרות והצגת הזוכה")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def end(self, interaction: discord.Interaction, contest_id: int) -> None:
+        contest = await self.bot.db.fetchone("SELECT title, active FROM contests WHERE id = ? AND guild_id = ?", (contest_id, interaction.guild_id))
+        if not contest or not contest[1]:
+            await interaction.response.send_message(embed=error("לא נמצאה תחרות פעילה עם מזהה זה."), ephemeral=True); return
+        winner = await self.bot.db.fetchone("SELECT s.user_id, COUNT(v.voter_id) votes FROM submissions s LEFT JOIN votes v ON v.submission_id = s.id WHERE s.contest_id = ? GROUP BY s.id ORDER BY votes DESC, s.id ASC LIMIT 1", (contest_id,))
+        await self.bot.db.execute("UPDATE contests SET active = 0 WHERE id = ?", (contest_id,))
+        if winner:
+            await self.bot.db.execute("INSERT OR IGNORE INTO profiles (user_id) VALUES (?)", (winner[0],))
+            await self.bot.db.execute("UPDATE profiles SET wins = wins + 1 WHERE user_id = ?", (winner[0],))
+        result = f"הזוכה: <@{winner[0]}> עם {winner[1]} הצבעות." if winner else "התחרות הסתיימה ללא הגשות."
+        await interaction.response.send_message(embed=embed(f"🏆 {contest[0]}", result, PURPLE))
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Contests(bot))
