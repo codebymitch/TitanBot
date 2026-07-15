@@ -13,7 +13,7 @@ export const botConfig = {
     // Current online state shown on Discord.
     status: "online",
 
-    // Activity lines shown under the bot name.
+    // Activity shown under the bot name.
     // `type` number mapping from Discord:
     // 0 = Playing
     // 1 = Streaming
@@ -21,10 +21,8 @@ export const botConfig = {
     // 3 = Watching
     // 4 = Custom
     // 5 = Competing
-    // Rotates every 30 seconds. Add/remove entries here to customize.
-    // type: 0=Playing, 2=Listening, 3=Watching, 5=Competing
     activities: [
-      { name: "system corrupted by the void.", type: 0 },
+      { name: "🎬 Helping EditIL creators", type: 0 },
     ],
   },
 
