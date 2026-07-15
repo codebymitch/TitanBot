@@ -1,6 +1,21 @@
 const key = guildId => `community:${guildId}:config`;
 export const defaults = {
-  welcome: { enabled: false, channelId: null, message: 'ברוך הבא {user} לשרת {server}!' },
+  welcome: {
+    enabled: false,
+    channelId: null,
+    message: `ברוכים הבאים ל־EditIL 🇮🇱
+
+ברוכים הבאים {member}! 🎉
+
+אנחנו שמחים שהצטרפתם לקהילת העריכה הישראלית.
+
+📜 קראו את החוקים
+✅ השלימו את האימות
+🎭 בחרו את התפקידים שלכם
+🎬 התחילו לשתף את העריכות שלכם ולהכיר את הקהילה!
+
+תהנו ובהצלחה! 💙`
+  },
   verification: { enabled: false, channelId: null, roleId: null },
   roles: { panels: [] },
   tickets: { enabled: false, categoryId: null, supportRoleId: null, panelChannelId: null, nextNumber: 1 },
