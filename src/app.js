@@ -49,17 +49,14 @@ class TitanBot extends Client {
         
         
         GatewayIntentBits.GuildMessages,                
-        GatewayIntentBits.GuildMessageReactions,        
         GatewayIntentBits.MessageContent,               
         
         GatewayIntentBits.GuildVoiceStates,             
         
         
         GatewayIntentBits.GuildBans,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.GuildPresences,
       ],
-      partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+      partials: [Partials.Message, Partials.Channel, Partials.GuildMember, Partials.User],
     });
 
     this.config = config;
@@ -544,5 +541,4 @@ try {
 }
 
 export default TitanBot;
-
 

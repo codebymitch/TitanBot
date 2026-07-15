@@ -1,5 +1,5 @@
 import { EmbedBuilder, ChannelType, PermissionFlagsBits } from 'discord.js';
-import { getGuildConfig } from './guildConfig.js';
+import { getConfig as getCommunityConfig, updateConfig as updateCommunityConfig } from '../modules/community/store.js';
 import { logger } from '../utils/logger.js';
 
 
@@ -34,6 +34,7 @@ const EVENT_TYPES = {
   MESSAGE_DELETE: 'message.delete',
   MESSAGE_EDIT: 'message.edit',
   MESSAGE_BULK_DELETE: 'message.bulkdelete',
+  MESSAGE_CREATE: 'message.create',
   
   
   ROLE_CREATE: 'role.create',
@@ -44,6 +45,12 @@ const EVENT_TYPES = {
   MEMBER_JOIN: 'member.join',
   MEMBER_LEAVE: 'member.leave',
   MEMBER_NAME_CHANGE: 'member.namechange',
+  MEMBER_UPDATE: 'member.update',
+  CHANNEL_CHANGE: 'channel.change',
+  VOICE_CHANGE: 'voice.change',
+  INVITE_CHANGE: 'invite.change',
+  EMOJI_STICKER_CHANGE: 'emoji_sticker.change',
+  SERVER_UPDATE: 'server.update',
   VERIFICATION: 'verification.complete',
   SUGGESTION: 'suggestion.create',
   REPORT: 'report.create',
@@ -164,7 +171,7 @@ export async function logEvent({
       return { ok: false, reason: 'guild_not_found' };
     }
 
-    const config = await getGuildConfig(client, guildId);
+    const config = await getCommunityConfig(client, guildId);
 
     
     const ignoredUsers = config.logIgnore?.users || [];
@@ -360,7 +367,7 @@ function formatEventType(eventType) {
 
 
 export async function getLoggingStatus(client, guildId) {
-  const config = await getGuildConfig(client, guildId);
+  const config = await getCommunityConfig(client, guildId);
   const logging = config.logging || {};
 
   return {
@@ -381,8 +388,7 @@ export async function getLoggingStatus(client, guildId) {
 
 export async function toggleEventLogging(client, guildId, eventTypes, enabled) {
   try {
-    const { updateGuildConfig } = await import('./guildConfig.js');
-    const config = await getGuildConfig(client, guildId);
+    const config = await getCommunityConfig(client, guildId);
     
     const logging = config.logging || { enabled: false, enabledEvents: {} };
     const types = Array.isArray(eventTypes) ? eventTypes : [eventTypes];
@@ -402,7 +408,7 @@ export async function toggleEventLogging(client, guildId, eventTypes, enabled) {
       }
     });
 
-    await updateGuildConfig(client, guildId, { logging });
+    await updateCommunityConfig(client, guildId, { logging });
     return true;
   } catch (error) {
     logger.error('Error toggling event logging:', error);
@@ -419,14 +425,13 @@ export async function toggleEventLogging(client, guildId, eventTypes, enabled) {
 
 export async function setLoggingChannel(client, guildId, channelId) {
   try {
-    const { updateGuildConfig } = await import('./guildConfig.js');
-    const config = await getGuildConfig(client, guildId);
+    const config = await getCommunityConfig(client, guildId);
     
     const logging = config.logging || { enabled: false, enabledEvents: {} };
     logging.channelId = channelId;
     logging.enabled = true;
 
-    await updateGuildConfig(client, guildId, { logging });
+    await updateCommunityConfig(client, guildId, { logging });
     return true;
   } catch (error) {
     logger.error('Error setting logging channel:', error);
@@ -443,13 +448,12 @@ export async function setLoggingChannel(client, guildId, channelId) {
 
 export async function setLoggingEnabled(client, guildId, enabled) {
   try {
-    const { updateGuildConfig } = await import('./guildConfig.js');
-    const config = await getGuildConfig(client, guildId);
+    const config = await getCommunityConfig(client, guildId);
     
     const logging = config.logging || { enabledEvents: {} };
     logging.enabled = enabled;
 
-    await updateGuildConfig(client, guildId, { logging });
+    await updateCommunityConfig(client, guildId, { logging });
     return true;
   } catch (error) {
     logger.error('Error setting logging enabled:', error);

@@ -36,8 +36,8 @@ export function moderationCommand(name) {
   if (['warn', 'timeout', 'kick'].includes(name)) data.addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true).setMaxLength(500));
   if (name === 'clearwarnings') data.addStringOption(o => o.setName('warning_id').setDescription('Warning ID; omit to clear all'));
   if (name === 'clear') data.addIntegerOption(o => o.setName('amount').setDescription('Messages').setRequired(true).setMinValue(1).setMaxValue(100)).addUserOption(o => o.setName('member').setDescription('Only messages from this member'));
-  if (['lock', 'unlock', 'slowmode'].includes(name)) data.addChannelOption(o => o.setName('channel').setDescription('Channel; defaults to current').addChannelTypes(ChannelType.GuildText));
   if (name === 'slowmode') data.addIntegerOption(o => o.setName('seconds').setDescription('0-21600').setRequired(true).setMinValue(0).setMaxValue(21600));
+  if (['lock', 'unlock', 'slowmode'].includes(name)) data.addChannelOption(o => o.setName('channel').setDescription('Channel; defaults to current').addChannelTypes(ChannelType.GuildText));
   if (name === 'nick') data.addStringOption(o => o.setName('nickname').setDescription('New nickname; omit to reset').setMaxLength(32));
 
   return { data, async execute(i, client) {

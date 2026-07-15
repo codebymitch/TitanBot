@@ -4,7 +4,7 @@ export const defaults = {
   verification: { enabled: false, channelId: null, roleId: null },
   roles: { panels: [] },
   tickets: { enabled: false, categoryId: null, supportRoleId: null, panelChannelId: null, nextNumber: 1 },
-  logging: { enabled: false, channelId: null },
+  logging: { enabled: false, channelId: null, enabledEvents: {} },
   leveling: { enabled: false, announceChannelId: null, cooldownMs: 60_000, xpMin: 15, xpMax: 25 }
   , contests: { active: null, submissions: [], votes: {} }
   , channels: { suggestions: null, reports: null, feedback: null, announcements: null }
