@@ -1,8 +1,10 @@
 import { Events } from 'discord.js';
 import { getConfig, levelKey } from '../modules/community/store.js';
 import { createEmbed } from '../utils/embeds.js';
+import { handleOwnerInboxReply } from '../services/ownerInboxService.js';
 
 export default { name: Events.MessageCreate, async execute(message) {
+  if (!message.author.bot && await handleOwnerInboxReply(message)) return;
   if (!message.guild || message.author.bot || message.webhookId) return;
 
   // Normal messages are used for leveling only. The logging handler records

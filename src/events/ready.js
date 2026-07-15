@@ -4,11 +4,13 @@ import { resumeCommunityPolls } from '../services/communityPollService.js';
 import { validateSavedRolePanels } from '../services/roleSystemService.js';
 import { validateSavedTickets } from '../services/ticketSystemService.js';
 import { runStartupUpdateCheck } from '../services/botUpdateService.js';
+import { retryPendingOwnerInboxCases } from '../services/ownerInboxService.js';
 export default { name: Events.ClientReady, once: true, async execute(client) {
   client.user.setPresence(client.config.bot.presence);
   await resumeCommunityPolls(client);
   await validateSavedRolePanels(client);
   await validateSavedTickets(client);
   void runStartupUpdateCheck(client);
+  void retryPendingOwnerInboxCases(client);
   startupLog(`Ready as ${client.user.tag}; serving ${client.guilds.cache.size} server(s).`);
 } };

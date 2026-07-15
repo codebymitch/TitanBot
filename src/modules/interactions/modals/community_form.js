@@ -2,6 +2,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'disc
 import { createEmbed } from '../../../utils/embeds.js';
 import { getConfig } from '../../community/store.js';
 import { logEvent, EVENT_TYPES } from '../../../services/loggingService.js';
+import { createOwnerInboxCase, deliverOwnerInboxCase, isOwnerInboxSubmission } from '../../../services/ownerInboxService.js';
 
 const channelNames = { suggest: 'suggestions', feedback: 'feedback', report: 'reports', selfpromo: 'selfPromotion', lookingforeditor: 'lookingForEditor', lookingforteam: 'lookingForTeam' };
 const titles = { suggest: 'הצעה', feedback: 'משוב', report: 'דיווח', selfpromo: 'פרסום עצמי', lookingforeditor: 'חיפוש עורך', lookingforteam: 'חיפוש צוות' };
@@ -18,9 +19,10 @@ export default {
   async execute(interaction, client, args) {
     const [kind, encoded] = args;
     const config = await getConfig(client, interaction.guildId);
+    const privateOwnerInbox = isOwnerInboxSubmission(interaction.guildId, kind);
     const channelId = config.channels[channelNames[kind]];
     const channel = channelId && interaction.guild.channels.cache.get(channelId);
-    if (!channel?.isTextBased()) return interaction.reply({ content: kind === 'suggest' ? 'ערוץ ההצעות עדיין לא הוגדר.' : 'ערוץ המערכת עדיין לא הוגדר.', flags: MessageFlags.Ephemeral });
+    if (!privateOwnerInbox && !channel?.isTextBased()) return interaction.reply({ content: kind === 'suggest' ? 'ערוץ ההצעות עדיין לא הוגדר.' : 'ערוץ המערכת עדיין לא הוגדר.', flags: MessageFlags.Ephemeral });
     const cooldownSeconds = config.community.cooldowns[kind] || 0;
     const cooldownKey = `community:${interaction.guildId}:cooldown:${kind}:${interaction.user.id}`;
     const last = Number(await client.db.get(cooldownKey, 0));
@@ -49,6 +51,14 @@ export default {
         ? values(interaction, ['video_type', 'deadline', 'style', 'contact', 'description'])
         : values(interaction, ['project', 'deadline', 'experience', 'contact', 'description']);
       Object.assign(data, JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
+    }
+    if (privateOwnerInbox) {
+      const record = await createOwnerInboxCase(client, interaction, kind, data);
+      const delivered = await deliverOwnerInboxCase(client, record);
+      await client.db.set(cooldownKey, Date.now());
+      return interaction.reply({ content: delivered
+        ? '✅ ההודעה שלך נשלחה בהצלחה לצוות השרת.'
+        : '⚠️ אירעה תקלה זמנית בשליחת ההודעה.\nהצוות יקבל אותה ברגע שהחיבור יחזור.', flags: MessageFlags.Ephemeral });
     }
     const id = String(await client.db.increment(`community:${interaction.guildId}:sequence:${kind}`));
     const record = { id, kind, authorId: interaction.user.id, ...data, status: 'open', createdAt: Date.now(), handlerId: null };
