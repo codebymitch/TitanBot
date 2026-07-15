@@ -6,14 +6,17 @@ export const AccessLevel = Object.freeze({ EVERYONE: 0, VERIFIED: 1, HELPER: 2, 
 
 export async function memberAccessLevel(interaction, client) {
   if (!interaction.inGuild() || !interaction.member) return AccessLevel.EVERYONE;
-  const ownerIds = new Set((process.env.OWNER_IDS || '').split(',').map(v => v.trim()).filter(Boolean));
-  if (interaction.guild?.ownerId === interaction.user.id || ownerIds.has(interaction.user.id)) return AccessLevel.OWNER;
+  if (interaction.guild?.ownerId === interaction.user.id) return AccessLevel.OWNER;
   const p = interaction.member.permissions;
-  if (p.has(PermissionFlagsBits.Administrator) || p.has(PermissionFlagsBits.ManageGuild)) return AccessLevel.ADMIN;
-  if (p.has(PermissionFlagsBits.ModerateMembers) && p.has(PermissionFlagsBits.KickMembers) && p.has(PermissionFlagsBits.ManageMessages)) return AccessLevel.MODERATOR;
-  if (p.has(PermissionFlagsBits.ManageMessages)) return AccessLevel.HELPER;
   const config = await getConfig(client, interaction.guildId);
-  if (config.verification.roleId && interaction.member.roles?.cache?.has(config.verification.roleId)) return AccessLevel.VERIFIED;
+  const hasRole = id => Boolean(id && interaction.member.roles?.cache?.has(id));
+  if (hasRole(config.staffRoles?.administrator)) return AccessLevel.ADMIN;
+  if (p.has(PermissionFlagsBits.Administrator) || p.has(PermissionFlagsBits.ManageGuild)) return AccessLevel.ADMIN;
+  if (hasRole(config.staffRoles?.moderator)) return AccessLevel.MODERATOR;
+  if (p.has(PermissionFlagsBits.ModerateMembers) && p.has(PermissionFlagsBits.KickMembers) && p.has(PermissionFlagsBits.ManageMessages)) return AccessLevel.MODERATOR;
+  if (hasRole(config.staffRoles?.helper)) return AccessLevel.HELPER;
+  if (p.has(PermissionFlagsBits.ManageMessages)) return AccessLevel.HELPER;
+  if (hasRole(config.staffRoles?.verified || config.verification.roleId)) return AccessLevel.VERIFIED;
   return AccessLevel.EVERYONE;
 }
 
@@ -23,6 +26,11 @@ export async function requireAccess(interaction, client, defaultLevel, commandKe
     return false;
   }
   const config = await getConfig(client, interaction.guildId);
+  const setting = config.commandSettings?.[commandKey] || config.commandSettings?.[interaction.commandName];
+  if (setting?.enabled === false) {
+    await interaction.reply({ embeds: [createEmbed({ title: 'הפקודה מושבתת', description: 'הפקודה הזו הושבתה בהגדרות השרת.', color: 'error' })], flags: MessageFlags.Ephemeral });
+    return false;
+  }
   const required = Number(config.commandPermissions?.[commandKey] ?? defaultLevel);
   if (await memberAccessLevel(interaction, client) >= required) return true;
   await interaction.reply({ embeds: [createEmbed({ title: 'אין הרשאה', description: 'אין לך הרשאה להשתמש בפקודה זו.', color: 'error' })], flags: MessageFlags.Ephemeral });

@@ -66,6 +66,7 @@ async function getAllFiles(directory, fileList = []) {
 
 export async function loadCommands(client) {
     client.commands = new Collection();
+    client.failedCommands = new Collection();
     const commandsPath = path.join(__dirname, '../commands');
     const commandFiles = await getAllFiles(commandsPath);
     
@@ -94,11 +95,11 @@ export async function loadCommands(client) {
             
             const primaryCommandName = command.data.name;
             
-            if (!uniqueCommandNames.has(primaryCommandName)) {
-                uniqueCommandNames.add(primaryCommandName);
-                
-                client.commands.set(primaryCommandName, command);
+            if (uniqueCommandNames.has(primaryCommandName)) {
+                throw new Error(`Duplicate command name "${primaryCommandName}" in ${normalizedPath}`);
             }
+            uniqueCommandNames.add(primaryCommandName);
+            client.commands.set(primaryCommandName, command);
             
             const subcommands = getSubcommandInfo(command.data.toJSON());
             
@@ -109,6 +110,7 @@ export async function loadCommands(client) {
             }
             
         } catch (error) {
+            client.failedCommands.set(filePath, error.message);
             logger.error(`Error loading command from ${filePath}:`, error);
         }
     }
