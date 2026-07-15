@@ -1,4 +1,4 @@
-import { EmbedBuilder, ChannelType } from 'discord.js';
+import { EmbedBuilder, ChannelType, PermissionFlagsBits } from 'discord.js';
 import { getGuildConfig } from './guildConfig.js';
 import { logger } from '../utils/logger.js';
 
@@ -14,6 +14,9 @@ const EVENT_TYPES = {
   MODERATION_MUTE: 'moderation.mute',
   MODERATION_WARN: 'moderation.warn',
   MODERATION_PURGE: 'moderation.purge',
+  MODERATION_UNBAN: 'moderation.unban',
+  MODERATION_LOCK: 'moderation.lock',
+  MODERATION_UNLOCK: 'moderation.unlock',
   
   
   TICKET_CREATE: 'ticket.create',
@@ -41,6 +44,12 @@ const EVENT_TYPES = {
   MEMBER_JOIN: 'member.join',
   MEMBER_LEAVE: 'member.leave',
   MEMBER_NAME_CHANGE: 'member.namechange',
+  VERIFICATION: 'verification.complete',
+  SUGGESTION: 'suggestion.create',
+  REPORT: 'report.create',
+  CONTEST_ACTION: 'contest.action',
+  SETTINGS_CHANGE: 'settings.change',
+  COMMAND_ERROR: 'command.error',
   
   
   REACTION_ROLE_ADD: 'reactionrole.add',
@@ -152,7 +161,7 @@ export async function logEvent({
     
     if (!guild) {
       logger.warn(`logEvent: Guild not found: ${guildId}`);
-      return;
+      return { ok: false, reason: 'guild_not_found' };
     }
 
     const config = await getGuildConfig(client, guildId);
@@ -161,21 +170,22 @@ export async function logEvent({
     const ignoredUsers = config.logIgnore?.users || [];
     const ignoredChannels = config.logIgnore?.channels || [];
     if (data?.userId && ignoredUsers.includes(data.userId)) {
-      return;
+      return { ok: false, reason: 'ignored' };
     }
     if (data?.channelId && ignoredChannels.includes(data.channelId)) {
-      return;
+      return { ok: false, reason: 'ignored' };
     }
     
     
     if (!isLoggingEnabled(config, eventType)) {
-      return;
+      return { ok: false, reason: 'disabled' };
     }
 
     
     const logChannelId = getLogChannelForEvent(config, eventType);
     if (!logChannelId) {
-      return;
+      logger.warn(`Log channel is not configured for guild ${guildId}. Configure it with /settings channel.`);
+      return { ok: false, reason: 'not_configured' };
     }
 
     const channel = guild.channels.cache.get(logChannelId) || 
@@ -183,13 +193,18 @@ export async function logEvent({
     
     if (!channel || channel.type !== ChannelType.GuildText) {
       logger.warn(`logEvent: Invalid log channel ${logChannelId} for guild ${guildId}`);
-      return;
+      return { ok: false, reason: 'channel_not_found' };
     }
 
     const permissions = channel.permissionsFor(guild.members.me);
-    if (!permissions || !permissions.has(['SendMessages', 'EmbedLinks'])) {
+    const requiredPermissions = [
+      PermissionFlagsBits.ViewChannel,
+      PermissionFlagsBits.SendMessages,
+      PermissionFlagsBits.EmbedLinks,
+    ];
+    if (!permissions || !permissions.has(requiredPermissions)) {
       logger.warn(`logEvent: Missing permissions in channel ${logChannelId}`);
-      return;
+      return { ok: false, reason: 'missing_permissions' };
     }
 
     const embed = createLogEmbed(guild, eventType, data);
@@ -201,9 +216,11 @@ export async function logEvent({
 
     await channel.send(messageOptions);
     logger.info(`Event logged: ${eventType} in guild ${guildId}`);
+    return { ok: true };
 
   } catch (error) {
-    logger.error(`Error in logEvent:`, error);
+    logger.error('Error in logEvent', { error, guildId, eventType });
+    return { ok: false, reason: 'send_failed' };
   }
 }
 
@@ -218,7 +235,9 @@ function isLoggingEnabled(config, eventType) {
     return false;
   }
 
-  if (!config.logging || !config.logging.enabled) {
+  // Legacy guilds may only have logChannelId. Treat logging as enabled unless
+  // it was explicitly disabled, so existing configuration keeps working.
+  if (config.logging?.enabled === false) {
     return false;
   }
 
@@ -285,20 +304,37 @@ function createLogEmbed(guild, eventType, data) {
   });
 
   
-  const title = data.title || `${icon} ${formatEventType(eventType)}`;
+  const title = String(data?.title || `${icon} ${formatEventType(eventType)}`).slice(0, 256);
   embed.setTitle(title);
 
   
   if (data.description) {
-    embed.setDescription(data.description);
+    embed.setDescription(String(data.description).slice(0, 4096));
   }
 
   
   if (data.fields && Array.isArray(data.fields)) {
-    embed.addFields(data.fields);
+    embed.addFields(data.fields.slice(0, 25).map(field => ({
+      name: String(field.name || 'פרט').slice(0, 256),
+      value: String(field.value ?? '—').slice(0, 1024),
+      inline: Boolean(field.inline),
+    })));
   }
 
   return embed;
+}
+
+// Stable API for commands and services. Logging failures are intentionally
+// returned to the caller instead of being thrown into the original action.
+export async function sendLog(guild, logType, title, description, fields = [], options = {}) {
+  if (!guild?.client || !guild.id) return { ok: false, reason: 'guild_not_found' };
+  return logEvent({
+    client: guild.client,
+    guildId: guild.id,
+    eventType: logType,
+    data: { title, description, fields, ...options.data },
+    attachments: options.attachments || [],
+  });
 }
 
 

@@ -1,0 +1,3 @@
+import { Events } from 'discord.js';
+import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
+export default { name: Events.GuildMemberUpdate, async execute(before, after) { if (before.nickname !== after.nickname) await logEvent({ client: after.client, guildId: after.guild.id, eventType: EVENT_TYPES.MEMBER_NAME_CHANGE, data: { title: 'כינוי שונה', description: `הכינוי של ${after.user} שונה.`, userId: after.id, fields: [{ name: 'לפני', value: before.nickname || before.user.username, inline: true }, { name: 'אחרי', value: after.nickname || after.user.username, inline: true }] } }); } };
