@@ -57,6 +57,12 @@ export async function postUpdate(client, guild, content, { authorId = 'automatic
 }
 export async function runStartupUpdateCheck(client) {
   if (client.botUpdateStartupChecked) return; client.botUpdateStartupChecked = true;
+  // Never announce automatically when writes would only reach MemoryStorage.
+  // Otherwise every process restart forgets the announced version and reposts it.
+  if (typeof client.db?.isAvailable === 'function' && !client.db.isAvailable()) {
+    logger.warn('Skipping automatic bot updates because persistent database storage is unavailable');
+    return;
+  }
   for (const guild of client.guilds.cache.values()) {
     try { const s = await getUpdateSettings(client, guild.id); if (s.automaticEnabled && s.currentVersion !== s.lastAnnouncedVersion) await postUpdate(client, guild, { ...s.content, version: s.currentVersion }); }
     catch (error) { logger.error('Failed update announcement', { guildId: guild.id, error: error.stack || error.message }); }
