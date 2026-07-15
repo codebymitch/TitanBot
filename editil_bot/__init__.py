@@ -1,0 +1,1 @@
+"""EditIL Discord bot package."""

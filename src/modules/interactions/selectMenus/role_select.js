@@ -1,0 +1,2 @@
+import { success, error } from '../../community/ui.js';
+export default { name:'role_select',async execute(i){const role=i.guild.roles.cache.get(i.values[0]);if(!role||role.managed||role.position>=i.guild.members.me.roles.highest.position)return i.reply(error('לא ניתן לנהל את התפקיד הזה.'));const has=i.member.roles.cache.has(role.id);await i.member.roles[has?'remove':'add'](role,'Self-role panel');await i.reply({...success('לוח תפקידים',has?`התפקיד ${role} הוסר.`:`התפקיד ${role} נוסף.`),ephemeral:true});} };

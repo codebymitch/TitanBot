@@ -50,6 +50,10 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Python cache
+__pycache__/
+*.pyc
+
 # Snowpack dependency directory (https:
 web_modules/
 

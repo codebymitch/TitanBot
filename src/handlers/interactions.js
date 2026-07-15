@@ -1,58 +1,23 @@
 import { readdir } from 'fs/promises';
 import { join } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { logger } from '../utils/logger.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const interactionTypes = ['buttons', 'selectMenus', 'modals'];
-
-export default async (client) => {
-  try {
-    const interactionsPath = join(__dirname, '../interactions');
-    
-    for (const type of interactionTypes) {
-      const typePath = join(interactionsPath, type);
-      
-      try {
-        const interactionFiles = (await readdir(typePath)).filter(file => file.endsWith('.js'));
-        let loadedCount = 0;
-        
-        for (const file of interactionFiles) {
-          try {
-            const module = await import(`../interactions/${type}/${file}`);
-            const moduleExport = module.default;
-            const interactions = Array.isArray(moduleExport) ? moduleExport : [moduleExport];
-
-            for (const interaction of interactions) {
-              if (!interaction?.name || !interaction?.execute) {
-                logger.warn(`Interaction ${file} in ${type} is missing required properties.`);
-                continue;
-              }
-
-              client[type].set(interaction.name, interaction);
-              loadedCount += 1;
-              logger.info(`Loaded ${type.slice(0, -1)}: ${interaction.name}`);
-            }
-          } catch (error) {
-            logger.error(`Error loading interaction ${file} in ${type}:`, error);
-          }
-        }
-
-        logger.info(`Loaded ${loadedCount} ${type}`);
-      } catch (error) {
-        if (error.code !== 'ENOENT') {
-          logger.error(`Error loading ${type}:`, error);
-        } else {
-          logger.debug(`No ${type} directory found, skipping...`);
-        }
+const root = join(fileURLToPath(new URL('.', import.meta.url)), '../modules/interactions');
+export default async function loadInteractions(client) {
+  for (const type of ['buttons', 'selectMenus', 'modals']) {
+    const directory = join(root, type);
+    let files = [];
+    try { files = (await readdir(directory)).filter(file => file.endsWith('.js')); } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+    for (const file of files) {
+      const mod = (await import(pathToFileURL(join(directory, file)).href)).default;
+      for (const handler of (Array.isArray(mod) ? mod : [mod])) {
+        if (!handler?.name || typeof handler.execute !== 'function') throw new Error(`Invalid ${type} handler: ${file}`);
+        client[type].set(handler.name, handler);
       }
     }
-  } catch (error) {
-    logger.error('Error loading interactions:', error);
+    logger.info(`Loaded ${client[type].size} ${type}`);
   }
-};
-
-
+}

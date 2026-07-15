@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(docker compose down)",
+      "PowerShell(docker compose up -d --build)",
+      "PowerShell(docker compose logs bot --tail=50)"
+    ]
+  }
+}

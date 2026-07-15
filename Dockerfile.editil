@@ -1,0 +1,8 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+COPY requirements-editil.txt ./
+RUN pip install --no-cache-dir -r requirements-editil.txt
+COPY editil_bot ./editil_bot
+
+CMD ["python", "-m", "editil_bot.main"]

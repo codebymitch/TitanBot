@@ -1,0 +1,13 @@
+services:
+  editil-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.editil
+    env_file:
+      - .env.editil
+    volumes:
+      - editil-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  editil-data:
