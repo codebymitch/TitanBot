@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { PermissionFlagsBits } from 'discord.js';
+import { getUpdateSettings, parseLines, postUpdate, runStartupUpdateCheck } from '../src/services/botUpdateService.js';
+
+const makeClient = () => { const data=new Map(); return { user:{displayAvatarURL:()=>null},db:{get:async(k,d)=>data.has(k)?data.get(k):d,set:async(k,v)=>{data.set(k,v);return true;},delete:async k=>data.delete(k)},guilds:{cache:new Map()} }; };
+function makeGuild(client,{sendFails=false}={}){let sends=0;const message={id:'message-1'};const channel={id:'1527004410536923357',guildId:'guild-1',type:0,permissionsFor:()=>({has:bits=>bits.includes(PermissionFlagsBits.EmbedLinks)}),send:async payload=>{sends++;if(sendFails)throw new Error('send failed');channel.payload=payload;return message;}};const guild={id:'guild-1',members:{me:{}},roles:{cache:new Map()},channels:{cache:new Map([[channel.id,channel]]),fetch:async()=>channel}};client.guilds.cache.set(guild.id,guild);return{guild,channel,get sends(){return sends;}};}
+
+test('multi-line changelog values become clean bullet entries',()=>assert.deepEqual(parseLines('one\n• two\n- three'),['one','two','three']));
+test('successful post persists version and restricts role mentions',async()=>{const client=makeClient(),ctx=makeGuild(client);await client.db.set('guild:guild-1:bot_updates',{roleId:'role-1'});ctx.guild.roles.cache.set('role-1',{id:'role-1'});await postUpdate(client,ctx.guild,{version:'9.0.0',title:'עדכון',newFeatures:[],fixes:[],improvements:[]});const s=await getUpdateSettings(client,ctx.guild.id);assert.equal(s.lastAnnouncedVersion,'9.0.0');assert.deepEqual(ctx.channel.payload.allowedMentions,{parse:[],roles:['role-1']});});
+test('failed post never marks the version announced',async()=>{const client=makeClient(),ctx=makeGuild(client,{sendFails:true});await assert.rejects(()=>postUpdate(client,ctx.guild,{version:'9.0.0',title:'עדכון',newFeatures:[],fixes:[],improvements:[]}));assert.equal((await getUpdateSettings(client,ctx.guild.id)).lastAnnouncedVersion,null);});
+test('startup check posts exactly once and reconnect-style calls do nothing',async()=>{const client=makeClient(),ctx=makeGuild(client);await runStartupUpdateCheck(client);await runStartupUpdateCheck(client);assert.equal(ctx.sends,1);});

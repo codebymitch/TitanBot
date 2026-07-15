@@ -1,0 +1,1 @@
+export default {name:'botupdate_cancel',async execute(interaction,_client,args){if(interaction.user.id!==args[0])return interaction.reply({content:'רק יוצר הפעולה יכול לבטל אותה.',ephemeral:true});return interaction.update({content:'הפעולה בוטלה.',embeds:[],components:[]});}};
