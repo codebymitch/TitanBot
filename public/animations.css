@@ -78,6 +78,10 @@
 .staff-application-form input,.staff-application-form textarea { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; outline: 0; background: #11141d; color: var(--text); font: inherit; resize: vertical; transition: border-color .2s ease,transform .2s ease; }
 .staff-application-form textarea { min-height: 78px; }.staff-application-form input:focus,.staff-application-form textarea:focus { border-color: rgba(85,216,255,.65); transform: translate3d(0,-1px,0); }
 .staff-application-form .btn,.application-result { grid-column: 1/-1; }.staff-application-form .btn:disabled { opacity: .55; cursor: wait; }.form-trap { position: absolute!important; left: -9999px!important; }
+.discord-id-guide { grid-column: 1/-1; margin-top: -7px; border: 1px solid rgba(88,101,242,.2); border-radius: 11px; background: rgba(88,101,242,.06); overflow: hidden; }
+.discord-id-guide summary { padding: 10px 12px; display: flex; align-items: center; gap: 7px; color: #cdd1ff; font-size: 10px; cursor: pointer; list-style: none; }
+.discord-id-guide summary::-webkit-details-marker { display: none; }.discord-id-guide summary span { margin-inline-start: auto; color: var(--muted); }.discord-id-guide summary i { font-style: normal; font-size: 15px; transition: transform .2s ease; }.discord-id-guide[open] summary i { transform: rotate(45deg); }
+.discord-id-guide > div { padding: 4px 13px 10px; display: grid; grid-template-columns: repeat(2,1fr); gap: 18px; animation: faq-in .28s ease both; }.discord-id-guide section b { font-size: 11px; }.discord-id-guide ol { margin: 7px 0 0; padding-inline-start: 18px; color: var(--muted); font-size: 9px; line-height: 1.8; }.discord-id-guide strong { color: #d9dcff; }.discord-id-guide > p { margin: 0; padding: 8px 13px; border-top: 1px solid var(--line); color: #ffcf70; font-size: 9px; }
 .application-result { min-height: 20px; margin: 0; text-align: center; color: var(--muted); font-size: 11px; }.application-result.success { color: #57f287; }.application-result.error { color: #ff7b82; }
 .commands-section { border-block: 1px solid var(--line); background: linear-gradient(180deg,#0d1018,#090b11); }
 .command-controls { margin: -20px auto 34px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
@@ -121,6 +125,7 @@
 }
 @media (max-width: 760px) {
   .staff-application-form { grid-template-columns: 1fr; padding: 20px; }.staff-application-form label { grid-column: 1/-1; }.form-heading { align-items: start; flex-direction: column; gap: 4px; }
+  .discord-id-guide > div { grid-template-columns: 1fr; gap: 12px; }.discord-id-guide summary span { display: none; }
   .command-controls { align-items: stretch; flex-direction: column; }
   .command-search { width: 100%; }
   .command-filters { overflow-x: auto; }

@@ -13,6 +13,10 @@ test('website staff form requires Discord identity and includes a bot-verificati
   assert.match(html, /id="staffApplicationForm"/);
   assert.match(html, /name="discordId"[^>]+required/);
   assert.match(html, /הבוט ישלח לכם הודעת אימות פרטית/);
+  assert.match(html, /id="discordIdGuide"/);
+  assert.match(html, /Developer Mode/);
+  assert.match(html, /Copy User ID/);
+  assert.match(html, /אל תשלחו סיסמה או טוקן/);
 });
 
 test('worker protects bot polling and rate limits public submissions', async () => {
