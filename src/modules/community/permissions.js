@@ -16,11 +16,10 @@ export async function memberAccessLevel(interaction, client) {
   if (p.has(PermissionFlagsBits.ModerateMembers) && p.has(PermissionFlagsBits.KickMembers) && p.has(PermissionFlagsBits.ManageMessages)) return AccessLevel.MODERATOR;
   if (hasRole(config.staffRoles?.helper)) return AccessLevel.HELPER;
   if (p.has(PermissionFlagsBits.ManageMessages)) return AccessLevel.HELPER;
-  const verifiedRoleId = config.staffRoles?.verified || config.verification.roleId;
-  // Without an active, configured verification system, ordinary members must
-  // still be able to use member-facing commands.
-  if (config.verification?.enabled === false || !verifiedRoleId || hasRole(verifiedRoleId)) return AccessLevel.VERIFIED;
-  return AccessLevel.EVERYONE;
+  // Verification controls server/channel access, not member-facing commands.
+  // Every guild member receives the public-command level; staff levels above
+  // this still require their configured roles or Discord permissions.
+  return AccessLevel.VERIFIED;
 }
 
 export async function requireAccess(interaction, client, defaultLevel, commandKey = interaction.commandName) {

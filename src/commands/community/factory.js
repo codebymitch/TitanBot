@@ -61,7 +61,7 @@ export function communityCommand(name) {
     const privateInboxCommand = interaction.guildId === OWNER_INBOX_GUILD_ID && ['suggest', 'report'].includes(name);
     let required = privateInboxCommand || (name === 'poll' && config.community.publicPolls)
       ? AccessLevel.EVERYONE
-      : name === 'poll' ? AccessLevel.HELPER : AccessLevel.VERIFIED;
+      : name === 'poll' ? AccessLevel.HELPER : AccessLevel.EVERYONE;
     if (!await requireAccess(interaction, client, required)) return;
     if (name === 'editingtype') {
       const roles = (config.community.editingRoleIds || []).map(id => interaction.guild.roles.cache.get(id)).filter(role => role && !role.managed && role.position < interaction.guild.members.me.roles.highest.position);

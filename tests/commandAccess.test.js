@@ -15,9 +15,9 @@ test('members receive verified access when verification is disabled or unconfigu
   assert.equal(await memberAccessLevel(memberInteraction(), clientWithConfig({ verification: { enabled: true, roleId: null } })), AccessLevel.VERIFIED);
 });
 
-test('configured verification still requires the configured role', async () => {
+test('configured verification never blocks member-facing commands', async () => {
   const config = { verification: { enabled: true, roleId: 'verified' } };
-  assert.equal(await memberAccessLevel(memberInteraction(), clientWithConfig(config)), AccessLevel.EVERYONE);
+  assert.equal(await memberAccessLevel(memberInteraction(), clientWithConfig(config)), AccessLevel.VERIFIED);
   assert.equal(await memberAccessLevel(memberInteraction(['verified']), clientWithConfig(config)), AccessLevel.VERIFIED);
 });
 

@@ -13,7 +13,7 @@ export default {
     .addSubcommand(s=>s.setName('end').setDescription('סיום התחרות ופרסום תוצאות')),
   async execute(i,c){
     const sub=i.options.getSubcommand(),admin=['create','end'].includes(sub);
-    if(!await requireAccess(i,c,admin?AccessLevel.ADMIN:AccessLevel.VERIFIED,`contest.${sub}`))return;
+    if(!await requireAccess(i,c,admin?AccessLevel.ADMIN:AccessLevel.EVERYONE,`contest.${sub}`))return;
     const config=await getConfig(c,i.guildId),state=config.contests;
     if(sub==='create'){
       if(state.active)return i.reply({content:'כבר קיימת תחרות פעילה.',flags:MessageFlags.Ephemeral});
