@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ChannelType, Collection } from 'discord.js';
-import { BOOST_CHANNEL_NAME, BOOST_GUILD_ID, handleBoostStarted } from '../src/events/guildMemberUpdate.js';
+import { BOOST_CHANNEL_ID, BOOST_GUILD_ID, handleBoostStarted } from '../src/events/guildMemberUpdate.js';
 
 function fixture({ oldPremium = null, newPremium = new Date('2026-07-16T12:00:00Z'), channel = true, permissions = true } = {}) {
   const stored = new Map(), sent = [];
-  const boostChannel = { id: 'boosts', name: BOOST_CHANNEL_NAME, type: ChannelType.GuildText, permissionsFor: () => ({ has: () => permissions }), send: async payload => { sent.push(payload); } };
-  const guild = { id: BOOST_GUILD_ID, premiumTier: 2, premiumSubscriptionCount: 7, members: { me: { id: 'bot' } }, channels: { cache: new Collection(channel ? [['boosts', boostChannel]] : []) } };
+  const boostChannel = { id: BOOST_CHANNEL_ID, name: '🚀・בוסטים', type: ChannelType.GuildText, permissionsFor: () => ({ has: () => permissions }), send: async payload => { sent.push(payload); } };
+  const guild = { id: BOOST_GUILD_ID, premiumTier: 2, premiumSubscriptionCount: 7, members: { me: { id: 'bot' } }, channels: { cache: new Collection(channel ? [[BOOST_CHANNEL_ID, boostChannel]] : []) } };
   const member = premiumSince => ({ id: 'user-1', guild, premiumSince, premiumSinceTimestamp: premiumSince?.getTime() ?? null, user: { toString: () => '<@user-1>' } });
   const client = { db: { isAvailable: () => true, get: async (key, fallback) => stored.get(key) ?? fallback, set: async (key, value) => { stored.set(key, value); }, delete: async key => stored.delete(key) } };
   return { oldMember: member(oldPremium), newMember: member(newPremium), client, stored, sent };

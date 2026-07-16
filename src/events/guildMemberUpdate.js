@@ -2,7 +2,7 @@ import { ChannelType, EmbedBuilder, Events, PermissionFlagsBits } from 'discord.
 import { logger } from '../utils/logger.js';
 
 export const BOOST_GUILD_ID = '1526671786387705907';
-export const BOOST_CHANNEL_NAME = '💜・בוסטרים';
+export const BOOST_CHANNEL_ID = '1527374407343804566';
 
 const detectionKey = member => `server_boost:${member.guild.id}:${member.id}:${member.premiumSinceTimestamp}`;
 
@@ -22,12 +22,9 @@ export async function handleBoostStarted(oldMember, newMember, client = newMembe
       return false;
     }
 
-    const channel = newMember.guild.channels.cache.find(candidate =>
-      candidate.name === BOOST_CHANNEL_NAME &&
-      candidate.type === ChannelType.GuildText
-    );
-    if (!channel) {
-      logger.error('Boost announcement channel not found', { guildId: newMember.guild.id, channelName: BOOST_CHANNEL_NAME });
+    const channel = newMember.guild.channels.cache.get(BOOST_CHANNEL_ID);
+    if (!channel || channel.type !== ChannelType.GuildText) {
+      logger.error('Boost announcement channel not found or is not a text channel', { guildId: newMember.guild.id, channelId: BOOST_CHANNEL_ID });
       return false;
     }
 
