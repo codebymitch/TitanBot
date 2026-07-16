@@ -4,6 +4,11 @@
   "main": "cloudflare/worker.js",
   "compatibility_date": "2026-07-16",
   "preview_urls": false,
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "editil.com", "custom_domain": true },
+    { "pattern": "www.editil.com", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS"
