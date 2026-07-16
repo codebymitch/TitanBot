@@ -1,11 +1,21 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { STAFF_APPLICATION_CATEGORY_ID, STAFF_APPLICATION_GUILD_ID } from '../src/services/staffApplicationService.js';
+import { STAFF_APPLICATION_CATEGORY_ID, STAFF_APPLICATION_CHANNEL_NAME, STAFF_APPLICATION_GUILD_ID } from '../src/services/staffApplicationService.js';
 
 test('staff application targets only the configured EditIL guild and private category', () => {
   assert.equal(STAFF_APPLICATION_GUILD_ID, '1526671786387705907');
   assert.equal(STAFF_APPLICATION_CATEGORY_ID, '1526687081848504442');
+  assert.equal(STAFF_APPLICATION_CHANNEL_NAME, 'staff-applications');
+});
+
+test('staff applications use one staff-only inbox and never grant applicants channel access', async () => {
+  const service = await readFile(new URL('../src/services/staffApplicationService.js', import.meta.url), 'utf8');
+  assert.match(service, /ensureStaffApplicationChannel/);
+  assert.match(service, /upsert\(guild\.id, \{ allow: \[\], deny: \[PermissionFlagsBits\.ViewChannel\] \}\)/);
+  assert.doesNotMatch(service, /upsert\(member\.id/);
+  assert.doesNotMatch(service, /content: `[^`]*\$\{channel\}/);
+  assert.doesNotMatch(service, /allowedMentions: \{ users: \[member\.id\]/);
 });
 
 test('website staff form requires Discord identity and includes a bot-verification message', async () => {
