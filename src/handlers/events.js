@@ -3,7 +3,7 @@ import { pathToFileURL } from 'url';
 import { logger } from '../utils/logger.js';
 import registerServerLogging from './serverLogging.js';
 
-const eventNames = ['ready.js', 'interactionCreate.js', 'guildMemberAdd.js', 'messageCreate.js'];
+const eventNames = ['ready.js', 'interactionCreate.js', 'guildMemberAdd.js', 'guildMemberUpdate.js', 'messageCreate.js'];
 export default async function loadEvents(client) {
   registerServerLogging(client);
   const root = new URL('../events/', import.meta.url);
