@@ -64,7 +64,22 @@ export async function runStartupUpdateCheck(client) {
     return;
   }
   for (const guild of client.guilds.cache.values()) {
-    try { const s = await getUpdateSettings(client, guild.id); if (s.automaticEnabled && s.currentVersion !== s.lastAnnouncedVersion) await postUpdate(client, guild, { ...s.content, version: s.currentVersion }); }
+    try {
+      let s = await getUpdateSettings(client, guild.id);
+      if (isNewerVersion(DEFAULT_UPDATE_CONTENT.version, s.currentVersion)) {
+        s = await saveUpdateSettings(client, guild.id, { currentVersion: DEFAULT_UPDATE_CONTENT.version, content: { ...DEFAULT_UPDATE_CONTENT } });
+      }
+      if (s.automaticEnabled && s.currentVersion !== s.lastAnnouncedVersion) await postUpdate(client, guild, { ...s.content, version: s.currentVersion });
+    }
     catch (error) { logger.error('Failed update announcement', { guildId: guild.id, error: error.stack || error.message }); }
   }
+}
+
+export function isNewerVersion(candidate, current) {
+  const parts = value => String(value || '').replace(/^v/i, '').split('.').map(part => Number.parseInt(part, 10) || 0);
+  const next = parts(candidate); const saved = parts(current);
+  for (let index = 0; index < Math.max(next.length, saved.length); index += 1) {
+    if ((next[index] || 0) !== (saved[index] || 0)) return (next[index] || 0) > (saved[index] || 0);
+  }
+  return false;
 }

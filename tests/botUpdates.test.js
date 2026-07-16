@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PermissionFlagsBits } from 'discord.js';
-import { getUpdateSettings, parseLines, postUpdate, runStartupUpdateCheck } from '../src/services/botUpdateService.js';
+import { getUpdateSettings, isNewerVersion, parseLines, postUpdate, runStartupUpdateCheck } from '../src/services/botUpdateService.js';
 
 const makeClient = () => { const data=new Map(); return { user:{displayAvatarURL:()=>null},db:{get:async(k,d)=>data.has(k)?data.get(k):d,set:async(k,v)=>{data.set(k,v);return true;},delete:async k=>data.delete(k)},guilds:{cache:new Map()} }; };
 function makeGuild(client,{sendFails=false}={}){let sends=0;const message={id:'message-1'};const channel={id:'1527004410536923357',guildId:'guild-1',type:0,permissionsFor:()=>({has:bits=>bits.includes(PermissionFlagsBits.EmbedLinks)}),send:async payload=>{sends++;if(sendFails)throw new Error('send failed');channel.payload=payload;return message;}};const guild={id:'guild-1',members:{me:{}},roles:{cache:new Map()},channels:{cache:new Map([[channel.id,channel]]),fetch:async()=>channel}};client.guilds.cache.set(guild.id,guild);return{guild,channel,get sends(){return sends;}};}
@@ -11,3 +11,4 @@ test('successful post persists version and restricts role mentions',async()=>{co
 test('failed post never marks the version announced',async()=>{const client=makeClient(),ctx=makeGuild(client,{sendFails:true});await assert.rejects(()=>postUpdate(client,ctx.guild,{version:'9.0.0',title:'עדכון',newFeatures:[],fixes:[],improvements:[]}));assert.equal((await getUpdateSettings(client,ctx.guild.id)).lastAnnouncedVersion,null);});
 test('startup check posts exactly once and reconnect-style calls do nothing',async()=>{const client=makeClient(),ctx=makeGuild(client);await runStartupUpdateCheck(client);await runStartupUpdateCheck(client);assert.equal(ctx.sends,1);});
 test('startup check never posts while database is in degraded memory mode',async()=>{const client=makeClient(),ctx=makeGuild(client);client.db.isAvailable=()=>false;await runStartupUpdateCheck(client);assert.equal(ctx.sends,0);});
+test('semantic release comparison advances only to a newer version',()=>{assert.equal(isNewerVersion('3.4.0','3.3.0'),true);assert.equal(isNewerVersion('3.4.0','3.4.0'),false);assert.equal(isNewerVersion('3.3.9','3.4.0'),false);assert.equal(isNewerVersion('4.0.0','3.99.99'),true);});
