@@ -16,7 +16,10 @@ export async function memberAccessLevel(interaction, client) {
   if (p.has(PermissionFlagsBits.ModerateMembers) && p.has(PermissionFlagsBits.KickMembers) && p.has(PermissionFlagsBits.ManageMessages)) return AccessLevel.MODERATOR;
   if (hasRole(config.staffRoles?.helper)) return AccessLevel.HELPER;
   if (p.has(PermissionFlagsBits.ManageMessages)) return AccessLevel.HELPER;
-  if (hasRole(config.staffRoles?.verified || config.verification.roleId)) return AccessLevel.VERIFIED;
+  const verifiedRoleId = config.staffRoles?.verified || config.verification.roleId;
+  // Without an active, configured verification system, ordinary members must
+  // still be able to use member-facing commands.
+  if (config.verification?.enabled === false || !verifiedRoleId || hasRole(verifiedRoleId)) return AccessLevel.VERIFIED;
   return AccessLevel.EVERYONE;
 }
 

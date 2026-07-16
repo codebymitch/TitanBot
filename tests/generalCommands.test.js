@@ -46,7 +46,7 @@ test('help visibility respects access levels, disabled commands and Discord perm
     member: { roles: { cache: { has: () => false } }, permissions: { has: () => false } }
   };
   const visible = await getVisibleHelpCommands(interaction, client);
-  assert.deepEqual(visible.map(command => command.data.name), ['ping']);
+  assert.deepEqual(visible.map(command => command.data.name), ['ping', 'rank']);
 });
 
 test('uptime formatter produces stable Hebrew output', () => {

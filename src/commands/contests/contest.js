@@ -22,8 +22,9 @@ export default {
       return i.reply({embeds:[createEmbed({title:`🏆 תחרות: ${active.title}`,description:`${active.description}\n\n**מועד סיום:** <t:${Math.floor(active.endsAt/1000)}:R>`,color:'primary'})]});
     }
     if(!state.active)return i.reply({content:'אין תחרות פעילה.',flags:MessageFlags.Ephemeral});
-    if(sub==='status')return i.reply({embeds:[createEmbed({title:`🏆 ${state.active.title}`,description:`${state.active.description}\n\nסיום: <t:${Math.floor(state.active.endsAt/1000)}:R>\nהגשות: **${state.submissions.length}**\nמצביעים: **${Object.keys(state.votes).length}**`,fields:state.submissions.slice(0,10).map((s,n)=>({name:`הגשה ${n+1}`,value:`<@${s.userId}> • [צפייה](${s.url})`,inline:true})),color:'primary'})],flags:MessageFlags.Ephemeral});
-    if(Date.now()>=state.active.endsAt&&sub!=='end')return i.reply({content:'מועד התחרות הסתיים. מנהל יכול לפרסם את התוצאות באמצעות `/contest end`.',flags:MessageFlags.Ephemeral});
+    const endsAt=Number(state.active.endsAt)||Number(state.active.createdAt)+durations.d7;
+    if(sub==='status')return i.reply({embeds:[createEmbed({title:`🏆 ${state.active.title}`,description:`${state.active.description}\n\nסיום: <t:${Math.floor(endsAt/1000)}:R>\nהגשות: **${state.submissions.length}**\nמצביעים: **${Object.keys(state.votes).length}**`,fields:state.submissions.slice(0,10).map((s,n)=>({name:`הגשה ${n+1}`,value:`<@${s.userId}> • [צפייה](${s.url})`,inline:true})),color:'primary'})],flags:MessageFlags.Ephemeral});
+    if(Date.now()>=endsAt&&sub!=='end')return i.reply({content:'מועד התחרות הסתיים. מנהל יכול לפרסם את התוצאות באמצעות `/contest end`.',flags:MessageFlags.Ephemeral});
     if(sub==='submit'){
       const url=i.options.getString('url');if(!/^https?:\/\/\S+$/i.test(url))return i.reply({content:'יש לצרף קישור תקין לעבודה.',flags:MessageFlags.Ephemeral});
       if(state.submissions.some(s=>s.userId===i.user.id))return i.reply({content:'כבר הגשת עבודה לתחרות זו.',flags:MessageFlags.Ephemeral});

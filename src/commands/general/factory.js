@@ -48,7 +48,8 @@ function defaultAccessFor(command) {
   if (command.category === 'owner') return AccessLevel.OWNER;
   if (command.category === 'moderation') return AccessLevel.MODERATOR;
   if (command.category === 'tickets') return AccessLevel.HELPER;
-  if (command.category === 'levels' || command.category === 'community' || command.category === 'contests') return AccessLevel.VERIFIED;
+  if (command.category === 'levels') return AccessLevel.EVERYONE;
+  if (command.category === 'community' || command.category === 'contests') return AccessLevel.VERIFIED;
   if (command.category === 'roles') return AccessLevel.ADMIN;
   return AccessLevel.EVERYONE;
 }
