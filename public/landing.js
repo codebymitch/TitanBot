@@ -33,16 +33,7 @@
   }), { threshold: .6 });
   $$('[data-counter]').forEach(element => counterObserver.observe(element));
 
-  fetch('/api/public-stats', { headers: { Accept: 'application/json' } }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
-    state.stats = { ...state.stats, ...data.community };
-    $$('[data-stat="members"]').forEach(element => { element.textContent = `${format(data.community.members)}+`; });
-    $('#commandCount').textContent = data.bot.commands;
-    $('#latency').textContent = `${data.bot.latency}ms`;
-    $('#serverCount').textContent = data.bot.servers;
-    $('#botStatus').textContent = data.bot.online ? 'Online' : 'Offline';
-    const avatar = $('#botAvatar'); if (data.bot.avatar) avatar.src = data.bot.avatar;
-    $$('[data-counter]').forEach(element => { if (element.getBoundingClientRect().top < innerHeight) animateCounter(element, Number(state.stats[element.dataset.counter]) || 0); });
-  }).catch(() => { $('#botStatus').textContent = 'Offline'; });
+  // Live statistics will be enabled with the upcoming EditIL bot integration.
 
   let ticking = false;
   const updateScroll = () => {
@@ -57,14 +48,12 @@
   $$('.nav nav a').forEach(link => link.addEventListener('click', () => $('.nav').classList.remove('open')));
 
   if (!reduced && matchMedia('(pointer:fine)').matches) {
-    const glow = $('.cursor-glow'); let mouseX = innerWidth / 2, mouseY = innerHeight / 2, glowX = mouseX, glowY = mouseY;
-    addEventListener('pointermove', event => { mouseX = event.clientX; mouseY = event.clientY; }, { passive: true });
-    const cursorFrame = () => { glowX += (mouseX - glowX) * .12; glowY += (mouseY - glowY) * .12; glow.style.transform = `translate3d(${glowX - 170}px,${glowY - 170}px,0)`; if (!document.hidden) requestAnimationFrame(cursorFrame); };
-    requestAnimationFrame(cursorFrame);
-    $$('.parallax').forEach(element => addEventListener('pointermove', event => {
-      const depth = Number(element.dataset.depth) || 6;
-      element.style.transform = `translate3d(${(event.clientX / innerWidth - .5) * depth}px,${(event.clientY / innerHeight - .5) * depth}px,0)`;
-    }, { passive: true }));
+    const glow = $('.cursor-glow'); let pointerFrame = 0;
+    addEventListener('pointermove', event => {
+      if (pointerFrame) return;
+      const x = event.clientX, y = event.clientY;
+      pointerFrame = requestAnimationFrame(() => { glow.style.transform = `translate3d(${x - 130}px,${y - 130}px,0)`; pointerFrame = 0; });
+    }, { passive: true });
     $$('.laptop').forEach(card => {
       card.addEventListener('pointermove', event => { const box = card.getBoundingClientRect(); card.style.transform = `rotateX(${(event.clientY - box.top) / box.height * -4 + 2}deg) rotateY(${(event.clientX - box.left) / box.width * 5 - 2.5}deg)`; }, { passive: true });
       card.addEventListener('pointerleave', () => { card.style.transform = ''; }, { passive: true });
