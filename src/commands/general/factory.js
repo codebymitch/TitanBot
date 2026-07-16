@@ -45,6 +45,7 @@ function categoryFor(command) {
 }
 
 function defaultAccessFor(command) {
+  if (command.data.name === 'staffhelp') return AccessLevel.HELPER;
   if (command.category === 'owner') return AccessLevel.OWNER;
   if (command.category === 'moderation') return AccessLevel.MODERATOR;
   if (command.category === 'tickets') return AccessLevel.HELPER;
