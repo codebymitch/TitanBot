@@ -1,61 +1,141 @@
 (() => {
   'use strict';
+  document.documentElement.classList.add('js');
+
   const $ = (selector, scope = document) => scope.querySelector(selector);
   const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const state = { stats: { members: 0, channels: 0, resources: 0, competitions: 0 } };
+  const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const state = { ready: false, stats: { members: 0, channels: 0, resources: 0, competitions: 0 } };
   $('#year').textContent = new Date().getFullYear();
 
-  const reveal = new IntersectionObserver(entries => entries.forEach(entry => {
-    if (entry.isIntersecting) { entry.target.classList.add('visible'); reveal.unobserve(entry.target); }
-  }), { threshold: .12 });
-  $$('.reveal').forEach(element => reveal.observe(element));
+  // One-time section reveals and staggered groups.
+  $$('.bento-card, .bot-tools span, .bot-stats div').forEach((item, index) => {
+    item.classList.add('stagger-item');
+    item.style.setProperty('--stagger', `${(index % 8) * 55}ms`);
+  });
+  const revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    entry.target.classList.add('visible');
+    if (entry.target.classList.contains('stagger-item')) entry.target.classList.add('stagger-visible');
+    entry.target.querySelectorAll?.('.stagger-item').forEach(item => item.classList.add('stagger-visible'));
+    revealObserver.unobserve(entry.target);
+  }), { threshold: .12, rootMargin: '0px 0px -30px' });
+  $$('.reveal, .bento, .bot-copy').forEach(element => revealObserver.observe(element));
 
   const number = value => new Intl.NumberFormat('he-IL').format(value);
   const count = (element, target) => {
     if (reduced || target < 2) { element.textContent = number(target); return; }
-    const started = performance.now(), duration = 900;
-    const frame = now => { const progress = Math.min((now - started) / duration, 1); element.textContent = number(Math.round(target * (1 - Math.pow(1 - progress, 3)))); if (progress < 1) requestAnimationFrame(frame); };
+    const started = performance.now();
+    const frame = now => {
+      const progress = Math.min((now - started) / 900, 1);
+      element.textContent = number(Math.round(target * (1 - Math.pow(1 - progress, 3))));
+      if (progress < 1 && !document.hidden) requestAnimationFrame(frame);
+    };
     requestAnimationFrame(frame);
   };
-  const counters = new IntersectionObserver(entries => entries.forEach(entry => {
-    if (!entry.isIntersecting) return;
+  const counterObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (!entry.isIntersecting || !state.ready) return;
     count(entry.target, Number(state.stats[entry.target.dataset.counter]) || 0);
-    counters.unobserve(entry.target);
+    counterObserver.unobserve(entry.target);
   }), { threshold: .55 });
-  $$('[data-counter]').forEach(element => counters.observe(element));
+  $$('[data-counter]').forEach(element => counterObserver.observe(element));
 
-  fetch('/api/status', { headers: { accept: 'application/json' } }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
-    state.stats = { ...state.stats, ...(data.community || {}) };
-    $$('[data-stat="members"]').forEach(element => { element.textContent = `${number(state.stats.members)}+`; });
-    $$('[data-member-copy]').forEach(element => { element.textContent = `${number(state.stats.members)} חברים בקהילה`; });
-    $('#commandCount').textContent = data.bot.commands ?? '—';
-    $('#latency').textContent = data.bot.online ? `${data.bot.latency}ms` : '—';
-    $('#serverCount').textContent = data.bot.servers ?? '—';
-    $('#botStatus').textContent = data.bot.online ? 'מחובר עכשיו' : 'לא מחובר';
-    $('.status-chip').classList.toggle('offline', !data.bot.online);
-    if (data.bot.avatar) $('#botAvatar').src = data.bot.avatar;
-    $$('[data-counter]').forEach(element => { if (element.getBoundingClientRect().top < innerHeight) count(element, Number(state.stats[element.dataset.counter]) || 0); });
-  }).catch(() => { $('#botStatus').textContent = 'לא מחובר'; $('.status-chip').classList.add('offline'); });
+  // Real bot/community values only; graceful offline state on API failure.
+  fetch('/api/status', { headers: { accept: 'application/json' } })
+    .then(response => response.ok ? response.json() : Promise.reject())
+    .then(data => {
+      state.stats = { ...state.stats, ...(data.community || {}) };
+      state.ready = true;
+      $$('[data-stat="members"]').forEach(element => { element.textContent = `${number(state.stats.members)}+`; });
+      $$('[data-member-copy]').forEach(element => { element.textContent = `${number(state.stats.members)} חברים בקהילה`; });
+      $('#commandCount').textContent = data.bot.commands ?? '—';
+      $('#latency').textContent = data.bot.online ? `${data.bot.latency}ms` : '—';
+      $('#serverCount').textContent = data.bot.servers ?? '—';
+      $('#botStatus').textContent = data.bot.online ? 'מחובר עכשיו' : 'לא מחובר';
+      $('.status-chip').classList.toggle('offline', !data.bot.online);
+      if (data.bot.avatar) $('#botAvatar').src = data.bot.avatar;
+      $$('[data-counter]').forEach(element => { counterObserver.unobserve(element); counterObserver.observe(element); });
+    })
+    .catch(() => { $('#botStatus').textContent = 'לא מחובר'; $('.status-chip').classList.add('offline'); });
 
+  // Channel tabs.
   $$('.channel-tabs button').forEach(button => button.addEventListener('click', () => {
     $$('.channel-tabs button').forEach(item => item.classList.toggle('active', item === button));
     $$('.channel-list').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab));
   }));
 
+  // Accessible RTL mobile navigation.
   const toggle = $('.nav-toggle');
-  toggle.addEventListener('click', () => { const open = document.body.classList.toggle('nav-open'); toggle.setAttribute('aria-expanded', open); });
-  $$('.site-header nav a').forEach(link => link.addEventListener('click', () => document.body.classList.remove('nav-open')));
+  const closeMenu = () => {
+    document.body.classList.remove('nav-open');
+    toggle.setAttribute('aria-expanded', 'false');
+  };
+  toggle.addEventListener('click', () => {
+    const open = document.body.classList.toggle('nav-open');
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+  $('.menu-backdrop').addEventListener('click', closeMenu);
+  $$('.site-header nav a').forEach(link => link.addEventListener('click', closeMenu));
+  addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
 
-  let scrollFrame = 0;
-  addEventListener('scroll', () => {
-    if (scrollFrame) return;
-    scrollFrame = requestAnimationFrame(() => {
-      const max = document.documentElement.scrollHeight - innerHeight;
-      $('.scroll-progress').style.transform = `scaleX(${max ? scrollY / max : 0})`;
-      $('.back-top').classList.toggle('show', scrollY > 700);
-      scrollFrame = 0;
+  // FAQ: keep one item open while preserving native keyboard behavior.
+  $$('.faq-list details').forEach(item => item.addEventListener('toggle', () => {
+    if (!item.open) return;
+    $$('.faq-list details').forEach(other => { if (other !== item) other.open = false; });
+  }));
+
+  // Desktop-only pointer tilt; no idle animation or touch listeners.
+  if (finePointer && !reduced) $$('.tilt-card').forEach(card => {
+    let pointerFrame = 0;
+    card.addEventListener('pointermove', event => {
+      if (pointerFrame || document.hidden) return;
+      pointerFrame = requestAnimationFrame(() => {
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - .5;
+        const y = (event.clientY - rect.top) / rect.height - .5;
+        card.style.setProperty('--tilt-x', `${(-y * 3).toFixed(2)}deg`);
+        card.style.setProperty('--tilt-y', `${(x * 4).toFixed(2)}deg`);
+        card.style.setProperty('--light-x', `${(x + .5) * 100}%`);
+        pointerFrame = 0;
+      });
+    }, { passive: true });
+    card.addEventListener('pointerleave', () => {
+      card.style.setProperty('--tilt-x', '0deg');
+      card.style.setProperty('--tilt-y', '0deg');
+      card.style.setProperty('--light-x', '50%');
     });
+  });
+
+  // One requestAnimationFrame loop handles scroll progress, back-to-top and active nav.
+  const sections = $$('main section[id]');
+  let scrollFrame = 0;
+  const updateScroll = () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    $('.scroll-progress').style.transform = `scaleX(${max ? scrollY / max : 0})`;
+    $('.back-top').classList.toggle('show', scrollY > 700);
+    let active = '';
+    sections.forEach(section => { if (section.getBoundingClientRect().top <= 170) active = section.id; });
+    $$('.site-header nav a').forEach(link => link.classList.toggle('active', link.hash === `#${active}`));
+    scrollFrame = 0;
+  };
+  addEventListener('scroll', () => {
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScroll);
   }, { passive: true });
+  updateScroll();
   $('.back-top').addEventListener('click', () => scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }));
+
+  // Single subtle desktop cursor glow, paused while the tab is hidden.
+  if (finePointer && !reduced) {
+    const glow = $('.cursor-glow');
+    let glowFrame = 0, x = -100, y = -100;
+    addEventListener('pointermove', event => {
+      x = event.clientX; y = event.clientY;
+      if (glowFrame || document.hidden) return;
+      glowFrame = requestAnimationFrame(() => {
+        glow.style.transform = `translate3d(${x}px,${y}px,0)`;
+        glowFrame = 0;
+      });
+    }, { passive: true });
+  }
 })();

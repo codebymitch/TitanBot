@@ -10,10 +10,14 @@
   <meta property="og:image" content="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=512">
   <link rel="icon" href="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=64">
   <link rel="stylesheet" href="/landing.css">
+  <link rel="stylesheet" href="/animations.css">
   <script src="/landing.js" defer></script>
   <title>EditIL | קהילת העורכים בישראל</title>
 </head>
 <body>
+  <div class="page-loader" aria-hidden="true"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" alt=""><b>EditIL</b></div>
+  <div class="menu-backdrop" aria-hidden="true"></div>
+  <div class="cursor-glow" aria-hidden="true"></div>
   <div class="scroll-progress" aria-hidden="true"></div>
   <div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
 
@@ -29,7 +33,7 @@
 
   <main id="home">
     <section class="hero shell">
-      <div class="hero-copy reveal">
+      <div class="hero-copy reveal reveal-right">
         <div class="live-label"><i></i><span data-member-copy>קהילת עורכים ישראלית</span></div>
         <h1>כל פריים<br><em>מתחיל כאן.</em></h1>
         <p>קהילת EditIL מחברת בין עורכי וידאו, יוצרי תוכן ומעצבי תנועה — עם משאבים, משוב מקצועי והזדמנויות אמיתיות.</p>
@@ -37,7 +41,7 @@
         <div class="hero-proof"><div class="proof-icons"><span>🎬</span><span>🎨</span><span>🎮</span><span>✨</span></div><p><strong data-stat="members">—</strong> חברים יוצרים איתנו</p></div>
       </div>
 
-      <div class="discord-card reveal" aria-label="הצצה לשרת EditIL">
+      <div class="discord-card reveal reveal-left tilt-card" aria-label="הצצה לשרת EditIL">
         <div class="window-top"><span><i></i><i></i><i></i></span><b>Discord — EditIL</b></div>
         <div class="discord-layout">
           <aside class="servers"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=64" alt=""><span>🎬</span><span>🎵</span><span>🏆</span><span>＋</span></aside>
@@ -48,7 +52,7 @@
             <div class="media-post"><div>▶</div><p><b>העריכה החדשה שלי</b><span>After Effects • Motion Design</span><small>🔥 18　✨ 12　🎬 7</small></p></div>
           </div><footer>שליחת הודעה אל #צ׳אט-עריכה <span>🎁　GIF　☺</span></footer></section>
         </div>
-        <div class="float-note one">✨ משוב אמיתי</div><div class="float-note two">🎬 יוצרים ביחד</div>
+        <div class="float-note one">✨ קהילה פעילה</div><div class="float-note two">📦 משאבים</div><div class="float-note three">🤖 EditIL Assistant</div><div class="float-note four">🏆 תחרויות</div>
       </div>
     </section>
 
@@ -70,7 +74,7 @@
     <section class="section channel-section" id="channels">
       <div class="shell channel-grid">
         <div class="channel-copy reveal"><span class="kicker">בתוך השרת</span><h2>מסודר כמו סטודיו.<br><em>מרגיש כמו בית.</em></h2><p>ערוצים ברורים לכל שלב: מהיכרות ראשונה, דרך למידה ושיתוף, ועד מציאת עבודה וצוות.</p><div class="channel-tabs" role="tablist"><button class="active" data-tab="editing">עריכה</button><button data-tab="community">קהילה</button><button data-tab="work">הזדמנויות</button><button data-tab="media">מדיה</button></div></div>
-        <div class="channel-browser reveal">
+        <div class="channel-browser reveal reveal-left tilt-card">
           <header><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=64" alt=""><div><b>(EditIL) עורכי ישראל</b><span><i></i> <span data-member-copy>קהילה פעילה</span></span></div></header>
           <div class="channel-list active" data-panel="editing"><small>🎨・עולם העריכה</small><span>🔥・שתפו_עריכות</span><span>📈・ביקורת_על_עריכות</span><span>🎵・מוזיקה_ועריכה</span><span>📀・ספריית-מוזיקה</span><span>✨・פריסטים</span><span>📦・משאבים</span><span>❓・עזרה_בעריכה</span></div>
           <div class="channel-list" data-panel="community"><small>💬・קהילה</small><span>💬・צ׳אט_כללי</span><span>🎬・צ׳אט_עריכה</span><span>📸・היצירות_שלכם</span><span>💭・רעיונות-לעריכות</span><span>😂・ממים</span></div>
@@ -81,8 +85,8 @@
     </section>
 
     <section class="section shell bot-section" id="bot">
-      <div class="bot-visual reveal"><div class="orbit"><i></i><i></i><i></i></div><div class="bot-avatar"><img id="botAvatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="EditIL Assistant"><span></span></div><div class="status-chip"><i></i><span id="botStatus">בודק מצב...</span></div></div>
-      <div class="bot-copy reveal"><span class="kicker">EDITIL ASSISTANT</span><h2>הבוט ששומר<br><em>על הקצב.</em></h2><p>מערכת חכמה שנבנתה עבור הקהילה ומחברת בין ניהול, תמיכה, רמות וחוויית משתמש אחת.</p><div class="bot-tools"><span>✓ אימות</span><span>✓ טיקטים</span><span>✓ רמות</span><span>✓ ניהול</span><span>✓ הצעות</span><span>✓ דיווחים</span><span>✓ תפקידים</span><span>✓ בוסטרים</span></div><div class="bot-stats"><div><b id="commandCount">—</b><span>פקודות</span></div><div><b id="latency">—</b><span>Latency</span></div><div><b id="serverCount">—</b><span>שרתים</span></div></div></div>
+      <div class="bot-visual reveal reveal-left"><div class="orbit"><i></i><i></i><i></i></div><div class="bot-avatar"><img id="botAvatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="EditIL Assistant" decoding="async"><span></span></div><div class="status-chip"><i></i><span id="botStatus">בודק מצב...</span></div></div>
+      <div class="bot-copy reveal reveal-right"><span class="kicker">EDITIL ASSISTANT</span><h2>הבוט ששומר<br><em>על הקצב.</em></h2><p>מערכת חכמה שנבנתה עבור הקהילה ומחברת בין ניהול, תמיכה, רמות וחוויית משתמש אחת.</p><div class="command-preview" aria-label="תצוגת פקודה"><span>/leaderboard</span><b>EditIL Assistant</b><small>מציג את מובילי הקהילה בזמן אמת</small></div><div class="bot-tools"><span>✓ אימות</span><span>✓ טיקטים</span><span>✓ רמות</span><span>✓ ניהול</span><span>✓ הצעות</span><span>✓ דיווחים</span><span>✓ תפקידים</span><span>✓ בוסטרים</span></div><div class="bot-stats"><div><b id="commandCount">—</b><span>פקודות פעילות</span><i></i></div><div><b id="latency">—</b><span>זמן תגובה</span><i></i></div><div><b id="serverCount">—</b><span>מערכות פעילות</span><i></i></div></div></div>
     </section>
 
     <section class="software shell reveal"><p>יוצרים בכלים שאתם כבר אוהבים</p><div><span><b>Ae</b>After Effects</span><span><b>Pr</b>Premiere Pro</span><span><b>Cc</b>CapCut</span><span><b>Ps</b>Photoshop</span><span><b>Dr</b>DaVinci Resolve</span></div></section>
