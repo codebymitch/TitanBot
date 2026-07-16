@@ -80,13 +80,13 @@ async function updateRemote(client, id, status) {
 }
 
 export async function getStaffApplicationsOpen(client) {
-  const response = await fetch(`${API_BASE}/settings`, { headers: { authorization: `Bearer ${secret(client)}` }, signal: AbortSignal.timeout(8000) });
+  const response = await fetch(`${API_BASE}/availability`, { headers: { authorization: `Bearer ${secret(client)}` }, signal: AbortSignal.timeout(8000) });
   if (!response.ok) throw new Error(`Staff application settings returned HTTP ${response.status}`);
   return Boolean((await response.json()).open);
 }
 
 export async function setStaffApplicationsOpen(client, open) {
-  const response = await fetch(`${API_BASE}/settings`, {
+  const response = await fetch(`${API_BASE}/availability`, {
     method: 'POST',
     headers: { authorization: `Bearer ${secret(client)}`, 'content-type': 'application/json' },
     body: JSON.stringify({ open: Boolean(open) }),

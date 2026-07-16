@@ -39,6 +39,7 @@ test('worker protects bot polling and rate limits public submissions', async () 
   assert.match(worker, /delete saved\[field\]/);
   assert.match(worker, /STAFF_SETTINGS_KEY/);
   assert.match(worker, /settings\?\.open !== true/);
+  assert.match(worker, /staff-applications\/availability/);
 });
 
 test('owner can open, close, or inspect website staff applications', async () => {

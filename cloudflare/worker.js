@@ -83,12 +83,12 @@ export default {
       return json({ ok: true, id }, 201);
     }
 
-    if (url.pathname === '/api/staff-applications/settings' && request.method === 'GET') {
+    if (url.pathname === '/api/staff-applications/availability' && request.method === 'GET') {
       const settings = await env.STATUS_KV.get(STAFF_SETTINGS_KEY, 'json');
       return json({ open: settings?.open === true, updatedAt: settings?.updatedAt || null });
     }
 
-    if (url.pathname === '/api/staff-applications/settings' && request.method === 'POST') {
+    if (url.pathname === '/api/staff-applications/availability' && request.method === 'POST') {
       if (request.headers.get('authorization') !== `Bearer ${env.HEARTBEAT_SECRET}`) return json({ error: 'Unauthorized' }, 401);
       const update = await request.json().catch(() => null);
       if (typeof update?.open !== 'boolean') return json({ error: 'Invalid setting' }, 400);

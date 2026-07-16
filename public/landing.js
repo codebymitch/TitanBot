@@ -69,7 +69,7 @@
   const staffForm = $('#staffApplicationForm');
   const staffSubmit = $('button[type="submit"]', staffForm);
   const staffResult = $('#staffApplicationResult');
-  fetch('/api/staff-applications/settings', { headers: { accept: 'application/json' } })
+  fetch('/api/staff-applications/availability', { headers: { accept: 'application/json' } })
     .then(response => response.ok ? response.json() : Promise.reject())
     .then(settings => {
       staffSubmit.disabled = !settings.open;
