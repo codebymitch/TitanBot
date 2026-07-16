@@ -3,125 +3,101 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#070914">
-  <meta name="description" content="EditIL — קהילת עורכי הווידאו בישראל. משאבים, תחרויות, עבודות וקהילה מקצועית במקום אחד.">
+  <meta name="theme-color" content="#0b0d14">
+  <meta name="description" content="EditIL — קהילת עורכי הווידאו בישראל. משאבים, ביקורת, עבודות, תחרויות ויוצרים במקום אחד.">
   <meta property="og:title" content="EditIL | קהילת העורכים בישראל">
-  <meta property="og:description" content="עריכות, משאבים, ביקורת מקצועית, עבודות ותחרויות — בקהילה ישראלית אחת.">
+  <meta property="og:description" content="המקום של עורכי הווידאו בישראל ליצור, ללמוד ולהתקדם יחד.">
   <meta property="og:image" content="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=512">
   <link rel="icon" href="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=64">
-  <title>EditIL | קהילת העורכים בישראל</title>
-  <link rel="preconnect" href="https://cdn.discordapp.com" crossorigin>
   <link rel="stylesheet" href="/landing.css">
   <script src="/landing.js" defer></script>
+  <title>EditIL | קהילת העורכים בישראל</title>
 </head>
 <body>
-  <div class="loader" aria-hidden="true"><span class="brand-mark">E</span></div>
-  <div class="progress" aria-hidden="true"></div>
-  <div class="cursor-glow" aria-hidden="true"></div>
-  <div class="page-noise" aria-hidden="true"></div>
+  <div class="scroll-progress" aria-hidden="true"></div>
+  <div class="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
 
-  <header class="nav glass">
-    <a class="brand" href="#top" aria-label="EditIL דף הבית"><span class="brand-mark logo"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" alt="" width="42" height="42"></span><span>Edit<span>IL</span></span></a>
-    <nav aria-label="ניווט ראשי">
-      <a href="#features">מה מחכה לכם</a><a href="#bot">הבוט</a><a href="#community">הקהילה</a><a href="#faq">שאלות</a>
-    </nav>
-    <a class="button small" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">הצטרפו לשרת <span>↗</span></a>
-    <button class="menu" aria-label="פתיחת תפריט" aria-expanded="false"><i></i><i></i></button>
+  <header class="site-header">
+    <a class="identity" href="#home" aria-label="EditIL דף הבית">
+      <img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" width="44" height="44" alt="EditIL">
+      <span><b>EditIL</b><small>קהילת העורכים בישראל</small></span>
+    </a>
+    <nav aria-label="ניווט ראשי"><a href="#community">הקהילה</a><a href="#channels">הערוצים</a><a href="#bot">הבוט</a><a href="#faq">שאלות</a></nav>
+    <a class="btn compact" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">הצטרפו לשרת <span>↗</span></a>
+    <button class="nav-toggle" aria-label="פתיחת תפריט" aria-expanded="false"><span></span><span></span></button>
   </header>
 
-  <main id="top">
-    <section class="hero section">
-      <div class="ambient" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><i class="ray r1"></i><i class="ray r2"></i><span class="particle p1"></span><span class="particle p2"></span><span class="particle p3"></span><span class="particle p4"></span></div>
+  <main id="home">
+    <section class="hero shell">
       <div class="hero-copy reveal">
-        <div class="eyebrow"><span class="live-dot"></span> הקהילה היצירתית של ישראל</div>
-        <h1>קהילת <span class="gradient-text">העורכים</span><br>בישראל</h1>
-        <p>הבית של עורכי הווידאו בישראל — יוצרים, משתפים, לומדים ומתקדמים יחד.</p>
-        <div class="hero-actions">
-          <a class="button primary magnetic" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener"><span class="discord-icon">◖◗</span> הצטרפו ל־Discord</a>
-          <a class="button ghost" href="#features">גלו עוד <span>↓</span></a>
+        <div class="live-label"><i></i><span data-member-copy>קהילת עורכים ישראלית</span></div>
+        <h1>כל פריים<br><em>מתחיל כאן.</em></h1>
+        <p>קהילת EditIL מחברת בין עורכי וידאו, יוצרי תוכן ומעצבי תנועה — עם משאבים, משוב מקצועי והזדמנויות אמיתיות.</p>
+        <div class="actions"><a class="btn primary" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener"><span class="discord-glyph">◖◗</span> הצטרפו ל־Discord</a><a class="btn secondary" href="#channels">הכירו את השרת</a></div>
+        <div class="hero-proof"><div class="proof-icons"><span>🎬</span><span>🎨</span><span>🎮</span><span>✨</span></div><p><strong data-stat="members">—</strong> חברים יוצרים איתנו</p></div>
+      </div>
+
+      <div class="discord-card reveal" aria-label="הצצה לשרת EditIL">
+        <div class="window-top"><span><i></i><i></i><i></i></span><b>Discord — EditIL</b></div>
+        <div class="discord-layout">
+          <aside class="servers"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=64" alt=""><span>🎬</span><span>🎵</span><span>🏆</span><span>＋</span></aside>
+          <aside class="channels"><header><b>EditIL</b><small>קהילת העורכים בישראל</small></header><p>מידע ועדכונים</p><span>#　ברוכים-הבאים</span><span>#　תחרויות-עריכה</span><p>קהילה</p><span>#　צ׳אט-כללי</span><span class="selected">#　צ׳אט-עריכה</span><span>#　היצירות-שלכם</span><p>עולם העריכה</p><span>#　שתפו-עריכות</span><span>#　משאבים</span><span>#　פריסטים</span></aside>
+          <section class="chat"><header><b>#　צ׳אט-עריכה</b><span>המקום לדבר על עריכה</span></header><div class="chat-body">
+            <article><i class="user-avatar blue">E</i><div><b>EditIL Assistant <em>APP</em></b><small>היום בשעה 20:14</small><p>ברוכים הבאים לקהילת העורכים בישראל! 💙</p></div></article>
+            <article><i class="user-avatar cyan">D</i><div><b>Daniel</b><small>היום בשעה 20:15</small><p>מישהו עובד על עריכת גיימינג היום?</p></div></article>
+            <div class="media-post"><div>▶</div><p><b>העריכה החדשה שלי</b><span>After Effects • Motion Design</span><small>🔥 18　✨ 12　🎬 7</small></p></div>
+          </div><footer>שליחת הודעה אל #צ׳אט-עריכה <span>🎁　GIF　☺</span></footer></section>
         </div>
-        <div class="trust"><div class="avatars"><i>🎬</i><i>🎨</i><i>✨</i><i>▶</i></div><span><b data-stat="members">0</b> יוצרים כבר בפנים</span></div>
+        <div class="float-note one">✨ משוב אמיתי</div><div class="float-note two">🎬 יוצרים ביחד</div>
       </div>
+    </section>
 
-      <div class="hero-visual parallax reveal" data-depth="10" aria-label="תצוגה מקדימה של שרת EditIL">
-        <div class="discord-glow"></div>
-        <div class="discord-window">
-          <div class="server-rail"><span class="server-logo"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=64" alt="EditIL" width="38" height="38"></span><i>🎬</i><i>🎵</i><i>🏆</i><i>＋</i></div>
-          <div class="channel-rail"><b>EDITIL</b><small>קהילת העורכים בישראל</small><p>⌄ מידע ועדכונים</p><span># ברוכים-הבאים</span><span># תחרויות-עריכה</span><p>⌄ קהילה</p><span class="active"># צ׳אט-עריכה</span><span># היצירות-שלכם</span><span># מחפש-עורך</span><p>⌄ עולם העריכה</p><span># משאבים</span><span># פריסטים</span></div>
-          <div class="chat"><div class="chat-head"># צ׳אט-עורכים <span>קהילת העורכים בישראל</span></div><div class="messages">
-            <div class="message"><i class="avatar purple">E</i><p><b>EditIL Bot <em>BOT</em></b><small>היום, 20:24</small><span>ברוכים הבאים ל־EditIL! 👋</span></p></div>
-            <div class="message"><i class="avatar cyan">D</i><p><b>Daniel</b><small>היום, 20:25</small><span>מישהו עובד עם After Effects?</span></p></div>
-            <div class="edit-card"><div class="thumb">▶</div><p><b>העריכה החדשה שלי</b><span>Motion Design • After Effects</span><i></i></p></div>
-            <div class="typing">שלושה עורכים מקלידים...</div>
-          </div><div class="composer">שליחת הודעה אל #צ׳אט-עורכים <span>☺ ＋</span></div></div>
+    <section class="numbers shell reveal" aria-label="נתוני EditIL">
+      <div><strong data-counter="members">0</strong><span>חברי קהילה</span></div><div><strong data-counter="channels">0</strong><span>ערוצים</span></div><div><strong data-counter="resources">0</strong><span>אזורי משאבים</span></div><div><strong data-counter="competitions">0</strong><span>תחרות פעילה</span></div>
+    </section>
+
+    <section class="section shell" id="community">
+      <header class="section-title reveal"><span>למה EDITIL?</span><h2>יותר משרת.<br><em>קהילה שיוצרת.</em></h2><p>כל מה שעורך צריך כדי להפוך רעיון לעבודה שאי אפשר להתעלם ממנה.</p></header>
+      <div class="bento">
+        <article class="bento-card wide reveal"><span class="card-icon">🎬</span><small>SHOWCASE</small><h3>הבמה שלכם</h3><p>שתפו עריכות, רנדרים ופרויקטים. קבלו תגובות מעורכים שמבינים את התהליך.</p><div class="timeline"><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+        <article class="bento-card reveal"><span class="card-icon">📈</span><small>FEEDBACK</small><h3>משוב שמקדם</h3><p>ביקורת מקצועית, עזרה טכנית ורעיונות לשיפור הפריים הבא.</p></article>
+        <article class="bento-card reveal"><span class="card-icon">📦</span><small>RESOURCES</small><h3>ארגז כלים ליוצרים</h3><p>משאבים, פריסטים, מוזיקה וקבצים שימושיים שנבחרו לקהילה.</p></article>
+        <article class="bento-card reveal"><span class="card-icon">💼</span><small>OPPORTUNITIES</small><h3>הפרויקט הבא</h3><p>חיפוש עורכים, צוותים ושיתופי פעולה במקום אחד מסודר.</p></article>
+        <article class="bento-card wide booster reveal"><span class="card-icon">💎</span><small>BOOSTER ZONE</small><h3>תומכים ומקבלים יותר</h3><p>לאונג׳ פרטי, פריסטים ומשאבים בלעדיים ומתנות מיוחדות לבוסטרים.</p><div class="boost-pills"><span>פריסטים בלעדיים</span><span>משאבים בלעדיים</span><span>לאונג׳ פרטי</span></div></article>
+      </div>
+    </section>
+
+    <section class="section channel-section" id="channels">
+      <div class="shell channel-grid">
+        <div class="channel-copy reveal"><span class="kicker">בתוך השרת</span><h2>מסודר כמו סטודיו.<br><em>מרגיש כמו בית.</em></h2><p>ערוצים ברורים לכל שלב: מהיכרות ראשונה, דרך למידה ושיתוף, ועד מציאת עבודה וצוות.</p><div class="channel-tabs" role="tablist"><button class="active" data-tab="editing">עריכה</button><button data-tab="community">קהילה</button><button data-tab="work">הזדמנויות</button><button data-tab="media">מדיה</button></div></div>
+        <div class="channel-browser reveal">
+          <header><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=64" alt=""><div><b>(EditIL) עורכי ישראל</b><span><i></i> <span data-member-copy>קהילה פעילה</span></span></div></header>
+          <div class="channel-list active" data-panel="editing"><small>🎨・עולם העריכה</small><span>🔥・שתפו_עריכות</span><span>📈・ביקורת_על_עריכות</span><span>🎵・מוזיקה_ועריכה</span><span>📀・ספריית-מוזיקה</span><span>✨・פריסטים</span><span>📦・משאבים</span><span>❓・עזרה_בעריכה</span></div>
+          <div class="channel-list" data-panel="community"><small>💬・קהילה</small><span>💬・צ׳אט_כללי</span><span>🎬・צ׳אט_עריכה</span><span>📸・היצירות_שלכם</span><span>💭・רעיונות-לעריכות</span><span>😂・ממים</span></div>
+          <div class="channel-list" data-panel="work"><small>🤝・הזדמנויות</small><span>📢・פרסום-עצמי</span><span>🎬・מחפש-עורך</span><span>🤝・מחפש-צוות</span><span>🏆・תחרויות-עריכה</span><span>📂・פרויקטים</span></div>
+          <div class="channel-list" data-panel="media"><small>🎥・מדיה וקול</small><span>🎞️・קליפים</span><span>🖼️・רנדרים</span><span>📂・פרויקטים</span><span>💬・צ׳יל　🔊</span><span>🎙️・חדר_עריכה　🔊</span><span>🎵・מוזיקה　🔊</span></div>
         </div>
-        <span class="float-badge badge-one">✨ השראה</span><span class="float-badge badge-two">🎬 יצירה</span>
       </div>
     </section>
 
-    <section class="stats section reveal" aria-label="נתוני הקהילה">
-      <article><strong data-counter="members">0</strong><span>חברים</span></article><article><strong data-counter="channels">0</strong><span>ערוצים</span></article><article><strong data-counter="resources">0</strong><span>משאבים</span></article><article><strong data-counter="competitions">0</strong><span>תחרויות</span></article>
+    <section class="section shell bot-section" id="bot">
+      <div class="bot-visual reveal"><div class="orbit"><i></i><i></i><i></i></div><div class="bot-avatar"><img id="botAvatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="EditIL Assistant"><span></span></div><div class="status-chip"><i></i><span id="botStatus">בודק מצב...</span></div></div>
+      <div class="bot-copy reveal"><span class="kicker">EDITIL ASSISTANT</span><h2>הבוט ששומר<br><em>על הקצב.</em></h2><p>מערכת חכמה שנבנתה עבור הקהילה ומחברת בין ניהול, תמיכה, רמות וחוויית משתמש אחת.</p><div class="bot-tools"><span>✓ אימות</span><span>✓ טיקטים</span><span>✓ רמות</span><span>✓ ניהול</span><span>✓ הצעות</span><span>✓ דיווחים</span><span>✓ תפקידים</span><span>✓ בוסטרים</span></div><div class="bot-stats"><div><b id="commandCount">—</b><span>פקודות</span></div><div><b id="latency">—</b><span>Latency</span></div><div><b id="serverCount">—</b><span>שרתים</span></div></div></div>
     </section>
 
-    <section class="section content real-server" id="server">
-      <div class="section-heading reveal"><span class="eyebrow">השרת האמיתי של EDITIL</span><h2>כל עולם העריכה.<br><span class="gradient-text">מסודר בשבילכם.</span></h2><p>האתר מחובר לשרת ומציג את החוויה שמחכה לכם בפנים — בלי לחשוף אזורים פרטיים.</p></div>
-      <div class="server-map">
-        <article class="server-area reveal"><div class="area-icon">🎨</div><div><small>עולם העריכה</small><h3>יוצרים ומשתפרים</h3></div><ul><li>🔥 שיתוף עריכות</li><li>📈 ביקורת מקצועית</li><li>✨ פריסטים</li><li>📦 משאבים</li><li>❓ עזרה בעריכה</li></ul></article>
-        <article class="server-area reveal"><div class="area-icon">💬</div><div><small>קהילה</small><h3>מכירים ויוצרים יחד</h3></div><ul><li>💬 צ׳אט כללי</li><li>🎬 צ׳אט עריכה</li><li>📸 היצירות שלכם</li><li>💭 רעיונות לעריכות</li><li>😂 ממים</li></ul></article>
-        <article class="server-area reveal"><div class="area-icon">💼</div><div><small>הזדמנויות</small><h3>מוצאים את הפרויקט הבא</h3></div><ul><li>📢 פרסום עצמי</li><li>🎬 מחפש עורך</li><li>🤝 מחפש צוות</li><li>🏆 תחרויות עריכה</li><li>📂 פרויקטים</li></ul></article>
-        <article class="server-area booster reveal"><div class="area-icon">💎</div><div><small>BOOSTER ZONE</small><h3>יותר תמיכה. יותר הטבות.</h3></div><ul><li>💎 לאונג׳ בוסטרים</li><li>✨ פריסטים בלעדיים</li><li>📦 משאבים בלעדיים</li><li>🎁 מתנות לבוסטרים</li></ul></article>
-      </div>
-    </section>
+    <section class="software shell reveal"><p>יוצרים בכלים שאתם כבר אוהבים</p><div><span><b>Ae</b>After Effects</span><span><b>Pr</b>Premiere Pro</span><span><b>Cc</b>CapCut</span><span><b>Ps</b>Photoshop</span><span><b>Dr</b>DaVinci Resolve</span></div></section>
 
-    <section class="section software reveal" aria-label="תוכנות וסוגי עורכים">
-      <p>לא משנה באיזו תוכנה אתם יוצרים</p>
-      <div><span><b>Ae</b>After Effects</span><span><b>Pr</b>Premiere Pro</span><span><b>Cc</b>CapCut</span><span><b>Ps</b>Photoshop</span><span><b>Dr</b>DaVinci Resolve</span></div>
-    </section>
+    <section class="section shell faq" id="faq"><header class="section-title reveal"><span>שאלות נפוצות</span><h2>כל מה שצריך<br><em>לפני שמצטרפים.</em></h2></header><div class="faq-list reveal">
+      <details><summary>למי הקהילה מתאימה?<i>＋</i></summary><p>לעורכים מתחילים ומקצועיים, יוטיוברים, עורכי גיימינג, יוצרי TikTok ומעצבי תנועה.</p></details>
+      <details><summary>ההצטרפות בחינם?<i>＋</i></summary><p>כן. אפשר להצטרף לקהילה, לשתף, ללמוד ולהכיר עורכים ללא תשלום.</p></details>
+      <details><summary>איך מוצאים עורך או צוות?<i>＋</i></summary><p>בשרת קיימים ערוצים ייעודיים לחיפוש עורכים, צוותים, פרויקטים ושיתופי פעולה.</p></details>
+      <details><summary>מה מקבלים בוסטרים?<i>＋</i></summary><p>גישה לאזור בוסטרים עם לאונג׳, פריסטים, משאבים בלעדיים ומתנות קהילה.</p></details>
+    </div></section>
 
-    <section class="section content" id="features">
-      <div class="section-heading reveal"><span class="eyebrow">כל מה שיוצרים צריכים</span><h2>מקום אחד. <span class="gradient-text">אינסוף אפשרויות.</span></h2><p>כלים, ידע ואנשים שיעזרו לכם להפוך כל פריים לטוב יותר.</p></div>
-      <div class="feature-grid">
-        <article class="feature-card tilt reveal"><i>🎬</i><h3>שיתוף עריכות</h3><p>קבלו משוב אמיתי, שתפו עבודות וגלו סגנונות חדשים.</p><span>לשתף. ללמוד. להשתפר.</span></article>
-        <article class="feature-card tilt reveal"><i>📦</i><h3>משאבים</h3><p>פריסטים, פונטים, אפקטים וחבילות שנבחרו על ידי עורכים.</p><span>הכול במקום אחד.</span></article>
-        <article class="feature-card tilt reveal"><i>🎵</i><h3>מוזיקה</h3><p>גלו מוזיקה, סאונדים והשראה לפסקול הבא שלכם.</p><span>מצאו את הקצב.</span></article>
-        <article class="feature-card tilt reveal"><i>🏆</i><h3>תחרויות</h3><p>אתגרי עריכה, הצבעות קהילה ופרסים ליוצרים מצטיינים.</p><span>הראו מה אתם יודעים.</span></article>
-        <article class="feature-card tilt reveal"><i>🤖</i><h3>בוט חכם</h3><p>מערכת קהילה מתקדמת שמנהלת, מסדרת ומחברת בין כולם.</p><span>תמיד מחובר.</span></article>
-        <article class="feature-card tilt reveal"><i>💼</i><h3>עבודות</h3><p>מצאו עורכים, צוותים ופרויקטים שמתאימים בדיוק לכם.</p><span>הפרויקט הבא מתחיל כאן.</span></article>
-      </div>
-    </section>
-
-    <section class="section bot-section" id="bot">
-      <div class="bot-orb reveal"><div class="rings"></div><div class="bot-avatar"><img id="botAvatar" alt="EditIL Assistant" width="160" height="160"><span></span></div><div class="status-pill"><i></i><span id="botStatus">בודק מצב...</span></div></div>
-      <div class="bot-copy reveal"><span class="eyebrow">EDITIL ASSISTANT</span><h2>הקהילה שלכם.<br><span class="gradient-text">חכמה יותר.</span></h2><p>בוט Discord מתקדם שנבנה במיוחד עבור EditIL ומטפל בכל מה שהקהילה צריכה.</p>
-        <div class="bot-features"><span>✓ אימות</span><span>✓ טיקטים</span><span>✓ לוגים</span><span>✓ רמות</span><span>✓ ניהול</span><span>✓ הצעות</span><span>✓ דיווחים</span><span>✓ תפקידים</span><span>✓ ברוכים הבאים</span><span>✓ Dashboard</span></div>
-        <div class="bot-metrics"><div><b id="commandCount">—</b><span>פקודות</span></div><div><b id="latency">—</b><span>Latency</span></div><div><b id="serverCount">—</b><span>שרתים</span></div></div>
-      </div>
-    </section>
-
-    <section class="section preview-section">
-      <div class="section-heading reveal"><span class="eyebrow">הצצה פנימה</span><h2>השרת שנבנה <span class="gradient-text">ליוצרים.</span></h2></div>
-      <div class="laptop tilt reveal"><div class="screen"><div class="mini-discord"><aside><b>E</b><i>🎥</i><i>🎨</i><i>🎮</i><i>＋</i></aside><nav><b>EditIL　⌄</b><small>קהילת העורכים בישראל</small><p>ערוצי מידע</p><span># ברוכים-הבאים</span><p>קהילה</p><span># צ׳אט-עורכים</span><span class="on"># שיתוף-עריכות</span><span># משאבים</span><span># דרושים</span></nav><main><header><b>#</b> שיתוף-עריכות <span>שתפו יצירות עם הקהילה</span></header><div class="preview-post"><i>IL</i><p><b>Itay <small>היום בשעה 18:42</small></b><span>סיימתי את העריכה החדשה — מה דעתכם?</span><strong>▶</strong></p></div><div class="reactions">🔥 24　✨ 18　🎬 12</div><div class="preview-composer">שליחת הודעה אל #שיתוף-עריכות <span>🎁 GIF ☺</span></div></main></div></div><div class="laptop-base"></div></div>
-    </section>
-
-    <section class="section content" id="community">
-      <div class="section-heading reveal"><span class="eyebrow">כולם יוצרים כאן</span><h2>מצאו את <span class="gradient-text">האנשים שלכם.</span></h2></div>
-      <div class="community-grid reveal"><span><i>✂️</i>עורכי וידאו</span><span><i>▶️</i>יוטיוברים</span><span><i>〽️</i>Motion Designers</span><span><i>🎮</i>עורכי גיימינג</span><span><i>📱</i>עורכי TikTok</span><span><i>✨</i>יוצרים</span></div>
-    </section>
-
-    <section class="section faq" id="faq">
-      <div class="section-heading reveal"><span class="eyebrow">שאלות נפוצות</span><h2>רוצים לדעת <span class="gradient-text">יותר?</span></h2></div>
-      <div class="faq-list reveal">
-        <details><summary>למי מיועדת קהילת EditIL?<i>＋</i></summary><p>לכל מי שאוהב יצירה ועריכת וידאו — מתחילים, מקצוענים, יוטיוברים, מעצבי תנועה ויוצרי תוכן.</p></details>
-        <details><summary>ההצטרפות לשרת בחינם?<i>＋</i></summary><p>כן. ההצטרפות לקהילה חופשית וללא תשלום.</p></details>
-        <details><summary>איך משתפים עבודה או מוצאים עורך?<i>＋</i></summary><p>לאחר האימות תקבלו גישה לערוצי השיתוף והדרושים, וגם לפקודות הקהילה של EditIL Assistant.</p></details>
-        <details><summary>האם אפשר להשתתף בתחרויות?<i>＋</i></summary><p>בהחלט. התחרויות פתוחות לחברי הקהילה בהתאם לכללים המתפרסמים בכל אתגר.</p></details>
-      </div>
-    </section>
-
-    <section class="section final-cta reveal"><div class="cta-glow"></div><span class="brand-mark">E</span><h2>העריכה הבאה שלכם<br><span class="gradient-text">מתחילה כאן.</span></h2><p>הצטרפו לקהילת העורכים של ישראל.</p><a class="button primary" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">הצטרפו עכשיו ל־Discord ↗</a></section>
+    <section class="cta shell reveal"><div class="cta-logo"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" alt="EditIL"></div><span>הפריים הבא מחכה לכם</span><h2>מוכנים ליצור<br><em>משהו גדול?</em></h2><p>הצטרפו לקהילת העורכים בישראל.</p><a class="btn primary" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">הצטרפו ל־EditIL ↗</a></section>
   </main>
 
-  <footer><a class="brand" href="#top"><span class="brand-mark logo"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" alt="" width="42" height="42"></span><span>Edit<span>IL</span></span></a><p>קהילת העורכים בישראל</p><div class="socials"><a href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">Discord</a><a href="#">TikTok</a><a href="#">YouTube</a><a href="#">GitHub</a></div><div class="legal"><a href="#">פרטיות</a><a href="#">תנאים</a><span>© <span id="year"></span> EditIL</span></div></footer>
-  <button class="to-top" aria-label="חזרה למעלה">↑</button>
+  <footer class="site-footer shell"><a class="identity" href="#home"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" width="44" height="44" alt=""><span><b>EditIL</b><small>קהילת העורכים בישראל</small></span></a><nav><a href="#community">קהילה</a><a href="#channels">ערוצים</a><a href="#bot">הבוט</a><a href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">Discord</a></nav><p>© <span id="year"></span> EditIL</p></footer>
+  <button class="back-top" aria-label="חזרה למעלה">↑</button>
 </body>
 </html>

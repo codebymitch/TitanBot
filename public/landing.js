@@ -1,71 +1,61 @@
 (() => {
   'use strict';
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $ = (selector, scope = document) => scope.querySelector(selector);
   const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const state = { stats: { members: 0, channels: 0, resources: 0, competitions: 0 } };
-
-  addEventListener('load', () => document.body.classList.add('loaded'), { once: true });
-  setTimeout(() => document.body.classList.add('loaded'), 850);
   $('#year').textContent = new Date().getFullYear();
 
-  const revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
-    if (entry.isIntersecting) { entry.target.classList.add('visible'); revealObserver.unobserve(entry.target); }
+  const reveal = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (entry.isIntersecting) { entry.target.classList.add('visible'); reveal.unobserve(entry.target); }
   }), { threshold: .12 });
-  $$('.reveal').forEach(element => revealObserver.observe(element));
+  $$('.reveal').forEach(element => reveal.observe(element));
 
-  const format = value => new Intl.NumberFormat('he-IL').format(value);
-  const animateCounter = (element, target) => {
-    if (reduced || target <= 0) { element.textContent = format(target); return; }
-    const start = performance.now(), duration = 1100;
-    const tick = now => {
-      const progress = Math.min((now - start) / duration, 1);
-      element.textContent = format(Math.round(target * (1 - Math.pow(1 - progress, 3))));
-      if (progress < 1 && !document.hidden) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
+  const number = value => new Intl.NumberFormat('he-IL').format(value);
+  const count = (element, target) => {
+    if (reduced || target < 2) { element.textContent = number(target); return; }
+    const started = performance.now(), duration = 900;
+    const frame = now => { const progress = Math.min((now - started) / duration, 1); element.textContent = number(Math.round(target * (1 - Math.pow(1 - progress, 3)))); if (progress < 1) requestAnimationFrame(frame); };
+    requestAnimationFrame(frame);
   };
-  const counterObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+  const counters = new IntersectionObserver(entries => entries.forEach(entry => {
     if (!entry.isIntersecting) return;
-    const key = entry.target.dataset.counter;
-    animateCounter(entry.target, Number(state.stats[key]) || 0);
-    counterObserver.unobserve(entry.target);
-  }), { threshold: .6 });
-  $$('[data-counter]').forEach(element => counterObserver.observe(element));
+    count(entry.target, Number(state.stats[entry.target.dataset.counter]) || 0);
+    counters.unobserve(entry.target);
+  }), { threshold: .55 });
+  $$('[data-counter]').forEach(element => counters.observe(element));
 
-  fetch('/api/status', { headers: { Accept: 'application/json' } }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
-    state.stats = { ...state.stats, ...data.community };
-    $$('[data-stat="members"]').forEach(element => { element.textContent = `${format(data.community.members || 0)}+`; });
+  fetch('/api/status', { headers: { accept: 'application/json' } }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
+    state.stats = { ...state.stats, ...(data.community || {}) };
+    $$('[data-stat="members"]').forEach(element => { element.textContent = `${number(state.stats.members)}+`; });
+    $$('[data-member-copy]').forEach(element => { element.textContent = `${number(state.stats.members)} חברים בקהילה`; });
     $('#commandCount').textContent = data.bot.commands ?? '—';
     $('#latency').textContent = data.bot.online ? `${data.bot.latency}ms` : '—';
     $('#serverCount').textContent = data.bot.servers ?? '—';
-    $('#botStatus').textContent = data.bot.online ? 'מחובר' : 'לא מחובר';
-    const avatar = $('#botAvatar'); if (data.bot.avatar) avatar.src = data.bot.avatar;
-    $$('[data-counter]').forEach(element => { if (element.getBoundingClientRect().top < innerHeight) animateCounter(element, Number(state.stats[element.dataset.counter]) || 0); });
-  }).catch(() => { $('#botStatus').textContent = 'לא מחובר'; });
+    $('#botStatus').textContent = data.bot.online ? 'מחובר עכשיו' : 'לא מחובר';
+    $('.status-chip').classList.toggle('offline', !data.bot.online);
+    if (data.bot.avatar) $('#botAvatar').src = data.bot.avatar;
+    $$('[data-counter]').forEach(element => { if (element.getBoundingClientRect().top < innerHeight) count(element, Number(state.stats[element.dataset.counter]) || 0); });
+  }).catch(() => { $('#botStatus').textContent = 'לא מחובר'; $('.status-chip').classList.add('offline'); });
 
-  let ticking = false;
-  const updateScroll = () => {
-    const max = document.documentElement.scrollHeight - innerHeight;
-    $('.progress').style.width = `${max > 0 ? scrollY / max * 100 : 0}%`;
-    $('.to-top').classList.toggle('show', scrollY > 600);
-    ticking = false;
-  };
-  addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(updateScroll); } }, { passive: true });
-  $('.to-top').addEventListener('click', () => scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }));
-  $('.menu').addEventListener('click', event => { const nav = $('.nav'); nav.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', nav.classList.contains('open')); });
-  $$('.nav nav a').forEach(link => link.addEventListener('click', () => $('.nav').classList.remove('open')));
+  $$('.channel-tabs button').forEach(button => button.addEventListener('click', () => {
+    $$('.channel-tabs button').forEach(item => item.classList.toggle('active', item === button));
+    $$('.channel-list').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab));
+  }));
 
-  if (!reduced && matchMedia('(pointer:fine)').matches) {
-    const glow = $('.cursor-glow'); let pointerFrame = 0;
-    addEventListener('pointermove', event => {
-      if (pointerFrame) return;
-      const x = event.clientX, y = event.clientY;
-      pointerFrame = requestAnimationFrame(() => { glow.style.transform = `translate3d(${x - 130}px,${y - 130}px,0)`; pointerFrame = 0; });
-    }, { passive: true });
-    $$('.laptop').forEach(card => {
-      card.addEventListener('pointermove', event => { const box = card.getBoundingClientRect(); card.style.transform = `rotateX(${(event.clientY - box.top) / box.height * -4 + 2}deg) rotateY(${(event.clientX - box.left) / box.width * 5 - 2.5}deg)`; }, { passive: true });
-      card.addEventListener('pointerleave', () => { card.style.transform = ''; }, { passive: true });
+  const toggle = $('.nav-toggle');
+  toggle.addEventListener('click', () => { const open = document.body.classList.toggle('nav-open'); toggle.setAttribute('aria-expanded', open); });
+  $$('.site-header nav a').forEach(link => link.addEventListener('click', () => document.body.classList.remove('nav-open')));
+
+  let scrollFrame = 0;
+  addEventListener('scroll', () => {
+    if (scrollFrame) return;
+    scrollFrame = requestAnimationFrame(() => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      $('.scroll-progress').style.transform = `scaleX(${max ? scrollY / max : 0})`;
+      $('.back-top').classList.toggle('show', scrollY > 700);
+      scrollFrame = 0;
     });
-  }
+  }, { passive: true });
+  $('.back-top').addEventListener('click', () => scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }));
 })();
