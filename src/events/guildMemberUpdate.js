@@ -6,6 +6,33 @@ export const BOOST_CHANNEL_ID = '1527374407343804566';
 
 const detectionKey = member => `server_boost:${member.guild.id}:${member.id}:${member.premiumSinceTimestamp}`;
 
+export function buildBoostPayload(member, { test = false } = {}) {
+  const embed = new EmbedBuilder()
+    .setColor(0xF47FFF)
+    .setTitle(test ? '🧪 בדיקת מערכת הבוסטים' : '💜 תודה על הבוסט!')
+    .setDescription(`**${member.user} בדיוק ביצע Server Boost ל־EditIL!**\n\nתודה ענקית על התמיכה שלך בקהילה ❤️\n\nבזכותך אנחנו יכולים להמשיך לגדול ולהשתפר.${test ? '\n\n*זוהי הודעת בדיקה בלבד.*' : ''}`)
+    .addFields(
+      { name: '🚀 רמת הבוסטים', value: String(member.guild.premiumTier), inline: true },
+      { name: '💎 מספר הבוסטים', value: String(member.guild.premiumSubscriptionCount ?? 0), inline: true }
+    )
+    .setFooter({ text: 'EditIL • קהילת העורכים בישראל' })
+    .setTimestamp();
+  return { content: `${member.user}`, embeds: [embed], allowedMentions: { parse: [], users: [member.id] } };
+}
+
+export function getBoostChannel(guild) {
+  const channel = guild.channels.cache.get(BOOST_CHANNEL_ID);
+  return channel?.type === ChannelType.GuildText ? channel : null;
+}
+
+export function canSendBoostMessage(channel, guild) {
+  return Boolean(channel.permissionsFor(guild.members.me)?.has([
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.EmbedLinks
+  ]));
+}
+
 export async function handleBoostStarted(oldMember, newMember, client = newMember.client) {
   if (newMember.guild.id !== BOOST_GUILD_ID) return false;
   if (oldMember.premiumSince || !newMember.premiumSince) return false;
@@ -22,38 +49,22 @@ export async function handleBoostStarted(oldMember, newMember, client = newMembe
       return false;
     }
 
-    const channel = newMember.guild.channels.cache.get(BOOST_CHANNEL_ID);
-    if (!channel || channel.type !== ChannelType.GuildText) {
+    const channel = getBoostChannel(newMember.guild);
+    if (!channel) {
       logger.error('Boost announcement channel not found or is not a text channel', { guildId: newMember.guild.id, channelId: BOOST_CHANNEL_ID });
       return false;
     }
 
-    const permissions = channel.permissionsFor(newMember.guild.members.me);
-    if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])) {
+    if (!canSendBoostMessage(channel, newMember.guild)) {
       logger.error('Missing permissions for boost announcement channel', { guildId: newMember.guild.id, channelId: channel.id });
       return false;
     }
-
-    const embed = new EmbedBuilder()
-      .setColor(0xF47FFF)
-      .setTitle('💜 תודה על הבוסט!')
-      .setDescription(`**${newMember.user} בדיוק ביצע Server Boost ל־EditIL!**\n\nתודה ענקית על התמיכה שלך בקהילה ❤️\n\nבזכותך אנחנו יכולים להמשיך לגדול ולהשתפר.`)
-      .addFields(
-        { name: '🚀 רמת הבוסטים', value: String(newMember.guild.premiumTier), inline: true },
-        { name: '💎 מספר הבוסטים', value: String(newMember.guild.premiumSubscriptionCount ?? 0), inline: true }
-      )
-      .setFooter({ text: 'EditIL • קהילת העורכים בישראל' })
-      .setTimestamp();
 
     // Persist before sending so a process restart after Discord accepts the
     // message cannot produce a duplicate announcement.
     await client.db.set(key, { detectedAt: new Date().toISOString(), deliveryStatus: 'sending' });
     try {
-      await channel.send({
-        content: `${newMember.user}`,
-        embeds: [embed],
-        allowedMentions: { parse: [], users: [newMember.id] }
-      });
+      await channel.send(buildBoostPayload(newMember));
       await client.db.set(key, { detectedAt: new Date().toISOString(), deliveryStatus: 'delivered' });
     } catch (error) {
       await client.db.delete(key).catch(() => {});

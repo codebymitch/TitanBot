@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ChannelType, Collection } from 'discord.js';
-import { BOOST_CHANNEL_ID, BOOST_GUILD_ID, handleBoostStarted } from '../src/events/guildMemberUpdate.js';
+import { BOOST_CHANNEL_ID, BOOST_GUILD_ID, buildBoostPayload, handleBoostStarted } from '../src/events/guildMemberUpdate.js';
 
 function fixture({ oldPremium = null, newPremium = new Date('2026-07-16T12:00:00Z'), channel = true, permissions = true } = {}) {
   const stored = new Map(), sent = [];
@@ -37,4 +37,12 @@ test('missing channel or permissions is handled without sending or throwing', as
   const denied = fixture({ permissions: false });
   assert.equal(await handleBoostStarted(denied.oldMember, denied.newMember, denied.client), false);
   assert.equal(denied.sent.length, 0);
+});
+
+test('test payload is clearly marked and keeps mentions restricted to the tester', () => {
+  const input = fixture();
+  const payload = buildBoostPayload(input.newMember, { test: true });
+  assert.match(payload.embeds[0].data.title, /בדיקת/);
+  assert.match(payload.embeds[0].data.description, /בדיקה בלבד/);
+  assert.deepEqual(payload.allowedMentions, { parse: [], users: ['user-1'] });
 });
