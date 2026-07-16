@@ -65,6 +65,24 @@
     $$('.channel-list').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab));
   }));
 
+  // Staff application submission; Discord DM confirmation completes identity verification.
+  const staffForm = $('#staffApplicationForm');
+  staffForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = $('button[type="submit"]', staffForm);
+    const result = $('#staffApplicationResult');
+    button.disabled = true; result.className = 'application-result'; result.textContent = 'שולחים את הבקשה...';
+    try {
+      const payload = Object.fromEntries(new FormData(staffForm));
+      const response = await fetch('/api/staff-applications', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(response.status === 429 ? 'ניתן לשלוח בקשה אחת בשעה. נסו שוב מאוחר יותר.' : 'לא ניתן לשלוח את הבקשה. בדקו את הפרטים ונסו שוב.');
+      result.classList.add('success'); result.textContent = `הבקשה ${data.id} התקבלה. בדקו את ההודעות הפרטיות שלכם ב־Discord ואשרו אותה.`;
+      staffForm.reset();
+    } catch (error) { result.classList.add('error'); result.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
+
   // Public command directory: client-side category and text filtering.
   const commandSearch = $('#commandSearch');
   const commandCards = $$('.public-command-grid article');

@@ -26,7 +26,7 @@
       <img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" width="44" height="44" alt="EditIL">
       <span><b>EditIL</b><small>קהילת העורכים בישראל</small></span>
     </a>
-    <nav aria-label="ניווט ראשי"><a href="#community">הקהילה</a><a href="#channels">הערוצים</a><a href="#bot">הבוט</a><a href="#commands">פקודות</a><a href="#faq">שאלות</a></nav>
+    <nav aria-label="ניווט ראשי"><a href="#community">הקהילה</a><a href="#channels">הערוצים</a><a href="#bot">הבוט</a><a href="#commands">פקודות</a><a href="#staff-application">הצטרפות לצוות</a><a href="#faq">שאלות</a></nav>
     <a class="btn compact" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">הצטרפו לשרת <span>↗</span></a>
     <button class="nav-toggle" aria-label="פתיחת תפריט" aria-expanded="false"><span></span><span></span></button>
   </header>
@@ -87,6 +87,24 @@
     <section class="section shell bot-section" id="bot">
       <div class="bot-visual reveal reveal-left"><div class="orbit"><i></i><i></i><i></i></div><div class="bot-avatar"><img id="botAvatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="EditIL Assistant" decoding="async"><span></span></div><div class="status-chip"><i></i><span id="botStatus">בודק מצב...</span></div></div>
       <div class="bot-copy reveal reveal-right"><span class="kicker">EDITIL ASSISTANT</span><h2>הבוט ששומר<br><em>על הקצב.</em></h2><p>מערכת חכמה שנבנתה עבור הקהילה ומחברת בין ניהול, תמיכה, רמות וחוויית משתמש אחת.</p><div class="command-preview" aria-label="תצוגת פקודה"><span>/leaderboard</span><b>EditIL Assistant</b><small>מציג את מובילי הקהילה בזמן אמת</small></div><div class="bot-tools"><span>✓ אימות</span><span>✓ טיקטים</span><span>✓ רמות</span><span>✓ ניהול</span><span>✓ הצעות</span><span>✓ דיווחים</span><span>✓ תפקידים</span><span>✓ בוסטרים</span></div><div class="bot-stats"><div><b id="commandCount">—</b><span>פקודות פעילות</span><i></i></div><div><b id="latency">—</b><span>זמן תגובה</span><i></i></div><div><b id="serverCount">—</b><span>מערכות פעילות</span><i></i></div></div></div>
+    </section>
+
+    <section class="section staff-application-section" id="staff-application">
+      <div class="shell staff-application-grid">
+        <div class="staff-application-copy reveal reveal-right"><span class="kicker">JOIN THE TEAM</span><h2>רוצים להשפיע?<br><em>הצטרפו לצוות.</em></h2><p>מלאו את הבקשה הקצרה. הבוט ישלח לכם הודעת אימות פרטית ב־Discord, ורק לאחר אישורכם ייפתח ערוץ פרטי מול צוות EditIL.</p><ul><li>🔒 הבקשה אינה מתפרסמת בפומבי</li><li>✅ אימות זהות דרך הודעה פרטית מהבוט</li><li>💬 המשך התהליך בערוץ פרטי</li></ul></div>
+        <form class="staff-application-form reveal reveal-left" id="staffApplicationForm">
+          <div class="form-heading"><b>בקשת הצטרפות לצוות</b><span>כל השדות המסומנים נדרשים</span></div>
+          <label>Discord User ID<input name="discordId" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="1127099544560205914" required></label>
+          <label>גיל<input name="age" maxlength="20" placeholder="הגיל שלך" required></label>
+          <label>ניסיון קודם<textarea name="experience" maxlength="1200" placeholder="ספרו בקצרה על ניסיון בניהול קהילה, תמיכה או עריכה" required></textarea></label>
+          <label>למה אתם רוצים להצטרף לצוות?<textarea name="motivation" maxlength="1200" required></textarea></label>
+          <label>זמינות שבועית<textarea name="availability" maxlength="500" placeholder="ימים ושעות שבהם אתם בדרך כלל זמינים" required></textarea></label>
+          <label>תיק עבודות או קישור <small>(אופציונלי)</small><input name="portfolio" type="url" maxlength="500" placeholder="https://..."></label>
+          <input class="form-trap" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button class="btn primary" type="submit">שליחת הבקשה <span>←</span></button>
+          <p class="application-result" id="staffApplicationResult" role="status" aria-live="polite"></p>
+        </form>
+      </div>
     </section>
 
     <section class="section commands-section" id="commands">

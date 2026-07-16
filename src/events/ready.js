@@ -6,6 +6,7 @@ import { validateSavedTickets } from '../services/ticketSystemService.js';
 import { runStartupUpdateCheck } from '../services/botUpdateService.js';
 import { retryPendingOwnerInboxCases } from '../services/ownerInboxService.js';
 import { startWebsiteStatusHeartbeat } from '../services/websiteStatusService.js';
+import { startStaffApplicationPolling } from '../services/staffApplicationService.js';
 export default { name: Events.ClientReady, once: true, async execute(client) {
   client.user.setPresence(client.config.bot.presence);
   await resumeCommunityPolls(client);
@@ -14,5 +15,6 @@ export default { name: Events.ClientReady, once: true, async execute(client) {
   void runStartupUpdateCheck(client);
   void retryPendingOwnerInboxCases(client);
   startWebsiteStatusHeartbeat(client);
+  startStaffApplicationPolling(client);
   startupLog(`Ready as ${client.user.tag}; serving ${client.guilds.cache.size} server(s).`);
 } };

@@ -1,5 +1,6 @@
 const STATUS_KEY = 'latest';
 const MAX_STATUS_AGE_MS = 90_000;
+const STAFF_QUEUE_KEY = 'staffapp:queue';
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -42,6 +43,44 @@ export default {
         updatedAt: new Date().toISOString()
       };
       await env.STATUS_KV.put(STATUS_KEY, JSON.stringify(safe), { expirationTtl: 3600 });
+      return json({ ok: true });
+    }
+
+    if (url.pathname === '/api/staff-applications' && request.method === 'POST') {
+      const body = await request.json().catch(() => null);
+      if (!body || body.website) return json({ error: 'Invalid application' }, 400);
+      const discordId = String(body.discordId || '').trim();
+      const fields = ['age', 'experience', 'motivation', 'availability', 'portfolio'];
+      if (!/^\d{17,20}$/.test(discordId) || fields.some(key => !String(body[key] || '').trim() && key !== 'portfolio')) return json({ error: 'Missing or invalid fields' }, 400);
+      const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+      const ipHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ip));
+      const rateKey = `staffapp:rate:${[...new Uint8Array(ipHash)].map(byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 24)}`;
+      if (await env.STATUS_KV.get(rateKey)) return json({ error: 'Please wait before submitting another application' }, 429);
+      const id = `APP-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      const application = { id, discordId, createdAt: new Date().toISOString(), status: 'pending' };
+      for (const key of fields) application[key] = String(body[key] || '').trim().slice(0, key === 'age' ? 20 : 1000);
+      await env.STATUS_KV.put(`staffapp:${id}`, JSON.stringify(application), { expirationTtl: 604800 });
+      const queue = await env.STATUS_KV.get(STAFF_QUEUE_KEY, 'json') || [];
+      await env.STATUS_KV.put(STAFF_QUEUE_KEY, JSON.stringify([...new Set([...queue, id])].slice(-100)), { expirationTtl: 604800 });
+      await env.STATUS_KV.put(rateKey, '1', { expirationTtl: 3600 });
+      return json({ ok: true, id }, 201);
+    }
+
+    if (url.pathname === '/api/staff-applications/pending' && request.method === 'GET') {
+      if (request.headers.get('authorization') !== `Bearer ${env.HEARTBEAT_SECRET}`) return json({ error: 'Unauthorized' }, 401);
+      const queue = await env.STATUS_KV.get(STAFF_QUEUE_KEY, 'json') || [];
+      const applications = (await Promise.all(queue.slice(0, 20).map(id => env.STATUS_KV.get(`staffapp:${id}`, 'json')))).filter(item => item?.status === 'pending');
+      return json({ applications });
+    }
+
+    if (url.pathname.startsWith('/api/staff-applications/') && request.method === 'POST') {
+      if (request.headers.get('authorization') !== `Bearer ${env.HEARTBEAT_SECRET}`) return json({ error: 'Unauthorized' }, 401);
+      const id = decodeURIComponent(url.pathname.split('/').pop());
+      const saved = await env.STATUS_KV.get(`staffapp:${id}`, 'json');
+      if (!saved) return json({ error: 'Not found' }, 404);
+      const update = await request.json().catch(() => ({}));
+      saved.status = ['awaiting_confirmation', 'confirmed', 'rejected', 'failed'].includes(update.status) ? update.status : saved.status;
+      await env.STATUS_KV.put(`staffapp:${id}`, JSON.stringify(saved), { expirationTtl: 604800 });
       return json({ ok: true });
     }
 
