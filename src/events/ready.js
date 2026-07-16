@@ -5,6 +5,7 @@ import { validateSavedRolePanels } from '../services/roleSystemService.js';
 import { validateSavedTickets } from '../services/ticketSystemService.js';
 import { runStartupUpdateCheck } from '../services/botUpdateService.js';
 import { retryPendingOwnerInboxCases } from '../services/ownerInboxService.js';
+import { startWebsiteStatusHeartbeat } from '../services/websiteStatusService.js';
 export default { name: Events.ClientReady, once: true, async execute(client) {
   client.user.setPresence(client.config.bot.presence);
   await resumeCommunityPolls(client);
@@ -12,5 +13,6 @@ export default { name: Events.ClientReady, once: true, async execute(client) {
   await validateSavedTickets(client);
   void runStartupUpdateCheck(client);
   void retryPendingOwnerInboxCases(client);
+  startWebsiteStatusHeartbeat(client);
   startupLog(`Ready as ${client.user.tag}; serving ${client.guilds.cache.size} server(s).`);
 } };

@@ -33,7 +33,16 @@
   }), { threshold: .6 });
   $$('[data-counter]').forEach(element => counterObserver.observe(element));
 
-  // Live statistics will be enabled with the upcoming EditIL bot integration.
+  fetch('/api/status', { headers: { Accept: 'application/json' } }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
+    state.stats = { ...state.stats, ...data.community };
+    $$('[data-stat="members"]').forEach(element => { element.textContent = `${format(data.community.members || 0)}+`; });
+    $('#commandCount').textContent = data.bot.commands ?? '—';
+    $('#latency').textContent = data.bot.online ? `${data.bot.latency}ms` : '—';
+    $('#serverCount').textContent = data.bot.servers ?? '—';
+    $('#botStatus').textContent = data.bot.online ? 'מחובר' : 'לא מחובר';
+    const avatar = $('#botAvatar'); if (data.bot.avatar) avatar.src = data.bot.avatar;
+    $$('[data-counter]').forEach(element => { if (element.getBoundingClientRect().top < innerHeight) animateCounter(element, Number(state.stats[element.dataset.counter]) || 0); });
+  }).catch(() => { $('#botStatus').textContent = 'לא מחובר'; });
 
   let ticking = false;
   const updateScroll = () => {

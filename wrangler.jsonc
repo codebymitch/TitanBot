@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "editil",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-07-16",
+  "preview_urls": false,
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "STATUS_KV",
+      "id": "9fa4e2d08e144af3977180a7c0ec7f45"
+    }
+  ]
+}
