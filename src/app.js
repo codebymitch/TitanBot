@@ -182,7 +182,7 @@ class TitanBot extends Client {
     app.use(express.json());
 
     // ── Page routes ───────────────────────────────────────────────
-    app.get('/',          (req, res) => res.redirect('/dashboard'));
+    app.get('/',          (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
     app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, '../public/dashboard.html')));
     app.get('/login',     (req, res) => res.sendFile(path.join(__dirname, '../public/login.html')));
 
@@ -191,6 +191,27 @@ class TitanBot extends Client {
       res.json({
         username: this.user?.username || 'Bot',
         avatar:   this.user?.displayAvatarURL({ size: 128 }) || '',
+      });
+    });
+
+    app.get('/api/public-stats', (req, res) => {
+      const guild = this.guilds.cache.get(process.env.LANDING_GUILD_ID || '1526671786387705907');
+      const channels = guild?.channels.cache.filter(channel => !channel.isThread()).size || 0;
+      const resourceChannels = guild?.channels.cache.filter(channel => /resource|asset|preset|משאב|פריסט/i.test(channel.name)).size || 0;
+      res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60').json({
+        bot: {
+          online: this.isReady(),
+          avatar: this.user?.displayAvatarURL({ extension: 'webp', size: 256 }) || '',
+          commands: this.commands.size,
+          latency: Math.max(0, Math.round(this.ws.ping || 0)),
+          servers: this.guilds.cache.size
+        },
+        community: {
+          members: guild?.memberCount || 0,
+          channels,
+          resources: resourceChannels,
+          competitions: 0
+        }
       });
     });
 
