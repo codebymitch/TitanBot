@@ -1,6 +1,7 @@
 const STATUS_KEY = 'latest';
 const MAX_STATUS_AGE_MS = 90_000;
 const STAFF_QUEUE_KEY = 'staffapp:queue';
+const STAFF_SETTINGS_KEY = 'staffapp:settings';
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -58,6 +59,8 @@ export default {
     }
 
     if (url.pathname === '/api/staff-applications' && request.method === 'POST') {
+      const settings = await env.STATUS_KV.get(STAFF_SETTINGS_KEY, 'json');
+      if (settings?.open !== true) return json({ error: 'Applications are closed' }, 403);
       const body = await request.json().catch(() => null);
       if (!body || body.website) return json({ error: 'Invalid application' }, 400);
       const discordId = String(body.discordId || '').trim();
@@ -78,6 +81,20 @@ export default {
       await env.STATUS_KV.put(rateKey, '1', { expirationTtl: 3600 });
       await env.STATUS_KV.put(userRateKey, '1', { expirationTtl: 3600 });
       return json({ ok: true, id }, 201);
+    }
+
+    if (url.pathname === '/api/staff-applications/settings' && request.method === 'GET') {
+      const settings = await env.STATUS_KV.get(STAFF_SETTINGS_KEY, 'json');
+      return json({ open: settings?.open === true, updatedAt: settings?.updatedAt || null });
+    }
+
+    if (url.pathname === '/api/staff-applications/settings' && request.method === 'POST') {
+      if (request.headers.get('authorization') !== `Bearer ${env.HEARTBEAT_SECRET}`) return json({ error: 'Unauthorized' }, 401);
+      const update = await request.json().catch(() => null);
+      if (typeof update?.open !== 'boolean') return json({ error: 'Invalid setting' }, 400);
+      const settings = { open: update.open, updatedAt: new Date().toISOString() };
+      await env.STATUS_KV.put(STAFF_SETTINGS_KEY, JSON.stringify(settings));
+      return json(settings);
     }
 
     if (url.pathname === '/api/staff-applications/pending' && request.method === 'GET') {

@@ -79,6 +79,23 @@ async function updateRemote(client, id, status) {
   await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { method: 'POST', headers: { authorization: `Bearer ${secret(client)}`, 'content-type': 'application/json' }, body: JSON.stringify({ status }), signal: AbortSignal.timeout(8000) });
 }
 
+export async function getStaffApplicationsOpen(client) {
+  const response = await fetch(`${API_BASE}/settings`, { headers: { authorization: `Bearer ${secret(client)}` }, signal: AbortSignal.timeout(8000) });
+  if (!response.ok) throw new Error(`Staff application settings returned HTTP ${response.status}`);
+  return Boolean((await response.json()).open);
+}
+
+export async function setStaffApplicationsOpen(client, open) {
+  const response = await fetch(`${API_BASE}/settings`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${secret(client)}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ open: Boolean(open) }),
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!response.ok) throw new Error(`Staff application settings update returned HTTP ${response.status}`);
+  return Boolean((await response.json()).open);
+}
+
 export async function pollStaffApplications(client) {
   try {
     if (!client.db.isAvailable?.()) return;

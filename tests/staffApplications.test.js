@@ -37,4 +37,14 @@ test('worker protects bot polling and rate limits public submissions', async () 
   assert.match(worker, /expirationTtl: 3600/);
   assert.match(worker, /frame-ancestors 'none'/);
   assert.match(worker, /delete saved\[field\]/);
+  assert.match(worker, /STAFF_SETTINGS_KEY/);
+  assert.match(worker, /settings\?\.open !== true/);
+});
+
+test('owner can open, close, or inspect website staff applications', async () => {
+  const command = (await import('../src/commands/owner/staffapplications.js')).default;
+  const json = command.data.toJSON();
+  assert.equal(json.name, 'staffapplications');
+  assert.deepEqual(json.options.map(option => option.name), ['open', 'close', 'status']);
+  assert.match(command.execute.toString(), /interaction\.user\.id !== interaction\.guild\.ownerId/);
 });

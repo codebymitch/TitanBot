@@ -67,6 +67,20 @@
 
   // Staff application submission; Discord DM confirmation completes identity verification.
   const staffForm = $('#staffApplicationForm');
+  const staffSubmit = $('button[type="submit"]', staffForm);
+  const staffResult = $('#staffApplicationResult');
+  fetch('/api/staff-applications/settings', { headers: { accept: 'application/json' } })
+    .then(response => response.ok ? response.json() : Promise.reject())
+    .then(settings => {
+      staffSubmit.disabled = !settings.open;
+      staffSubmit.innerHTML = settings.open ? 'שליחת הבקשה <span>←</span>' : 'ההרשמה לצוות סגורה כרגע';
+      if (!settings.open) staffResult.textContent = 'בקשות הצוות אינן פתוחות כרגע. נעדכן באתר כשההרשמה תיפתח מחדש.';
+    })
+    .catch(() => {
+      staffSubmit.disabled = true;
+      staffSubmit.textContent = 'ההרשמה אינה זמינה כרגע';
+      staffResult.textContent = 'לא ניתן לבדוק את מצב ההרשמה כרגע. נסו שוב מאוחר יותר.';
+    });
   staffForm.addEventListener('submit', async event => {
     event.preventDefault();
     const button = $('button[type="submit"]', staffForm);
@@ -76,7 +90,7 @@
       const payload = Object.fromEntries(new FormData(staffForm));
       const response = await fetch('/api/staff-applications', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await response.json();
-      if (!response.ok) throw new Error(response.status === 429 ? 'ניתן לשלוח בקשה אחת בשעה. נסו שוב מאוחר יותר.' : 'לא ניתן לשלוח את הבקשה. בדקו את הפרטים ונסו שוב.');
+      if (!response.ok) throw new Error(response.status === 403 ? 'ההרשמה לצוות סגורה כרגע.' : response.status === 429 ? 'ניתן לשלוח בקשה אחת בשעה. נסו שוב מאוחר יותר.' : 'לא ניתן לשלוח את הבקשה. בדקו את הפרטים ונסו שוב.');
       result.classList.add('success'); result.textContent = `הבקשה ${data.id} התקבלה. בדקו את ההודעות הפרטיות שלכם ב־Discord ואשרו אותה.`;
       staffForm.reset();
     } catch (error) { result.classList.add('error'); result.textContent = error.message; }
