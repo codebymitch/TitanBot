@@ -11,6 +11,17 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   }
 });
 
+const secureAsset = async (request, env) => {
+  const response = await env.ASSETS.fetch(request);
+  const secured = new Response(response.body, response);
+  secured.headers.set('content-security-policy', "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://cdn.discordapp.com data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+  secured.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+  secured.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  secured.headers.set('x-content-type-options', 'nosniff');
+  secured.headers.set('x-frame-options', 'DENY');
+  return secured;
+};
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -55,7 +66,9 @@ export default {
       const ip = request.headers.get('cf-connecting-ip') || 'unknown';
       const ipHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ip));
       const rateKey = `staffapp:rate:${[...new Uint8Array(ipHash)].map(byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 24)}`;
-      if (await env.STATUS_KV.get(rateKey)) return json({ error: 'Please wait before submitting another application' }, 429);
+      const userRateKey = `staffapp:user:${discordId}`;
+      if (await env.STATUS_KV.get(rateKey) || await env.STATUS_KV.get(userRateKey)) return json({ error: 'Please wait before submitting another application' }, 429);
+      if (body.portfolio && !/^https?:\/\/\S+$/i.test(String(body.portfolio))) return json({ error: 'Invalid portfolio URL' }, 400);
       const id = `APP-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
       const application = { id, discordId, createdAt: new Date().toISOString(), status: 'pending' };
       for (const key of fields) application[key] = String(body[key] || '').trim().slice(0, key === 'age' ? 20 : 1000);
@@ -63,6 +76,7 @@ export default {
       const queue = await env.STATUS_KV.get(STAFF_QUEUE_KEY, 'json') || [];
       await env.STATUS_KV.put(STAFF_QUEUE_KEY, JSON.stringify([...new Set([...queue, id])].slice(-100)), { expirationTtl: 604800 });
       await env.STATUS_KV.put(rateKey, '1', { expirationTtl: 3600 });
+      await env.STATUS_KV.put(userRateKey, '1', { expirationTtl: 3600 });
       return json({ ok: true, id }, 201);
     }
 
@@ -80,11 +94,16 @@ export default {
       if (!saved) return json({ error: 'Not found' }, 404);
       const update = await request.json().catch(() => ({}));
       saved.status = ['awaiting_confirmation', 'confirmed', 'rejected', 'failed'].includes(update.status) ? update.status : saved.status;
+      if (['confirmed', 'rejected', 'failed'].includes(saved.status)) {
+        for (const field of ['age', 'experience', 'motivation', 'availability', 'portfolio']) delete saved[field];
+        const queue = await env.STATUS_KV.get(STAFF_QUEUE_KEY, 'json') || [];
+        await env.STATUS_KV.put(STAFF_QUEUE_KEY, JSON.stringify(queue.filter(item => item !== id)), { expirationTtl: 604800 });
+      }
       await env.STATUS_KV.put(`staffapp:${id}`, JSON.stringify(saved), { expirationTtl: 604800 });
       return json({ ok: true });
     }
 
     if (url.pathname.startsWith('/api/')) return json({ error: 'Not found' }, 404);
-    return env.ASSETS.fetch(request);
+    return secureAsset(request, env);
   }
 };

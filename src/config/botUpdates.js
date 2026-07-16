@@ -1,11 +1,11 @@
 export const DEFAULT_UPDATE_CHANNEL_ID = '1527004410536923357';
 
 export const DEFAULT_UPDATE_CONTENT = Object.freeze({
-  version: '3.5.0',
+  version: '3.5.1',
   title: '🤖 עדכון חדש ל־EditIL Assistant',
-  newFeatures: ['נוספה מערכת בקשות הצטרפות לצוות דרך אתר EditIL, עם אימות זהות בהודעה פרטית מהבוט'],
-  fixes: [],
-  improvements: ['לאחר אישור המועמד, הבוט יוצר ערוץ בקשה פרטי בקטגוריית הצוות ושומר על הרשאות הקטגוריה'],
+  newFeatures: [],
+  fixes: ['הוקשחה פרטיות בקשות הצוות: חסימת צפייה ציבורית מפורשת, מחיקת פרטים לאחר סיום והגנה מפני בקשות כפולות'],
+  improvements: ['נוספו כותרות אבטחה לאתר, הגבלת קצב לפי משתמש Discord וניקוי ערוץ אוטומטי אם מסירת הבקשה נכשלת'],
   changelogUrl: null,
   imageUrl: null
 });

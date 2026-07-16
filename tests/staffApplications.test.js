@@ -19,5 +19,8 @@ test('worker protects bot polling and rate limits public submissions', async () 
   const worker = await readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8');
   assert.match(worker, /HEARTBEAT_SECRET/);
   assert.match(worker, /staffapp:rate:/);
+  assert.match(worker, /staffapp:user:/);
   assert.match(worker, /expirationTtl: 3600/);
+  assert.match(worker, /frame-ancestors 'none'/);
+  assert.match(worker, /delete saved\[field\]/);
 });
