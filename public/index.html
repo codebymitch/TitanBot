@@ -26,7 +26,7 @@
       <img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" width="44" height="44" alt="EditIL">
       <span><b>EditIL</b><small>קהילת העורכים בישראל</small></span>
     </a>
-    <nav aria-label="ניווט ראשי"><a href="#community">הקהילה</a><a href="#channels">הערוצים</a><a href="#bot">הבוט</a><a href="#faq">שאלות</a></nav>
+    <nav aria-label="ניווט ראשי"><a href="#community">הקהילה</a><a href="#channels">הערוצים</a><a href="#bot">הבוט</a><a href="#commands">פקודות</a><a href="#faq">שאלות</a></nav>
     <a class="btn compact" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">הצטרפו לשרת <span>↗</span></a>
     <button class="nav-toggle" aria-label="פתיחת תפריט" aria-expanded="false"><span></span><span></span></button>
   </header>
@@ -87,6 +87,41 @@
     <section class="section shell bot-section" id="bot">
       <div class="bot-visual reveal reveal-left"><div class="orbit"><i></i><i></i><i></i></div><div class="bot-avatar"><img id="botAvatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="EditIL Assistant" decoding="async"><span></span></div><div class="status-chip"><i></i><span id="botStatus">בודק מצב...</span></div></div>
       <div class="bot-copy reveal reveal-right"><span class="kicker">EDITIL ASSISTANT</span><h2>הבוט ששומר<br><em>על הקצב.</em></h2><p>מערכת חכמה שנבנתה עבור הקהילה ומחברת בין ניהול, תמיכה, רמות וחוויית משתמש אחת.</p><div class="command-preview" aria-label="תצוגת פקודה"><span>/leaderboard</span><b>EditIL Assistant</b><small>מציג את מובילי הקהילה בזמן אמת</small></div><div class="bot-tools"><span>✓ אימות</span><span>✓ טיקטים</span><span>✓ רמות</span><span>✓ ניהול</span><span>✓ הצעות</span><span>✓ דיווחים</span><span>✓ תפקידים</span><span>✓ בוסטרים</span></div><div class="bot-stats"><div><b id="commandCount">—</b><span>פקודות פעילות</span><i></i></div><div><b id="latency">—</b><span>זמן תגובה</span><i></i></div><div><b id="serverCount">—</b><span>מערכות פעילות</span><i></i></div></div></div>
+    </section>
+
+    <section class="section commands-section" id="commands">
+      <div class="shell">
+        <header class="section-title reveal"><span>EDITIL ASSISTANT</span><h2>כל הפקודות.<br><em>לכל חברי הקהילה.</em></h2><p>רק פקודות ציבוריות מופיעות כאן — ללא פקודות צוות, ניהול או בעלים.</p></header>
+        <div class="command-controls reveal">
+          <label class="command-search"><span aria-hidden="true">⌕</span><input id="commandSearch" type="search" placeholder="חיפוש פקודה..." autocomplete="off" aria-label="חיפוש ברשימת הפקודות"></label>
+          <div class="command-filters" role="group" aria-label="סינון פקודות"><button class="active" data-command-filter="all">הכול</button><button data-command-filter="general">כללי</button><button data-command-filter="community">קהילה</button><button data-command-filter="levels">רמות</button></div>
+        </div>
+        <div class="public-command-grid" id="publicCommandGrid">
+          <article data-category="general" data-command="help עזרה"><code>/help</code><h3>מרכז העזרה</h3><p>מציג את הפקודות הזמינות עבורך לפי ההרשאות שלך.</p></article>
+          <article data-category="general" data-command="ping זמן תגובה"><code>/ping</code><h3>בדיקת חיבור</h3><p>מציג את זמן התגובה של הבוט ושל Discord.</p></article>
+          <article data-category="general" data-command="botinfo מידע בוט"><code>/botinfo</code><h3>מידע על הבוט</h3><p>גרסה, זמן פעילות, שרתים ונתוני EditIL Assistant.</p></article>
+          <article data-category="general" data-command="serverinfo מידע שרת"><code>/serverinfo</code><h3>מידע על השרת</h3><p>חברים, ערוצים, תפקידים, בוסטים ותאריך יצירה.</p></article>
+          <article data-category="general" data-command="userinfo משתמש"><code>/userinfo [member]</code><h3>מידע על חבר</h3><p>מציג פרטי משתמש, תפקיד ותאריכי הצטרפות.</p></article>
+          <article data-category="general" data-command="avatar תמונת פרופיל"><code>/avatar [member]</code><h3>תמונת פרופיל</h3><p>פותח את תמונת הפרופיל ברזולוציה מלאה.</p></article>
+
+          <article data-category="community" data-command="suggest הצעה"><code>/suggest</code><h3>שליחת הצעה</h3><p>שולח הצעה פרטית ומאובטחת לצוות השרת.</p></article>
+          <article data-category="community" data-command="report דיווח"><code>/report</code><h3>דיווח פרטי</h3><p>מדווח לצוות באופן פרטי בלי לפרסם בערוץ ציבורי.</p></article>
+          <article data-category="community" data-command="feedback משוב"><code>/feedback</code><h3>שליחת משוב</h3><p>משוב מסודר על השרת, הבוט או הקהילה.</p></article>
+          <article data-category="community" data-command="poll סקר"><code>/poll</code><h3>סקר קהילתי</h3><p>יוצר סקר עם עד חמש אפשרויות ומשך מוגדר.</p></article>
+          <article data-category="community" data-command="selfpromo פרסום עצמי"><code>/selfpromo</code><h3>פרופיל יוצר</h3><p>מפרסם את עמוד היוצר או תיק העבודות שלך.</p></article>
+          <article data-category="community" data-command="lookingforeditor מחפש עורך"><code>/lookingforeditor</code><h3>חיפוש עורך</h3><p>מפרסם עבודה, תקציב וסגנון עריכה מבוקש.</p></article>
+          <article data-category="community" data-command="lookingforteam מחפש צוות"><code>/lookingforteam</code><h3>חיפוש צוות</h3><p>מוצא שותפים ותפקידים לפרויקט הבא שלך.</p></article>
+          <article data-category="community" data-command="editingtype סוג עריכה"><code>/editingtype</code><h3>תחומי עריכה</h3><p>בוחר ומעדכן את תחומי העריכה שלך בשרת.</p></article>
+          <article data-category="community" data-command="roles תפקידים"><code>/roles</code><h3>בחירת תפקידים</h3><p>מציג ומעדכן תפקידים הזמינים לבחירה עצמית.</p></article>
+          <article data-category="community" data-command="contest תחרות submit vote status"><code>/contest</code><h3>תחרויות עריכה</h3><p><b>submit</b> להגשה, <b>vote</b> להצבעה ו־<b>status</b> לצפייה במצב.</p></article>
+
+          <article data-category="levels" data-command="leaderboard טבלת מובילים"><code>/leaderboard</code><h3>טבלת המובילים</h3><p>מציג את עשרת החברים המובילים לפי XP.</p></article>
+          <article data-category="levels" data-command="profile פרופיל רמה"><code>/profile [member]</code><h3>פרופיל עורך</h3><p>מציג את פרופיל הרמות שלך או של חבר אחר.</p></article>
+          <article data-category="levels" data-command="rank דירוג רמה xp"><code>/rank [member]</code><h3>רמה וניסיון</h3><p>מציג את הרמה וכמות הניסיון הנוכחית.</p></article>
+        </div>
+        <p class="command-empty" hidden>לא נמצאו פקודות שמתאימות לחיפוש.</p>
+        <p class="command-note">חלק מפקודות הקהילה דורשות אימות חבר או שמערכת השרת המתאימה תהיה פעילה.</p>
+      </div>
     </section>
 
     <section class="software shell reveal"><p>יוצרים בכלים שאתם כבר אוהבים</p><div><span><b>Ae</b>After Effects</span><span><b>Pr</b>Premiere Pro</span><span><b>Cc</b>CapCut</span><span><b>Ps</b>Photoshop</span><span><b>Dr</b>DaVinci Resolve</span></div></section>

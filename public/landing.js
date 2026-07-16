@@ -10,7 +10,7 @@
   $('#year').textContent = new Date().getFullYear();
 
   // One-time section reveals and staggered groups.
-  $$('.bento-card, .bot-tools span, .bot-stats div').forEach((item, index) => {
+  $$('.bento-card, .bot-tools span, .bot-stats div, .public-command-grid article').forEach((item, index) => {
     item.classList.add('stagger-item');
     item.style.setProperty('--stagger', `${(index % 8) * 55}ms`);
   });
@@ -21,7 +21,7 @@
     entry.target.querySelectorAll?.('.stagger-item').forEach(item => item.classList.add('stagger-visible'));
     revealObserver.unobserve(entry.target);
   }), { threshold: .12, rootMargin: '0px 0px -30px' });
-  $$('.reveal, .bento, .bot-copy').forEach(element => revealObserver.observe(element));
+  $$('.reveal, .bento, .bot-copy, .public-command-grid').forEach(element => revealObserver.observe(element));
 
   const number = value => new Intl.NumberFormat('he-IL').format(value);
   const count = (element, target) => {
@@ -63,6 +63,32 @@
   $$('.channel-tabs button').forEach(button => button.addEventListener('click', () => {
     $$('.channel-tabs button').forEach(item => item.classList.toggle('active', item === button));
     $$('.channel-list').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab));
+  }));
+
+  // Public command directory: client-side category and text filtering.
+  const commandSearch = $('#commandSearch');
+  const commandCards = $$('.public-command-grid article');
+  let commandCategory = 'all';
+  const filterCommands = () => {
+    const query = commandSearch.value.trim().toLocaleLowerCase('he');
+    let visible = 0;
+    commandCards.forEach(card => {
+      const categoryMatch = commandCategory === 'all' || card.dataset.category === commandCategory;
+      const textMatch = !query || `${card.dataset.command} ${card.textContent}`.toLocaleLowerCase('he').includes(query);
+      card.hidden = !(categoryMatch && textMatch);
+      if (!card.hidden) visible += 1;
+    });
+    $('.command-empty').hidden = visible !== 0;
+  };
+  commandSearch.addEventListener('input', filterCommands);
+  $$('.command-filters button').forEach(button => button.addEventListener('click', () => {
+    commandCategory = button.dataset.commandFilter;
+    $$('.command-filters button').forEach(item => {
+      const selected = item === button;
+      item.classList.toggle('active', selected);
+      item.setAttribute('aria-pressed', String(selected));
+    });
+    filterCommands();
   }));
 
   // Accessible RTL mobile navigation.
