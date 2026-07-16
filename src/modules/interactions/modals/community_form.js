@@ -11,13 +11,14 @@ const allowedValues = {
   report: new Set(['משתמש', 'הודעה', 'הטרדה', 'ספאם', 'גניבת תוכן', 'בעיה טכנית', 'אחר']),
   selfpromo: new Set(['tiktok', 'youtube', 'instagram', 'twitch', 'portfolio', 'other'])
 };
-const values = (interaction, ids) => Object.fromEntries(ids.map(id => [id, interaction.fields.getTextInputValue(id).trim()]));
+const values = (interaction, ids) => Object.fromEntries(ids.map(id => { try { return [id, interaction.fields.getTextInputValue(id).trim()]; } catch { return [id, '']; } }));
 const statusButton = (kind, id, status, label, style = ButtonStyle.Secondary) => new ButtonBuilder().setCustomId(`community_status:${kind}:${id}:${status}`).setLabel(label).setStyle(style);
 
 export default {
   name: 'community_form',
   async execute(interaction, client, args) {
     const [kind, encoded] = args;
+    let selected={};try{selected=encoded?JSON.parse(Buffer.from(encoded,'base64url').toString('utf8')):{}}catch{}
     const config = await getConfig(client, interaction.guildId);
     const privateOwnerInbox = isOwnerInboxSubmission(interaction.guildId, kind);
     const channelId = config.channels[channelNames[kind]];
@@ -33,16 +34,16 @@ export default {
       data = values(interaction, ['title', 'description']);
     } else if (kind === 'feedback') {
       data = values(interaction, ['category', 'content']);
+      Object.assign(data,selected);
       if (!allowedValues.feedback.has(data.category)) return interaction.reply({ content: 'סוג המשוב אינו תקין. יש לבחור אחת מהקטגוריות המוצגות בטופס.', flags: MessageFlags.Ephemeral });
-      data.anonymous = interaction.message == null && interaction.user && false;
-      // The slash option is unavailable on modal submit; preserve it in the modal id in future calls.
-      data.anonymous = encoded === 'anonymous';
     } else if (kind === 'report') {
       data = values(interaction, ['type', 'reported_user', 'description', 'evidence']);
+      Object.assign(data,selected);
       if (!allowedValues.report.has(data.type)) return interaction.reply({ content: 'סוג הדיווח אינו תקין.', flags: MessageFlags.Ephemeral });
       if (data.evidence && !/^https?:\/\/\S+$/i.test(data.evidence)) return interaction.reply({ content: 'הקישור שסופק אינו תקין.', flags: MessageFlags.Ephemeral });
     } else if (kind === 'selfpromo') {
       data = values(interaction, ['platform', 'display_name', 'link', 'description']);
+      Object.assign(data,selected);
       if (!allowedValues.selfpromo.has(data.platform.toLowerCase())) return interaction.reply({ content: 'הפלטפורמה שנבחרה אינה נתמכת.', flags: MessageFlags.Ephemeral });
       if (!/^https?:\/\/\S+$/i.test(data.link)) return interaction.reply({ content: 'הקישור שסופק אינו תקין.', flags: MessageFlags.Ephemeral });
       if (!config.community.allowDiscordInvites && /(?:discord\.gg|discord(?:app)?\.com\/invite)\//i.test(data.link)) return interaction.reply({ content: 'קישורי הזמנה ל־Discord אינם מורשים בפרסום עצמי.', flags: MessageFlags.Ephemeral });
@@ -50,14 +51,14 @@ export default {
       data = kind === 'lookingforeditor'
         ? values(interaction, ['video_type', 'deadline', 'style', 'contact', 'description'])
         : values(interaction, ['project', 'deadline', 'experience', 'contact', 'description']);
-      Object.assign(data, JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
+      Object.assign(data, selected);
     }
     if (privateOwnerInbox) {
       const record = await createOwnerInboxCase(client, interaction, kind, data);
       const delivered = await deliverOwnerInboxCase(client, record);
       await client.db.set(cooldownKey, Date.now());
       return interaction.reply({ content: delivered
-        ? '✅ ההודעה שלך נשלחה בהצלחה לצוות השרת.'
+        ? `✅ ההודעה שלך נשלחה בהצלחה לצוות השרת.\nמזהה המקרה: \`${record.caseId}\``
         : '⚠️ אירעה תקלה זמנית בשליחת ההודעה.\nהצוות יקבל אותה ברגע שהחיבור יחזור.', flags: MessageFlags.Ephemeral });
     }
     const id = String(await client.db.increment(`community:${interaction.guildId}:sequence:${kind}`));
@@ -67,7 +68,8 @@ export default {
     if (kind === 'feedback') fields.push({ name: 'סוג המשוב', value: data.category }, { name: 'תוכן', value: data.content });
     if (kind === 'report') fields.push({ name: 'סוג', value: data.type, inline: true }, { name: 'משתמש מדווח', value: data.reported_user || 'לא צוין', inline: true }, { name: 'תיאור', value: data.description }, { name: 'הוכחה', value: data.evidence || 'לא צורפה' });
     if (kind === 'selfpromo') fields.push({ name: 'יוצר', value: `${interaction.user}`, inline: true }, { name: 'פלטפורמה', value: data.platform, inline: true }, { name: 'שם תצוגה', value: data.display_name, inline: true }, { name: 'תיאור', value: data.description }, { name: 'קישור', value: `[פתיחת העמוד](${data.link})` });
-    if (kind.startsWith('lookingfor')) fields.push({ name: 'תשלום', value: data.paid ? `בתשלום — ${data.budget || 'לא צוין תקציב'}` : 'ללא תשלום', inline: true }, { name: 'מועד אחרון', value: data.deadline, inline: true }, { name: 'יצירת קשר', value: data.contact }, { name: 'פרטים', value: data.description });
+    if (kind === 'lookingforeditor') fields.push({ name: 'תשלום', value: data.paid ? `בתשלום — ${data.budget}` : 'ללא תשלום', inline: true }, { name: 'תוכנה', value: data.software || 'לא צוין', inline: true }, { name: 'סוג סרטון', value: data.video_type }, { name: 'סגנון', value: data.style, inline: true }, { name: 'מועד אחרון', value: data.deadline, inline: true }, { name: 'יצירת קשר', value: data.contact }, { name: 'פרטים', value: data.description });
+    if (kind === 'lookingforteam') fields.push({ name: 'תשלום', value: data.paid ? `בתשלום — ${data.budget}` : 'ללא תשלום', inline: true }, { name: 'ניסיון נדרש', value: data.experience, inline: true }, { name: 'פרויקט ותפקידים פתוחים', value: data.project }, { name: 'מועד אחרון', value: data.deadline, inline: true }, { name: 'יצירת קשר', value: data.contact }, { name: 'פרטים', value: data.description });
     if (kind === 'suggest') components = [new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`community_vote:suggest:${id}:up`).setLabel('בעד').setEmoji('👍').setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId(`community_vote:suggest:${id}:down`).setLabel('נגד').setEmoji('👎').setStyle(ButtonStyle.Danger),

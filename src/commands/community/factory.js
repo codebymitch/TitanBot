@@ -9,9 +9,16 @@ import { schedulePollClosure } from '../../services/communityPollService.js';
 import { OWNER_INBOX_GUILD_ID } from '../../services/ownerInboxService.js';
 
 const descriptions = {
-  suggest: 'שליחת הצעה לקהילה', feedback: 'שליחת משוב על השרת או הבוט', report: 'שליחת דיווח פרטי לצוות',
+  suggest: 'שליחת הצעה פרטית לצוות השרת', feedback: 'שליחת משוב מסודר על השרת או הבוט', report: 'שליחת דיווח פרטי ומאובטח לצוות',
   poll: 'יצירת סקר קהילתי', selfpromo: 'פרסום עמוד היוצר שלך', lookingforeditor: 'פרסום חיפוש אחר עורך',
   lookingforteam: 'פרסום חיפוש אחר צוות', editingtype: 'בחירת תחומי העריכה שלך'
+};
+const choices = {
+  feedback: [{name:'השרת',value:'השרת'},{name:'הבוט',value:'הבוט'},{name:'הצוות',value:'הצוות'},{name:'רעיון לשיפור',value:'רעיון לשיפור'},{name:'אחר',value:'אחר'}],
+  report: [{name:'משתמש',value:'משתמש'},{name:'הודעה',value:'הודעה'},{name:'הטרדה',value:'הטרדה'},{name:'ספאם',value:'ספאם'},{name:'גניבת תוכן',value:'גניבת תוכן'},{name:'בעיה טכנית',value:'בעיה טכנית'},{name:'אחר',value:'אחר'}],
+  platform: ['TikTok','YouTube','Instagram','Twitch','Portfolio','Other'].map(value=>({name:value,value:value.toLowerCase()})),
+  software: ['After Effects','Premiere Pro','CapCut','DaVinci Resolve','אחר'].map(value=>({name:value,value})),
+  duration: [{name:'10 דקות',value:'10m'},{name:'שעה',value:'1h'},{name:'6 שעות',value:'6h'},{name:'יום',value:'1d'},{name:'3 ימים',value:'3d'},{name:'7 ימים',value:'7d'}]
 };
 const modalFields = {
   suggest: [['title', 'כותרת ההצעה', TextInputStyle.Short, true], ['description', 'פירוט ההצעה', TextInputStyle.Paragraph, true]],
@@ -24,7 +31,8 @@ const modalFields = {
 
 export function createModal(name, suffix = '') {
   const modal = new ModalBuilder().setCustomId(`community_form:${name}${suffix ? `:${suffix}` : ''}`).setTitle(descriptions[name]);
-  modal.addComponents(...modalFields[name].map(([id, label, style, required, placeholder]) =>
+  let selected={};try{selected=suffix?JSON.parse(Buffer.from(suffix,'base64url').toString('utf8')):{}}catch{}
+  modal.addComponents(...modalFields[name].filter(([id])=>selected[id]===undefined).map(([id, label, style, required, placeholder]) =>
     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId(id).setLabel(label).setStyle(style).setRequired(required).setMaxLength(style === TextInputStyle.Paragraph ? 1500 : 200).setPlaceholder(placeholder || label))
   ));
   return modal;
@@ -32,17 +40,20 @@ export function createModal(name, suffix = '') {
 
 export function communityCommand(name) {
   const data = new SlashCommandBuilder().setName(name).setDescription(descriptions[name]).setDMPermission(false);
-  if (name === 'feedback') data.addBooleanOption(o => o.setName('anonymous').setDescription('שליחת המשוב באופן אנונימי'));
+  if (name === 'feedback') data.addStringOption(o=>o.setName('category').setDescription('סוג המשוב').setRequired(true).addChoices(...choices.feedback)).addBooleanOption(o => o.setName('anonymous').setDescription('שליחת המשוב באופן אנונימי'));
+  if (name === 'report') data.addStringOption(o=>o.setName('type').setDescription('סוג הדיווח').setRequired(true).addChoices(...choices.report));
+  if (name === 'selfpromo') data.addStringOption(o=>o.setName('platform').setDescription('פלטפורמת הפרסום').setRequired(true).addChoices(...choices.platform));
   if (name === 'poll') {
     data.addStringOption(o => o.setName('question').setDescription('שאלת הסקר').setRequired(true).setMaxLength(300));
     for (let n = 1; n <= 2; n++) data.addStringOption(o => o.setName(`option_${n}`).setDescription(`אפשרות ${n}`).setRequired(true).setMaxLength(100));
-    data.addStringOption(o => o.setName('duration').setDescription('משך: 10m, 2h, 1d (עד 7 ימים)').setRequired(true));
+    data.addStringOption(o => o.setName('duration').setDescription('משך הסקר').setRequired(true).addChoices(...choices.duration));
     data.addBooleanOption(o => o.setName('allow_multiple_choices').setDescription('לאפשר מספר בחירות').setRequired(true));
     for (let n = 3; n <= 5; n++) data.addStringOption(o => o.setName(`option_${n}`).setDescription(`אפשרות ${n}`).setMaxLength(100));
   }
   if (['lookingforeditor', 'lookingforteam'].includes(name)) {
     data.addBooleanOption(o => o.setName('paid').setDescription('האם העבודה בתשלום?').setRequired(true));
-    if (name === 'lookingforeditor') data.addStringOption(o => o.setName('budget').setDescription('תקציב או טווח תקציב (חובה לעבודה בתשלום)').setMaxLength(100));
+    data.addStringOption(o => o.setName('budget').setDescription('תקציב או טווח תקציב (חובה לעבודה בתשלום)').setMaxLength(100));
+    if (name === 'lookingforeditor') data.addStringOption(o=>o.setName('software').setDescription('תוכנת עריכה מועדפת').addChoices(...choices.software));
   }
   return { data, async execute(interaction, client) {
     const config = await getConfig(client, interaction.guildId);
@@ -56,17 +67,23 @@ export function communityCommand(name) {
       const roles = (config.community.editingRoleIds || []).map(id => interaction.guild.roles.cache.get(id)).filter(role => role && !role.managed && role.position < interaction.guild.members.me.roles.highest.position);
       if (!roles.length) return interaction.reply({ content: 'תפקידי העריכה עדיין לא הוגדרו.', flags: MessageFlags.Ephemeral });
       const menu = new StringSelectMenuBuilder().setCustomId(`editing_roles:${interaction.user.id}`).setPlaceholder('בחרו את תחומי העריכה שלכם').setMinValues(0).setMaxValues(roles.length).addOptions(roles.map(role => ({ label: role.name, value: role.id, default: interaction.member.roles.cache.has(role.id) })));
-      return interaction.reply({ embeds: [createEmbed({ title: '🎨 תחומי עריכה', description: 'בחרו את כל תחומי העריכה המתאימים לכם. הבחירה תחליף את הבחירה הקודמת.', color: 'primary' })], components: [new ActionRowBuilder().addComponents(menu)], flags: MessageFlags.Ephemeral });
+      const selectedCount = roles.filter(role => interaction.member.roles.cache.has(role.id)).length;
+      const clear = new ButtonBuilder().setCustomId(`editing_roles_clear:${interaction.user.id}`).setLabel('ניקוי כל התחומים').setStyle(ButtonStyle.Danger).setDisabled(selectedCount === 0);
+      return interaction.reply({ embeds: [createEmbed({ title: '🎨 תחומי עריכה', description: `בחרו את כל תחומי העריכה המתאימים לכם. הבחירה תחליף את הבחירה הקודמת.\n\nנבחרו כרגע: **${selectedCount}**`, color: 'primary' })], components: [new ActionRowBuilder().addComponents(menu), new ActionRowBuilder().addComponents(clear)], flags: MessageFlags.Ephemeral });
     }
     if (name === 'poll') return createPoll(interaction, client, config);
     if (name === 'feedback' && interaction.options.getBoolean('anonymous') && !config.community.anonymousFeedback) return interaction.reply({ content: 'משוב אנונימי אינו מופעל בשרת זה.', flags: MessageFlags.Ephemeral });
-    let suffix = name === 'feedback' && interaction.options.getBoolean('anonymous') ? 'anonymous' : '';
+    const selected={};
+    if(name==='feedback'){const category=interaction.options.getString('category');if(category)selected.category=category;selected.anonymous=interaction.options.getBoolean('anonymous')??false;}
+    if(name==='report'){const type=interaction.options.getString('type');if(type)selected.type=type;}
+    if(name==='selfpromo'){const platform=interaction.options.getString('platform');if(platform)selected.platform=platform;}
     if (['lookingforeditor', 'lookingforteam'].includes(name)) {
       const paid = interaction.options.getBoolean('paid');
       const budget = interaction.options.getString('budget');
-      if (name === 'lookingforeditor' && paid && !budget) return interaction.reply({ content: 'בעבודה בתשלום חובה לציין תקציב או טווח תקציב.', flags: MessageFlags.Ephemeral });
-      suffix = Buffer.from(JSON.stringify({ paid, budget })).toString('base64url');
+      if (paid && !budget) return interaction.reply({ content: 'בעבודה בתשלום חובה לציין תקציב או טווח תקציב.', flags: MessageFlags.Ephemeral });
+      Object.assign(selected,{paid,budget,software:interaction.options.getString('software')});
     }
+    const suffix=Object.keys(selected).length?Buffer.from(JSON.stringify(selected)).toString('base64url'):'';
     return interaction.showModal(createModal(name, suffix));
   } };
 }

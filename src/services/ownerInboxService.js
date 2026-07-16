@@ -107,7 +107,7 @@ export async function handleOwnerInboxReply(message) {
   return true;
 }
 
-export async function replyToOwnerInboxCase(client, ownerId, caseId, replyText) {
+export async function replyToOwnerInboxCase(client, ownerId, caseId, replyText, status = null) {
   if (ownerId !== OWNER_INBOX_USER_ID) return { ok: false, code: 'FORBIDDEN', message: 'אין לך הרשאה להשתמש בפקודה זו.' };
   caseId = String(caseId || '').trim().toUpperCase();
   replyText = String(replyText || '').trim();
@@ -116,9 +116,11 @@ export async function replyToOwnerInboxCase(client, ownerId, caseId, replyText) 
   if (!record) return { ok: false, code: 'NOT_FOUND', message: 'מזהה המקרה לא נמצא.' };
   try {
     const user = await client.users.fetch(record.authorId);
+    const statusLabels={received:'התקבל',reviewing:'בבדיקה',accepted:'אושר',rejected:'נדחה',resolved:'טופל'};
     await user.send({ embeds: [new EmbedBuilder().setColor(0x5865F2).setTitle('📩 תגובה מצוות EditIL')
       .addFields({ name: '🆔 Case ID', value: `\`${caseId}\`` }, { name: '💬 תגובת הצוות', value: replyText },
-        { name: '🕒 זמן', value: `<t:${Math.floor(Date.now() / 1000)}:F>` }).setTimestamp()], allowedMentions: { parse: [] } });
+        ...(statusLabels[status]?[{name:'📌 סטטוס',value:statusLabels[status]}]:[]),{ name: '🕒 זמן', value: `<t:${Math.floor(Date.now() / 1000)}:F>` }).setTimestamp()], allowedMentions: { parse: [] } });
+    if(statusLabels[status])record.status=status;
     record.replies = [...(record.replies || []), { authorId: ownerId, content: replyText, createdAt: new Date().toISOString() }];
     await client.db.set(caseKey(caseId), record);
     logger.info('Owner replied', { caseId, recipientId: record.authorId });

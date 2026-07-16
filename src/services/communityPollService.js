@@ -18,7 +18,8 @@ export async function closePoll(client, guildId, id) {
   const totals = poll.nativePoll && message?.poll
     ? [...message.poll.answers.values()].map(answer => answer.voteCount || 0)
     : poll.options.map((_, index) => Object.values(poll.votes || {}).filter(value => (Array.isArray(value) ? value : [value]).includes(index)).length);
-  if (message) await message.edit({ embeds: [createEmbed({ title: `📊 תוצאות סופיות — ${poll.question}`, description: poll.options.map((option, index) => `**${index + 1}. ${option}** — ${totals[index]} קולות`).join('\n'), color: 'success', footer: { text: `סקר #${id} הסתיים` } })], components: [] });
+  const highest=Math.max(...totals,0),winners=poll.options.filter((_,index)=>highest>0&&totals[index]===highest);
+  if (message) await message.edit({ embeds: [createEmbed({ title: `📊 תוצאות סופיות — ${poll.question}`, description:`${poll.options.map((option, index) => `**${index + 1}. ${option}** — ${totals[index]} קולות`).join('\n')}\n\n${winners.length?`🏆 **${winners.length===1?'האפשרות המנצחת':'תיקו בין'}:** ${winners.join(' / ')}`:'לא התקבלו הצבעות.'}`, color: 'success', footer: { text: `סקר #${id} הסתיים` } })], components: [] });
   await logEvent({ client, guildId, eventType: EVENT_TYPES.SETTINGS_CHANGE, data: { title: `סקר #${id} נסגר`, description: `התקבלו ${totals.reduce((sum, value) => sum + value, 0)} בחירות.` } });
   timers.delete(key); return true;
 }

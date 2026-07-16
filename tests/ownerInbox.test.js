@@ -27,7 +27,7 @@ for (const kind of ['suggest', 'report']) test(`${kind} in target guild is DMed 
   const ctx = memoryClient(), input = modalInteraction(kind);
   await communityModal.execute(input.interaction, ctx.client, [kind]);
   assert.equal(ctx.sent.length, 1); assert.equal(ctx.sent[0].id, OWNER_INBOX_USER_ID);
-  assert.equal(input.reply.content, '✅ ההודעה שלך נשלחה בהצלחה לצוות השרת.');
+  assert.equal(input.reply.content, `✅ ההודעה שלך נשלחה בהצלחה לצוות השרת.\nמזהה המקרה: \`${kind === 'suggest' ? 'SUG-000001' : 'REP-000001'}\``);
   assert.equal(input.reply.flags, MessageFlags.Ephemeral);
   const caseId = kind === 'suggest' ? 'SUG-000001' : 'REP-000001';
   assert.equal(ctx.records.get(`owner_inbox:case:${caseId}`).authorId, 'user-1');
@@ -51,14 +51,14 @@ test('only the configured owner can reply to a stored case in DMs', async () => 
 for (const name of ['suggest', 'report']) test(`${name} can open its modal without a verified role in the target guild`, async () => {
   const ctx=memoryClient();let modal;const interaction={guildId:OWNER_INBOX_GUILD_ID,commandName:name,
     inGuild:()=>true,guild:{ownerId:'owner'},user:{id:'unverified'},member:{permissions:{has:()=>false},roles:{cache:new Collection()}},
-    options:{},showModal:async value=>{modal=value;},reply:async()=>{throw new Error('access was denied');}};
+    options:{ getString:()=>null, getBoolean:()=>null },showModal:async value=>{modal=value;},reply:async()=>{throw new Error('access was denied');}};
   await communityCommand(name).execute(interaction,ctx.client);
   assert.equal(modal.data.custom_id,`community_form:${name}`);
 });
 
 test('/reply is a real slash command and delivers the owner response', async () => {
-  const json=replyCommand.data.toJSON();assert.equal(json.name,'reply');assert.deepEqual(json.options.map(option=>option.name),['case_id','message']);
+  const json=replyCommand.data.toJSON();assert.equal(json.name,'reply');assert.deepEqual(json.options.map(option=>option.name),['case_id','message','status']);
   const ctx=memoryClient();ctx.records.set('owner_inbox:case:REP-000001',{caseId:'REP-000001',authorId:'user-1',replies:[]});let response;
-  const interaction={user:{id:OWNER_INBOX_USER_ID},options:{getString:name=>name==='case_id'?'REP-000001':'הדיווח טופל'},reply:async payload=>{response=payload;}};
-  await replyCommand.execute(interaction,ctx.client);assert.equal(ctx.sent[0].id,'user-1');assert.match(response.content,/נשלחה בהצלחה/);assert.equal(ctx.records.get('owner_inbox:case:REP-000001').replies.length,1);
+  const interaction={user:{id:OWNER_INBOX_USER_ID},options:{getString:name=>({case_id:'REP-000001',message:'הדיווח טופל',status:'resolved'})[name]},reply:async payload=>{response=payload;}};
+  await replyCommand.execute(interaction,ctx.client);assert.equal(ctx.sent[0].id,'user-1');assert.match(response.content,/נשלחה בהצלחה/);assert.equal(ctx.records.get('owner_inbox:case:REP-000001').replies.length,1);assert.equal(ctx.records.get('owner_inbox:case:REP-000001').status,'resolved');
 });
