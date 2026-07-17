@@ -85,6 +85,16 @@
     if (event.target === staffDialog) staffDialog.close();
   });
 
+  // Large secondary content opens above the page without changing its height.
+  $$('[data-open-dialog]').forEach(button => button.addEventListener('click', () => {
+    $$('dialog[open]').forEach(dialog => dialog.close());
+    $(`#${button.dataset.openDialog}`).showModal();
+  }));
+  $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
+  $$('.content-dialog').forEach(dialog => dialog.addEventListener('click', event => {
+    if (event.target === dialog) dialog.close();
+  }));
+
   // Heavy sections stay collapsed until a visitor asks to view them.
   $$('.compact-panel').forEach(panel => panel.addEventListener('toggle', () => {
     if (!panel.open) return;
@@ -95,6 +105,11 @@
   }));
   $$('a[href^="#"]').forEach(link => link.addEventListener('click', () => {
     const target = $(link.hash);
+    const dialog = target?.querySelector('.content-dialog');
+    if (dialog) {
+      $$('dialog[open]').forEach(openDialog => openDialog.close());
+      dialog.showModal();
+    }
     const panel = target?.querySelector('.compact-panel');
     if (panel) panel.open = true;
   }));
