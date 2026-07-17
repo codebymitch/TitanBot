@@ -65,7 +65,7 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /animations\.css\?v=3\.5\.17/);
+  assert.match(html, /animations\.css\?v=3\.5\.18/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
@@ -81,8 +81,9 @@ test('custom animated background stays lightweight and accessible', async () => 
     readFile(new URL('../public/animations.css', import.meta.url), 'utf8')
   ]);
   assert.match(html, /class="editil-background"/);
-  assert.match(css, /@keyframes bg-orbit-blue/);
   assert.match(css, /@keyframes bg-playhead/);
+  assert.doesNotMatch(css, /@keyframes bg-orbit/);
+  assert.doesNotMatch(css, /filter: blur\(75px\)/);
   assert.match(css, /prefers-reduced-motion: reduce/);
   assert.doesNotMatch(css, /canvas/);
 });
