@@ -33,8 +33,8 @@ test('website staff form requires Discord identity and includes a bot-verificati
 
 test('website publishes legal notices and removes age collection end to end', async () => {
   const [privacy, terms, worker, service] = await Promise.all([
-    readFile(new URL('../public/privacy.html', import.meta.url), 'utf8'),
-    readFile(new URL('../public/terms.html', import.meta.url), 'utf8'),
+    readFile(new URL('../public/privacy-policy.html', import.meta.url), 'utf8'),
+    readFile(new URL('../public/terms-of-use.html', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../src/services/staffApplicationService.js', import.meta.url), 'utf8')
   ]);
