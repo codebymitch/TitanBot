@@ -64,8 +64,8 @@ export default {
       const body = await request.json().catch(() => null);
       if (!body || body.website) return json({ error: 'Invalid application' }, 400);
       const discordId = String(body.discordId || '').trim();
-      const fields = ['age', 'experience', 'motivation', 'availability', 'portfolio'];
-      if (!/^\d{17,20}$/.test(discordId) || fields.some(key => !String(body[key] || '').trim() && key !== 'portfolio')) return json({ error: 'Missing or invalid fields' }, 400);
+      const fields = ['experience', 'motivation', 'availability', 'portfolio'];
+      if (!/^\d{17,20}$/.test(discordId) || body.privacyConsent !== 'accepted' || fields.some(key => !String(body[key] || '').trim() && key !== 'portfolio')) return json({ error: 'Missing or invalid fields' }, 400);
       const ip = request.headers.get('cf-connecting-ip') || 'unknown';
       const ipHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ip));
       const rateKey = `staffapp:rate:${[...new Uint8Array(ipHash)].map(byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 24)}`;
@@ -73,8 +73,8 @@ export default {
       if (await env.STATUS_KV.get(rateKey) || await env.STATUS_KV.get(userRateKey)) return json({ error: 'Please wait before submitting another application' }, 429);
       if (body.portfolio && !/^https?:\/\/\S+$/i.test(String(body.portfolio))) return json({ error: 'Invalid portfolio URL' }, 400);
       const id = `APP-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-      const application = { id, discordId, createdAt: new Date().toISOString(), status: 'pending' };
-      for (const key of fields) application[key] = String(body[key] || '').trim().slice(0, key === 'age' ? 20 : 1000);
+      const application = { id, discordId, createdAt: new Date().toISOString(), privacyAcceptedAt: new Date().toISOString(), status: 'pending' };
+      for (const key of fields) application[key] = String(body[key] || '').trim().slice(0, 1000);
       await env.STATUS_KV.put(`staffapp:${id}`, JSON.stringify(application), { expirationTtl: 604800 });
       const queue = await env.STATUS_KV.get(STAFF_QUEUE_KEY, 'json') || [];
       await env.STATUS_KV.put(STAFF_QUEUE_KEY, JSON.stringify([...new Set([...queue, id])].slice(-100)), { expirationTtl: 604800 });
@@ -112,7 +112,7 @@ export default {
       const update = await request.json().catch(() => ({}));
       saved.status = ['awaiting_confirmation', 'confirmed', 'rejected', 'failed'].includes(update.status) ? update.status : saved.status;
       if (['confirmed', 'rejected', 'failed'].includes(saved.status)) {
-        for (const field of ['age', 'experience', 'motivation', 'availability', 'portfolio']) delete saved[field];
+        for (const field of ['experience', 'motivation', 'availability', 'portfolio']) delete saved[field];
         const queue = await env.STATUS_KV.get(STAFF_QUEUE_KEY, 'json') || [];
         await env.STATUS_KV.put(STAFF_QUEUE_KEY, JSON.stringify(queue.filter(item => item !== id)), { expirationTtl: 604800 });
       }

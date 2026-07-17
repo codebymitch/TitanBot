@@ -27,6 +27,23 @@ test('website staff form requires Discord identity and includes a bot-verificati
   assert.match(html, /Developer Mode/);
   assert.match(html, /Copy User ID/);
   assert.match(html, /אל תשלחו סיסמה או טוקן/);
+  assert.match(html, /name="privacyConsent"[^>]+required/);
+  assert.doesNotMatch(html, /name="age"/);
+});
+
+test('website publishes legal notices and removes age collection end to end', async () => {
+  const [privacy, terms, worker, service] = await Promise.all([
+    readFile(new URL('../public/privacy.html', import.meta.url), 'utf8'),
+    readFile(new URL('../public/terms.html', import.meta.url), 'utf8'),
+    readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/services/staffApplicationService.js', import.meta.url), 'utf8')
+  ]);
+  assert.match(privacy, /מדיניות פרטיות/);
+  assert.match(privacy, /1127099544560205914/);
+  assert.match(terms, /אינה קשורה, מאושרת, ממומנת או מופעלת על־ידי Discord Inc/);
+  assert.match(terms, /אין בתנאים אלה כדי לשלול אחריות שלא ניתן לשלול/);
+  assert.doesNotMatch(worker, /['"]age['"]/);
+  assert.doesNotMatch(service, /application\.age/);
 });
 
 test('worker protects bot polling and rate limits public submissions', async () => {

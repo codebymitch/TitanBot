@@ -74,10 +74,11 @@
 .form-heading { grid-column: 1/-1; display: flex; justify-content: space-between; align-items: end; margin-bottom: 4px; }
 .form-heading b { font-size: 20px; }.form-heading span,.staff-application-form label small { color: var(--muted); font-size: 11px; }
 .staff-application-form label { display: flex; flex-direction: column; gap: 7px; color: #dfe2ec; font-size: 13px; font-weight: 750; }
-.staff-application-form label:nth-of-type(3),.staff-application-form label:nth-of-type(4),.staff-application-form label:nth-of-type(5) { grid-column: 1/-1; }
+.staff-application-form .full-field,.privacy-consent { grid-column: 1/-1; }
 .staff-application-form input,.staff-application-form textarea { width: 100%; padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px; outline: 0; background: #11141d; color: var(--text); font: inherit; font-size: 13px; line-height: 1.55; resize: vertical; transition: border-color .2s ease,transform .2s ease; }
 .staff-application-form textarea { min-height: 78px; }.staff-application-form input:focus,.staff-application-form textarea:focus { border-color: rgba(85,216,255,.65); transform: translate3d(0,-1px,0); }
 .staff-application-form .btn,.application-result { grid-column: 1/-1; }.staff-application-form .btn:disabled { opacity: .55; cursor: wait; }.form-trap { position: absolute!important; left: -9999px!important; }
+.staff-application-form .privacy-consent { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid rgba(88,101,242,.22); border-radius: 11px; background: rgba(88,101,242,.06); font-weight: 500; line-height: 1.65; }.privacy-consent input { width: 17px; height: 17px; margin-top: 2px; flex: 0 0 auto; accent-color: var(--brand); }.privacy-consent a { color: var(--cyan); text-decoration: underline; text-underline-offset: 2px; }
 .discord-id-guide { grid-column: 1/-1; margin-top: -7px; border: 1px solid rgba(88,101,242,.2); border-radius: 11px; background: rgba(88,101,242,.06); overflow: hidden; }
 .discord-id-guide summary { padding: 13px 14px; display: flex; align-items: center; gap: 8px; color: #cdd1ff; font-size: 13px; cursor: pointer; list-style: none; }
 .discord-id-guide summary::-webkit-details-marker { display: none; }.discord-id-guide summary span { margin-inline-start: auto; color: var(--muted); }.discord-id-guide summary i { font-style: normal; font-size: 15px; transition: transform .2s ease; }.discord-id-guide[open] summary i { transform: rotate(45deg); }

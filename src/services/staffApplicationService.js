@@ -145,7 +145,7 @@ export async function confirmStaffApplication(interaction, client, id) {
   if (!guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels)) return interaction.reply({ content: 'לבוט חסרה הרשאה ליצור ערוץ פרטי. הצוות עודכן בתקלה.', ephemeral: true });
   const channel = await ensureStaffApplicationChannel(client);
   try { await channel.send({ embeds: [createEmbed({ title: `📝 בקשת צוות ${id}`, fields: [
-    { name: 'מועמד/ת', value: `${member} (\`${member.id}\`)` }, { name: 'גיל', value: application.age },
+    { name: 'מועמד/ת', value: `${member} (\`${member.id}\`)` },
     { name: 'ניסיון', value: application.experience }, { name: 'למה להצטרף לצוות?', value: application.motivation },
     { name: 'זמינות', value: application.availability }, ...(application.portfolio ? [{ name: 'תיק עבודות / קישור', value: application.portfolio }] : [])
   ], color: 'primary', footer: { text: 'EditIL • בקשת צוות מהאתר' } })], allowedMentions: { parse: [] } }); }
