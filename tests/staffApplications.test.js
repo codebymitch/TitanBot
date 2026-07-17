@@ -58,6 +58,14 @@ test('website editing tutorials are privacy enhanced and click to load', async (
   assert.match(worker, /frame-src https:\/\/www\.youtube-nocookie\.com/);
 });
 
+test('public command grid cannot create horizontal page overflow', async () => {
+  const css = await readFile(new URL('../public/animations.css', import.meta.url), 'utf8');
+  assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
+  assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
+  assert.match(css, /\.public-command-grid \{[^}]*repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.public-command-grid article \{[^}]*min-width: 0/);
+});
+
 test('worker protects bot polling and rate limits public submissions', async () => {
   const worker = await readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8');
   assert.match(worker, /HEARTBEAT_SECRET/);
