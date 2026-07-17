@@ -1,5 +1,6 @@
 import privacyHtml from '../public/privacy-policy.html';
 import termsHtml from '../public/terms-of-use.html';
+import securityHtml from '../public/security.html';
 import legalCss from '../public/legal-v1.css';
 import indexHtml from '../public/index.html';
 import landingCss from '../public/landing.css';
@@ -61,6 +62,7 @@ export default {
     if (url.pathname === '/animations.css') return siteResponse(animationsCss, 'text/css');
     if (['/legal/privacy-notice-v1', '/privacy-policy.html', '/privacy.html', '/privacy'].includes(url.pathname)) return legalResponse(privacyHtml, 'text/html');
     if (['/legal/terms-of-use-v1', '/terms-of-use.html', '/terms.html', '/terms'].includes(url.pathname)) return legalResponse(termsHtml, 'text/html');
+    if (['/legal/security-v1', '/security.html', '/security'].includes(url.pathname)) return legalResponse(securityHtml, 'text/html');
     if (['/legal/legal-notice-v1.css', '/legal-v1.css', '/legal.css'].includes(url.pathname)) return legalResponse(legalCss, 'text/css');
 
     if (url.pathname === '/api/status' && request.method === 'GET') {
