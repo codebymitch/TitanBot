@@ -1,6 +1,9 @@
 import privacyHtml from '../public/privacy-policy.html';
 import termsHtml from '../public/terms-of-use.html';
 import legalCss from '../public/legal-v1.css';
+import indexHtml from '../public/index.html';
+import landingCss from '../public/landing.css';
+import animationsCss from '../public/animations.css';
 
 const STATUS_KEY = 'latest';
 const MAX_STATUS_AGE_MS = 90_000;
@@ -27,6 +30,18 @@ const legalResponse = (body, contentType) => new Response(body, {
   }
 });
 
+const siteResponse = (body, contentType) => new Response(body, {
+  headers: {
+    'content-type': `${contentType}; charset=utf-8`,
+    'cache-control': 'public, max-age=300',
+    'content-security-policy': "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://cdn.discordapp.com https://i.ytimg.com data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    'referrer-policy': 'strict-origin-when-cross-origin',
+    'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY'
+  }
+});
+
 const secureAsset = async (request, env) => {
   const response = await env.ASSETS.fetch(request);
   const secured = new Response(response.body, response);
@@ -41,6 +56,9 @@ const secureAsset = async (request, env) => {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === '/' || url.pathname === '/index.html') return siteResponse(indexHtml, 'text/html');
+    if (url.pathname === '/landing.css') return siteResponse(landingCss, 'text/css');
+    if (url.pathname === '/animations.css') return siteResponse(animationsCss, 'text/css');
     if (['/legal/privacy-notice-v1', '/privacy-policy.html', '/privacy.html', '/privacy'].includes(url.pathname)) return legalResponse(privacyHtml, 'text/html');
     if (['/legal/terms-of-use-v1', '/terms-of-use.html', '/terms.html', '/terms'].includes(url.pathname)) return legalResponse(termsHtml, 'text/html');
     if (['/legal/legal-notice-v1.css', '/legal-v1.css', '/legal.css'].includes(url.pathname)) return legalResponse(legalCss, 'text/css');

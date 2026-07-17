@@ -65,6 +65,21 @@
     $$('.channel-list').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab));
   }));
 
+  // Privacy-enhanced tutorials load YouTube only after an explicit click.
+  $$('.tutorial-card').forEach(card => {
+    const player = $('.tutorial-player', card);
+    player.addEventListener('click', event => {
+      event.preventDefault();
+      if (player.querySelector('iframe')) return;
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube-nocookie.com/embed/${card.dataset.youtube}?autoplay=1&rel=0`;
+      iframe.title = player.getAttribute('aria-label');
+      iframe.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.allowFullscreen = true;
+      player.replaceChildren(iframe);
+    }, { once: true });
+  });
+
   // Staff application submission; Discord DM confirmation completes identity verification.
   const staffForm = $('#staffApplicationForm');
   const staffSubmit = $('button[type="submit"]', staffForm);

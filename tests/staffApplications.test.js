@@ -46,6 +46,18 @@ test('website publishes legal notices and removes age collection end to end', as
   assert.doesNotMatch(service, /application\.age/);
 });
 
+test('website editing tutorials are privacy enhanced and click to load', async () => {
+  const [html, script, worker] = await Promise.all([
+    readFile(new URL('../public/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
+    readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
+  ]);
+  assert.match(html, /data-youtube="hb2bbfiNBXA"/);
+  assert.match(html, /data-youtube="VUMVsGm0xOE"/);
+  assert.match(script, /youtube-nocookie\.com\/embed/);
+  assert.match(worker, /frame-src https:\/\/www\.youtube-nocookie\.com/);
+});
+
 test('worker protects bot polling and rate limits public submissions', async () => {
   const worker = await readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8');
   assert.match(worker, /HEARTBEAT_SECRET/);
