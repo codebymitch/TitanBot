@@ -89,6 +89,15 @@
       $$('[data-counter]').forEach(element => { counterObserver.unobserve(element); counterObserver.observe(element); });
     });
 
+  // The hero editing stage is intentionally click-driven so it stays lightweight.
+  const stage = $('.editor-stage');
+  const stagePlay = $('.stage-play');
+  if (stage && stagePlay) stagePlay.addEventListener('click', () => {
+    const playing = stage.classList.toggle('is-playing');
+    stagePlay.textContent = playing ? '❚❚' : '▶';
+    stagePlay.setAttribute('aria-label', playing ? 'עצירת תצוגת ההדגמה' : 'הפעלת תצוגת ההדגמה');
+  });
+
   // Channel tabs.
   $$('.channel-tabs button').forEach(button => button.addEventListener('click', () => {
     $$('.channel-tabs button').forEach(item => item.classList.toggle('active', item === button));
