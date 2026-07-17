@@ -9,9 +9,9 @@
   <meta property="og:description" content="המקום של עורכי הווידאו בישראל ליצור, ללמוד ולהתקדם יחד.">
   <meta property="og:image" content="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=512">
   <link rel="icon" href="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=64">
-  <link rel="stylesheet" href="/landing.css?v=3.5.21">
-  <link rel="stylesheet" href="/animations.css?v=3.5.21">
-  <script src="/landing.js?v=3.5.21" defer></script>
+  <link rel="stylesheet" href="/landing.css?v=3.5.22">
+  <link rel="stylesheet" href="/animations.css?v=3.5.22">
+  <script src="/landing.js?v=3.5.22" defer></script>
   <title>EditIL | קהילת העורכים בישראל</title>
 </head>
 <body>
@@ -31,7 +31,7 @@
       <img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" width="44" height="44" alt="EditIL">
       <span><b>EditIL</b><small>קהילת העורכים בישראל</small></span>
     </a>
-    <nav aria-label="ניווט ראשי"><a href="#community">הקהילה</a><a href="#channels">הערוצים</a><a href="#bot">הבוט</a><a href="#commands">פקודות</a><a href="#staff-application">הצטרפות לצוות</a><a href="#faq">שאלות</a></nav>
+    <nav aria-label="ניווט ראשי"><a href="#community">הקהילה</a><a href="#bot">הבוט</a><a href="#explore">כל התוכן</a></nav>
     <a class="btn compact" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">הצטרפו לשרת <span>↗</span></a>
     <button class="nav-toggle" aria-label="פתיחת תפריט" aria-expanded="false"><span></span><span></span></button>
   </header>
@@ -42,7 +42,7 @@
         <div class="live-label"><i></i><span data-member-copy>קהילת עורכים ישראלית</span></div>
         <h1>כל פריים<br><em>מתחיל כאן.</em></h1>
         <p>קהילת EditIL מחברת בין עורכי וידאו, יוצרי תוכן ומעצבי תנועה — עם משאבים, משוב מקצועי והזדמנויות אמיתיות.</p>
-        <div class="actions"><a class="btn primary" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener"><span class="discord-glyph">◖◗</span> הצטרפו ל־Discord</a><a class="btn secondary" href="#channels">הכירו את השרת</a></div>
+        <div class="actions"><a class="btn primary" href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener"><span class="discord-glyph">◖◗</span> הצטרפו ל־Discord</a><a class="btn secondary" href="#explore">הכירו את השרת</a></div>
         <div class="hero-proof"><div class="proof-icons"><span>🎬</span><span>🎨</span><span>🎮</span><span>✨</span></div><p><strong data-stat="members">—</strong> חברים יוצרים איתנו</p></div>
       </div>
 
@@ -76,8 +76,7 @@
       </div>
     </section>
 
-    <section class="section channel-section compact-host" id="channels">
-      <button class="compact-launch" type="button" data-open-dialog="channelsDialog"><span>💬</span><b>הצצה לערוצי השרת</b><small>עריכה, קהילה והזדמנויות</small><i>↗</i></button>
+    <section class="dialog-host" id="channels">
       <dialog class="content-dialog" id="channelsDialog">
         <button class="dialog-close" type="button" data-close-dialog aria-label="סגירה">×</button>
         <header class="dialog-heading"><span>💬</span><div><b>ערוצי EditIL</b><small>הצצה למבנה הקהילה</small></div></header>
@@ -99,8 +98,18 @@
       <div class="bot-copy reveal reveal-right"><span class="kicker">EDITIL ASSISTANT</span><h2>הבוט ששומר<br><em>על הקצב.</em></h2><p>מערכת חכמה שנבנתה עבור הקהילה ומחברת בין ניהול, תמיכה, רמות וחוויית משתמש אחת.</p><div class="command-preview" aria-label="תצוגת פקודה"><span>/leaderboard</span><b>EditIL Assistant</b><small>מציג את מובילי הקהילה בזמן אמת</small></div><div class="bot-tools"><span>✓ אימות</span><span>✓ טיקטים</span><span>✓ רמות</span><span>✓ ניהול</span><span>✓ הצעות</span><span>✓ דיווחים</span><span>✓ תפקידים</span><span>✓ בוסטרים</span></div><div class="bot-stats"><div><b id="commandCount">—</b><span>פקודות פעילות</span><i></i></div><div><b id="latency">—</b><span>זמן תגובה</span><i></i></div><div><b id="serverCount">—</b><span>מערכות פעילות</span><i></i></div></div></div>
     </section>
 
-    <section class="section tutorials-section compact-host" id="tutorials">
-      <button class="compact-launch" type="button" data-open-dialog="tutorialsDialog"><span>🎓</span><b>מדריכי עריכה בעברית</b><small>After Effects ו־CapCut</small><i>↗</i></button>
+    <section class="section shell explore-section" id="explore">
+      <header class="section-title reveal"><span>כל מה שצריך במקום אחד</span><h2>בוחרים נושא.<br><em>פותחים ומגלים.</em></h2><p>כל התוכן הנוסף של EditIL מסודר כאן — בלי להעמיס על העמוד.</p></header>
+      <div class="explore-grid reveal">
+        <button type="button" data-open-dialog="channelsDialog"><span>💬</span><div><b>ערוצי השרת</b><small>קהילה, עריכה והזדמנויות</small></div><i>↗</i></button>
+        <button type="button" data-open-dialog="tutorialsDialog"><span>🎓</span><div><b>מדריכים בעברית</b><small>After Effects ו־CapCut</small></div><i>↗</i></button>
+        <button type="button" data-open-dialog="commandsDialog"><span>⌨️</span><div><b>פקודות הבוט</b><small>כל הפקודות הציבוריות</small></div><i>↗</i></button>
+        <button type="button" id="openStaffApplication"><span>📝</span><div><b>הצטרפות לצוות</b><small>טופס פרטי ומאובטח</small></div><i>↗</i></button>
+        <button type="button" data-open-dialog="faqDialog"><span>❓</span><div><b>שאלות נפוצות</b><small>תשובות לפני שמצטרפים</small></div><i>↗</i></button>
+      </div>
+    </section>
+
+    <section class="dialog-host" id="tutorials">
       <dialog class="content-dialog" id="tutorialsDialog">
         <button class="dialog-close" type="button" data-close-dialog aria-label="סגירה">×</button>
         <header class="dialog-heading"><span>🎓</span><div><b>לומדים לערוך</b><small>מדריכים מלאים בעברית</small></div></header>
@@ -120,13 +129,12 @@
       </dialog>
     </section>
 
-    <section class="section staff-application-section" id="staff-application">
+    <section class="dialog-host" id="staff-application">
       <div class="shell staff-application-grid">
-        <div class="staff-application-copy reveal reveal-right"><span class="kicker">JOIN THE TEAM</span><h2>רוצים להשפיע?<br><em>הצטרפו לצוות.</em></h2><p>מלאו בקשה קצרה ומאובטחת. לאחר ההגשה הבוט ישלח לכם הודעת אימות פרטית.</p><ul><li>🔒 הבקשה אינה מתפרסמת בפומבי</li><li>✅ אימות זהות דרך הודעה פרטית מהבוט</li><li>🛡️ רק צוות EditIL יכול לצפות בבקשה</li></ul><button class="btn primary" id="openStaffApplication" type="button">פתיחת טופס מועמדות</button></div>
         <dialog class="staff-application-dialog" id="staffApplicationDialog">
           <button class="dialog-close" id="closeStaffApplication" type="button" aria-label="סגירת הטופס">×</button>
         <form class="staff-application-form reveal reveal-left" id="staffApplicationForm">
-          <div class="form-heading"><b>בקשת הצטרפות לצוות</b><span>כל השדות המסומנים נדרשים</span></div>
+          <div class="form-heading"><b>בקשת הצטרפות לצוות</b><span>כל השדות המסומנים נדרשים • הבוט ישלח לכם הודעת אימות פרטית</span></div>
           <label class="full-field">Discord User ID<input name="discordId" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" placeholder="1127099544560205914" aria-describedby="discordIdGuide" required></label>
           <details class="discord-id-guide" id="discordIdGuide"><summary>לא יודעים איך למצוא את ה־User ID? <span>הצגת מדריך</span><i>＋</i></summary><div><section><b>💻 במחשב</b><ol><li>פתחו את Discord ולחצו על גלגל השיניים ליד השם שלכם.</li><li>עברו אל <strong>Advanced</strong> והפעילו <strong>Developer Mode</strong>.</li><li>לחצו לחיצה ימנית על המשתמש שלכם.</li><li>בחרו <strong>Copy User ID</strong> והדביקו אותו בשדה.</li></ol></section><section><b>📱 בטלפון</b><ol><li>פתחו הגדרות משתמש ב־Discord.</li><li>עברו אל <strong>Advanced</strong> והפעילו <strong>Developer Mode</strong>.</li><li>פתחו את הפרופיל שלכם ולחצו על תפריט שלוש הנקודות.</li><li>בחרו <strong>Copy User ID</strong> והדביקו אותו בשדה.</li></ol></section></div><p>ה־User ID הוא מספר באורך 17–20 ספרות. אל תשלחו סיסמה או טוקן.</p></details>
           <label class="full-field">ניסיון קודם<textarea name="experience" maxlength="1200" placeholder="ספרו בקצרה על ניסיון בניהול קהילה, תמיכה או עריכה" required></textarea></label>
@@ -142,8 +150,7 @@
       </div>
     </section>
 
-    <section class="section commands-section compact-host" id="commands">
-      <button class="compact-launch" type="button" data-open-dialog="commandsDialog"><span>⌨️</span><b>פקודות הבוט</b><small>חיפוש בכל הפקודות הציבוריות</small><i>↗</i></button>
+    <section class="dialog-host" id="commands">
       <dialog class="content-dialog commands-dialog" id="commandsDialog">
         <button class="dialog-close" type="button" data-close-dialog aria-label="סגירה">×</button>
         <header class="dialog-heading"><span>⌨️</span><div><b>פקודות EditIL Assistant</b><small>כל הפקודות הציבוריות במקום אחד</small></div></header>
@@ -183,16 +190,16 @@
       </dialog>
     </section>
 
-    <section class="section compact-host" id="faq"><details class="compact-panel"><summary><span>❓</span><b>שאלות נפוצות</b><small>כל מה שכדאי לדעת לפני שמצטרפים</small><i>＋</i></summary><div class="shell faq"><header class="section-title reveal"><span>שאלות נפוצות</span><h2>כל מה שצריך<br><em>לפני שמצטרפים.</em></h2></header><div class="faq-list reveal">
+    <section class="dialog-host" id="faq"><dialog class="content-dialog" id="faqDialog"><button class="dialog-close" type="button" data-close-dialog aria-label="סגירה">×</button><header class="dialog-heading"><span>❓</span><div><b>שאלות נפוצות</b><small>כל מה שכדאי לדעת לפני שמצטרפים</small></div></header><div class="shell faq"><header class="section-title reveal"><span>שאלות נפוצות</span><h2>כל מה שצריך<br><em>לפני שמצטרפים.</em></h2></header><div class="faq-list reveal">
       <details><summary>למי הקהילה מתאימה?<i>＋</i></summary><p>לעורכים מתחילים ומקצועיים, יוטיוברים, עורכי גיימינג, יוצרי TikTok ומעצבי תנועה.</p></details>
       <details><summary>ההצטרפות בחינם?<i>＋</i></summary><p>כן. אפשר להצטרף לקהילה, לשתף, ללמוד ולהכיר עורכים ללא תשלום.</p></details>
       <details><summary>איך מוצאים עורך או צוות?<i>＋</i></summary><p>בשרת קיימים ערוצים ייעודיים לחיפוש עורכים, צוותים, פרויקטים ושיתופי פעולה.</p></details>
       <details><summary>מה מקבלים בוסטרים?<i>＋</i></summary><p>גישה לאזור בוסטרים עם לאונג׳, פריסטים, משאבים בלעדיים ומתנות קהילה.</p></details>
-    </div></div></details></section>
+    </div></div></dialog></section>
 
   </main>
 
-  <footer class="site-footer shell"><a class="identity" href="#home"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" width="44" height="44" alt=""><span><b>EditIL</b><small>קהילת העורכים בישראל</small></span></a><nav><a href="#community">קהילה</a><a href="#channels">ערוצים</a><a href="#bot">הבוט</a><a href="/legal/privacy-notice-v1">פרטיות</a><a href="/legal/terms-of-use-v1">תנאי שימוש</a><a href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">Discord</a></nav><p>© <span id="year"></span> EditIL<br><small>EditIL היא קהילה עצמאית ואינה קשורה, מאושרת או מופעלת על־ידי Discord Inc.</small></p></footer>
+  <footer class="site-footer shell"><a class="identity" href="#home"><img src="https://cdn.discordapp.com/icons/1526671786387705907/d2dae6973a167f36b79f04bd4c769fed.webp?size=128" width="44" height="44" alt=""><span><b>EditIL</b><small>קהילת העורכים בישראל</small></span></a><nav><a href="#community">קהילה</a><a href="#explore">כל התוכן</a><a href="#bot">הבוט</a><a href="/legal/privacy-notice-v1">פרטיות</a><a href="/legal/terms-of-use-v1">תנאי שימוש</a><a href="https://discord.gg/6Hu8xpTYqQ" target="_blank" rel="noopener">Discord</a></nav><p>© <span id="year"></span> EditIL<br><small>EditIL היא קהילה עצמאית ואינה קשורה, מאושרת או מופעלת על־ידי Discord Inc.</small></p></footer>
   <button class="back-top" aria-label="חזרה למעלה">↑</button>
 </body>
 </html>

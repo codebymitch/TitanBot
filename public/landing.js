@@ -109,14 +109,6 @@
     if (event.target === dialog) dialog.close();
   }));
 
-  // Heavy sections stay collapsed until a visitor asks to view them.
-  $$('.compact-panel').forEach(panel => panel.addEventListener('toggle', () => {
-    if (!panel.open) return;
-    $$('.reveal, .stagger-item', panel).forEach(item => {
-      item.classList.add('visible');
-      item.classList.add('stagger-visible');
-    });
-  }));
   $$('a[href^="#"]').forEach(link => link.addEventListener('click', () => {
     const target = $(link.hash);
     const dialog = target?.querySelector('.content-dialog');
@@ -124,8 +116,6 @@
       $$('dialog[open]').forEach(openDialog => openDialog.close());
       dialog.showModal();
     }
-    const panel = target?.querySelector('.compact-panel');
-    if (panel) panel.open = true;
   }));
 
   // Privacy-enhanced tutorials load YouTube only after an explicit click.

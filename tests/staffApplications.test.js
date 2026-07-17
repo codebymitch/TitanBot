@@ -65,7 +65,7 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /animations\.css\?v=3\.5\.21/);
+  assert.match(html, /animations\.css\?v=3\.5\.22/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
@@ -99,6 +99,9 @@ test('custom animated background stays lightweight and accessible', async () => 
   assert.match(script, /const hasLiveStatus = Boolean\(data\.updatedAt\)/);
   assert.match(script, /'המצב מתעדכן'/);
   assert.match(worker, /MAX_STATUS_AGE_MS = 11 \* 60_000/);
+  assert.match(html, /class="section shell explore-section" id="explore"/);
+  assert.match(html, /data-open-dialog="faqDialog"/);
+  assert.match(css, /\.explore-grid \{ display: grid; grid-template-columns: repeat\(6,minmax\(0,1fr\)\)/);
 });
 
 test('public command directory starts compact and can reveal every command', async () => {
@@ -114,9 +117,8 @@ test('public command directory starts compact and can reveal every command', asy
   assert.match(css, /\.section \{ padding-block: 62px; \}/);
   assert.match(html, /<dialog class="staff-application-dialog" id="staffApplicationDialog">/);
   assert.match(script, /staffDialog\.showModal\(\)/);
-  assert.equal((html.match(/<details class="compact-panel">/g) || []).length, 1);
-  assert.equal((html.match(/<dialog class="content-dialog/g) || []).length, 3);
-  assert.match(script, /\$\$\('\.compact-panel'\)/);
+  assert.equal((html.match(/<details class="compact-panel">/g) || []).length, 0);
+  assert.equal((html.match(/<dialog class="content-dialog/g) || []).length, 4);
   assert.match(script, /\$\$\('\[data-open-dialog\]'\)/);
   assert.match(css, /\.compact-host \{ padding-block: 10px; \}/);
   assert.doesNotMatch(html, /class="software shell/);
