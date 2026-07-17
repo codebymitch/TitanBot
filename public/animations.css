@@ -1,5 +1,18 @@
 /* EditIL interaction and motion layer. Content remains visible without JavaScript. */
 html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+body { position: relative; isolation: isolate; }
+.editil-background { position: fixed; z-index: -2; inset: 0; overflow: hidden; pointer-events: none; background: radial-gradient(circle at 50% -15%,rgba(42,116,255,.13),transparent 42%),linear-gradient(180deg,#080b13,#090b11 55%,#0c0911); }
+.editil-background::before { content: ""; position: absolute; inset: 0; opacity: .16; background-image: linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px); background-size: 72px 72px; mask-image: linear-gradient(to bottom,black,transparent 72%); }
+.editil-background::after { content: ""; position: absolute; width: 42vw; height: 1px; top: 24%; left: -45vw; background: linear-gradient(90deg,transparent,#fff 46%,#5ca8ff 62%,transparent); opacity: .38; box-shadow: 0 0 16px rgba(111,181,255,.65); transform: rotate(-12deg); animation: bg-light-pass 16s linear infinite; }
+.bg-orb { position: absolute; width: min(52vw,760px); aspect-ratio: 1; border-radius: 50%; filter: blur(75px); opacity: .12; will-change: transform; }
+.bg-orb.blue { top: 5%; right: -18%; background: #1976ff; animation: bg-orbit-blue 24s ease-in-out infinite alternate; }
+.bg-orb.pink { top: 38%; left: -22%; background: #ff4fae; animation: bg-orbit-pink 28s ease-in-out infinite alternate; }
+.bg-orb.white { width: min(30vw,430px); right: 28%; bottom: -18%; background: #fff; opacity: .055; animation: bg-orbit-white 22s ease-in-out infinite alternate; }
+.bg-timeline { position: absolute; top: 66%; left: 0; width: 100%; height: 110px; opacity: .14; transform: perspective(700px) rotateX(66deg) scale(1.3); transform-origin: center; }
+.bg-timeline::before,.bg-timeline::after { content: ""; position: absolute; inset-inline: 0; height: 1px; background: linear-gradient(90deg,transparent,#4e9cff,#ff5db7,transparent); }.bg-timeline::after { top: 100%; }
+.bg-timeline span { position: absolute; top: 28px; height: 18px; border-radius: 3px; background: linear-gradient(90deg,#247cff,#65b4ff); }.bg-timeline span:nth-child(1){right:8%;width:22%}.bg-timeline span:nth-child(2){right:34%;width:14%;top:58px;background:linear-gradient(90deg,#ff4fae,#ff8acb)}.bg-timeline span:nth-child(3){right:53%;width:25%}.bg-timeline span:nth-child(4){right:81%;width:12%;top:58px;background:#f4f7ff}.bg-timeline b { position: absolute; top: -8px; bottom: -8px; right: 18%; width: 1px; background: #fff; box-shadow: 0 0 10px #fff; animation: bg-playhead 12s ease-in-out infinite alternate; }
+.bg-particles i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .4; animation: bg-particle 9s ease-in-out infinite alternate; }.bg-particles i:nth-child(1){left:8%;top:12%}.bg-particles i:nth-child(2){left:18%;top:72%;animation-delay:-2s;background:#ff70c2}.bg-particles i:nth-child(3){left:28%;top:34%;animation-delay:-5s}.bg-particles i:nth-child(4){left:39%;top:84%;animation-delay:-3s;background:#5fa9ff}.bg-particles i:nth-child(5){left:47%;top:16%;animation-delay:-7s}.bg-particles i:nth-child(6){left:58%;top:61%;animation-delay:-1s;background:#ff70c2}.bg-particles i:nth-child(7){left:67%;top:29%;animation-delay:-4s}.bg-particles i:nth-child(8){left:77%;top:77%;animation-delay:-6s;background:#5fa9ff}.bg-particles i:nth-child(9){left:88%;top:19%;animation-delay:-8s}.bg-particles i:nth-child(10){left:94%;top:54%;animation-delay:-3s;background:#ff70c2}.bg-particles i:nth-child(11){left:13%;top:45%;animation-delay:-6s;background:#5fa9ff}.bg-particles i:nth-child(12){left:72%;top:92%;animation-delay:-1s}
+@keyframes bg-orbit-blue { to { transform: translate3d(-12vw,9vh,0) scale(1.08); } }@keyframes bg-orbit-pink { to { transform: translate3d(15vw,-8vh,0) scale(.92); } }@keyframes bg-orbit-white { to { transform: translate3d(-8vw,-6vh,0) scale(1.1); } }@keyframes bg-light-pass { to { transform: translate3d(155vw,0,0) rotate(-12deg); } }@keyframes bg-playhead { to { transform: translate3d(-64vw,0,0); } }@keyframes bg-particle { to { opacity: .9; transform: translate3d(12px,-24px,0) scale(1.8); } }
 .reveal { opacity: 1; transform: none; }
 .js .reveal { opacity: 0; transform: translate3d(0, 28px, 0); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.75,.25,1); }
 .js .reveal-right { transform: translate3d(38px, 0, 0); }
@@ -153,6 +166,7 @@ html, body { width: 100%; max-width: 100%; overflow-x: clip; }
   .status-chip i, .bot-stats i, .faq-list details p { animation: none; }
   .tilt-card { transform: none; }
   .site-header nav { transition: none; }
+  .editil-background::after,.bg-orb,.bg-timeline b,.bg-particles i { animation: none; }
 }
 
 /* Compact page rhythm: keep every section, remove unnecessary scrolling. */
