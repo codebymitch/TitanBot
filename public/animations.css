@@ -109,6 +109,8 @@ html, body { width: 100%; max-width: 100%; overflow-x: clip; }
 .public-command-grid p { margin: 0; color: var(--muted); font-size: 12px; }
 .public-command-grid p b { color: #d6d9e8; font-family: Consolas,monospace; }
 .command-empty { margin: 35px 0 0; text-align: center; color: var(--muted); }
+.command-expand { margin: 24px auto 0; }
+.command-expand[hidden] { display: none; }
 .command-note { margin: 22px 0 0; text-align: center; color: var(--muted); font-size: 11px; }
 .faq-list details { overflow: hidden; }
 .faq-list summary { transition: color .2s ease; }
@@ -151,4 +153,14 @@ html, body { width: 100%; max-width: 100%; overflow-x: clip; }
   .status-chip i, .bot-stats i, .faq-list details p { animation: none; }
   .tilt-card { transform: none; }
   .site-header nav { transition: none; }
+}
+
+/* Compact page rhythm: keep every section, remove unnecessary scrolling. */
+.section { padding-block: 96px; }
+.section-title { margin-bottom: 42px; }
+.public-command-grid article { min-height: 145px; padding: 18px; }
+.cta { min-height: 360px; margin-bottom: 80px; }
+@media (max-width: 600px) {
+  .section { padding-block: 68px; }
+  .section-title { margin-bottom: 34px; }
 }

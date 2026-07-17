@@ -127,19 +127,32 @@
   // Public command directory: client-side category and text filtering.
   const commandSearch = $('#commandSearch');
   const commandCards = $$('.public-command-grid article');
+  const commandExpand = $('#commandExpand');
   let commandCategory = 'all';
+  let commandsExpanded = false;
   const filterCommands = () => {
     const query = commandSearch.value.trim().toLocaleLowerCase('he');
     let visible = 0;
+    let matches = 0;
+    const compact = !commandsExpanded && commandCategory === 'all' && !query;
     commandCards.forEach(card => {
       const categoryMatch = commandCategory === 'all' || card.dataset.category === commandCategory;
       const textMatch = !query || `${card.dataset.command} ${card.textContent}`.toLocaleLowerCase('he').includes(query);
-      card.hidden = !(categoryMatch && textMatch);
+      const matchesFilter = categoryMatch && textMatch;
+      if (matchesFilter) matches += 1;
+      card.hidden = !matchesFilter || (compact && matches > 6);
       if (!card.hidden) visible += 1;
     });
     $('.command-empty').hidden = visible !== 0;
+    commandExpand.hidden = commandCategory !== 'all' || Boolean(query) || commandCards.length <= 6;
+    commandExpand.setAttribute('aria-expanded', String(commandsExpanded));
+    commandExpand.textContent = commandsExpanded ? 'הצגת פחות פקודות ↑' : 'הצגת כל הפקודות ↓';
   };
   commandSearch.addEventListener('input', filterCommands);
+  commandExpand.addEventListener('click', () => {
+    commandsExpanded = !commandsExpanded;
+    filterCommands();
+  });
   $$('.command-filters button').forEach(button => button.addEventListener('click', () => {
     commandCategory = button.dataset.commandFilter;
     $$('.command-filters button').forEach(item => {
@@ -149,6 +162,7 @@
     });
     filterCommands();
   }));
+  filterCommands();
 
   // Accessible RTL mobile navigation.
   const toggle = $('.nav-toggle');

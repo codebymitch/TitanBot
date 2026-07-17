@@ -65,7 +65,7 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /animations\.css\?v=3\.5\.12/);
+  assert.match(html, /animations\.css\?v=3\.5\.13/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
@@ -73,6 +73,19 @@ test('public command grid cannot create horizontal page overflow', async () => {
   assert.match(css, /\.public-command-grid article \{[^}]*min-width: 0/);
   assert.match(script, /containCommandLayout/);
   assert.match(worker, /const siteResponse[\s\S]*?'cache-control': 'no-cache'/);
+});
+
+test('public command directory starts compact and can reveal every command', async () => {
+  const [html, css, script] = await Promise.all([
+    readFile(new URL('../public/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../public/animations.css', import.meta.url), 'utf8'),
+    readFile(new URL('../public/landing.js', import.meta.url), 'utf8')
+  ]);
+  assert.match(html, /id="commandExpand"[^>]*aria-expanded="false"/);
+  assert.match(script, /commandsExpanded = false/);
+  assert.match(script, /compact && matches > 6/);
+  assert.match(script, /commandExpand\.addEventListener\('click'/);
+  assert.match(css, /\.section \{ padding-block: 96px; \}/);
 });
 
 test('worker protects bot polling and rate limits public submissions', async () => {
