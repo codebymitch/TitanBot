@@ -14,6 +14,9 @@
     "binding": "ASSETS",
     "run_worker_first": true
   },
+  "rules": [
+    { "type": "Text", "globs": ["**/*.html", "**/*.css"], "fallthrough": true }
+  ],
   "kv_namespaces": [
     {
       "binding": "STATUS_KV",

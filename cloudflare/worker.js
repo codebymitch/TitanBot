@@ -1,3 +1,7 @@
+import privacyHtml from '../public/privacy-policy.html';
+import termsHtml from '../public/terms-of-use.html';
+import legalCss from '../public/legal-v1.css';
+
 const STATUS_KEY = 'latest';
 const MAX_STATUS_AGE_MS = 90_000;
 const STAFF_QUEUE_KEY = 'staffapp:queue';
@@ -9,6 +13,17 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff'
+  }
+});
+
+const legalResponse = (body, contentType) => new Response(body, {
+  headers: {
+    'content-type': `${contentType}; charset=utf-8`,
+    'cache-control': 'public, max-age=300',
+    'content-security-policy': "default-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    'referrer-policy': 'strict-origin-when-cross-origin',
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY'
   }
 });
 
@@ -26,6 +41,10 @@ const secureAsset = async (request, env) => {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === '/legal/privacy-notice-v1') return legalResponse(privacyHtml, 'text/html');
+    if (url.pathname === '/legal/terms-of-use-v1') return legalResponse(termsHtml, 'text/html');
+    if (url.pathname === '/legal/legal-notice-v1.css') return legalResponse(legalCss, 'text/css');
+
     if (url.pathname === '/api/status' && request.method === 'GET') {
       const saved = await env.STATUS_KV.get(STATUS_KEY, 'json');
       if (!saved) return json({ bot: { online: false }, community: {} });
