@@ -77,6 +77,14 @@
     $$('.channel-list').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab));
   }));
 
+  // Keep the lengthy staff form out of the page flow until requested.
+  const staffDialog = $('#staffApplicationDialog');
+  $('#openStaffApplication').addEventListener('click', () => staffDialog.showModal());
+  $('#closeStaffApplication').addEventListener('click', () => staffDialog.close());
+  staffDialog.addEventListener('click', event => {
+    if (event.target === staffDialog) staffDialog.close();
+  });
+
   // Privacy-enhanced tutorials load YouTube only after an explicit click.
   $$('.tutorial-card').forEach(card => {
     const player = $('.tutorial-player', card);
