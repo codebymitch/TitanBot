@@ -65,7 +65,7 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /animations\.css\?v=3\.5\.23/);
+  assert.match(html, /animations\.css\?v=3\.5\.24/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
@@ -105,6 +105,9 @@ test('custom animated background stays lightweight and accessible', async () => 
   assert.match(html, /class="bot-stats" hidden/);
   assert.match(script, /\.bot-stats'\)\.hidden = !hasLiveStatus/);
   assert.match(worker, /invites\/6Hu8xpTYqQ\?with_counts=true/);
+  assert.match(css, /\[hidden\] \{ display: none !important; \}/);
+  assert.match(html, /class="status-chip" hidden/);
+  assert.match(script, /\.status-chip'\)\.hidden = !hasLiveStatus/);
 });
 
 test('public command directory starts compact and can reveal every command', async () => {

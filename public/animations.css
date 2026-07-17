@@ -1,5 +1,6 @@
 /* EditIL interaction and motion layer. Content remains visible without JavaScript. */
 html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+[hidden] { display: none !important; }
 :root { --brand: #2f80ff; --cyan: #72b7ff; --purple: #ff4fae; --pink: #ff83ca; --text: #ffffff; }
 body { position: relative; isolation: isolate; }
 .scroll-progress { background: linear-gradient(90deg,#2f80ff,#fff,#ff4fae); }
