@@ -24,9 +24,9 @@ test('website staff form requires Discord identity and includes a bot-verificati
   assert.match(html, /name="discordId"[^>]+required/);
   assert.match(html, /הבוט ישלח לכם הודעת אימות פרטית/);
   assert.match(html, /id="discordIdGuide"/);
-  assert.match(html, /Developer Mode/);
-  assert.match(html, /Copy User ID/);
-  assert.match(html, /אל תשלחו סיסמה או טוקן/);
+  assert.match(html, /מצב מפתח/);
+  assert.match(html, /העתקת מזהה המשתמש/);
+  assert.match(html, /אל תשלחו סיסמה או אסימון גישה/);
   assert.match(html, /name="privacyConsent"[^>]+required/);
   assert.doesNotMatch(html, /name="age"/);
 });
@@ -65,7 +65,8 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /animations\.css\?v=3\.5\.24/);
+  assert.match(html, /animations\.css\?v=4\.0\.0/);
+  assert.match(html, /redesign\.css\?v=4\.0\.0/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
