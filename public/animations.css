@@ -85,6 +85,7 @@ body { position: relative; isolation: isolate; }
 .visible .bot-stats div:nth-child(2) i { animation-delay: .12s; }
 .visible .bot-stats div:nth-child(3) i { animation-delay: .24s; }
 .status-chip:not(.offline) i { animation: status-pulse 1.6s ease-in-out infinite; }
+.status-chip.pending i { background: #72b7ff; box-shadow: 0 0 10px rgba(114,183,255,.7); }
 @keyframes status-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes status-pulse { 50% { opacity: .45; transform: scale(.75); } }
 
@@ -251,4 +252,59 @@ body { position: relative; isolation: isolate; }
   .content-dialog > .shell { padding: 24px 14px; }
   .content-dialog .dialog-close { top: 18px; }
   .commands-dialog .public-command-grid { grid-template-columns: 1fr; }
+}
+
+/* Mobile presentation: compact, readable and free of fixed-element collisions. */
+@media (max-width: 600px) {
+  html { scroll-padding-top: 78px; }
+  .site-header {
+    top: max(8px,env(safe-area-inset-top));
+    width: calc(100% - 20px);
+    height: 58px;
+    padding-inline: 12px;
+    border-radius: 17px;
+    background: #090b11;
+    box-shadow: 0 10px 28px rgba(0,0,0,.42);
+  }
+  .site-header .identity img { width: 40px; height: 40px; border-radius: 12px; }
+  .site-header .identity b { font-size: 18px; }
+  .nav-toggle { padding: 8px; }
+  .hero { min-height: auto; padding-top: 92px; gap: 34px; }
+  .discord-card { width: 100%; overflow: hidden; border-radius: 18px; }
+  .discord-layout { height: 330px; grid-template-columns: 1fr; }
+  .discord-card .servers,
+  .discord-card .channels { display: none; }
+  .discord-card .chat-body { padding: 12px; }
+  .discord-card .media-post { width: 100%; max-width: 290px; margin: 14px auto 0; }
+  .numbers {
+    min-height: 0;
+    padding-block: 16px;
+    gap: 8px;
+    border: 0;
+  }
+  .numbers div,
+  .numbers div:nth-child(2),
+  .numbers div:last-child {
+    min-width: 0;
+    padding: 14px 8px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(17,20,29,.88);
+  }
+  .numbers strong { font-size: 25px; }
+  .numbers span { font-size: 10px; }
+  .bot-section { gap: 22px; }
+  .bot-visual { min-height: 245px; }
+  .orbit { width: 220px; height: 220px; }
+  .orbit::before { inset: 30px; }
+  .orbit::after { inset: 60px; }
+  .bot-avatar { width: 116px; height: 116px; padding: 5px; box-shadow: 0 0 38px rgba(88,101,242,.25); }
+  .bot-avatar > span { right: 8px; bottom: 7px; width: 20px; height: 20px; border-width: 4px; }
+  .status-chip { bottom: 5px; }
+  .bot-copy h2 { margin-block: 12px 16px; }
+  .bot-tools { margin-block: 18px; }
+  .bot-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .bot-stats div { min-width: 0; padding: 10px 7px; }
+  .bg-timeline,
+  .back-top { display: none; }
 }

@@ -4,7 +4,9 @@ import { logger } from '../utils/logger.js';
 
 const GUILD_ID = '1526671786387705907';
 const HEARTBEAT_URL = 'https://editil.itay-kman.workers.dev/api/heartbeat';
-const INTERVAL_MS = 30_000;
+// Cloudflare KV has a daily write allowance. Five-minute heartbeats keep the
+// status fresh without exhausting it and breaking the public status endpoint.
+const INTERVAL_MS = 5 * 60_000;
 
 const heartbeatSecret = client => crypto.createHash('sha256').update(`${client.config.bot.token}:editil-status`).digest('hex');
 

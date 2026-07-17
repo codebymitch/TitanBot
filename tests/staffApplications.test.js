@@ -65,7 +65,7 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /animations\.css\?v=3\.5\.20/);
+  assert.match(html, /animations\.css\?v=3\.5\.21/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
@@ -76,9 +76,11 @@ test('public command grid cannot create horizontal page overflow', async () => {
 });
 
 test('custom animated background stays lightweight and accessible', async () => {
-  const [html, css] = await Promise.all([
+  const [html, css, script, worker] = await Promise.all([
     readFile(new URL('../public/index.html', import.meta.url), 'utf8'),
-    readFile(new URL('../public/animations.css', import.meta.url), 'utf8')
+    readFile(new URL('../public/animations.css', import.meta.url), 'utf8'),
+    readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
+    readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
   assert.match(html, /class="editil-background"/);
   assert.match(css, /@keyframes bg-playhead/);
@@ -91,6 +93,12 @@ test('custom animated background stays lightweight and accessible', async () => 
   assert.match(css, /linear-gradient\(90deg,#fff 0%,#72b7ff 42%,#ff5db8 100%\)/);
   assert.match(css, /\.channel-browser\.tilt-card::after \{ display: none/);
   assert.match(css, /@media \(max-width: 1200px\) \{[\s\S]*?\.discord-card \.float-note \{ display: none/);
+  assert.match(css, /\.discord-card \.servers,[\s\S]*?\.discord-card \.channels \{ display: none/);
+  assert.match(css, /\.bot-visual \{ min-height: 245px/);
+  assert.match(script, /entry\.target\.textContent = '—'/);
+  assert.match(script, /const hasLiveStatus = Boolean\(data\.updatedAt\)/);
+  assert.match(script, /'המצב מתעדכן'/);
+  assert.match(worker, /MAX_STATUS_AGE_MS = 11 \* 60_000/);
 });
 
 test('public command directory starts compact and can reveal every command', async () => {

@@ -6,7 +6,7 @@ import landingCss from '../public/landing.css';
 import animationsCss from '../public/animations.css';
 
 const STATUS_KEY = 'latest';
-const MAX_STATUS_AGE_MS = 90_000;
+const MAX_STATUS_AGE_MS = 11 * 60_000;
 const STAFF_QUEUE_KEY = 'staffapp:queue';
 const STAFF_SETTINGS_KEY = 'staffapp:settings';
 
@@ -91,7 +91,7 @@ export default {
         },
         updatedAt: new Date().toISOString()
       };
-      await env.STATUS_KV.put(STATUS_KEY, JSON.stringify(safe), { expirationTtl: 3600 });
+      await env.STATUS_KV.put(STATUS_KEY, JSON.stringify(safe), { expirationTtl: 86400 });
       return json({ ok: true });
     }
 

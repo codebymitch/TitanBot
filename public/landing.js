@@ -6,7 +6,7 @@
   const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const state = { ready: false, stats: { members: 0, channels: 0, resources: 0, competitions: 0 } };
+  const state = { ready: false, stats: {} };
   $('#year').textContent = new Date().getFullYear();
 
   // Keep the RTL command catalogue anchored to the visual viewport.
@@ -48,7 +48,12 @@
   };
   const counterObserver = new IntersectionObserver(entries => entries.forEach(entry => {
     if (!entry.isIntersecting || !state.ready) return;
-    count(entry.target, Number(state.stats[entry.target.dataset.counter]) || 0);
+    const value = state.stats[entry.target.dataset.counter];
+    if (value === undefined || value === null || !Number.isFinite(Number(value))) {
+      entry.target.textContent = '—';
+    } else {
+      count(entry.target, Number(value));
+    }
     counterObserver.unobserve(entry.target);
   }), { threshold: .55 });
   $$('[data-counter]').forEach(element => counterObserver.observe(element));
@@ -57,19 +62,28 @@
   fetch('/api/status', { headers: { accept: 'application/json' } })
     .then(response => response.ok ? response.json() : Promise.reject())
     .then(data => {
+      const hasLiveStatus = Boolean(data.updatedAt);
       state.stats = { ...state.stats, ...(data.community || {}) };
       state.ready = true;
-      $$('[data-stat="members"]').forEach(element => { element.textContent = `${number(state.stats.members)}+`; });
-      $$('[data-member-copy]').forEach(element => { element.textContent = `${number(state.stats.members)} חברים בקהילה`; });
-      $('#commandCount').textContent = data.bot.commands ?? '—';
-      $('#latency').textContent = data.bot.online ? `${data.bot.latency}ms` : '—';
-      $('#serverCount').textContent = data.bot.servers ?? '—';
-      $('#botStatus').textContent = data.bot.online ? 'מחובר עכשיו' : 'לא מחובר';
-      $('.status-chip').classList.toggle('offline', !data.bot.online);
+      const hasMembers = Number.isFinite(Number(state.stats.members));
+      $$('[data-stat="members"]').forEach(element => { element.textContent = hasMembers ? `${number(state.stats.members)}+` : 'קהילה פעילה'; });
+      $$('[data-member-copy]').forEach(element => { element.textContent = hasMembers ? `${number(state.stats.members)} חברים בקהילה` : 'קהילה פעילה'; });
+      $('#commandCount').textContent = hasLiveStatus ? (data.bot.commands ?? '—') : '—';
+      $('#latency').textContent = hasLiveStatus && data.bot.online ? `${data.bot.latency}ms` : '—';
+      $('#serverCount').textContent = hasLiveStatus ? (data.bot.servers ?? '—') : '—';
+      $('#botStatus').textContent = hasLiveStatus ? (data.bot.online ? 'מחובר עכשיו' : 'לא מחובר') : 'המצב מתעדכן';
+      $('.status-chip').classList.toggle('offline', hasLiveStatus && !data.bot.online);
+      $('.status-chip').classList.toggle('pending', !hasLiveStatus);
       if (data.bot.avatar) $('#botAvatar').src = data.bot.avatar;
       $$('[data-counter]').forEach(element => { counterObserver.unobserve(element); counterObserver.observe(element); });
     })
-    .catch(() => { $('#botStatus').textContent = 'לא מחובר'; $('.status-chip').classList.add('offline'); });
+    .catch(() => {
+      $('#botStatus').textContent = 'המצב מתעדכן';
+      $('.status-chip').classList.remove('offline');
+      $('.status-chip').classList.add('pending');
+      state.ready = true;
+      $$('[data-counter]').forEach(element => { counterObserver.unobserve(element); counterObserver.observe(element); });
+    });
 
   // Channel tabs.
   $$('.channel-tabs button').forEach(button => button.addEventListener('click', () => {
