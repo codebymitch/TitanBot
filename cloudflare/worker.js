@@ -33,7 +33,7 @@ const legalResponse = (body, contentType) => new Response(body, {
 const siteResponse = (body, contentType) => new Response(body, {
   headers: {
     'content-type': `${contentType}; charset=utf-8`,
-    'cache-control': 'public, max-age=300',
+    'cache-control': 'no-cache',
     'content-security-policy': "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://cdn.discordapp.com https://i.ytimg.com data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
     'referrer-policy': 'strict-origin-when-cross-origin',
     'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=()',

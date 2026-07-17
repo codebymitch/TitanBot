@@ -9,6 +9,18 @@
   const state = { ready: false, stats: { members: 0, channels: 0, resources: 0, competitions: 0 } };
   $('#year').textContent = new Date().getFullYear();
 
+  // Keep the RTL command catalogue anchored to the visual viewport.
+  const containCommandLayout = () => {
+    const shell = $('.commands-section > .shell');
+    if (!shell) return;
+    shell.style.insetInline = '0';
+    shell.style.marginInline = 'auto';
+    shell.style.translate = 'none';
+    shell.style.transform = 'none';
+  };
+  containCommandLayout();
+  addEventListener('resize', containCommandLayout, { passive: true });
+
   // One-time section reveals and staggered groups.
   $$('.bento-card, .bot-tools span, .bot-stats div, .public-command-grid article').forEach((item, index) => {
     item.classList.add('stagger-item');
