@@ -52,8 +52,8 @@ test('website editing tutorials are privacy enhanced and click to load', async (
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /data-youtube="hb2bbfiNBXA"/);
-  assert.match(html, /data-youtube="VUMVsGm0xOE"/);
+  assert.match(html, /data-youtube="vjcAwHrAkAM"/);
+  assert.match(html, /data-youtube="4uaBMwsMwIY"/);
   assert.match(script, /youtube-nocookie\.com\/embed/);
   assert.match(worker, /frame-src https:\/\/www\.youtube-nocookie\.com/);
 });
