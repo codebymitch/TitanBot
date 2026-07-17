@@ -171,9 +171,26 @@ html, body { width: 100%; max-width: 100%; overflow-x: clip; }
 .staff-application-dialog::backdrop { background: rgba(3,5,10,.82); }
 .staff-application-dialog .staff-application-form { opacity: 1; transform: none; border: 0; box-shadow: none; }
 .dialog-close { position: sticky; z-index: 4; top: 12px; float: left; width: 38px; height: 38px; margin: 12px 0 -50px 12px; border: 1px solid var(--line); border-radius: 11px; background: #1d202b; color: #fff; font-size: 24px; cursor: pointer; }
+.compact-host { padding-block: 10px; }
+.compact-panel { width: min(calc(100% - 40px),var(--shell)); margin-inline: auto; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg,rgba(24,28,42,.96),rgba(12,14,21,.96)); overflow: clip; }
+.compact-panel > summary { min-height: 86px; padding: 16px 22px; display: grid; grid-template-columns: 46px 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 15px; cursor: pointer; list-style: none; }
+.compact-panel > summary::-webkit-details-marker { display: none; }
+.compact-panel > summary > span { grid-row: 1/3; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 13px; background: rgba(88,101,242,.15); font-size: 20px; }
+.compact-panel > summary b { align-self: end; font-size: 18px; }
+.compact-panel > summary small { align-self: start; color: var(--muted); }
+.compact-panel > summary i { grid-column: 3; grid-row: 1/3; font-style: normal; font-size: 24px; transition: transform .2s ease; }
+.compact-panel[open] > summary { border-bottom: 1px solid var(--line); }
+.compact-panel[open] > summary i { transform: rotate(45deg); }
+.compact-panel > .shell, .compact-panel > .faq { margin-block: 0; padding-block: 52px; }
+.compact-panel .section-title { margin-top: 0; }
 @media (max-width: 600px) {
   .hero { min-height: 600px; }
   .section { padding-block: 48px; }
   .section-title { margin-bottom: 26px; }
   .staff-application-copy ul { display: grid; }
+  .compact-panel { width: calc(100% - 24px); }
+  .compact-panel > summary { min-height: 76px; padding: 12px 15px; grid-template-columns: 42px 1fr auto; column-gap: 10px; }
+  .compact-panel > summary b { font-size: 15px; }
+  .compact-panel > summary small { font-size: 10px; }
+  .compact-panel > .shell, .compact-panel > .faq { padding-block: 38px; }
 }

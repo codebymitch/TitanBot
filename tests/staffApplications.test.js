@@ -65,7 +65,7 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /animations\.css\?v=3\.5\.14/);
+  assert.match(html, /animations\.css\?v=3\.5\.15/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
@@ -88,6 +88,9 @@ test('public command directory starts compact and can reveal every command', asy
   assert.match(css, /\.section \{ padding-block: 62px; \}/);
   assert.match(html, /<dialog class="staff-application-dialog" id="staffApplicationDialog">/);
   assert.match(script, /staffDialog\.showModal\(\)/);
+  assert.equal((html.match(/<details class="compact-panel">/g) || []).length, 4);
+  assert.match(script, /\$\$\('\.compact-panel'\)/);
+  assert.match(css, /\.compact-host \{ padding-block: 10px; \}/);
 });
 
 test('worker protects bot polling and rate limits public submissions', async () => {
