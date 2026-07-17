@@ -1,6 +1,17 @@
 /* EditIL interaction and motion layer. Content remains visible without JavaScript. */
 html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+:root { --brand: #2f80ff; --cyan: #72b7ff; --purple: #ff4fae; --pink: #ff83ca; --text: #ffffff; }
 body { position: relative; isolation: isolate; }
+.scroll-progress { background: linear-gradient(90deg,#2f80ff,#fff,#ff4fae); }
+.btn.primary { background: linear-gradient(135deg,#2578ff 0%,#5a9dff 48%,#ff4fae 100%); box-shadow: 0 14px 34px rgba(47,128,255,.23),0 8px 28px rgba(255,79,174,.13); }
+.hero h1 em,.section-title em,.channel-copy em,.bot-copy em,.cta em { background: linear-gradient(90deg,#fff 0%,#72b7ff 42%,#ff5db8 100%); background-clip: text; -webkit-background-clip: text; }
+.bot-avatar { background: linear-gradient(135deg,#fff,#3f8eff 45%,#ff58b4); box-shadow: 0 0 56px rgba(47,128,255,.24),0 0 38px rgba(255,79,174,.12); }
+.tutorial-play { background: linear-gradient(135deg,#2f80ff,#ff4fae); }
+.command-filters button.active { background: linear-gradient(135deg,#2f80ff,#ff4fae); }
+.compact-launch:hover,.compact-panel:hover { border-color: rgba(255,79,174,.42); }
+.compact-launch > span,.compact-panel > summary > span,.dialog-heading > span { background: linear-gradient(135deg,rgba(47,128,255,.2),rgba(255,79,174,.16)); }
+.bento-card:hover,.public-command-grid article:hover { border-color: rgba(255,79,174,.48); }
+.live-label i,.status-chip i,.channel-browser header span i { background: #72b7ff; box-shadow: 0 0 12px #72b7ff; }
 .editil-background { position: fixed; z-index: -2; inset: 0; overflow: hidden; pointer-events: none; background: radial-gradient(circle at 50% -15%,rgba(42,116,255,.13),transparent 42%),linear-gradient(180deg,#080b13,#090b11 55%,#0c0911); }
 .editil-background::before { content: ""; position: absolute; inset: 0; opacity: .16; background-image: linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px); background-size: 72px 72px; mask-image: linear-gradient(to bottom,black,transparent 72%); }
 .editil-background::after { content: ""; position: absolute; width: 38vw; height: 1px; top: 24%; right: 8%; background: linear-gradient(90deg,transparent,#fff 46%,#5ca8ff 62%,transparent); opacity: .22; transform: rotate(-12deg); }
