@@ -92,10 +92,10 @@
   // The hero editing stage is intentionally click-driven so it stays lightweight.
   const stage = $('.editor-stage');
   const stagePlay = $('.stage-play');
-  if (stage && stagePlay) stagePlay.addEventListener('click', () => {
-    const playing = stage.classList.toggle('is-playing');
-    stagePlay.textContent = playing ? '❚❚' : '▶';
-    stagePlay.setAttribute('aria-label', playing ? 'עצירת תצוגת ההדגמה' : 'הפעלת תצוגת ההדגמה');
+  const stageVideo = $('.stage-video');
+  if (stage && stagePlay && stageVideo) stagePlay.addEventListener('click', async () => {
+    stage.classList.add('video-open');
+    try { await stageVideo.play(); } catch { stageVideo.controls = true; }
   });
 
   // Channel tabs.

@@ -71,8 +71,8 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-    assert.match(html, /animations\.css\?v=4\.1\.0/);
-    assert.match(html, /redesign\.css\?v=4\.1\.0/);
+    assert.match(html, /animations\.css\?v=4\.1\.2/);
+    assert.match(html, /redesign\.css\?v=4\.1\.2/);
     assert.match(html, /class="editor-stage/);
     assert.match(html, /class="creative-ticker"/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
@@ -117,6 +117,18 @@ test('custom animated background stays lightweight and accessible', async () => 
   assert.match(css, /\[hidden\] \{ display: none !important; \}/);
   assert.match(html, /class="status-chip" hidden/);
   assert.match(script, /\.status-chip'\)\.hidden = !hasLiveStatus/);
+});
+
+test('hero editor stage plays the optimized EditIL site tour', async () => {
+  const [html, script] = await Promise.all([
+    readFile(new URL('../public/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../public/landing.js', import.meta.url), 'utf8')
+  ]);
+  assert.match(html, /class="stage-video"/);
+  assert.match(html, /editil-site-tour\.mp4/);
+  assert.match(html, /editil-site-tour\.webp/);
+  assert.match(script, /stageVideo\.play\(\)/);
+  assert.match(script, /video-open/);
 });
 
 test('public command directory starts compact and can reveal every command', async () => {

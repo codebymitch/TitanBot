@@ -1,11 +1,11 @@
 export const DEFAULT_UPDATE_CHANNEL_ID = '1527004410536923357';
 
 export const DEFAULT_UPDATE_CONTENT = Object.freeze({
-  version: '4.1.1',
+  version: '4.1.2',
   title: '🤖 עדכון חדש ל־EditIL Assistant',
   newFeatures: [],
   fixes: [],
-  improvements: ['נוסף לאתר מרכז משפטי מלא בעברית הכולל תנאי שימוש, מדיניות פרטיות ומדיניות אבטחה עם הנחיות לדיווח אחראי על חולשות'],
+  improvements: ['כפתור ההפעלה בבמת העריכה באתר מנגן כעת סיור וידאו אמיתי באתר EditIL, עם נגן מלא וקובץ מותאם לטעינה מהירה'],
   changelogUrl: null,
   imageUrl: null
 });
