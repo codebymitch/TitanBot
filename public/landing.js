@@ -118,7 +118,7 @@
       stage.classList.add('film-finished');
       stagePlay.textContent = '↻';
       stagePlay.setAttribute('aria-label', 'ניגון חוזר של אנימציית האתר');
-    }, 18000);
+    }, 20000);
   });
 
   // Channel tabs.

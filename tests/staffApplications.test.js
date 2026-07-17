@@ -71,8 +71,8 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-    assert.match(html, /animations\.css\?v=4\.1\.4/);
-    assert.match(html, /redesign\.css\?v=4\.1\.4/);
+    assert.match(html, /animations\.css\?v=4\.2\.0/);
+    assert.match(html, /redesign\.css\?v=4\.2\.0/);
     assert.match(html, /class="editor-stage/);
     assert.match(html, /class="creative-ticker"/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
@@ -128,10 +128,13 @@ test('hero editor stage plays a custom EditIL animation without a personal recor
   assert.match(html, /film-community/);
   assert.match(html, /film-bot/);
   assert.match(html, /film-finale/);
+  assert.match(html, /film-mini-browser/);
+  assert.match(html, /film-messages/);
+  assert.match(html, /film-progress/);
   assert.match(html, /film-bot-avatar"><img/);
   assert.doesNotMatch(html, /editil-site-tour\.mp4/);
   assert.match(script, /film-finished/);
-  assert.match(script, /18000/);
+  assert.match(script, /20000/);
 });
 
 test('public command directory starts compact and can reveal every command', async () => {
