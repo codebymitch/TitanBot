@@ -92,10 +92,33 @@
   // The hero editing stage is intentionally click-driven so it stays lightweight.
   const stage = $('.editor-stage');
   const stagePlay = $('.stage-play');
-  const stageVideo = $('.stage-video');
-  if (stage && stagePlay && stageVideo) stagePlay.addEventListener('click', async () => {
-    stage.classList.add('video-open');
-    try { await stageVideo.play(); } catch { stageVideo.controls = true; }
+  let stageTimer;
+  if (stage && stagePlay) stagePlay.addEventListener('click', () => {
+    if (stage.classList.contains('is-playing')) {
+      stage.classList.remove('is-playing');
+      stage.classList.add('is-paused');
+      stagePlay.textContent = '▶';
+      stagePlay.setAttribute('aria-label', 'המשך אנימציית האתר');
+      clearTimeout(stageTimer);
+      return;
+    }
+    if (!stage.classList.contains('is-paused')) {
+      stage.classList.remove('film-active');
+      stage.classList.remove('film-finished');
+      void stage.offsetWidth;
+      stage.classList.add('film-active');
+    }
+    stage.classList.remove('is-paused');
+    stage.classList.add('is-playing');
+    stagePlay.textContent = '❚❚';
+    stagePlay.setAttribute('aria-label', 'השהיית אנימציית האתר');
+    stageTimer = setTimeout(() => {
+      stage.classList.remove('is-playing');
+      stage.classList.remove('film-active');
+      stage.classList.add('film-finished');
+      stagePlay.textContent = '↻';
+      stagePlay.setAttribute('aria-label', 'ניגון חוזר של אנימציית האתר');
+    }, 18000);
   });
 
   // Channel tabs.
