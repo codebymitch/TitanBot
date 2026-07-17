@@ -65,7 +65,7 @@ test('public command grid cannot create horizontal page overflow', async () => {
     readFile(new URL('../public/landing.js', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/worker.js', import.meta.url), 'utf8')
   ]);
-  assert.match(html, /animations\.css\?v=3\.5\.19/);
+  assert.match(html, /animations\.css\?v=3\.5\.20/);
   assert.match(css, /html, body \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section \{[^}]*overflow-x: clip/);
   assert.match(css, /\.commands-section > \.shell \{[^}]*margin-right: auto; margin-left: auto/);
@@ -89,6 +89,8 @@ test('custom animated background stays lightweight and accessible', async () => 
   assert.match(css, /--brand: #2f80ff/);
   assert.match(css, /--purple: #ff4fae/);
   assert.match(css, /linear-gradient\(90deg,#fff 0%,#72b7ff 42%,#ff5db8 100%\)/);
+  assert.match(css, /\.channel-browser\.tilt-card::after \{ display: none/);
+  assert.match(css, /@media \(max-width: 1200px\) \{[\s\S]*?\.discord-card \.float-note \{ display: none/);
 });
 
 test('public command directory starts compact and can reveal every command', async () => {

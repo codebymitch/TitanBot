@@ -188,6 +188,22 @@ body { position: relative; isolation: isolate; }
 .bento-card { min-height: 220px; padding: 22px; }
 .showcase-card { min-height: 330px; }
 .channel-browser, .bot-visual { min-height: 390px; }
+.discord-card { isolation: isolate; }
+.channel-browser { position: relative; isolation: isolate; direction: rtl; text-align: right; }
+.channel-browser.tilt-card::after { display: none; }
+.discord-card .channels,
+.discord-card .chat { direction: rtl; text-align: right; }
+.discord-card .chat > header { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.discord-card .chat > header b { flex: 0 0 auto; white-space: nowrap; }
+.discord-card .chat > header span { min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discord-card .chat article { direction: rtl; }
+.discord-card .chat article > div { min-width: 0; }
+.discord-card .chat article p { overflow-wrap: anywhere; }
+.discord-card .media-post { margin-inline: 0 40px; }
+
+@media (max-width: 1200px) {
+  .discord-card .float-note { display: none; }
+}
 .public-command-grid article { min-height: 132px; padding: 16px; }
 .cta { min-height: 310px; margin-bottom: 55px; }
 .staff-application-grid { display: block; }
