@@ -41,9 +41,9 @@ const secureAsset = async (request, env) => {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === '/legal/privacy-notice-v1') return legalResponse(privacyHtml, 'text/html');
-    if (url.pathname === '/legal/terms-of-use-v1') return legalResponse(termsHtml, 'text/html');
-    if (url.pathname === '/legal/legal-notice-v1.css') return legalResponse(legalCss, 'text/css');
+    if (['/legal/privacy-notice-v1', '/privacy-policy.html', '/privacy.html', '/privacy'].includes(url.pathname)) return legalResponse(privacyHtml, 'text/html');
+    if (['/legal/terms-of-use-v1', '/terms-of-use.html', '/terms.html', '/terms'].includes(url.pathname)) return legalResponse(termsHtml, 'text/html');
+    if (['/legal/legal-notice-v1.css', '/legal-v1.css', '/legal.css'].includes(url.pathname)) return legalResponse(legalCss, 'text/css');
 
     if (url.pathname === '/api/status' && request.method === 'GET') {
       const saved = await env.STATUS_KV.get(STATUS_KEY, 'json');
