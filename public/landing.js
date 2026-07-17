@@ -74,6 +74,7 @@
       $('#botStatus').textContent = hasLiveStatus ? (data.bot.online ? 'מחובר עכשיו' : 'לא מחובר') : 'המצב מתעדכן';
       $('.status-chip').classList.toggle('offline', hasLiveStatus && !data.bot.online);
       $('.status-chip').classList.toggle('pending', !hasLiveStatus);
+      $('.bot-stats').hidden = !hasLiveStatus;
       if (data.bot.avatar) $('#botAvatar').src = data.bot.avatar;
       $$('[data-counter]').forEach(element => { counterObserver.unobserve(element); counterObserver.observe(element); });
     })

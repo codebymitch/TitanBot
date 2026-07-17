@@ -65,7 +65,21 @@ export default {
 
     if (url.pathname === '/api/status' && request.method === 'GET') {
       const saved = await env.STATUS_KV.get(STATUS_KEY, 'json');
-      if (!saved) return json({ bot: { online: false }, community: {} });
+      if (!saved) {
+        const invite = await fetch('https://discord.com/api/v10/invites/6Hu8xpTYqQ?with_counts=true', {
+          headers: { accept: 'application/json', 'user-agent': 'EditIL-Website/1.0' }
+        }).then(response => response.ok ? response.json() : null).catch(() => null);
+        return json({
+          bot: { online: false },
+          community: {
+            members: Number(invite?.approximate_member_count) || 31,
+            channels: 62,
+            resources: 4,
+            competitions: 0
+          },
+          fallback: true
+        });
+      }
       const online = Date.now() - new Date(saved.updatedAt).getTime() <= MAX_STATUS_AGE_MS;
       return json({ ...saved, bot: { ...saved.bot, online } });
     }
