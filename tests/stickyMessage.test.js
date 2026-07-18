@@ -98,3 +98,30 @@ test('sticky refreshes immediately on every fifth user message', async () => {
   assert.equal(sent.length, 1);
   assert.equal((await getStickyMessage(client, 'guild-1', 'channel-1')).messagesSinceLastPost, 0);
 });
+
+test('simultaneous messages are serialized and create only one sticky copy', async () => {
+  const client = memoryClient();
+  client.user = { id: 'bot-1' };
+  const sent = [];
+  const channel = {
+    id: 'channel-race',
+    guildId: 'guild-1',
+    isTextBased: () => true,
+    messages: { fetch: async () => null },
+    send: async payload => {
+      sent.push(payload);
+      return { id: `sticky-${sent.length}` };
+    },
+  };
+  await saveStickyMessage(client, 'guild-1', channel.id, {
+    content: 'Sticky',
+    lastMessageId: null,
+    messagesSinceLastPost: 0,
+  });
+  const message = { client, guild: { id: 'guild-1' }, channel };
+
+  await Promise.all(Array.from({ length: STICKY_MESSAGE_INTERVAL }, () => scheduleStickyRefresh(message)));
+
+  assert.equal(sent.length, 1);
+  assert.equal((await getStickyMessage(client, 'guild-1', channel.id)).messagesSinceLastPost, 0);
+});
