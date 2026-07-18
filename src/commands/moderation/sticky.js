@@ -74,6 +74,7 @@ export default {
     const sticky = {
       content: interaction.options.getString('message', true),
       lastMessageId: previous?.lastMessageId || null,
+      messagesSinceLastPost: 0,
       updatedBy: interaction.user.id,
       updatedAt: Date.now(),
     };

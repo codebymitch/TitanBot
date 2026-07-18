@@ -7,6 +7,8 @@ import {
   publishStickyMessage,
   removeStickyMessage,
   saveStickyMessage,
+  scheduleStickyRefresh,
+  STICKY_MESSAGE_INTERVAL,
 } from '../src/services/stickyMessageService.js';
 
 function memoryClient() {
@@ -66,4 +68,33 @@ test('sticky messages persist, replace the previous bot message and disable ment
   const removed = await removeStickyMessage(client, 'guild-1', 'channel-1');
   assert.equal(removed.content, 'Please read @everyone');
   assert.equal(await getStickyMessage(client, 'guild-1', 'channel-1'), null);
+});
+
+test('sticky refreshes immediately on every fifth user message', async () => {
+  const client = memoryClient();
+  const sent = [];
+  const channel = {
+    id: 'channel-1',
+    guildId: 'guild-1',
+    isTextBased: () => true,
+    messages: { fetch: async () => null },
+    send: async payload => {
+      sent.push(payload);
+      return { id: `sticky-${sent.length}` };
+    },
+  };
+  await saveStickyMessage(client, 'guild-1', 'channel-1', {
+    content: 'Sticky',
+    lastMessageId: 'initial-sticky',
+    messagesSinceLastPost: 0,
+  });
+  const message = { client, guild: { id: 'guild-1' }, channel };
+
+  for (let index = 1; index < STICKY_MESSAGE_INTERVAL; index += 1) {
+    assert.equal(await scheduleStickyRefresh(message), false);
+  }
+  assert.equal(sent.length, 0);
+  assert.equal(await scheduleStickyRefresh(message), true);
+  assert.equal(sent.length, 1);
+  assert.equal((await getStickyMessage(client, 'guild-1', 'channel-1')).messagesSinceLastPost, 0);
 });

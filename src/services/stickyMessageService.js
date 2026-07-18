@@ -1,8 +1,7 @@
 import { createEmbed } from '../utils/embeds.js';
 import logger from '../utils/logger.js';
 
-export const STICKY_REFRESH_DELAY_MS = 3000;
-const timers = new Map();
+export const STICKY_MESSAGE_INTERVAL = 5;
 const stickyKey = (guildId, channelId) => `guild:${guildId}:sticky:${channelId}`;
 
 export async function getStickyMessage(client, guildId, channelId) {
@@ -41,7 +40,12 @@ export async function publishStickyMessage(client, channel, sticky) {
     })],
     allowedMentions: { parse: [], users: [], roles: [] },
   });
-  const updated = { ...sticky, lastMessageId: message.id, lastPublishedAt: Date.now() };
+  const updated = {
+    ...sticky,
+    lastMessageId: message.id,
+    lastPublishedAt: Date.now(),
+    messagesSinceLastPost: 0,
+  };
   await saveStickyMessage(client, channel.guildId, channel.id, updated);
   return message;
 }
@@ -50,22 +54,25 @@ export async function scheduleStickyRefresh(message) {
   const sticky = await getStickyMessage(message.client, message.guild.id, message.channel.id);
   if (!sticky?.content || !message.channel.isTextBased()) return false;
 
-  const timerKey = `${message.guild.id}:${message.channel.id}`;
-  clearTimeout(timers.get(timerKey));
-  const timer = setTimeout(async () => {
-    timers.delete(timerKey);
-    try {
-      const latest = await getStickyMessage(message.client, message.guild.id, message.channel.id);
-      if (latest?.content) await publishStickyMessage(message.client, message.channel, latest);
-    } catch (error) {
-      logger.error('Failed to refresh sticky message', {
-        guildId: message.guild.id,
-        channelId: message.channel.id,
-        error: error.stack || error.message,
-      });
-    }
-  }, STICKY_REFRESH_DELAY_MS);
-  timer.unref?.();
-  timers.set(timerKey, timer);
-  return true;
+  const updated = {
+    ...sticky,
+    messagesSinceLastPost: (sticky.messagesSinceLastPost || 0) + 1,
+  };
+  if (updated.messagesSinceLastPost < STICKY_MESSAGE_INTERVAL) {
+    await saveStickyMessage(message.client, message.guild.id, message.channel.id, updated);
+    return false;
+  }
+
+  try {
+    await publishStickyMessage(message.client, message.channel, updated);
+    return true;
+  } catch (error) {
+    logger.error('Failed to refresh sticky message', {
+      guildId: message.guild.id,
+      channelId: message.channel.id,
+      error: error.stack || error.message,
+    });
+    await saveStickyMessage(message.client, message.guild.id, message.channel.id, updated);
+    return false;
+  }
 }
