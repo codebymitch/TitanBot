@@ -1,11 +1,11 @@
 export const DEFAULT_UPDATE_CHANNEL_ID = '1527004410536923357';
 
 export const DEFAULT_UPDATE_CONTENT = Object.freeze({
-  version: '4.3.2',
+  version: '4.3.3',
   title: '🤖 עדכון חדש ל־EditIL Assistant',
   newFeatures: [],
   fixes: [],
-  improvements: ['נוספה פקודת `/say` מאובטחת לבעל הבוט, המאפשרת לשלוח הודעה בערוץ הנוכחי בשם EditIL Assistant ללא תיוגים לא רצויים'],
+  improvements: ['נוספה מערכת הודעות מוצמדות עם `/sticky set`, ‏`/sticky view` ו־`/sticky remove`, כולל שמירה קבועה והקפצה אוטומטית לתחתית הערוץ'],
   changelogUrl: null,
   imageUrl: null
 });

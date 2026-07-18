@@ -4,12 +4,14 @@ import { createEmbed } from '../utils/embeds.js';
 import { handleOwnerInboxReply } from '../services/ownerInboxService.js';
 import { clampCommunityXp, communityLevelFromXp, MAX_LEVEL } from '../utils/levelLimits.js';
 import logger from '../utils/logger.js';
+import { scheduleStickyRefresh } from '../services/stickyMessageService.js';
 
 export const LEVEL_UP_CHANNEL_ID = '1527004187093762159';
 
 export default { name: Events.MessageCreate, async execute(message) {
   if (!message.author.bot && await handleOwnerInboxReply(message)) return;
   if (!message.guild || message.author.bot || message.webhookId) return;
+  await scheduleStickyRefresh(message);
 
   // Normal messages are used for leveling only. The logging handler records
   // message edits and deletions, so the log channel is not flooded by chat.
