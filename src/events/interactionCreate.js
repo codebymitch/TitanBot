@@ -2,6 +2,7 @@ import { Events, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { createEmbed } from '../utils/embeds.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
+import { enforceCommandChannel } from '../services/commandChannelPolicy.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -10,6 +11,7 @@ export default {
       if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
         if (!command) throw new Error(`Unknown command: ${interaction.commandName}`);
+        if (!await enforceCommandChannel(interaction, command, client)) return;
         await command.execute(interaction, client);
         return;
       }

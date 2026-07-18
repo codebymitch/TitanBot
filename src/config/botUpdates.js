@@ -1,10 +1,10 @@
 export const DEFAULT_UPDATE_CHANNEL_ID = '1527004410536923357';
 
 export const DEFAULT_UPDATE_CONTENT = Object.freeze({
-  version: '4.3.5',
+  version: '4.4.0',
   title: '🤖 עדכון חדש ל־EditIL Assistant',
-  newFeatures: [],
-  fixes: ['תוקנה כפילות של הודעות מוצמדות כאשר כמה הודעות נשלחות במהירות; העיבוד מסודר כעת לפי ערוץ ועותקים ישנים מנוקים אוטומטית'],
+  newFeatures: ['נוספה מערכת ערוצים ייעודיים לפקודות: כל משתמש שאינו בעל הבוט מופנה אוטומטית לערוץ המתאים לפי סוג הפקודה'],
+  fixes: [],
   improvements: [],
   changelogUrl: null,
   imageUrl: null
