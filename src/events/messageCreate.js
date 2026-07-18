@@ -3,6 +3,9 @@ import { getConfig, levelKey } from '../modules/community/store.js';
 import { createEmbed } from '../utils/embeds.js';
 import { handleOwnerInboxReply } from '../services/ownerInboxService.js';
 import { clampCommunityXp, communityLevelFromXp, MAX_LEVEL } from '../utils/levelLimits.js';
+import logger from '../utils/logger.js';
+
+export const LEVEL_UP_CHANNEL_ID = '1527004187093762159';
 
 export default { name: Events.MessageCreate, async execute(message) {
   if (!message.author.bot && await handleOwnerInboxReply(message)) return;
@@ -26,11 +29,26 @@ export default { name: Events.MessageCreate, async execute(message) {
   await message.client.db.set(id, user);
 
   if (changed) {
-    const channel = message.guild.channels.cache.get(config.leveling.announceChannelId) || message.channel;
-    await channel.send({ embeds: [createEmbed({
-      title: 'עלית רמה!',
-      description: `${message.author}, הגעת לרמה **${level}**.`,
-      color: 'success',
-    })] });
+    const channel = message.guild.channels.cache.get(LEVEL_UP_CHANNEL_ID)
+      || await message.guild.channels.fetch(LEVEL_UP_CHANNEL_ID).catch(() => null);
+
+    if (!channel?.isTextBased()) {
+      logger.warn('Level-up announcement channel is unavailable', {
+        guildId: message.guild.id,
+        channelId: LEVEL_UP_CHANNEL_ID,
+        userId: message.author.id,
+      });
+      return;
+    }
+
+    await channel.send({
+      content: message.author.toString(),
+      embeds: [createEmbed({
+        title: 'עלית רמה!',
+        description: `${message.author}, הגעת לרמה **${level}**.`,
+        color: 'success',
+      })],
+      allowedMentions: { users: [message.author.id], parse: [] },
+    });
   }
 } };
