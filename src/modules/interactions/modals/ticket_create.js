@@ -1,5 +1,149 @@
 import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { getConfig, updateConfig, ticketKey } from '../../community/store.js';
-import { normalizeTicket, safeChannelName, saveTicket, ticketMessagePayload, TICKET_TYPES } from '../../../services/ticketSystemService.js';
-import { logEvent, EVENT_TYPES } from '../../../services/loggingService.js';
-export default{name:'ticket_create',async execute(i,client,args){const[type,panelId]=args,config=await getConfig(client,i.guildId),category=i.guild.channels.cache.get(config.tickets.categoryId),support=i.guild.roles.cache.get(config.tickets.supportRoleId);if(!config.tickets.enabled||category?.type!==ChannelType.GuildCategory||!support)return i.reply({content:'מערכת הכרטיסים עדיין לא הוגדרה.',flags:MessageFlags.Ephemeral});if(!i.guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels))return i.reply({content:'לבוט חסרות הרשאות לניהול ערוץ הכרטיס.',flags:MessageFlags.Ephemeral});const keys=await client.db.list(`community:${i.guildId}:ticket:`),open=[];for(const key of keys){const ticket=await client.db.get(key);if((ticket.creatorId||ticket.ownerId)===i.user.id&&!['closed','closing'].includes(ticket.status||'open'))open.push(ticket);}if(open.length>=config.tickets.maxOpenPerUser)return i.reply({content:'הגעת למספר הכרטיסים הפתוחים המותר.',flags:MessageFlags.Ephemeral});if(!config.tickets.allowDuplicateTypes&&open.some(ticket=>(ticket.type||'general')===type))return i.reply({content:'כבר יש לך כרטיס פתוח מהסוג הזה.',flags:MessageFlags.Ephemeral});const id=String(config.tickets.nextNumber),definition=TICKET_TYPES[type]||TICKET_TYPES.general,get=id=>{try{return i.fields.getTextInputValue(id)?.trim()||null}catch{return null}},title=get('title'),description=get('description');const channel=await i.guild.channels.create({name:safeChannelName(i.user.username,id,definition.prefix),type:ChannelType.GuildText,parent:category,reason:`Ticket #${id} by ${i.user.tag}`,permissionOverwrites:[{id:i.guild.id,deny:[PermissionFlagsBits.ViewChannel]},{id:i.user.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.AttachFiles,PermissionFlagsBits.EmbedLinks,PermissionFlagsBits.ReadMessageHistory,PermissionFlagsBits.AddReactions]},{id:support.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.AttachFiles,PermissionFlagsBits.EmbedLinks,PermissionFlagsBits.ReadMessageHistory,PermissionFlagsBits.ManageMessages]},{id:i.guild.members.me.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ManageChannels,PermissionFlagsBits.ManageMessages,PermissionFlagsBits.ReadMessageHistory]}]});const ticket=normalizeTicket({id,guildId:i.guildId,channelId:channel.id,creatorId:i.user.id,type,title,description,software:get('software'),budget:get('budget'),evidence:get('evidence'),supportRoleId:support.id,panelId,status:'open',priority:'normal',createdAt:Date.now()});const message=await channel.send({content:`${i.user} <@&${support.id}>`,allowedMentions:{parse:[],roles:[support.id],users:[]},...ticketMessagePayload(ticket)});ticket.openingMessageId=message.id;await saveTicket(client,ticket);await updateConfig(client,i.guildId,{tickets:{nextNumber:Number(id)+1}});await logEvent({client,guildId:i.guildId,eventType:EVENT_TYPES.TICKET_CREATE,data:{title:`כרטיס #${id} נוצר`,description:`נוצר על ידי ${i.user} ב־${channel}.`}});return i.reply({content:`הכרטיס נפתח בהצלחה: ${channel}`,flags:MessageFlags.Ephemeral});}};
+import { getConfig, updateConfig } from '../../community/store.js';
+import {
+  normalizeTicket,
+  resolveTicketPingRoleIds,
+  safeChannelName,
+  saveTicket,
+  ticketMessagePayload,
+  TICKET_TYPES,
+} from '../../../services/ticketSystemService.js';
+import { EVENT_TYPES, logEvent } from '../../../services/loggingService.js';
+
+export default {
+  name: 'ticket_create',
+  async execute(i, client, args) {
+    const [type, panelId] = args;
+    const config = await getConfig(client, i.guildId);
+    const category = i.guild.channels.cache.get(config.tickets.categoryId);
+    const support = i.guild.roles.cache.get(config.tickets.supportRoleId);
+    if (!config.tickets.enabled || category?.type !== ChannelType.GuildCategory || !support) {
+      return i.reply({
+        content: 'מערכת הכרטיסים עדיין לא הוגדרה.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+    if (!i.guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels)) {
+      return i.reply({
+        content: 'לבוט חסרות הרשאות לניהול ערוץ הכרטיס.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const keys = await client.db.list(`community:${i.guildId}:ticket:`);
+    const open = [];
+    for (const key of keys) {
+      const ticket = await client.db.get(key);
+      if ((ticket.creatorId || ticket.ownerId) === i.user.id
+        && !['closed', 'closing'].includes(ticket.status || 'open')) open.push(ticket);
+    }
+    if (open.length >= config.tickets.maxOpenPerUser) {
+      return i.reply({
+        content: 'הגעת למספר הכרטיסים הפתוחים המותר.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+    if (!config.tickets.allowDuplicateTypes
+      && open.some(ticket => (ticket.type || 'general') === type)) {
+      return i.reply({
+        content: 'כבר יש לך כרטיס פתוח מהסוג הזה.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const id = String(config.tickets.nextNumber);
+    const definition = TICKET_TYPES[type] || TICKET_TYPES.general;
+    const get = fieldId => {
+      try {
+        return i.fields.getTextInputValue(fieldId)?.trim() || null;
+      } catch {
+        return null;
+      }
+    };
+    const pingRoleIds = resolveTicketPingRoleIds(config)
+      .filter(roleId => i.guild.roles.cache.has(roleId));
+    const channel = await i.guild.channels.create({
+      name: safeChannelName(i.user.username, id, definition.prefix),
+      type: ChannelType.GuildText,
+      parent: category,
+      reason: `Ticket #${id} by ${i.user.tag}`,
+      permissionOverwrites: [
+        { id: i.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+        {
+          id: i.user.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.AttachFiles,
+            PermissionFlagsBits.EmbedLinks,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.AddReactions,
+          ],
+        },
+        {
+          id: support.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.AttachFiles,
+            PermissionFlagsBits.EmbedLinks,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.ManageMessages,
+          ],
+        },
+        {
+          id: i.guild.members.me.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ManageChannels,
+            PermissionFlagsBits.ManageMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+          ],
+        },
+      ],
+    });
+    const ticket = normalizeTicket({
+      id,
+      guildId: i.guildId,
+      channelId: channel.id,
+      creatorId: i.user.id,
+      type,
+      title: get('title'),
+      description: get('description'),
+      software: get('software'),
+      budget: get('budget'),
+      evidence: get('evidence'),
+      supportRoleId: support.id,
+      pingRoleIds,
+      panelId,
+      status: 'open',
+      priority: 'normal',
+      createdAt: Date.now(),
+    });
+    const mentions = pingRoleIds.map(roleId => `<@&${roleId}>`).join(' ');
+    const message = await channel.send({
+      content: `${i.user}${mentions ? ` ${mentions}` : ''}`,
+      allowedMentions: { parse: [], roles: pingRoleIds, users: [] },
+      ...ticketMessagePayload(ticket),
+    });
+    ticket.openingMessageId = message.id;
+    await saveTicket(client, ticket);
+    await updateConfig(client, i.guildId, {
+      tickets: { nextNumber: Number(id) + 1 },
+    });
+    await logEvent({
+      client,
+      guildId: i.guildId,
+      eventType: EVENT_TYPES.TICKET_CREATE,
+      data: {
+        title: `כרטיס #${id} נוצר`,
+        description: `נוצר על ידי ${i.user} ב־${channel}.`,
+      },
+    });
+    return i.reply({
+      content: `הכרטיס נפתח בהצלחה: ${channel}`,
+      flags: MessageFlags.Ephemeral,
+    });
+  },
+};

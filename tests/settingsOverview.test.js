@@ -14,10 +14,10 @@ test('settings overview includes every configurable server area within embed lim
 
 test('settings dashboard provides valid navigable pages and button rows', () => {
   const config = structuredClone(defaults);
-  for (const page of ['overview', 'systems', 'access', 'commands', 'logging']) {
+  for (const page of ['overview', 'systems', 'access', 'commands', 'logging', 'tickets']) {
     assert.ok(createSettingsPage(config, page).toJSON().title);
     const rows = createSettingsComponents('123456789', page).map(row => row.toJSON());
-    assert.equal(rows.length, 2);
+    assert.equal(rows.length, page === 'tickets' ? 3 : 2);
     assert.ok(rows.every(row => row.components.length <= 5));
     assert.ok(rows.flatMap(row => row.components).every(button => button.custom_id.length <= 100));
   }

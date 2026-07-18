@@ -23,6 +23,7 @@ export const defaults = {
     transcriptChannelId: null, logsChannelId: null, nextNumber: 1, panels: [], maxOpenPerUser: 1,
     closeDelaySeconds: 10, staffAlertCooldownSeconds: 300, maxAddedUsers: 5, allowDuplicateTypes: false,
     transcriptsEnabled: true, creatorCanClose: true, creatorCanAdd: false, creatorCanRename: false,
+    pingRoleIds: [],
     claimEnabled: true, priorityEnabled: true, archiveEnabled: false, dmNotifications: true,
     enabledTypes: ['general','editing','report','partnership','bot_bug','resource','paid_work','management']
   },

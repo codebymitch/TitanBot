@@ -9,6 +9,7 @@ import { getConfig } from '../../community/store.js';
 import {
   buildTranscript,
   getTicket,
+  resolveTicketPingRoleIds,
   saveTicket,
   ticketAccess,
   ticketMessagePayload,
@@ -92,10 +93,17 @@ const action = {
     ticket.lastStaffAlertAt = Date.now();
     ticket.lastStaffAlertBy = i.user.id;
     await saveTicket(client, ticket);
-    const supportRoleId = ticket.supportRoleId || config.tickets.supportRoleId;
+    const pingRoleIds = resolveTicketPingRoleIds(config, ticket)
+      .filter(roleId => i.guild.roles.cache.has(roleId));
+    if (!pingRoleIds.length) {
+      return i.reply({
+        content: 'לא הוגדר תפקיד תקין להתראות צוות. יש לעדכן את הגדרות הכרטיסים.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
     await i.channel.send({
-      content: `<@&${supportRoleId}> נדרשת עזרת צוות בכרטיס #${ticket.id}.`,
-      allowedMentions: { parse: [], roles: [supportRoleId], users: [] },
+      content: `${pingRoleIds.map(roleId => `<@&${roleId}>`).join(' ')} נדרשת עזרת צוות בכרטיס #${ticket.id}.`,
+      allowedMentions: { parse: [], roles: pingRoleIds, users: [] },
     });
     await logEvent({
       client,

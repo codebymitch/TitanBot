@@ -63,13 +63,25 @@ export function createSettingsPage(config, page = 'overview') {
       { name: 'ניהול', value: 'השתמשו ב-`/settings logging` כדי לבחור ערוץ, לבדוק אותו, ולהפעיל או לכבות סוגי אירועים.' }
     );
   }
+  if (page === 'tickets') {
+    const pingRoleIds = config.tickets.pingRoleIds?.length
+      ? config.tickets.pingRoleIds
+      : [config.tickets.supportRoleId].filter(Boolean);
+    embed.setTitle('🎫 הגדרות כרטיסים').addFields(
+      { name: 'תפקיד צוות ראשי', value: role(config.tickets.supportRoleId), inline: true },
+      { name: 'תפקידי התראה', value: pingRoleIds.map(role).join('\n') || 'לא הוגדרו', inline: true },
+      { name: 'זמן המתנה להזעקה', value: `${config.tickets.staffAlertCooldownSeconds} שניות`, inline: true },
+      { name: 'איך זה עובד?', value: 'תפקיד הצוות הראשי קובע מי יכול לראות ולנהל כרטיסים. תפקידי ההתראה קובעים רק מי יקבל תיוג כשכרטיס נפתח או כשלוחצים על „הזעקת צוות”.' },
+    );
+  }
   return embed.setFooter({ text: 'הנתונים מוצגים בזמן אמת • לחצו רענון לעדכון' });
 }
 
 export function createSettingsComponents(userId, page = 'overview') {
   const button = (id, label, emoji) => new ButtonBuilder().setCustomId(`settings_page:${userId}:${id}`).setLabel(label).setEmoji(emoji).setStyle(id === page ? ButtonStyle.Primary : ButtonStyle.Secondary).setDisabled(id === page);
   return [
-    new ActionRowBuilder().addComponents(button('overview', 'סקירה', '🏠'), button('systems', 'מערכות', '🧩'), button('access', 'ערוצים ותפקידים', '👥')),
+    new ActionRowBuilder().addComponents(button('overview', 'סקירה', '🏠'), button('systems', 'מערכות', '🧩'), button('access', 'ערוצים ותפקידים', '👥'), button('tickets', 'כרטיסים', '🎫')),
     new ActionRowBuilder().addComponents(button('commands', 'פקודות', '⌨️'), button('logging', 'לוגים', '📋'), new ButtonBuilder().setCustomId(`settings_page:${userId}:refresh:${page}`).setLabel('רענון').setEmoji('🔄').setStyle(ButtonStyle.Success))
+    ,...(page === 'tickets' ? [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`ticket_ping_roles:${userId}:open`).setLabel('בחירת תפקידי התראה').setEmoji('🔔').setStyle(ButtonStyle.Primary))] : [])
   ];
 }

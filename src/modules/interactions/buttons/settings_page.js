@@ -2,7 +2,7 @@ import { MessageFlags } from 'discord.js';
 import { getConfig } from '../../community/store.js';
 import { createSettingsPage, createSettingsComponents } from '../../../services/settingsOverview.js';
 
-const pages = new Set(['overview', 'systems', 'access', 'commands', 'logging']);
+const pages = new Set(['overview', 'systems', 'access', 'commands', 'logging', 'tickets']);
 
 export default {
   name: 'settings_page',

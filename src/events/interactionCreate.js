@@ -16,7 +16,7 @@ export default {
         return;
       }
       const registry = interaction.isButton() ? client.buttons
-        : interaction.isStringSelectMenu() ? client.selectMenus
+        : interaction.isStringSelectMenu() || interaction.isRoleSelectMenu() ? client.selectMenus
           : interaction.isModalSubmit() ? client.modals : null;
       if (!registry) return;
       const [name, ...args] = interaction.customId.split(':');
