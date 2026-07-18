@@ -1,6 +1,7 @@
 import { MessageFlags } from 'discord.js';
 import { OWNER_INBOX_USER_ID } from './ownerInboxService.js';
 import { ticketKey } from '../modules/community/store.js';
+import { AccessLevel, memberAccessLevel } from '../modules/community/permissions.js';
 
 export const COMMAND_CHANNEL_GUILD_ID = '1526671786387705907';
 
@@ -60,6 +61,20 @@ export function resolveCommandDestination(command) {
     || 'commands';
 }
 
+function restrictedCommandAccess(interaction, command) {
+  const name = command.data.name;
+  if (command.category === 'owner') return AccessLevel.OWNER;
+  if (command.category === 'moderation') return AccessLevel.MODERATOR;
+  if (command.category === 'utility') return AccessLevel.ADMIN;
+  if (command.category === 'admin') {
+    if (name === 'ticket' && interaction.options?.getSubcommand?.() === 'open') return null;
+    return AccessLevel.ADMIN;
+  }
+  if (name === 'setxp' || name === 'resetxp') return AccessLevel.ADMIN;
+  if (name === 'role') return AccessLevel.MODERATOR;
+  return null;
+}
+
 async function isTicketChannel(interaction, client) {
   if (interaction.channelId === COMMAND_CHANNELS.tickets) return true;
   return Boolean(await client.db.get(ticketKey(interaction.guildId, interaction.channelId), null));
@@ -68,6 +83,11 @@ async function isTicketChannel(interaction, client) {
 export async function enforceCommandChannel(interaction, command, client) {
   if (interaction.user.id === OWNER_INBOX_USER_ID) return true;
   if (interaction.guildId !== COMMAND_CHANNEL_GUILD_ID) return true;
+
+  // Run the command's own permission guard before revealing its staff channel.
+  const requiredAccess = restrictedCommandAccess(interaction, command);
+  if (requiredAccess !== null
+    && await memberAccessLevel(interaction, client) < requiredAccess) return true;
 
   const destination = resolveCommandDestination(command);
   if (destination === 'tickets' && await isTicketChannel(interaction, client)) return true;

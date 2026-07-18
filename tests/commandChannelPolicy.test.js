@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { Collection, PermissionsBitField } from 'discord.js';
 import {
   COMMAND_CHANNEL_GUILD_ID,
   COMMAND_CHANNELS,
@@ -68,4 +69,48 @@ test('other servers keep their existing command behavior', async () => {
     channelId: 'any-channel',
   }, command('ping', 'general'), client(null));
   assert.equal(allowed, true);
+});
+
+test('unauthorized staff command reaches its Hebrew permission check before channel routing', async () => {
+  let replied = false;
+  const allowed = await enforceCommandChannel({
+    user: { id: 'regular-member' },
+    guildId: COMMAND_CHANNEL_GUILD_ID,
+    channelId: 'wrong-channel',
+    inGuild: () => true,
+    member: {
+      permissions: new PermissionsBitField(),
+      roles: { cache: new Collection() },
+    },
+    reply: async () => { replied = true; },
+  }, command('ban', 'moderation'), {
+    db: { get: async (_key, fallback) => fallback },
+  });
+
+  assert.equal(allowed, true);
+  assert.equal(replied, false);
+});
+
+test('authorized staff still receives the private command-channel redirect', async () => {
+  let reply;
+  const allowed = await enforceCommandChannel({
+    user: { id: 'moderator' },
+    guildId: COMMAND_CHANNEL_GUILD_ID,
+    channelId: 'wrong-channel',
+    inGuild: () => true,
+    member: {
+      permissions: new PermissionsBitField([
+        'ModerateMembers',
+        'KickMembers',
+        'ManageMessages',
+      ]),
+      roles: { cache: new Collection() },
+    },
+    reply: async payload => { reply = payload; },
+  }, command('ban', 'moderation'), {
+    db: { get: async (_key, fallback) => fallback },
+  });
+
+  assert.equal(allowed, false);
+  assert.match(reply.content, new RegExp(COMMAND_CHANNELS.moderation));
 });

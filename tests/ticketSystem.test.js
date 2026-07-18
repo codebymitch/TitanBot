@@ -15,4 +15,21 @@ test('ticket panels expose every enabled ticket type through persistent select c
 test('contextual ticket modals ask only relevant fields and respect Discord five-field limit',async()=>{const client={db:{get:async()=>({tickets:{enabledTypes:Object.keys(TICKET_TYPES)}})}};for(const type of Object.keys(TICKET_TYPES)){let modal;const interaction={guildId:'g',values:[type],showModal:async value=>{modal=value.toJSON();}};await ticketType.execute(interaction,client,['default']);assert.ok(modal.components.length>=2&&modal.components.length<=5);const ids=modal.components.map(row=>row.components[0].custom_id);assert.ok(ids.includes('title')&&ids.includes('description'));if(type==='editing')assert.ok(ids.includes('software'));if(type==='paid_work')assert.ok(ids.includes('budget'));}});
 test('ticket channel names are sanitized and retain the ticket id',()=>{assert.equal(safeChannelName('Itay שלום !!!','42'),'itay-0042');assert.match(safeChannelName('','7','report'),/^report-0007$/);assert.ok(safeChannelName('a'.repeat(200),'99').length<=100);});
 test('ticket opening message contains persistent management controls',()=>{const payload=ticketMessagePayload(normalizeTicket({id:'1',guildId:'g',channelId:'c',creatorId:'u',title:'Title',description:'Details'}));assert.equal(payload.components.length,2);assert.equal(payload.components.flatMap(row=>row.components).length,7);assert.equal(ticketButtons.length,4);});
+test('ticket creator cannot use staff management buttons',async()=>{
+  const handler=ticketButtons.find(value=>value.name==='ticket_action');
+  let reply;
+  const stored=normalizeTicket({id:'1',guildId:'g',channelId:'c',creatorId:'creator',title:'Title',description:'Details'});
+  const client={db:{get:async(key,fallback)=>key.endsWith(':ticket:c')?stored:fallback,set:async()=>{}}};
+  const interaction={
+    guildId:'g',
+    channelId:'c',
+    user:{id:'creator'},
+    inGuild:()=>true,
+    member:{permissions:{has:()=>false},roles:{cache:new Collection()}},
+    reply:async payload=>{reply=payload;},
+  };
+  await handler.execute(interaction,client,['alert']);
+  assert.equal(reply.flags,64);
+  assert.match(reply.content,/אין לך הרשאה/);
+});
 test('settings exposes all required ticket configuration areas',()=>{const group=settings.data.toJSON().options.find(option=>option.name==='tickets');assert.deepEqual(group.options.map(option=>option.name),['view','channel','role','limits','types','toggles']);});
