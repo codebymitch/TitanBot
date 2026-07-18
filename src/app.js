@@ -5,6 +5,7 @@ import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { BOT_OWNER_USER_ID } from './config/owner.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Dashboard auth helpers ────────────────────────────────────────
@@ -265,8 +266,7 @@ class TitanBot extends Client {
         if (!userRes.ok) return res.redirect('/login?error=user_failed');
         const user = await userRes.json();
 
-        const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
-        const isOwner  = ownerIds.includes(user.id);
+        const isOwner = user.id === BOT_OWNER_USER_ID;
         const remember = req.query.state === '1';
         const token    = createToken({ userId: user.id, username: user.username, isOwner }, remember);
 
@@ -289,9 +289,7 @@ class TitanBot extends Client {
       if (!email || !password || email !== cfgEmail || password !== cfgPass) {
         return res.status(401).json({ error: 'Invalid email or password.' });
       }
-      const ownerIds = process.env.OWNER_IDS?.split(',').map(id => id.trim()) ?? [];
-      const isOwner  = ownerIds.includes(process.env.DASHBOARD_OWNER_ID || '') || true;
-      const token    = createToken({ userId: email, username: email.split('@')[0], isOwner }, !!remember);
+      const token = createToken({ userId: email, username: email.split('@')[0], isOwner: false }, !!remember);
       res.json({ token });
     });
 

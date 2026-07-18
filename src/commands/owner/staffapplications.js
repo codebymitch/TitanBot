@@ -1,5 +1,6 @@
 import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { getStaffApplicationsOpen, setStaffApplicationsOpen, STAFF_APPLICATION_GUILD_ID } from '../../services/staffApplicationService.js';
+import { BOT_OWNER_USER_ID } from '../../config/owner.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -11,7 +12,7 @@ export default {
     .addSubcommand(subcommand => subcommand.setName('status').setDescription('בדיקת מצב בקשות הצוות באתר')),
 
   async execute(interaction, client) {
-    if (interaction.guildId !== STAFF_APPLICATION_GUILD_ID || interaction.user.id !== interaction.guild.ownerId) {
+    if (interaction.guildId !== STAFF_APPLICATION_GUILD_ID || interaction.user.id !== BOT_OWNER_USER_ID) {
       return interaction.reply({ content: 'רק בעל שרת EditIL יכול להשתמש בפקודה הזאת.', flags: MessageFlags.Ephemeral });
     }
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });

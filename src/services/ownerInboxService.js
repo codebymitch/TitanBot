@@ -1,8 +1,9 @@
 import { EmbedBuilder } from 'discord.js';
 import { logger } from '../utils/logger.js';
+import { BOT_OWNER_USER_ID } from '../config/owner.js';
 
 export const OWNER_INBOX_GUILD_ID = '1526671786387705907';
-export const OWNER_INBOX_USER_ID = '1127099544560205914';
+export const OWNER_INBOX_USER_ID = BOT_OWNER_USER_ID;
 
 const caseKey = caseId => `owner_inbox:case:${caseId}`;
 const sequenceKey = kind => `owner_inbox:sequence:${kind}`;

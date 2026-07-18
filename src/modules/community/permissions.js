@@ -1,12 +1,13 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { getConfig } from './store.js';
 import { createEmbed } from '../../utils/embeds.js';
+import { BOT_OWNER_USER_ID } from '../../config/owner.js';
 
 export const AccessLevel = Object.freeze({ EVERYONE: 0, VERIFIED: 1, HELPER: 2, MODERATOR: 3, ADMIN: 4, OWNER: 5 });
 
 export async function memberAccessLevel(interaction, client) {
   if (!interaction.inGuild() || !interaction.member) return AccessLevel.EVERYONE;
-  if (interaction.guild?.ownerId === interaction.user.id) return AccessLevel.OWNER;
+  if (interaction.user.id === BOT_OWNER_USER_ID) return AccessLevel.OWNER;
   const p = interaction.member.permissions;
   const config = await getConfig(client, interaction.guildId);
   const hasRole = id => Boolean(id && interaction.member.roles?.cache?.has(id));

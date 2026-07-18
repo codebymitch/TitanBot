@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { buildUpdateEmbed, getUpdateSettings, parseLines } from '../../services/botUpdateService.js';
+import { BOT_OWNER_USER_ID } from '../../config/owner.js';
 
 function addContentOptions(sub, versionRequired = true) {
   return sub.addStringOption(o=>o.setName('version').setDescription('גרסת הבוט').setRequired(versionRequired).setMaxLength(30))
@@ -31,7 +32,7 @@ export default { data: new SlashCommandBuilder().setName('botupdate').setDescrip
   .addSubcommand(s=>addContentOptions(s.setName('edit').setDescription('עריכת הודעת העדכון האחרונה'), false))
   .addSubcommand(s=>s.setName('delete').setDescription('מחיקת הודעת העדכון האחרונה')),
   async execute(interaction, client) {
-    if (!interaction.inGuild() || interaction.user.id !== interaction.guild.ownerId) return interaction.reply({ content:'רק בעל השרת יכול להשתמש בפקודה הזאת.', flags:MessageFlags.Ephemeral });
+    if (!interaction.inGuild() || interaction.user.id !== BOT_OWNER_USER_ID) return interaction.reply({ content:'רק בעל הבוט יכול להשתמש בפקודה הזאת.', flags:MessageFlags.Ephemeral });
     const sub=interaction.options.getSubcommand(), settings=await getUpdateSettings(client,interaction.guildId);
     if(sub==='preview') return interaction.reply({embeds:[buildUpdateEmbed(client,settings.content)],flags:MessageFlags.Ephemeral});
     if(sub==='status'){const link=settings.lastMessageId?`https://discord.com/channels/${interaction.guildId}/${settings.channelId}/${settings.lastMessageId}`:'לא קיים';return interaction.reply({content:`**מצב עדכוני הבוט**\nגרסה נוכחית: \`${settings.currentVersion}\`\nגרסה שפורסמה: \`${settings.lastAnnouncedVersion||'טרם פורסמה'}\`\nערוץ: <#${settings.channelId}>\nתפקיד: ${settings.roleId?`<@&${settings.roleId}>`:'לא הוגדר'}\nפרסום אוטומטי: ${settings.automaticEnabled?'פעיל':'כבוי'}\nפרסום אחרון: ${settings.lastAnnouncementAt?`<t:${Math.floor(new Date(settings.lastAnnouncementAt).getTime()/1000)}:F>`:'אין'}\nהודעה אחרונה: ${link}`,flags:MessageFlags.Ephemeral});}

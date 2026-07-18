@@ -180,5 +180,5 @@ test('owner can open, close, or inspect website staff applications', async () =>
   const json = command.data.toJSON();
   assert.equal(json.name, 'staffapplications');
   assert.deepEqual(json.options.map(option => option.name), ['open', 'close', 'status']);
-  assert.match(command.execute.toString(), /interaction\.user\.id !== interaction\.guild\.ownerId/);
+  assert.match(command.execute.toString(), /interaction\.user\.id !== BOT_OWNER_USER_ID/);
 });

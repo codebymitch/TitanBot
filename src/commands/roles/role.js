@@ -4,6 +4,7 @@ import { requireAccess, AccessLevel } from '../../modules/community/permissions.
 import { getConfig } from '../../modules/community/store.js';
 import { roleTemplates, validateRoleAction } from '../../services/roleSystemService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+import { BOT_OWNER_USER_ID } from '../../config/owner.js';
 
 const templates = Object.keys(roleTemplates).map(value => ({ name: value, value }));
 const data = new SlashCommandBuilder().setName('role').setDescription('ניהול תפקידים בשרת').setDMPermission(false)
@@ -20,7 +21,7 @@ export default { data, async execute(interaction, client) {
   ] })], flags: MessageFlags.Ephemeral });
   const required = ['add','remove'].includes(sub) ? AccessLevel.MODERATOR : AccessLevel.ADMIN;
   if (!await requireAccess(interaction, client, required, `role.${sub}`)) return;
-  if (!interaction.member.permissions.has(PermissionFlagsBits.ManageRoles) && interaction.user.id !== interaction.guild.ownerId) return interaction.reply({ content: 'אין לך הרשאת ניהול תפקידים.', flags: MessageFlags.Ephemeral });
+  if (!interaction.member.permissions.has(PermissionFlagsBits.ManageRoles) && interaction.user.id !== BOT_OWNER_USER_ID) return interaction.reply({ content: 'אין לך הרשאת ניהול תפקידים.', flags: MessageFlags.Ephemeral });
   if (['add','remove'].includes(sub)) {
     const member = interaction.options.getMember('member'); const error = await validateRoleAction(interaction.guild, interaction.member, role);
     if (error) return interaction.reply({ content: error, flags: MessageFlags.Ephemeral });
@@ -36,7 +37,7 @@ export default { data, async execute(interaction, client) {
     const pending={action:'create',name:interaction.options.getString('name'),color,hoist:interaction.options.getBoolean('hoist'),mentionable:interaction.options.getBoolean('mentionable'),template:interaction.options.getString('permission_template'),actorId:interaction.user.id}; const id=String(await client.db.increment(`community:${interaction.guildId}:sequence:roleaction`)); await client.db.set(`community:${interaction.guildId}:roleaction:${id}`,pending,600);
     return interaction.reply({embeds:[createEmbed({title:'אישור יצירת תפקיד',description:`שם: **${pending.name}**\nצבע: **${color}**\nתבנית: **${pending.template}**`,color:'warning'})],components:[new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`role_confirm:${id}`).setLabel('אישור יצירה').setStyle(ButtonStyle.Success),new ButtonBuilder().setCustomId(`role_cancel:${id}`).setLabel('ביטול').setStyle(ButtonStyle.Secondary))],flags:MessageFlags.Ephemeral});
   }
-  if (interaction.user.id !== interaction.guild.ownerId) return interaction.reply({content:'רק בעל השרת יכול למחוק תפקידים.',flags:MessageFlags.Ephemeral});
+  if (interaction.user.id !== BOT_OWNER_USER_ID) return interaction.reply({content:'רק בעל הבוט יכול למחוק תפקידים.',flags:MessageFlags.Ephemeral});
   const error=await validateRoleAction(interaction.guild,interaction.member,role); if(error)return interaction.reply({content:error,flags:MessageFlags.Ephemeral});
   const id=String(await client.db.increment(`community:${interaction.guildId}:sequence:roleaction`)); await client.db.set(`community:${interaction.guildId}:roleaction:${id}`,{action:'delete',roleId:role.id,actorId:interaction.user.id},600);
   return interaction.reply({embeds:[createEmbed({title:'אישור מחיקת תפקיד',description:`האם למחוק את ${role}? התפקיד נמצא אצל **${role.members.size}** חברים.`,color:'error'})],components:[new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`role_confirm:${id}`).setLabel('מחיקה').setStyle(ButtonStyle.Danger),new ButtonBuilder().setCustomId(`role_cancel:${id}`).setLabel('ביטול').setStyle(ButtonStyle.Secondary))],flags:MessageFlags.Ephemeral});

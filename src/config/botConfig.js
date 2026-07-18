@@ -1,4 +1,4 @@
-
+import { BOT_OWNER_USER_ID } from './owner.js';
 
 export const botConfig = {
   // =========================
@@ -30,9 +30,8 @@ export const botConfig = {
   // COMMAND BEHAVIOR
   // =========================
   commands: {
-    // Bot owner user IDs (comma-separated in OWNER_IDS env var).
-    // Owners can access all admin commands.
-    owners: process.env.OWNER_IDS?.split(",").filter(Boolean) || [],
+    // Exactly one Discord account owns the bot.
+    owners: [BOT_OWNER_USER_ID],
 
     // Bot admin user IDs (comma-separated in ADMIN_IDS env var).
     // Admins can use /admin commands but are not full owners.
