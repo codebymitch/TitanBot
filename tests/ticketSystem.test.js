@@ -28,8 +28,29 @@ test('ticket creator cannot use staff management buttons',async()=>{
     member:{permissions:{has:()=>false},roles:{cache:new Collection()}},
     reply:async payload=>{reply=payload;},
   };
-  await handler.execute(interaction,client,['alert']);
+  await handler.execute(interaction,client,['claim']);
   assert.equal(reply.flags,64);
   assert.match(reply.content,/אין לך הרשאה/);
+});
+test('ticket creator can alert exactly the configured support role',async()=>{
+  const handler=ticketButtons.find(value=>value.name==='ticket_action');
+  const stored=normalizeTicket({id:'1',guildId:'g',channelId:'c',creatorId:'creator',supportRoleId:'support',title:'Title',description:'Details'});
+  const sent=[];
+  let reply;
+  const client={db:{
+    get:async(key,fallback)=>key.endsWith(':ticket:c')?stored:fallback,
+    set:async()=>{},
+  }};
+  const interaction={
+    guildId:'g',channelId:'c',user:{id:'creator'},inGuild:()=>true,
+    member:{permissions:{has:()=>false},roles:{cache:new Collection()}},
+    channel:{send:async payload=>{sent.push(payload);}},
+    reply:async payload=>{reply=payload;},
+  };
+  await handler.execute(interaction,client,['alert']);
+  assert.equal(sent.length,1);
+  assert.equal(sent[0].content,'<@&support> נדרשת עזרת צוות בכרטיס #1.');
+  assert.deepEqual(sent[0].allowedMentions,{parse:[],roles:['support'],users:[]});
+  assert.match(reply.content,/הוזעק/);
 });
 test('settings exposes all required ticket configuration areas',()=>{const group=settings.data.toJSON().options.find(option=>option.name==='tickets');assert.deepEqual(group.options.map(option=>option.name),['view','channel','role','limits','types','toggles']);});

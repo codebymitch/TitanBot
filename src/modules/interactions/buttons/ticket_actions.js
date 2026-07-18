@@ -39,7 +39,9 @@ const action = {
         flags: MessageFlags.Ephemeral,
       });
     }
-    if (!await ticketAccess(i, client, ticket, { staffOnly: true })) return denied(i);
+    const staff = await ticketAccess(i, client, ticket, { staffOnly: true });
+    const creatorAlert = actionName === 'alert' && i.user.id === ticket.creatorId;
+    if (!staff && !creatorAlert) return denied(i);
 
     if (['close', 'add', 'remove', 'rename'].includes(actionName)) {
       const modal = new ModalBuilder()
@@ -90,9 +92,10 @@ const action = {
     ticket.lastStaffAlertAt = Date.now();
     ticket.lastStaffAlertBy = i.user.id;
     await saveTicket(client, ticket);
+    const supportRoleId = ticket.supportRoleId || config.tickets.supportRoleId;
     await i.channel.send({
-      content: `<@&${config.tickets.supportRoleId}> נדרשת עזרת צוות בכרטיס #${ticket.id}.`,
-      allowedMentions: { roles: [config.tickets.supportRoleId] },
+      content: `<@&${supportRoleId}> נדרשת עזרת צוות בכרטיס #${ticket.id}.`,
+      allowedMentions: { parse: [], roles: [supportRoleId], users: [] },
     });
     await logEvent({
       client,
