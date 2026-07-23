@@ -10,26 +10,27 @@ import nextBirthdays from './modules/next_birthdays.js';
 import birthdaySetchannel from './modules/birthday_setchannel.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
-        .setName('birthday')
-        .setDescription('Birthday system commands')
+        .setName('생일 설정')
+        .setDescription('생일 시스템 명령어 모음이에요')
         .addSubcommand(subcommand =>
             subcommand
-                .setName('set')
-                .setDescription('Set your birthday')
+                .setName('설정')
+                .setDescription('내 생일을 설정해요')
                 .addIntegerOption(option =>
                     option
-                        .setName('month')
-                        .setDescription('Birth month (1-12)')
+                        .setName('월')
+                        .setDescription('태어난 월 (1-12)')
                         .setRequired(true)
                         .setMinValue(1)
                         .setMaxValue(12)
                 )
                 .addIntegerOption(option =>
                     option
-                        .setName('day')
-                        .setDescription('Birth day (1-31)')
+                        .setName('일')
+                        .setDescription('태어난 일 (1-31)')
                         .setRequired(true)
                         .setMinValue(1)
                         .setMaxValue(31)
@@ -37,38 +38,38 @@ export default {
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('info')
-                .setDescription('View birthday information')
+                .setName('정보')
+                .setDescription('생일 정보를 확인해요')
                 .addUserOption(option =>
                     option
-                        .setName('user')
-                        .setDescription('User to check birthday for')
+                        .setName('유저')
+                        .setDescription('생일을 확인할 유저를 선택해요')
                         .setRequired(false)
                 )
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('list')
-                .setDescription('List all birthdays in the server')
+                .setName('생일 목록')
+                .setDescription('서버 내 모든 유저의 생일 목록을 봐요')
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('remove')
-                .setDescription('Remove your birthday')
+                .setName('생일 삭제')
+                .setDescription('등록된 내 생일을 삭제해요')
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('next')
-                .setDescription('Show upcoming birthdays')
+                .setName('다음 생일 목록')
+                .setDescription('다가오는 생일 목록을 확인해요')
         )
         .addSubcommand(subcommand =>
             subcommand
-                .setName('setchannel')
-                .setDescription('Set or disable the channel for birthday announcements. (Manage Server required)')
+                .setName('알림 설정')
+                .setDescription('생일 알림 채널을 설정하거나 비활성화해요. (서버 관리 권한 필요)')
                 .addChannelOption(option =>
                     option
-                        .setName('channel')
-                        .setDescription('The text channel for announcements. Leave empty to disable.')
+                        .setName('알림 보낼 채널')
+                        .setDescription('알림을 보낼 텍스트 채널이에요. 비워두면 비활성화돼요.')
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(false)
                 )
@@ -91,7 +92,7 @@ export default {
             case 'setchannel':
                 return await birthdaySetchannel.execute(interaction, config, client);
             default:
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Unknown subcommand' });
+                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: '알 수 없는 하위 명령어예요.' });
         }
     }
-};
+}
