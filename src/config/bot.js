@@ -24,7 +24,7 @@ export const botConfig = {
     activities: [
       {
         name: "Made With : 민", // required by Discord API, not shown in the client
-        state: "Made With : 민준",     // this is what people actually see
+        state: "/도움말 | 1개의 서버에서 활동중",     // this is what people actually see
         type: 4,               // Custom
       },
     ],
