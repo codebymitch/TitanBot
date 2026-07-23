@@ -8,7 +8,7 @@ export const botConfig = {
     status: "online",
     activities: [
       {
-        name: "Made With : 민", 
+        name: "name", 
         state: "/도움말 | 1개의 서버에서 활동중",     
         type: 4,               
       },
