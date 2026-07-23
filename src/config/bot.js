@@ -61,9 +61,9 @@ export const botConfig = {
   applications: {
     // Default questions shown when someone fills out an application.
     defaultQuestions: [
-      { question: "What is your name?", required: true },
-      { question: "How old are you?", required: true },
-      { question: "Why do you want to join?", required: true },
+      { question: "이름이 무엇인가요? 닉네임도 괜찮아요?", required: true },
+      { question: "몇 살 이신가요?", required: true },
+      { question: "왜 여기에 참여하고 싶으셨나요?", required: true },
     ],
 
     // Embed colors by application status.
@@ -141,7 +141,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: "민쭌봇",
       // Footer icon URL (null = no icon).
       icon: null,
     },
@@ -302,10 +302,10 @@ export const botConfig = {
   // =========================
   verification: {
     // Message shown when posting the verification panel.
-    defaultMessage: "Click the button below to verify yourself and gain access to the server!",
+    defaultMessage: "아래 버튼을 클릭하여 인증을 완료하세요. 인증하면 서버에서 인증하였다는 사실을 알 수 있습니다.",
 
     // Text on the verification button.
-    defaultButtonText: "Verify",
+    defaultButtonText: "인증시작",
 
     // Automatic verification behavior.
     autoVerify: {
@@ -372,11 +372,11 @@ export const botConfig = {
     // Welcome template posted when a user joins.
     // Placeholders: {user}, {server}, {memberCount}
     defaultWelcomeMessage:
-      "Welcome {user} to {server}! We now have {memberCount} members!",
+      "{user} 님! 여기는 {server} 입니다! 반나뵙게 되어 정말 반갑습니다. {memberCount} 번째 유저입니다",
     // Goodbye template posted when a user leaves.
     // Placeholders: {user}, {memberCount}
     defaultGoodbyeMessage:
-      "{user} has left the server. We now have {memberCount} members.",
+      "{user} 님이 서버에서 나갔습니다. {memberCount} 명의 유저가 남았습니다.",
     // Channel ID for welcome messages.
     defaultWelcomeChannel: null,
     // Channel ID for goodbye messages.
@@ -404,9 +404,9 @@ export const botConfig = {
     },
     messages: {
       // Default response messages for counter actions.
-      created: "✅ Created counter **{name}**",
-      deleted: "🗑️ Deleted counter **{name}**",
-      updated: "🔄 Updated counter **{name}**",
+      created: "✅ 다음 이름으로 카운터를 만들었어요. **{name}**",
+      deleted: "🗑️ 다음 이름의 카운터를 지웠어요. **{name}**",
+      updated: "🔄 다음 이름의 카운터를 업데이트 했어요. **{name}**",
     },
     types: {
       // Built-in counter types and how each count is calculated.
