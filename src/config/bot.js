@@ -32,7 +32,7 @@ export const botConfig = {
   // =========================
   applications: {
     defaultQuestions: [
-      { question: "이름이 무엇인가요? 닉네임도 괜찮아요?", required: true },
+      { question: "이름이 무엇인가요?", required: true },
       { question: "몇 살 이신가요?", required: true },
       { question: "왜 여기에 참여하고 싶으셨나요?", required: true },
     ],
