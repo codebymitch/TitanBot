@@ -155,6 +155,11 @@ export function setupPlayerHandler(client) {
     client.riffy.on('queueEnd', async (player) => {
         try {
             const guildData = getGuildMusicData(player.guildId);
+
+            if (guildData.loop && guildData.loop !== 'none') {
+                return;
+            }
+
             clearUpdateInterval(guildData);
 
             if (guildData.autoplay) {
