@@ -1,0 +1,35 @@
+name: Register Korean Localized Commands
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - translate/commands-ko
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  register-commands:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Register commands to test guild
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          GUILD_ID: ${{ secrets.GUILD_ID }}
+        run: node scripts/register-guild-commands.js

@@ -143,7 +143,9 @@ export default {
     slashOnly: true,
     data: new SlashCommandBuilder()
         .setName("help")
-        .setDescription("Displays the help menu with all available commands"),
+        .setNameLocalizations({ ko: '도움말' })
+        .setDescription("Displays the help menu with all available commands")
+        .setDescriptionLocalizations({ ko: '사용 가능한 모든 명령어가 포함된 도움 메뉴를 표시' }),
 
     async execute(interaction, guildConfig, client) {
         
