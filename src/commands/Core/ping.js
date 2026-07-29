@@ -6,7 +6,9 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ping")
-        .setDescription("Checks the bot's latency and API speed"),
+        .setNameLocalizations({ ko: '핑' })
+        .setDescription("Checks the bot's latency and API speed")
+        .setDescriptionLocalizations({ ko: '지연 시간 및 API 응답 속도 확인' }),
 
     async prefixExecute(interaction) {
         try {
