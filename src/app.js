@@ -12,6 +12,7 @@ import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
+import { registerSessionReactions } from './handlers/events/sessionReactions.js';
 
 class TitanBot extends Client {
   constructor() {
@@ -79,6 +80,14 @@ class TitanBot extends Client {
       startupLog('Loading handlers...');
       await this.loadHandlers();
       startupLog('Handlers loaded');
+
+      // Register session reaction listeners (if available)
+      try {
+        registerSessionReactions(this);
+        startupLog('Session reaction handler registered');
+      } catch (err) {
+        logger.warn('Failed to register session reaction handler:', err && err.message ? err.message : err);
+      }
       
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
@@ -347,7 +356,7 @@ class TitanBot extends Client {
 
       logger.info('✅ Graceful shutdown complete');
   shutdownLog('Bot stopped successfully.');
-      process.exit(0);
+        process.exit(0);
     } catch (error) {
       logger.error('Error during graceful shutdown:', error);
       process.exit(1);
@@ -381,6 +390,3 @@ try {
 }
 
 export default TitanBot;
-
-
-
