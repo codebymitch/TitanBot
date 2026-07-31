@@ -24,30 +24,30 @@ export default {
         .setDescription("Starts a new giveaway in a specified channel.")
         .addStringOption((option) =>
             option
-                .setName("duration")
+                .setName("Zeit")
                 .setDescription(
-                    "How long the giveaway should last (e.g., 1h, 30m, 5d).",
+                    "Zeit des Giveaways  (e.g., 1h, 30m, 5d).",
                 )
                 .setRequired(true),
         )
         .addIntegerOption((option) =>
             option
-                .setName("winners")
-                .setDescription("The number of winners to pick.")
+                .setName("gewinner")
+                .setDescription("die zahlen vön gewinnern")
                 .setMinValue(GIVEAWAY_MIN_WINNERS)
                 .setMaxValue(GIVEAWAY_MAX_WINNERS)
                 .setRequired(true),
         )
         .addStringOption((option) =>
             option
-                .setName("prize")
+                .setName("gewinn")
                 .setDescription("The prize being given away.")
                 .setRequired(true),
         )
         .addChannelOption((option) =>
             option
                 .setName("channel")
-                .setDescription("The channel to send the giveaway to (defaults to current channel).")
+                .setDescription("Der kanal wo es gesendet wird (default kanal ist der aktuelle).")
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(false),
         )
@@ -116,7 +116,7 @@ export default {
         const row = createGiveawayButtons(false);
 
         const giveawayMessage = await targetChannel.send({
-            content: "🎉 **NEW GIVEAWAY** 🎉",
+            content: "🎉 **NEUES GIVEAWAY** 🎉",
             embeds: [embed],
             components: [row],
         });
@@ -174,7 +174,7 @@ export default {
         await InteractionHelper.safeReply(interaction, {
             embeds: [
                 successEmbed(
-                    `Giveaway Started! 🎉`,
+                    `Giveaway hat gestartet 🎉`,
                     `A new giveaway for **${prizeName}** has been started in ${targetChannel} and will end in **${durationString}**.`,
                 ),
             ],
