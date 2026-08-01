@@ -101,7 +101,7 @@ export async function createInitialHelpMenu(client) {
             },
             {
                 name: '\u200B',
-                value: `-# ${botName} is [open source](linktr.ee/kayadee.wz)`,
+                value: `-# ${botName} is [open source](https://www.youtube.com/@KayDee_RL)`,
                 inline: false,
             },
         ],
