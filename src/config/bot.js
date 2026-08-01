@@ -93,14 +93,14 @@ export const botConfig = {
   embeds: {
     colors: {
       // Main brand colors.
-      primary: "#336699",
+      primary: "#0377fc",
       secondary: "#2F3136",
 
       // Standard status colors for success/error/warning/info messages.
-      success: "#57F287",
-      error: "#ED4245",
-      warning: "#FEE75C",
-      info: "#3498DB",
+      success: "#17fc03",
+      error: "#fc0303",
+      warning: "#f4fc03",
+      info: "#0377fc",
 
       // Neutral utility colors.
       light: "#FFFFFF",
@@ -117,14 +117,14 @@ export const botConfig = {
 
       // Feature-specific colors.
       giveaway: {
-        active: "#57F287",
-        ended: "#ED4245",
+        active: "#0377fc",
+        ended: "#0377fc",
       },
       ticket: {
-        open: "#57F287",
-        claimed: "#FAA61A",
-        closed: "#ED4245",
-        pending: "#99AAB5",
+        open: "#0377fc",
+        claimed: "#0377fc",
+        closed: "#0377fc",
+        pending: "#0377fc",
       },
       economy: "#F1C40F",
       birthday: "#E91E63",
@@ -141,7 +141,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: "HyperCloud",
       // Footer icon URL (null = no icon).
       icon: null,
     },
