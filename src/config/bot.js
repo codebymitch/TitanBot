@@ -25,7 +25,7 @@ export const botConfig = {
       {
         name: "Custom Status", // required by Discord API, not shown in the client
         state: "Hypercloud.bot",     // this is what people actually see
-        type: 4,               // Custom
+        type: 0,               // Custom
       },
     ],
   },
