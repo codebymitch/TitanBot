@@ -8,38 +8,38 @@ import { ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('goodbye')
-        .setDescription('Configure the goodbye message system')
+        .setName('tschüss')
+        .setDescription('Willkommens modul confih)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand
                 .setName('setup')
-                .setDescription('Set up the goodbye message')
+                .setDescription('Tschüss Module configurieren')
                 .addChannelOption(option =>
                     option.setName('channel')
-                        .setDescription('The channel to send goodbye messages to')
+                        .setDescription('der kanal wo die nachricht gesendet wird')
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(true))
                 .addStringOption(option =>
                     option.setName('message')
-                        .setDescription('Goodbye message. Variables: {user}, {username}, {server}, {memberCount}')
+                        .setDescription('Tschüss nachricht. Variables: {user}, {username}, {server}, {memberCount}')
                         .setRequired(true))
                 .addStringOption(option =>
-                    option.setName('image')
-                        .setDescription('URL of the image to include in the goodbye message')
+                    option.setName('bild')
+                        .setDescription('macht ein bild im text URL')
                         .setRequired(false))
                 .addBooleanOption(option =>
                     option.setName('ping')
-                        .setDescription('Whether to ping the user in the goodbye message')
+                        .setDescription('Soll dir person gepingt werden ')
                         .setRequired(false))),
 
     async execute(interaction) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
-            logger.warn(`Goodbye interaction defer failed`, {
+            logger.warn(`Tschüss modul fehlgeschlagen`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                commandName: 'goodbye'
+                commandName: 'Tschüss'
             });
             return;
         }
@@ -55,7 +55,7 @@ export default {
         if (subcommand === 'setup') {
             const channel = options.getChannel('channel');
             const message = options.getString('message');
-            const image = options.getString('image');
+            const image = options.getString('bild');
             const ping = options.getBoolean('ping') ?? false;
 
             const existingConfig = await getWelcomeConfig(client, guild.id);
@@ -103,16 +103,16 @@ export default {
                 const embed = new EmbedBuilder()
                     .setColor(getColor('success'))
                     .setTitle('Goodbye System Configured')
-                    .setDescription(`Goodbye messages will now be sent to ${channel}`)
+                    .setDescription(`tschüss nachrichten werden jetzt gesendet in ${channel}`)
                     .addFields(
                         { name: 'Message Preview', value: truncateForEmbedField(previewMessage) },
-                        { name: 'Ping User', value: ping ? 'Yes' : 'No' },
+                        { name: 'Ping User', value: ping ? 'ja' : 'nein' },
                         { name: 'Status', value: 'Enabled' }
                     )
-                    .setFooter({ text: 'Tip: Use /greet dashboard to customize goodbye settings' });
+                    .setFooter({ text: 'Tip: benutze das willkommens dashboard' });
 
                 if (image) {
-                    embed.setImage(image);
+                    embed.setImage(bild);
                 }
 
                 await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
