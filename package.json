@@ -16,9 +16,9 @@
     "backup:drill": "node scripts/restore-drill.js"
   },
   "dependencies": {
-    "@discordjs/rest": "^2.6.1",
+    "@discordjs/rest": "^2.6.3",
     "axios": "^1.15.2",
-    "discord.js": "^14.26.4",
+    "discord.js": "^14.27.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "node-cron": "^4.2.1",
@@ -33,6 +33,6 @@
   },
   "overrides": {
     "form-data": "^4.0.6",
-    "undici": "^6.27.0"
+    "undici": "^6.28.0"
   }
 }
