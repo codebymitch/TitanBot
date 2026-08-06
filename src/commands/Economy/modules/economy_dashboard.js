@@ -115,21 +115,27 @@ async function updateConfigFile(currencySymbol, currencyName) {
         const configPath = path.join(__dirname, '../../../config/bot.js');
         let configContent = await fs.readFile(configPath, 'utf-8');
 
+        // Serialize as proper JS string literals (escapes quotes/backslashes) instead of
+        // raw-interpolating user input into source code - see security review, issue #151 follow-up.
+        const symbolLiteral = JSON.stringify(currencySymbol);
+        const nameLiteral = JSON.stringify(currencyName);
+        const namePluralLiteral = JSON.stringify(`${currencyName}s`);
+
         configContent = configContent.replace(
             /symbol:\s*"[^"]*"/,
-            `symbol: "${currencySymbol}"`
+            `symbol: ${symbolLiteral}`
         );
 
         configContent = configContent.replace(
             /name:\s*"[^"]*",\s*\/\/\s*Currency display name/,
-            `name: "${currencyName}", // Currency display name`
+            `name: ${nameLiteral}, // Currency display name`
         );
 
         configContent = configContent.replace(
             /namePlural:\s*"[^"]*",\s*\/\/\s*Plural display name/,
-            `namePlural: "${currencyName}s", // Plural display name`
+            `namePlural: ${namePluralLiteral}, // Plural display name`
         );
-        
+
         await fs.writeFile(configPath, configContent, 'utf-8');
         logger.info('Config file updated successfully');
         return true;
@@ -137,6 +143,15 @@ async function updateConfigFile(currencySymbol, currencyName) {
         logger.error('Error updating config file:', error);
         return false;
     }
+}
+
+// Only letters, numbers, currency symbols, and common punctuation - excludes quote/backslash/backtick
+// so this can never contain characters that would break out of a string literal, even if a future
+// refactor bypasses the JSON.stringify() call above.
+const SAFE_CURRENCY_CHARS = /^[\p{L}\p{N}\p{Sc}\s.,!?-]+$/u;
+
+function isSafeCurrencyInput(value) {
+    return SAFE_CURRENCY_CHARS.test(value);
 }
 
 export default {
@@ -453,6 +468,11 @@ async function handleChangeCurrency(selectInteraction, rootInteraction, guild) {
         return;
     }
 
+    if (!isSafeCurrencyInput(newSymbol)) {
+        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'Currency symbol contains an unsupported character. Quotes, backslashes, and backticks are not allowed.' });
+        return;
+    }
+
     const success = await updateConfigFile(newSymbol, BotConfig.economy.currency.name);
 
     if (!success) {
@@ -504,6 +524,11 @@ async function handleChangeName(selectInteraction, rootInteraction, guild) {
 
     if (newName.length === 0 || newName.length > 20) {
         await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'Currency name must be 1-20 characters long.' });
+        return;
+    }
+
+    if (!isSafeCurrencyInput(newName)) {
+        await replyUserError(submitted, { type: ErrorTypes.VALIDATION, message: 'Currency name contains an unsupported character. Quotes, backslashes, and backticks are not allowed.' });
         return;
     }
 
