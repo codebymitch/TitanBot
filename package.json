@@ -1,19 +1,13 @@
 {
-  "name": "titanbot",
-  "version": "2.1.0",
-  "description": "Modular Ultimate Community Bot by Touchpoint Support",
+  "name": "redtie",
+  "version": "2.1.0-superuser",
+  "description": "R.E.D.T.I.E - Superuser Discord Intelligence layer for MEE6",
+  "author": "zema-tech",
   "main": "src/app.js",
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
-    "migrate": "node scripts/migrate.js apply",
-    "migrate:check": "node scripts/migrate.js check",
-    "migrate:status": "node scripts/migrate.js status",
-    "migrate:keys": "node scripts/migrate-keys.js",
-    "migrate:keys:dry": "node scripts/migrate-keys.js --dry-run",
-    "backup:db": "node scripts/backup.js",
-    "restore:db": "node scripts/restore.js",
-    "backup:drill": "node scripts/restore-drill.js"
+    "migrate": "node scripts/migrate.js apply"
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.1",
@@ -21,18 +15,16 @@
     "discord.js": "^14.26.4",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "groq-sdk": "^0.5.0",
+    "@huggingface/inference": "^2.0.0",
     "node-cron": "^4.2.1",
     "pg": "^8.11.3",
     "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^5.0.0",
     "zod": "^3.25.76",
     "riffy": "1.0.12"
   },
   "engines": {
     "node": ">=20.10.0"
   },
-  "overrides": {
-    "form-data": "^4.0.6",
-    "undici": "^6.27.0"
-  }
+  "keywords": ["redtie", "mee6", "superuser", "discord-bot", "groq", "ai", "automation"]
 }
