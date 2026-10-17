@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    container_name: titanbot
+    container_name: nexobot
     restart: unless-stopped
     env_file:
       - .env
@@ -10,12 +10,12 @@ services:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-titanbot}
-      - POSTGRES_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-titanbot}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-nexobot}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-nexobot}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-nexobot}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-nexobot}
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB:-titanbot}
-      - POSTGRES_USER=${POSTGRES_USER:-titanbot}
+      - POSTGRES_DB=${POSTGRES_DB:-nexobot}
+      - POSTGRES_USER=${POSTGRES_USER:-nexobot}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
       - POSTGRES_SSL=false
       - AUTO_MIGRATE=true
@@ -35,41 +35,44 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - titan-network
+      - nexo-network
 
   lavalink:
     profiles:
       - local-lavalink
     image: ghcr.io/lavalink-devs/lavalink:4
-    container_name: titanbot-lavalink
+    container_name: nexobot-lavalink
     restart: unless-stopped
     environment:
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
     volumes:
       - ./lavalink/application.yml:/opt/Lavalink/application.yml
     networks:
-      - titan-network
+      - nexo-network
 
   db:
     image: postgres:15-alpine
-    container_name: titanbot-db
+    container_name: nexobot-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-titanbot}
+      - POSTGRES_USER=${POSTGRES_USER:-nexobot}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=${POSTGRES_DB:-titanbot}
+      - POSTGRES_DB=${POSTGRES_DB:-nexobot}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Local access for `npm run dev` / `npm start` on the host (bound to localhost only).
+      - "127.0.0.1:${DB_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - titan-network
+      - nexo-network
 
 networks:
-  titan-network:
+  nexo-network:
     driver: bridge
 
 volumes:

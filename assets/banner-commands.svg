@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-label="Command-Migration: 99 → 36 Commands">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#A78BFA"/><stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="eye" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A78BFA"/><stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="visor" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2A2066"/><stop offset="1" stop-color="#140F33"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2B1863"/><stop offset="0.55" stop-color="#161038"/><stop offset="1" stop-color="#0F2A44"/>
+    </linearGradient>
+    <radialGradient id="nebulaPurple" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#8B5CF6" stop-opacity="0.45"/><stop offset="1" stop-color="#8B5CF6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebulaCyan" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#22D3EE" stop-opacity="0.35"/><stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="orbit" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#C4B5FD" stop-opacity="0.15"/><stop offset="0.5" stop-color="#D8B4FE" stop-opacity="0.9"/><stop offset="1" stop-color="#7DD3FC" stop-opacity="0.9"/>
+    </linearGradient>
+    <clipPath id="orbitFront"><rect x="-600" y="0" width="1200" height="600"/></clipPath>
+    <filter id="shadow" x="-15%" y="-25%" width="130%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="glow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <polygon points="344,87 616,87 544,145 272,145" fill="#8B5CF6"/>
+    <polygon points="916,245 1224,245 1152,303 844,303" fill="#22D3EE"/>
+    <polygon points="366,105 1206,105 1134,285 294,285" fill="url(#plate)"/>
+  </g>
+  <clipPath id="plateClip"><polygon points="366,105 1206,105 1134,285 294,285"/></clipPath>
+  <g clip-path="url(#plateClip)">
+    <circle cx="590" cy="115" r="220" fill="url(#nebulaPurple)"/>
+    <circle cx="1050" cy="285" r="240" fill="url(#nebulaCyan)"/>
+    <circle cx="470" cy="130" r="1.6" fill="#FFFFFF" fill-opacity="0.7"/><circle cx="620" cy="268" r="1.2" fill="#FFFFFF" fill-opacity="0.5"/><circle cx="780" cy="124" r="1.4" fill="#FFFFFF" fill-opacity="0.6"/><circle cx="905" cy="262" r="1.8" fill="#FFFFFF" fill-opacity="0.7"/><circle cx="1010" cy="140" r="1.2" fill="#FFFFFF" fill-opacity="0.5"/><circle cx="1100" cy="230" r="1.6" fill="#FFFFFF" fill-opacity="0.6"/><circle cx="560" cy="190" r="1" fill="#FFFFFF" fill-opacity="0.4"/><circle cx="980" cy="200" r="1" fill="#FFFFFF" fill-opacity="0.4"/>
+    <path d="M 1100 135 Q 1100 145 1110 145 Q 1100 145 1100 155 Q 1100 145 1090 145 Q 1100 145 1100 135 Z" fill="#FFFFFF"/>
+    <path d="M 1110 255 Q 1110 261 1116 261 Q 1110 261 1110 267 Q 1110 261 1104 261 Q 1110 261 1110 255 Z" fill="#FFFFFF"/>
+  </g>
+  <polygon points="366,105 1206,105 1134,285 294,285" fill="none" stroke="url(#brand)" stroke-width="3" stroke-opacity="0.7"/>
+  <g font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-weight="900">
+    <text x="430" y="214" font-size="100" fill="#FFFFFF" letter-spacing="4">COMMANDS</text>
+    <text x="434" y="256" font-size="24" font-weight="700" fill="url(#brand)" letter-spacing="3">99 → 36 · ALTE NAMEN BLEIBEN</text>
+  </g>
+  <g transform="translate(220 182) scale(0.5) translate(-512 -500)" filter="url(#shadow)">
+    <g transform="translate(512 560) rotate(-10)" opacity="0.55"><ellipse cx="0" cy="0" rx="400" ry="88" fill="none" stroke="url(#orbit)" stroke-width="14"/></g>
+      <rect x="497" y="236" width="30" height="80" rx="15" fill="#FFFFFF" stroke="#CFC8F5" stroke-width="8"/>
+      <circle cx="512" cy="226" r="27" fill="#FFFFFF" stroke="#CFC8F5" stroke-width="8"/>
+      <circle cx="512" cy="226" r="15" fill="url(#eye)"/>
+      <rect x="214" y="450" width="96" height="160" rx="46" fill="#E6E4FB" stroke="#CFC8F5" stroke-width="8"/>
+      <rect x="714" y="450" width="96" height="160" rx="46" fill="#E6E4FB" stroke="#CFC8F5" stroke-width="8"/>
+      <rect x="262" y="310" width="500" height="420" rx="150" fill="#FFFFFF" stroke="#CFC8F5" stroke-width="8"/>
+      <rect x="325" y="395" width="375" height="205" rx="102" fill="url(#visor)"/>
+      <ellipse cx="426" cy="486" rx="44" ry="52" fill="url(#eye)"/>
+      <ellipse cx="598" cy="486" rx="44" ry="52" fill="url(#eye)"/>
+      <circle cx="442" cy="466" r="13" fill="#F5F3FF"/>
+      <circle cx="614" cy="466" r="13" fill="#F5F3FF"/>
+      <path d="M 452 552 Q 512 592 572 552" fill="none" stroke="#22D3EE" stroke-width="15" stroke-linecap="round"/>
+      <circle cx="452" cy="672" r="11" fill="#C4B5FD"/>
+      <circle cx="512" cy="672" r="11" fill="#67E8F9"/>
+      <circle cx="572" cy="672" r="11" fill="#D8B4FE"/>
+    <g transform="translate(512 560) rotate(-10)" clip-path="url(#orbitFront)"><ellipse cx="0" cy="0" rx="400" ry="88" fill="none" stroke="url(#orbit)" stroke-width="14"/></g>
+    <circle cx="880" cy="470" r="16" fill="#FFFFFF" opacity="0.9" filter="url(#glow)"/>
+  </g>
+  <path d="M 70 58 Q 70 70 82 70 Q 70 70 70 82 Q 70 70 58 70 Q 70 70 70 58 Z" fill="#FFFFFF"/>
+  <path d="M 340 52 Q 340 60 348 60 Q 340 60 340 68 Q 340 60 332 60 Q 340 60 340 52 Z" fill="#FFFFFF"/>
+  <path d="M 60 293 Q 60 300 67 300 Q 60 300 60 307 Q 60 300 53 300 Q 60 300 60 293 Z" fill="#FFFFFF"/>
+  <g transform="translate(340 286)" filter="url(#shadow)">
+    <circle r="36" fill="#161038" stroke="url(#brand)" stroke-width="4"/>
+    <g fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M -18 -12 H -6 C 2 -12 2 0 10 0 H 16 M -18 12 H -6 C 2 12 2 0 10 0"/><path d="M 11 -6 L 17 0 L 11 6"/></g>
+  </g>
+</svg>

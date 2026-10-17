@@ -1,19 +1,33 @@
 {
-  "name": "titanbot",
-  "version": "2.1.0",
-  "description": "Modular Ultimate Community Bot by Touchpoint Support",
-  "main": "src/app.js",
+  "name": "nexobot",
+  "version": "1.0.0",
+  "description": "Nexo - Ein Bot. Alle Funktionen. Modular Discord community bot.",
+  "author": "Robertwlt03",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Robertwlt03/NexoBot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Robertwlt03/NexoBot/issues"
+  },
+  "homepage": "https://github.com/Robertwlt03/NexoBot#readme",
+  "main": "dist/app.js",
   "type": "module",
   "scripts": {
-    "start": "node src/app.js",
-    "migrate": "node scripts/migrate.js apply",
-    "migrate:check": "node scripts/migrate.js check",
-    "migrate:status": "node scripts/migrate.js status",
-    "migrate:keys": "node scripts/migrate-keys.js",
-    "migrate:keys:dry": "node scripts/migrate-keys.js --dry-run",
-    "backup:db": "node scripts/backup.js",
-    "restore:db": "node scripts/restore.js",
-    "backup:drill": "node scripts/restore-drill.js"
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/app.js",
+    "dev": "tsx watch src/app.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "node dist/scripts/migrate.js apply",
+    "migrate:check": "node dist/scripts/migrate.js check",
+    "migrate:status": "node dist/scripts/migrate.js status",
+    "migrate:keys": "node dist/scripts/migrate-keys.js",
+    "migrate:keys:dry": "node dist/scripts/migrate-keys.js --dry-run",
+    "backup:db": "node dist/scripts/backup.js",
+    "restore:db": "node dist/scripts/restore.js",
+    "backup:drill": "node dist/scripts/restore-drill.js",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.1",
@@ -23,10 +37,10 @@
     "express": "^5.1.0",
     "node-cron": "^4.2.1",
     "pg": "^8.11.3",
+    "riffy": "1.0.12",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.25.76",
-    "riffy": "1.0.12"
+    "zod": "^3.25.76"
   },
   "engines": {
     "node": ">=20.10.0"
@@ -34,5 +48,12 @@
   "overrides": {
     "form-data": "^4.0.6",
     "undici": "^6.27.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.19.43",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
   }
 }

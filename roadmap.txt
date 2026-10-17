@@ -1,54 +1,53 @@
-TitanBot Roadmap / Structure Overview
+NexoBot Roadmap / Structure Overview
 
 Goal
 - Keep this as a practical map of the codebase.
 - Show main folders and important files only (not every file).
 
 Root
-- index.js                    -> process entry point
-- package.json                -> scripts, dependencies, project metadata
-- README.md                   -> setup and usage docs
-- SECURITY.md                 -> security policy
-- scripts/                    -> utility/maintenance scripts (backup, restore, migrate)
+- package.json                -> scripts (build, start, dev, typecheck, test, migrate, backup), dependencies
+- tsconfig.json               -> TypeScript config (strict, NodeNext, src -> dist)
+- Dockerfile                  -> multi-stage build (tsc) + slim runtime (node dist/app.js)
+- README.md                   -> setup and usage docs (German)
+- docs/COMMAND_MIGRATION.md   -> old -> new command mapping (99 -> 36)
+- tests/                      -> node:test checks (npm test, run via tsx)
+- lavalink/                   -> Lavalink node list and local Lavalink config
 - logs/                       -> runtime log output
-- src/                        -> main bot application code
-- tests/                      -> unit tests (run via npm test)
+- dist/                       -> compiled output (git-ignored)
 
 src/
-- app.js                      -> creates client, initializes systems, starts web server
+- app.ts                      -> NexoBot client, startup, web server (/health, /ready), cron jobs
+- types/index.ts              -> shared types (Command, BotEvent, handlers, Client augmentation, GuildConfig)
 
-- commands/                   -> slash command categories by feature
-  - Core/                     -> help, ping, stats, uptime, invite
-  - Community/                -> application management + dashboards
-  - Logging/                  -> audit logging + event management
-    - modules/logging_dashboard.js
-    - modules/logging_setchannel.js
-  - Ticket/                   -> support ticket system + dashboard
-  - ServerStats/              -> server stats channel system
-  - Economy/                  -> economy system
-  - Moderation/               -> moderation/admin commands
-  - Verification/             -> member verification flow
-  - JoinToCreate/             -> dynamic voice channel creation
-  - Reaction_roles/           -> automatic role assignment
-  - Birthday/, Fun/, Giveaway/, Leveling/, Search/, Tools/, Utility/, Welcome/
+- commands/                   -> slash commands by category folder
+  - <Category>/<name>.ts      -> top-level command (router or standalone)
+  - <Category>/modules/       -> subcommand implementations (old top-level commands live here)
+  - Economy/ (eco, economy), Music/ (music), Giveaway/ (giveaway), Leveling/ (level, rank),
+    Tools/ (tools), Utility/ (info, todo, report, wipedata), Core/ (bot, help, commands, configwizard),
+    Fun/ (fun, count), Welcome/ (welcome), Verification/ (verification, verify), Ticket/ (tickets, ticket),
+    Moderation/ (ban, kick, mod, channel, msg, cases), Community/, Birthday/, JoinToCreate/,
+    Logging/, Reaction_roles/, Search/, ServerStats/
 
-- config/                     -> centralized configuration modules
-- events/                     -> Discord event listeners
-- handlers/                   -> interaction routing and component handlers
-  - commandLoader.js          -> loads slash commands at startup
-  - events.js                 -> Discord event listener registration
-  - interactions.js           -> button/select/modal router
-  - ticketButtons.js, reactionRoles.js, etc.
+- config/                     -> centralized configuration
+  - bot.ts                    -> single source of truth for theming/colors and core bot config
+  - env.ts                    -> zod schema for environment variables
+  - commands/legacyCommandMap.ts -> old command names -> new paths (access, prefix, help, docs)
+  - commands/                 -> aliases, categories, prefix restrictions
+  - database/                 -> Postgres config and schema version
 
-- interactions/               -> button, modal, and select menu handlers
+- events/                     -> Discord event listeners (interactionCreate, messageCreate, ...)
+- handlers/                   -> component handlers and loaders
+  - loaders/commandLoader.ts  -> loads and registers slash commands
+  - loaders/events.ts         -> event registration
+  - loaders/interactions.ts   -> button/select/modal registry
+- interactions/               -> button, modal and select menu handler modules
 - services/                   -> business logic + data operations
 - utils/                      -> shared helpers
-  - database.js               -> facade re-exporting database modules
-  - database/wrapper.js       -> DatabaseWrapper, get/set helpers
-  - database/keys.js          -> Redis-style key builders
-  - database/tickets.js       -> ticket persistence + guild ticket stats
-  - panelStatus.js            -> shared panel message detection
-  - errorHandler.js, logger.js, embeds.js, etc.
+  - commandRouter.ts          -> builds consolidated commands from old command modules
+  - database.ts               -> facade re-exporting database modules
+  - database/wrapper.ts       -> DatabaseWrapper, typed key-value API
+  - errorHandler.ts, logger.ts, embeds.ts, interactionHelper.ts, ...
+- scripts/                    -> maintenance scripts (backup, restore, migrate), run from dist/scripts
 
 Database
 - PostgreSQL (primary) with in-memory fallback for development
@@ -56,4 +55,4 @@ Database
 
 Notes
 - Modular by feature area: commands -> handlers -> services -> utils
-- bot.js is the single source of truth for embed theming/colors and core bot config
+- User-facing texts are German; code, comments and logs are English
