@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>CHAOS — الإعلان الرئيسي</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .dead { width: 880px; text-align: right; font-size: 44px; font-weight: 700; color: #8e8ea6; }
+  .dead .ch { color: #cfd0e6; font-weight: 900; margin-bottom: 18px; }
+  .dead .msg { display: flex; gap: 20px; align-items: center; opacity: .6; }
+  .dead .av { width: 80px; height: 80px; border-radius: 50%; background: #3a3b4f; flex: none; }
+  .dead .ago { margin-top: 22px; color: var(--red); font-weight: 900; }
+  .asset { display: flex; justify-content: space-between; font-size: 42px; font-weight: 900; margin-top: 24px; }
+</style>
+</head>
+<body data-duration="23.5" data-cover="4.6" data-hits="3.5,18.1,19.5">
+<div id="stage">
+  <div class="bg"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div><div class="grid"></div><div class="noise"></div><div class="scan"></div><div class="vignette"></div></div>
+  <div class="brand"><span><b>C</b>HAOS</span></div>
+
+  <!-- 1. Hook: dead servers -->
+  <section class="scene" data-start="0" data-end="3">
+    <div class="card dead fromR" data-at="0">
+      <div class="ch"># 💬・الشات-العام</div>
+      <div class="msg"><div class="av"></div><div>…هو في حد هنا؟</div></div>
+      <div class="ago">آخر رسالة: من 3 أيام <span class="emoji">🕸️</span></div>
+    </div>
+    <div class="h1"><div class="glin" data-at="0.5">زهقت من</div><div class="glin" data-at="0.9">السيرفرات</div><div class="glin red" data-at="1.3">الميتة؟ <span class="emoji">💀</span></div></div>
+  </section>
+
+  <!-- 2. Logo -->
+  <section class="scene" data-start="3" data-end="6">
+    <div class="h3 up" data-at="0">مكانك الصح في <span class="emoji">👇</span></div>
+    <div class="logo slam" data-t="CHAOS" data-at="0.5">CHAOS</div>
+    <div class="tag up" data-at="1.1">كيوس · السيرفر اللي <span class="red">عمره ما بينام</span></div>
+  </section>
+
+  <!-- 3. Games -->
+  <section class="scene" data-start="6" data-end="9.5">
+    <div class="big-emoji pop" data-at="0">🎮</div>
+    <div class="h2 up" data-at="0.2">ألعاب <span class="hl">جماعية</span> كل يوم</div>
+    <div class="chips">
+      <div class="chip pop" data-at="0.6">🎭 مافيا</div>
+      <div class="chip pop" data-at="0.75">🪑 كراسي</div>
+      <div class="chip pop" data-at="0.9">🎯 روليت</div>
+      <div class="chip pop" data-at="1.05">🧠 أسئلة</div>
+      <div class="chip pop" data-at="1.2">⚡ أسرع واحد</div>
+      <div class="chip pop" data-at="1.35">🔤 فكك</div>
+    </div>
+    <div class="h3 up" data-at="1.9">واللي يكسب ياخد <span class="gold">CC</span> <span class="emoji">🏆</span></div>
+  </section>
+
+  <!-- 4. Currency -->
+  <section class="scene" data-start="9.5" data-end="13">
+    <div class="h2 up" data-at="0">عملة <span class="hl gold">خاصة</span> بالسيرفر</div>
+    <div class="pop" data-at="0.2"><div class="coin">CC</div></div>
+    <div class="card pop" data-at="0.4"><div class="num gold" style="font-size:150px"><span id="cc1">0</span> CC</div></div>
+    <div class="p up" data-at="0.9">Chaos Credits — بتجمعها من اللعب<br>واللفلات والانفايتات</div>
+  </section>
+
+  <!-- 5. Bourse -->
+  <section class="scene" data-start="13" data-end="16.5">
+    <div class="h2 up" data-at="0">بورصة <span class="green">بتتحرك</span> كل ساعة</div>
+    <div class="card chart fromL" data-at="0.2">
+      <div class="head"><div class="title">🚗 عربية</div><div class="price"><span id="p1">1,180</span> CC</div></div>
+      <svg id="c1" viewBox="0 0 1000 400" preserveAspectRatio="none"></svg>
+      <div class="asset"><span>🥇 سبيكة دهب</span><span class="delta gain">+6.2%</span></div>
+      <div class="asset"><span>✈️ طيارة</span><span class="delta loss">-4.8%</span></div>
+    </div>
+    <div class="h3 up" data-at="1.3">اشتري رخيص، وبيع غالي <span class="emoji">😏</span></div>
+  </section>
+
+  <!-- 6. Levels -->
+  <section class="scene" data-start="16.5" data-end="19.5">
+    <div class="h2 up" data-at="0">اتكلم <span class="hl">واكبر</span></div>
+    <div class="p up" data-at="0.2">XP من الشات والفويس <span class="emoji">🎙️</span></div>
+    <div class="card lvl fromR" data-at="0.3">
+      <div class="top"><span>LVL <span id="lv">24</span></span><span id="xp">0%</span></div>
+      <div class="bar"><i id="bar1"></i></div>
+    </div>
+    <div class="levelup slam" data-at="1.6">LEVEL UP!</div>
+    <div class="h3 pop" data-at="1.9"><span class="num gold">+250 CC</span> مع كل لفل <span class="emoji">🔥</span></div>
+  </section>
+
+  <!-- 7. CTA -->
+  <section class="scene" data-start="19.5" data-end="23.5">
+    <div class="logo slam" data-t="CHAOS" data-at="0" style="font-size:240px">CHAOS</div>
+    <div class="h2 up" data-at="0.4">الفوضى <span class="red">مستنياك</span> <span class="emoji">🔥</span></div>
+    <div class="pop" data-at="0.9"><div class="btn pulse">ادخل السيرفر</div></div>
+    <div class="cta-foot up" data-at="1.4" data-invite>
+      <div class="bio">اللينك في البايو <span class="bounce">👇</span></div>
+      <div class="link">discord.gg/…</div>
+    </div>
+  </section>
+
+  <div id="flash"></div>
+</div>
+<script src="shared.js"></script>
+<script>
+  const { hook, ease, local, fmt, lineChart } = CHAOS;
+  const $ = id => document.getElementById(id);
+  // CC counter
+  hook(t => { $('cc1').textContent = fmt(12450 * ease.out(local(t, 9.9) / 1.8)); });
+  // Car price: hourly moves, never more than 10% at once
+  const car = [1180, 1242, 1205, 1296, 1263, 1371, 1338, 1452, 1418, 1539];
+  hook(t => { $('p1').textContent = fmt(lineChart($('c1'), car, ease.inOut(local(t, 13.3) / 2.6), '#3ee07a')); });
+  // Level bar: 24 → 25
+  hook(t => {
+    const p = ease.inOut(local(t, 16.9) / 1.2);
+    $('bar1').style.width = (p * 100).toFixed(1) + '%';
+    $('xp').textContent = Math.round(p * 100) + '%';
+    $('lv').textContent = t >= 18.1 ? '25' : '24';
+  });
+</script>
+</body>
+</html>

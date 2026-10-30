@@ -5,7 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { getGuildConfig, setGuildConfig } from '../config/guildConfig.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { addXp } from './xpSystem.js';
-import { getUserLevelKey } from '../../utils/database/keys.js';
+import { getUserLevelKey, getUserLevelPrefix } from '../../utils/database/keys.js';
 
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
@@ -56,6 +56,45 @@ export function calculateTotalXp(level, currentXp = 0) {
   return total;
 }
 
+/** Every user ID that has saved level data in the guild (both the current and the old key format). */
+export async function listLevelUserIds(client, guildId) {
+  if (typeof client.db?.list !== 'function') return [];
+
+  const prefixes = [getUserLevelPrefix(guildId), `${guildId}:leveling:users:`];
+  const userIds = new Set();
+
+  for (const prefix of prefixes) {
+    let keys = await client.db.list(prefix).catch(() => []);
+    if (!Array.isArray(keys)) {
+      keys = typeof keys === 'object' && keys !== null ? Object.keys(keys) : [];
+    }
+
+    for (const key of keys) {
+      if (!key.startsWith(prefix)) continue;
+      const userId = key.slice(prefix.length);
+      if (/^\d{17,20}$/.test(userId)) userIds.add(userId);
+    }
+  }
+
+  return [...userIds];
+}
+
+// Fetching every member is rate limited by Discord (a `rank` right before a `top` was enough), so a
+// full cache is used as is and a failed fetch falls back to the cache instead of an empty list.
+async function loadMembers(guild) {
+  if (guild.members.cache.size >= (guild.memberCount || Infinity)) return { members: guild.members.cache, complete: true };
+  try {
+    return { members: await guild.members.fetch(), complete: true };
+  } catch (error) {
+    logger.warn(`Could not fetch members of guild ${guild.id} for the leaderboard, using the cache: ${error.message}`);
+    return { members: guild.members.cache, complete: false };
+  }
+}
+
+/**
+ * The members with the most XP, highest first, each with its `rank`. The ranked users come from the
+ * saved level data; the member list only drops bots and people who left (when it could be loaded).
+ */
 export async function getLeaderboard(client, guildId, limit = 10) {
   try {
     
@@ -76,29 +115,31 @@ export async function getLeaderboard(client, guildId, limit = 10) {
       logger.warn(`Guild ${guildId} not found in cache`);
       return [];
     }
-    
-    const members = await guild.members.fetch().catch(error => {
-      logger.error(`Failed to fetch members for guild ${guildId}:`, error);
-      return new Map();
-    });
+
+    const { members, complete } = await loadMembers(guild);
+    const savedIds = await listLevelUserIds(client, guildId);
+    // Without a key listing the database can't say who has XP, so every member is checked instead.
+    const userIds = typeof client.db?.list === 'function' ? savedIds : [...members.keys()];
 
     const leaderboard = [];
-    
-    for (const [userId, member] of members) {
-      if (member.user.bot) continue;
-      
+
+    for (const userId of userIds) {
+      const member = members.get(userId);
+      if (member?.user?.bot) continue;
+      if (!member && complete) continue;
+
       const data = await getUserLevelData(client, guildId, userId);
       if (data && (data.totalXp > 0 || data.level > 0)) {
         leaderboard.push({
           userId,
-          username: member.user.username,
-          discriminator: member.user.discriminator,
+          username: member?.user?.username ?? null,
+          discriminator: member?.user?.discriminator ?? null,
           ...data
         });
       }
     }
     
-    leaderboard.sort((a, b) => b.totalXp - a.totalXp);
+    leaderboard.sort((a, b) => b.totalXp - a.totalXp || b.level - a.level);
     
     leaderboard.forEach((entry, index) => {
       entry.rank = index + 1;

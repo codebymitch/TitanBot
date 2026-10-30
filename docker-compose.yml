@@ -10,13 +10,13 @@ services:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-titanbot}
-      - POSTGRES_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-titanbot}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-titanbot}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-titanbot}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-titanbot}
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB:-titanbot}
       - POSTGRES_USER=${POSTGRES_USER:-titanbot}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       - POSTGRES_SSL=false
       - AUTO_MIGRATE=true
       - LOG_LEVEL=${LOG_LEVEL:-warn}
@@ -56,7 +56,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-titanbot}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       - POSTGRES_DB=${POSTGRES_DB:-titanbot}
     volumes:
       - postgres_data:/var/lib/postgresql/data

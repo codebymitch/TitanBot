@@ -21,6 +21,7 @@ import { buildUserErrorEmbed } from './embeds.js';
 import { MessageFlags } from 'discord.js';
 import { getErrorMetadata, getDefaultErrorCodeByType, resolveErrorCode, ErrorCodes } from './errorRegistry.js';
 import { InteractionHelper } from './interactionHelper.js';
+import { NO_PINGS, toOneLine } from './oneLine.js';
 
 // Re-export so consumers only ever need to import from errorHandler.js
 export { ErrorCodes, getErrorMetadata, resolveErrorCode, getDefaultErrorCodeByType } from './errorRegistry.js';
@@ -378,6 +379,24 @@ function logInteractionError(error, errorType, logData) {
     }
 }
 
+const NO_PERMISSION_TEXT = 'You do not have permission to use this command.';
+
+/** Errors are shown as a single short line (`🚫 No Permission`, `❌ User not found`). */
+function toOneLineError(embed) {
+    const data = embed?.data || {};
+    const title = data.title || '';
+    const description = String(data.description || title)
+        .replace(/-#\s*Ref:.*$/gmu, '')
+        .replace(/\*\*/gu, '')
+        .replace(/^[❌🚫⚠️\s]+/u, '');
+    const text = toOneLine(description);
+    if (title === 'Permission Denied' && (!text || text === NO_PERMISSION_TEXT)) {
+        return { content: '🚫 No Permission', embeds: [], allowedMentions: NO_PINGS };
+    }
+    const emoji = title === 'Permission Denied' ? '🚫' : title === 'Too Fast' ? '⏱️' : '❌';
+    return { content: `${emoji} ${text || 'Something went wrong'}`, embeds: [], allowedMentions: NO_PINGS };
+}
+
 async function sendErrorResponse(interaction, embed, context = {}) {
     try {
         if (!interaction || !interaction.id) {
@@ -408,7 +427,7 @@ async function sendErrorResponse(interaction, embed, context = {}) {
             return false;
         }
 
-        const errorMessage = { embeds: [embed] };
+        const errorMessage = toOneLineError(embed);
 
         if (interaction._isPrefixCommand) {
             if (coordinator?.hasResponded()) {

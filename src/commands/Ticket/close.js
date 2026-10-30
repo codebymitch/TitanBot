@@ -1,6 +1,7 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { successEmbed } from '../../utils/embeds.js';
+import { NO_REASON } from '../../utils/moderationCard.js';
 import { logger } from '../../utils/logger.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -33,9 +34,7 @@ export default {
             return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need the `Manage Channels` permission, the configured `Ticket Staff Role`, or be the ticket creator to close this ticket.' });
         }
 
-        const reason =
-            interaction.options?.getString("reason") ||
-            "Closed via command without a specific reason.";
+        const reason = interaction.options?.getString("reason")?.trim() || NO_REASON;
 
         await closeTicket(interaction.channel, interaction.user, reason);
 

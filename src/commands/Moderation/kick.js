@@ -1,8 +1,8 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { successEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { ModerationService } from '../../services/moderation/moderationService.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { moderationCard, cardReason } from '../../utils/moderationCard.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -23,7 +23,7 @@ export default {
     async execute(interaction, config, client) {
         const targetUser = interaction.options.getUser("target");
         const member = interaction.options.getMember("target");
-        const reason = interaction.options.getString("reason") || "No reason provided";
+        const reason = cardReason(interaction.options.getString("reason"));
 
         if (!targetUser) {
             throw new TitanBotError(
@@ -66,13 +66,11 @@ export default {
             reason,
         });
 
-        await InteractionHelper.universalReply(interaction, {
-            embeds: [
-                successEmbed(
-                    `👢 **Kicked** ${targetUser.tag}`,
-                    `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
-                ),
-            ],
-        });
+        await InteractionHelper.universalReply(interaction, moderationCard({
+            emoji: '👢',
+            title: 'KICK ISSUED',
+            fields: [['User', `<@${targetUser.id}>`], ['Reason', reason]],
+            moderatorId: interaction.user.id,
+        }));
     },
 };

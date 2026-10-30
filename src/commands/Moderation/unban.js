@@ -1,9 +1,10 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderation/moderationService.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { moderationCard, cardReason } from '../../utils/moderationCard.js';
+import { unbanDmLine } from '../../services/moderation/punishmentDm.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -52,7 +53,7 @@ export default {
             });
         }
 
-        const reason = interaction.options.getString("reason") || "No reason provided";
+        const reason = cardReason(interaction.options.getString("reason"));
 
         const result = await ModerationService.unbanUser({
             guild: interaction.guild,
@@ -61,13 +62,11 @@ export default {
             reason,
         });
 
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                successEmbed(
-                    "✅ User Unbanned",
-                    `Successfully unbanned **${targetUser.tag}** from the server.\n\n**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
-                ),
-            ],
-        });
+        await InteractionHelper.safeEditReply(interaction, moderationCard({
+            emoji: '✅',
+            title: 'BAN REMOVED',
+            fields: [['User', `<@${targetUser.id}>`], ['Reason', reason], ['DM', unbanDmLine(result.dmSent)]],
+            moderatorId: interaction.user.id,
+        }));
     },
 };

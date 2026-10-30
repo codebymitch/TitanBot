@@ -1,75 +1,55 @@
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { logger } from '../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
-import { getLeaderboard, getLevelingConfig, getXpForLevel } from '../../services/leveling/leveling.js';
+import { getLeaderboard, getLevelingConfig } from '../../services/leveling/leveling.js';
+import { getChatCounts, rankChatCounts } from '../../services/leveling/chatCounter.js';
+import { getVoiceMinutes, rankVoiceMinutes } from '../../services/leveling/voiceXp.js';
+import { buildTopEmbed, buildTopChatEmbed, buildTopVoiceEmbed } from '../../services/leveling/levelUi.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
+// `top level` / `توب لفل` (also plain `top` / `توب`): the 10 members with the most XP.
+// `top chat` / `توب شات`: the 10 members with the most messages.
+// `top voice` / `توب فويس`: the 10 members with the most voice time. All add the caller's own place.
 export default {
   data: new SlashCommandBuilder()
     .setName('leaderboard')
-    .setDescription("Shows the server's level leaderboard")
+    .setDescription("Shows the server's level, chat or voice leaderboard")
+    .addStringOption((option) => option
+      .setName('type')
+      .setDescription('Level (XP), chat (messages) or voice (time in voice)')
+      .addChoices({ name: 'Level', value: 'level' }, { name: 'Chat', value: 'chat' }, { name: 'Voice', value: 'voice' })
+      .setRequired(false))
     .setDMPermission(false),
   category: 'Leveling',
 
   async execute(interaction, config, client) {
     await InteractionHelper.safeDefer(interaction);
+    const type = ['chat', 'voice'].includes(interaction.options.getString('type')) ? interaction.options.getString('type') : 'level';
 
-    const levelingConfig = await getLevelingConfig(client, interaction.guildId);
-
-    if (!levelingConfig?.enabled) {
-      await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          new EmbedBuilder()
-            .setColor('#f1c40f')
-            .setDescription('The leveling system is currently disabled on this server.')
-        ],
-        flags: MessageFlags.Ephemeral
-      });
+    if (type === 'chat' || type === 'voice') {
+      const members = await interaction.guild.members.fetch().catch(() => null);
+      const isMember = (userId) => !members || (members.has(userId) && !members.get(userId).user.bot);
+      const ranked = type === 'chat'
+        ? rankChatCounts(await getChatCounts(client, interaction.guildId), isMember)
+        : rankVoiceMinutes(await getVoiceMinutes(client, interaction.guildId), isMember);
+      const callerEntry = ranked.find((entry) => entry.userId === interaction.user.id) || null;
+      const buildEmbed = type === 'chat' ? buildTopChatEmbed : buildTopVoiceEmbed;
+      const embed = buildEmbed(interaction.guild, ranked.slice(0, 10), { callerId: interaction.user.id, callerEntry });
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed], allowedMentions: { parse: [] } });
       return;
     }
 
-    const leaderboard = await getLeaderboard(client, interaction.guildId, 10);
-
-    if (leaderboard.length === 0) {
-      throw new TitanBotError(
-        'No leaderboard data found',
-        ErrorTypes.DATABASE,
-        'No level data found yet. Start chatting to gain XP!'
-      );
+    const levelingConfig = await getLevelingConfig(client, interaction.guildId);
+    if (!levelingConfig?.enabled) {
+      await InteractionHelper.safeEditReply(interaction, { content: '⚠️ نظام اللفلات مقفول في السيرفر ده.' });
+      return;
     }
 
-    const embed = new EmbedBuilder()
-      .setTitle('Level Leaderboard')
-      .setColor('#2ecc71')
-      .setDescription("Top 10 most active members in this server:")
-      .setTimestamp();
+    const everyone = await getLeaderboard(client, interaction.guildId, 100);
+    const callerEntry = everyone.find((entry) => entry.userId === interaction.user.id) || null;
+    const embed = buildTopEmbed(interaction.guild, everyone.slice(0, 10), { callerId: interaction.user.id, callerEntry });
 
-    const leaderboardText = await Promise.all(
-      leaderboard.map(async (user, index) => {
-        try {
-          const member = await interaction.guild.members.fetch(user.userId).catch(() => null);
-          const userMention = member?.user.toString() || `<@${user.userId}>`;
-          const xpForNextLevel = getXpForLevel(user.level + 1);
-
-          let rankPrefix = `${index + 1}.`;
-          if (index === 0) rankPrefix = '🥇';
-          else if (index === 1) rankPrefix = '🥈';
-          else if (index === 2) rankPrefix = '🥉';
-          else rankPrefix = `**${index + 1}.**`;
-
-          return `${rankPrefix} ${userMention} - Level ${user.level} (${user.xp}/${xpForNextLevel} XP)`;
-        } catch {
-          return `**${index + 1}.** Error loading user ${user.userId}`;
-        }
-      })
-    );
-
-    embed.addFields({
-      name: 'Rankings',
-      value: leaderboardText.join('\n')
-    });
-
-    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+    await InteractionHelper.safeEditReply(interaction, { embeds: [embed], allowedMentions: { parse: [] } });
     logger.debug(`Leaderboard displayed for guild ${interaction.guildId}`);
   }
 };

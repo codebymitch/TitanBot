@@ -29,6 +29,7 @@ const RISKY_COMMAND_NAMES = new Set([
   'timeout',
   'untimeout',
   'purge',
+  'clear',
   'warn',
   'unban',
   'lock',

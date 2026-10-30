@@ -8,6 +8,7 @@ export const CATEGORY_ICONS = {
   Core: 'ℹ️',
   Economy: '💰',
   Fun: '🎮',
+  Games: '🕹️',
   Giveaway: '🎉',
   JoinToCreate: '🔌',
   Leveling: '📊',

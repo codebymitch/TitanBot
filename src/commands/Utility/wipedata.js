@@ -14,7 +14,7 @@ export default {
         const warningMessage = 
             `⚠️ **THIS ACTION IS IRREVERSIBLE!** ⚠️\n\n` +
             `This will permanently delete **ALL** your data from this server including:\n` +
-            `• 💰 Economy balance (wallet & bank)\n` +
+            `• 🌀 Chaos Credits (CC) balance and game stats\n` +
             `• 📊 Levels and XP\n` +
             `• 🎒 Inventory items\n` +
             `• 🛍️ Shop purchases\n` +

@@ -1,5 +1,5 @@
 export const VOICE_CHANNEL_DENIAL =
-    'You need to be in the same voice channel as the bot to use music controls.';
+    '🎧 لازم تكون في نفس روم الفويس اللي فيه البوت عشان تشغل أو تتحكم في الأغاني.';
 
 export function canControlMusic(member, player) {
     const memberChannel = member?.voice?.channel;

@@ -1,11 +1,14 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { cardReason } from '../../utils/moderationCard.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderation/moderationService.js';
 import { TitanBotError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { groupLeadingUsers } from '../../utils/prefixArgs.js';
+import { sendPunishmentDm } from '../../services/moderation/punishmentDm.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("masskick")
@@ -23,6 +26,11 @@ export default {
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
     category: "moderation",
+
+    // Prefix usage: `ماس طرد ID1 ID2 السبب` — all leading IDs go into `users`, the rest is the reason.
+    normalizePrefixArgs(args) {
+        return groupLeadingUsers(args);
+    },
     abuseProtection: { maxAttempts: 3, windowMs: 60_000 },
 
     async execute(interaction, config, client) {
@@ -37,7 +45,7 @@ export default {
         }
 
         const usersInput = interaction.options.getString("users");
-        const reason = interaction.options.getString("reason") || "Mass kick - No reason provided";
+        const reason = cardReason(interaction.options.getString("reason"));
 
         try {
             const userIds = usersInput
@@ -102,6 +110,7 @@ export default {
                         continue;
                     }
 
+                    await sendPunishmentDm(interaction.guild, member.user, 'kick', reason, interaction.user);
                     await member.kick(reason);
 
                     results.successful.push({

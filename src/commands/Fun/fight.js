@@ -3,6 +3,7 @@ import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { inviteOpponent } from '../../services/games/challenge.js';
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const EMBED_DESCRIPTION_LIMIT = 4096;
 
@@ -19,8 +20,6 @@ export default {
   category: 'Fun',
 
   async execute(interaction, config, client) {
-    await InteractionHelper.safeDefer(interaction);
-
     const challenger = interaction.user;
     const opponent = interaction.options.getUser("opponent");
 
@@ -29,7 +28,7 @@ export default {
         "⚔️ Invalid Challenge",
         `**${challenger.username}**, you can't fight yourself! That's a draw before it even starts.`
       );
-      return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+      return await InteractionHelper.safeReply(interaction, { embeds: [embed] });
     }
 
     if (opponent.bot) {
@@ -37,8 +36,12 @@ export default {
         "⚔️ Invalid Opponent",
         "You can't fight bots! Challenge a real person instead."
       );
-      return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+      return await InteractionHelper.safeReply(interaction, { embeds: [embed] });
     }
+
+    // The opponent has to accept the duel first; the invite message then shows the fight.
+    const message = await inviteOpponent(interaction, opponent, 'قتال ⚔️');
+    if (!message) return;
 
     const winner = rand(0, 1) === 0 ? challenger : opponent;
     const loser = winner.id === challenger.id ? opponent : challenger;
@@ -77,7 +80,7 @@ export default {
       description
     );
 
-    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+    await message.edit({ content: null, embeds: [embed], components: [], allowedMentions: { parse: [] } }).catch(() => {});
     logger.debug(`Fight command executed between ${challenger.id} and ${opponent.id} in guild ${interaction.guildId}`);
   },
 };

@@ -9,6 +9,7 @@ import {
 import { sanitizeInput } from '../utils/validation.js';
 import { logger } from '../utils/logger.js';
 import { handleMusicVoiceState } from '../services/music/musicVoiceState.js';
+import { handleVoteKickVoiceState } from '../services/voice/voteKickService.js';
 
 const channelCreationCooldown = new Map();
 const VOICE_CREATE_COOLDOWN_MS = 2000;
@@ -23,6 +24,8 @@ export default {
     name: 'voiceStateUpdate',
     async execute(oldState, newState, client) {
         if (newState.member.user.bot) return;
+        // A vote kicked member can't come back to that channel (our server only).
+        if (await handleVoteKickVoiceState(client, oldState, newState).catch(() => false)) return;
 
         const guildId = newState.guild.id;
         const userId = newState.member.id;

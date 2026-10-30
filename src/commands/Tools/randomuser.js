@@ -98,7 +98,7 @@ export default {
             { name: 'Bot', value: user.bot ? 'Yes' : 'No', inline: true },
             { name: `Roles (${roles.length})`, value: roles.length > 0 ? roles.slice(0, 5).join('') + (roles.length > 5 ? `+${roles.length - 5} more` : '') : 'No roles', inline: false }
         )
-        .setColor('primary');
+        .setColor(getColor('primary'));
 
         const row = new ActionRowBuilder()
             .addComponents(

@@ -40,6 +40,21 @@ export function getEconomyPrefix(guildId) {
     return `guild:${guildId}:economy:`;
 }
 
+/** The CC bourse market of a guild (prices, demand); members' holdings live in their economy record. */
+export function getBourseKey(guildId) {
+    return `guild:${guildId}:bourse`;
+}
+
+/** XP ×2 boosts bought in the CC store: `{ <userId>: { chat: until, voice: until } }` (ms). */
+export function getXpBoostsKey(guildId) {
+    return `guild:${guildId}:xpboosts`;
+}
+
+/** Custom roles bought in the CC store: `{ <roleId>: { kind, leaderId, members, paidUntil, ... } }`. */
+export function getCustomRolesKey(guildId) {
+    return `guild:${guildId}:customroles`;
+}
+
 export function getAFKKey(guildId, userId) {
     return `guild:${guildId}:afk:${userId}`;
 }
@@ -249,4 +264,8 @@ export function getLegacyVariantsForCanonical(canonicalKey) {
     }
 
     return variants;
+}
+
+export function getVoteKickBlocksKey(guildId) {
+    return `guild:${guildId}:votekickblocks`;
 }

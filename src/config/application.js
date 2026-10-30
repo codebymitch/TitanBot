@@ -1,7 +1,7 @@
 import { fileURLToPath } from "url";
 import path from "path";
 import botConfig, { validateConfig } from "./bot.js";
-import { shopConfig as shop } from "./shop/index.js";
+import { ccStoreItems, ccStoreSettings } from "./store/ccStoreItems.js";
 import { pgConfig } from "./database/postgres.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,7 +27,7 @@ const appConfig = {
 
     shop: {
       ...botConfig.shop,
-      ...shop,
+      ...ccStoreSettings,
     },
   },
 
@@ -70,7 +70,7 @@ const appConfig = {
     },
   },
 
-  shop,
+  shop: { ...ccStoreSettings, items: ccStoreItems },
 
   features: {
     ...botConfig.features,

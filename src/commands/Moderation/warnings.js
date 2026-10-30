@@ -1,10 +1,12 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
+import { cardReason } from '../../utils/moderationCard.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/moderation/warningService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { oneLine } from '../../utils/oneLine.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -37,14 +39,7 @@ export default {
         const totalWarns = validWarnings.length;
 
         if (totalWarns === 0) {
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    createEmbed({
-                        title: `Warnings: ${target.tag}`,
-                        description: "This user has no recorded warnings.",
-                    }).setColor(getColor('success')),
-                ],
-            });
+            await InteractionHelper.safeEditReply(interaction, oneLine('✅', `<@${target.id}> Has No Warnings`));
             return;
         }
 
@@ -57,7 +52,7 @@ export default {
             .map((w, i) => {
                 const discordTimestamp = Math.floor(w.timestamp / 1000);
                 return {
-                    name: `[#${i + 1}] Reason: ${w.reason.substring(0, 100)}`,
+                    name: `[#${i + 1}] Reason: ${cardReason(w.reason).substring(0, 100)}`,
                     value: `**Moderator:** <@${w.moderatorId}>\n**Date:** <t:${discordTimestamp}:F> (<t:${discordTimestamp}:R>)`,
                     inline: false,
                 };
@@ -93,6 +88,7 @@ export default {
             },
         });
 
-        await InteractionHelper.safeEditReply(interaction, { embeds: [embed], components: [actionRow] });
+        const reasons = validWarnings.map((w, i) => `${i + 1}. ${cardReason(w.reason).substring(0, 60)}`).join(' | ');
+        await InteractionHelper.safeEditReply(interaction, oneLine('📋', `<@${target.id}> Warnings (${totalWarns}): ${reasons}`.substring(0, 1900), { components: [actionRow] }));
     },
 };

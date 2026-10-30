@@ -4,6 +4,7 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { checkUserPermissions } from '../../utils/permissionGuard.js';
 import { addLevels, getLevelingConfig } from '../../services/leveling/leveling.js';
 import { createEmbed } from '../../utils/embeds.js';
+import { syncMemberLevelRoles } from '../../services/leveling/levelRoleSyncService.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -63,6 +64,9 @@ export default {
     }
 
     const userData = await addLevels(client, interaction.guildId, targetUser.id, levelsToAdd);
+
+    // Give the level roles for the new level (and take the ones above it).
+    await syncMemberLevelRoles(interaction.guild, member, userData.level, levelingConfig.roleRewards, { removeAbove: true, reason: `/leveladd by ${interaction.user.tag}` });
 
     await InteractionHelper.safeEditReply(interaction, {
       embeds: [

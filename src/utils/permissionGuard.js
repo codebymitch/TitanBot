@@ -1,6 +1,6 @@
 // permissionGuard.js
 
-import { PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits, PermissionsBitField } from 'discord.js';
 import { logger } from './logger.js';
 import { replyUserError, ErrorTypes } from './errorHandler.js';
 import { isBotOwner, getBotMessage } from '../config/bot.js';
@@ -20,6 +20,8 @@ export function getCommandDefaultPermissions(commandData) {
 
   return BigInt(value);
 }
+
+const BAN_OR_KICK = [PermissionFlagsBits.BanMembers, PermissionFlagsBits.KickMembers];
 
 function normalizeRoleId(role) {
   if (!role) {
@@ -79,6 +81,11 @@ export function memberHasModerationCommandAccess(member, guildConfig, requiredPe
 
   if (requiredPermissions != null && member.permissions.has(requiredPermissions)) {
     return true;
+  }
+
+  // The configured modRole covers trial-level moderation only: banning and kicking need the real Discord permission.
+  if (requiredPermissions != null && new PermissionsBitField(requiredPermissions).any(BAN_OR_KICK)) {
+    return false;
   }
 
   return memberHasConfiguredModeratorRole(member, guildConfig);

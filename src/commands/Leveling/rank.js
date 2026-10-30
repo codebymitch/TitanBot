@@ -1,9 +1,14 @@
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
-import { getUserLevelData, getLevelingConfig, getXpForLevel } from '../../services/leveling/leveling.js';
+import { getUserLevelData, getLevelingConfig, getXpForLevel, getLeaderboard } from '../../services/leveling/leveling.js';
+import { buildRankEmbed } from '../../services/leveling/levelUi.js';
+import { getChatCounts } from '../../services/leveling/chatCounter.js';
+import { getVoiceMinutes } from '../../services/leveling/voiceXp.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
+// `rank` / `لفل` / `لفل @member`: a member's level, place on the server, messages, voice time and progress to the next level.
 export default {
   data: new SlashCommandBuilder()
     .setName('rank')
@@ -22,22 +27,12 @@ export default {
 
     const levelingConfig = await getLevelingConfig(client, interaction.guildId);
     if (!levelingConfig?.enabled) {
-      await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          new EmbedBuilder()
-            .setColor('#f1c40f')
-            .setDescription('The leveling system is currently disabled on this server.')
-        ],
-        flags: MessageFlags.Ephemeral
-      });
+      await InteractionHelper.safeEditReply(interaction, { content: '⚠️ نظام اللفلات مقفول في السيرفر ده.' });
       return;
     }
 
     const targetUser = interaction.options.getUser('user') || interaction.user;
-    const member = await interaction.guild.members
-      .fetch(targetUser.id)
-      .catch(() => null);
-
+    const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
     if (!member) {
       throw new TitanBotError(
         `User ${targetUser.id} not found in guild`,
@@ -47,53 +42,23 @@ export default {
     }
 
     const userData = await getUserLevelData(client, interaction.guildId, targetUser.id);
+    const level = userData?.level ?? 0;
+    const everyone = await getLeaderboard(client, interaction.guildId, 100).catch(() => []);
+    const entry = everyone.find((item) => item.userId === targetUser.id);
 
-    const safeUserData = {
-      level: userData?.level ?? 0,
+    const embed = buildRankEmbed(member, {
+      level,
       xp: userData?.xp ?? 0,
-      totalXp: userData?.totalXp ?? 0
-    };
+      totalXp: userData?.totalXp ?? 0,
+      // The XP system levels up at getXpForLevel(level), so that's what the bar fills towards.
+      xpNeeded: getXpForLevel(level),
+      position: entry?.rank ?? null,
+      rankedCount: everyone.length,
+      messages: (await getChatCounts(client, interaction.guildId).catch(() => ({})))[targetUser.id] || 0,
+      voiceMinutes: (await getVoiceMinutes(client, interaction.guildId).catch(() => ({})))[targetUser.id] || 0,
+    });
 
-    const xpNeeded = getXpForLevel(safeUserData.level + 1);
-    const progress = xpNeeded > 0 ? Math.floor((safeUserData.xp / xpNeeded) * 100) : 0;
-    const progressBar = createProgressBar(progress, 20);
-
-    const embed = new EmbedBuilder()
-      .setTitle(`${member.displayName}'s Rank`)
-      .setThumbnail(member.displayAvatarURL({ dynamic: true }))
-      .addFields(
-        {
-          name: 'Level',
-          value: safeUserData.level.toString(),
-          inline: true
-        },
-        {
-          name: 'XP',
-          value: `${safeUserData.xp}/${xpNeeded}`,
-          inline: true
-        },
-        {
-          name: 'Total XP',
-          value: safeUserData.totalXp.toString(),
-          inline: true
-        },
-        {
-          name: `Progress to Level ${safeUserData.level + 1}`,
-          value: `${progressBar} ${progress}%`
-        }
-      )
-      .setColor('#2ecc71')
-      .setTimestamp();
-
-    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+    await InteractionHelper.safeEditReply(interaction, { embeds: [embed], allowedMentions: { parse: [] } });
     logger.debug(`Rank checked for user ${targetUser.id} in guild ${interaction.guildId}`);
   }
 };
-
-function createProgressBar(percentage, length = 10) {
-  if (percentage < 0 || percentage > 100) {
-    percentage = Math.max(0, Math.min(100, percentage));
-  }
-  const filled = Math.round((percentage / 100) * length);
-  return '█'.repeat(filled) + '░'.repeat(length - filled);
-}

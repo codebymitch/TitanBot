@@ -4,6 +4,32 @@ import { db, getFromDb, setInDb, getWarningsKey, getWarningsPrefix } from '../..
 import { logger } from '../../utils/logger.js';
 import { createError, ErrorTypes, wrapServiceClassMethods } from '../../utils/errorHandler.js';
 
+/** Warnings delete themselves 5 days after they were issued. */
+export const WARNING_EXPIRY_MS = 5 * 24 * 60 * 60 * 1000;
+
+function isExpired(warning, now = Date.now()) {
+  const issuedAt = Number(warning?.timestamp || warning?.id) || 0;
+  return now - issuedAt >= WARNING_EXPIRY_MS;
+}
+
+/** Drops expired warnings from the stored list; saves only when something was removed. */
+async function pruneKey(key) {
+  const warnings = await getFromDb(key, []);
+  if (!Array.isArray(warnings)) return { warnings, removed: 0 };
+  const now = Date.now();
+  const kept = warnings.filter(w => w && !isExpired(w, now));
+  const removed = warnings.length - kept.length;
+  if (removed) {
+    await setInDb(key, kept);
+    logger.info(`Expired ${removed} warning(s) at ${key}`);
+  }
+  return { warnings: kept, removed };
+}
+
+async function loadAndPrune(key) {
+  return (await pruneKey(key)).warnings;
+}
+
 class WarningService {
 
   static async addWarning({
@@ -14,7 +40,7 @@ class WarningService {
     timestamp = Date.now()
   }) {
     const key = getWarningsKey(guildId, userId);
-    const warnings = await getFromDb(key, []);
+    const warnings = await loadAndPrune(key);
 
     if (!Array.isArray(warnings)) {
       logger.warn(`Warnings for ${userId} in ${guildId} corrupted, resetting`);
@@ -44,13 +70,13 @@ class WarningService {
 
     return {
       id: warning.id,
-      totalCount: warnings.length
+      totalCount: warnings.filter(w => w.status !== 'deleted').length
     };
   }
 
   static async getWarnings(guildId, userId) {
     const key = getWarningsKey(guildId, userId);
-    const warnings = await getFromDb(key, []);
+    const warnings = await loadAndPrune(key);
 
     return Array.isArray(warnings)
       ? warnings.filter(w => w && w.status !== 'deleted')
@@ -64,7 +90,7 @@ class WarningService {
 
   static async removeWarning(guildId, userId, warningId) {
     const key = getWarningsKey(guildId, userId);
-    const warnings = await getFromDb(key, []);
+    const warnings = await loadAndPrune(key);
 
     const index = warnings.findIndex(w => w.id === warningId);
     if (index === -1) {
@@ -85,8 +111,8 @@ class WarningService {
 
   static async clearWarnings(guildId, userId) {
     const key = getWarningsKey(guildId, userId);
-    const warnings = await getFromDb(key, []);
-    const count = warnings.length;
+    const warnings = await loadAndPrune(key);
+    const count = Array.isArray(warnings) ? warnings.filter(w => w.status !== 'deleted').length : 0;
 
     await setInDb(key, []);
 
@@ -102,7 +128,7 @@ class WarningService {
     const allWarnings = [];
 
     for (const key of Array.isArray(keys) ? keys : []) {
-      const warnings = await getFromDb(key, []);
+      const warnings = await loadAndPrune(key);
       if (!Array.isArray(warnings)) continue;
 
       for (const warning of warnings) {
@@ -116,6 +142,16 @@ class WarningService {
 
     logger.debug(`Fetched guild warnings for ${guildId} with ${allWarnings.length} total`);
     return allWarnings.slice(0, limit);
+  }
+
+  /** Deletes every warning older than 5 days in the given guild. Returns how many were removed. */
+  static async pruneExpiredWarnings(guildId) {
+    const keys = await db.list(getWarningsPrefix(guildId));
+    let removed = 0;
+    for (const key of Array.isArray(keys) ? keys : []) {
+      removed += (await pruneKey(key)).removed;
+    }
+    return removed;
   }
 }
 

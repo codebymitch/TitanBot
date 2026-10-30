@@ -1,8 +1,9 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { successEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { ModerationService } from '../../services/moderation/moderationService.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { moderationCard, cardReason } from '../../utils/moderationCard.js';
+import { fetchRepliedMessage, sendModerationActionLog } from '../../services/moderation/moderationActionLogService.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -22,7 +23,7 @@ export default {
 
     async execute(interaction, config, client) {
         const user = interaction.options.getUser("target");
-        const reason = interaction.options.getString("reason") || "No reason provided";
+        const reason = cardReason(interaction.options.getString("reason"));
 
         if (!user) {
             throw new TitanBotError(
@@ -48,20 +49,27 @@ export default {
             );
         }
 
-        const result = await ModerationService.banUser({
+        const repliedMessage = await fetchRepliedMessage(interaction);
+        await ModerationService.banUser({
             guild: interaction.guild,
             user,
             moderator: interaction.member,
             reason,
         });
-
-        await InteractionHelper.universalReply(interaction, {
-            embeds: [
-                successEmbed(
-                    `🚫 **Banned** ${user.tag}`,
-                    `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
-                ),
-            ],
+        await sendModerationActionLog(interaction.guild, {
+            action: 'ban',
+            targetUser: user,
+            moderatorUser: interaction.user,
+            reason,
+            channel: interaction.channel,
+            repliedMessage,
         });
+
+        await InteractionHelper.universalReply(interaction, moderationCard({
+            emoji: '🔨',
+            title: 'BAN ISSUED',
+            fields: [['User', `<@${user.id}>`], ['Reason', reason]],
+            moderatorId: interaction.user.id,
+        }));
     },
 };

@@ -1,15 +1,20 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { cardReason } from '../../utils/moderationCard.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderation/moderationService.js';
 import { TitanBotError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { groupLeadingUsers } from '../../utils/prefixArgs.js';
+import { addHardBans, canLiftHardBan } from '../../services/moderation/hardBanService.js';
+import { sendModerationActionLog } from '../../services/moderation/moderationActionLogService.js';
+import { sendPunishmentDm } from '../../services/moderation/punishmentDm.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("massban")
-        .setDescription("Ban multiple users from the server at once")
+        .setDescription("Hard-ban users: only trusted members can lift these bans")
         .addStringOption(option =>
             option
                 .setName("users")
@@ -31,6 +36,11 @@ export default {
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
     category: "moderation",
+
+    // Prefix usage: `هارد بان ID1 ID2 السبب` — all leading IDs go into `users`, the rest is the reason.
+    normalizePrefixArgs(args) {
+        return groupLeadingUsers(args);
+    },
     abuseProtection: { maxAttempts: 3, windowMs: 60_000 },
 
     async execute(interaction, config, client) {
@@ -44,8 +54,13 @@ export default {
             return;
         }
 
+        // Hard bans can only be lifted by trusted members, so only they can place one.
+        if (!(await canLiftHardBan(interaction.guild, interaction.user.id))) {
+            return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'No Permission — هارد بان للـ trusted فقط' });
+        }
+
         const usersInput = interaction.options.getString("users");
-        const reason = interaction.options.getString("reason") || "Mass ban - No reason provided";
+        const reason = cardReason(interaction.options.getString("reason"));
         const deleteDays = interaction.options.getInteger("delete_days") || 0;
 
         try {
@@ -106,6 +121,8 @@ export default {
                         }
                     }
 
+                    // Only members still in the server can be told (the bot must share a server to DM).
+                    if (member) await sendPunishmentDm(interaction.guild, user, 'ban', reason, interaction.user);
                     await interaction.guild.members.ban(userId, {
                         reason: reason,
                         deleteMessageSeconds: deleteDays * 24 * 60 * 60
@@ -114,6 +131,13 @@ export default {
                     results.successful.push({
                         user: user.tag,
                         userId
+                    });
+                    await sendModerationActionLog(interaction.guild, {
+                        action: 'hardban',
+                        targetUser: user,
+                        moderatorUser: interaction.user,
+                        reason,
+                        channel: interaction.channel,
                     });
 
                     await logModerationAction({
@@ -145,7 +169,9 @@ export default {
                 }
             }
 
-            let description = `**Mass Ban Results:**\n\n`;
+            await addHardBans(client, interaction.guild.id, results.successful.map((result) => result.userId));
+
+            let description = `**Hard Ban Results** — فك البان متاح للـ trusted فقط\n\n`;
             
             if (results.successful.length > 0) {
                 description += `✅ **Successfully Banned (${results.successful.length}):**\n`;
@@ -175,7 +201,7 @@ export default {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     embed(
-                        `🔨 Mass Ban Completed`,
+                        `🔨 Hard Ban Completed`,
                         description
                     )
                 ]

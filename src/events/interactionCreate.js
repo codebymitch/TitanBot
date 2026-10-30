@@ -17,8 +17,11 @@ import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abusePr
 import { isCommandEnabled } from '../services/commandAccessService.js';
 import { resolveSlashAccessKey } from '../utils/messageAdapter.js';
 import { isCollectorManagedComponent } from '../utils/collectorComponents.js';
+import { isBlockedSlashCommand, GAMES_ONLY_NOTICE } from '../services/games/gamesChannel.js';
+import { isBlockedStoreSlashCommand, STORE_ONLY_NOTICE } from '../services/cc/storeChannel.js';
 import { ResponseCoordinator } from '../utils/responseCoordinator.js';
 import { enforceDefaultCommandPermissions } from '../utils/permissionGuard.js';
+import { blockDangerCommand } from '../services/moderation/dangerList.js';
 
 const COMMAND_ERROR_SUBTYPES = {
   warn: 'warn_failed',
@@ -120,6 +123,24 @@ export default {
               client.cooldowns.set(cooldownKey, Date.now() + defaultCooldownSec * 1000);
             }
 
+            if (isBlockedSlashCommand(interaction.channelId, interaction.commandName, interaction.user.id)) {
+              throw createError(
+                `Command ${interaction.commandName} used in the games channel`,
+                ErrorTypes.VALIDATION,
+                GAMES_ONLY_NOTICE,
+                withTraceContext({ commandName: interaction.commandName, expected: true }, interactionTraceContext)
+              );
+            }
+
+            if (isBlockedStoreSlashCommand(interaction.channelId, interaction.commandName, interaction.user.id)) {
+              throw createError(
+                `Command ${interaction.commandName} used in the store room`,
+                ErrorTypes.VALIDATION,
+                STORE_ONLY_NOTICE,
+                withTraceContext({ commandName: interaction.commandName, expected: true }, interactionTraceContext)
+              );
+            }
+
             const abuseProtection = await enforceAbuseProtection(interaction, command, interaction.commandName);
             if (!abuseProtection.allowed) {
               const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
@@ -157,6 +178,11 @@ export default {
               guildConfig,
             });
             if (!permissionAllowed) {
+              return;
+            }
+
+            if (await blockDangerCommand(interaction.guild, interaction.user.id, interaction.commandName)) {
+              await interaction.reply({ content: '🚫 انت في قائمة الخطر.', flags: MessageFlags.Ephemeral }).catch(() => {});
               return;
             }
 

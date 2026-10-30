@@ -9,6 +9,7 @@ import { SLASH_ONLY_COMMANDS } from '../config/commands/prefixRestrictions.js';
 import { getCommandPrefix } from '../config/bot.js';
 import { ResponseCoordinator, buildPrefixUsage } from './responseCoordinator.js';
 import { enforceDefaultCommandPermissions } from './permissionGuard.js';
+import { scheduleNoPermissionDelete } from './noPermissionReply.js';
 
 export { buildPrefixUsage };
 
@@ -66,6 +67,11 @@ export function createMockInteraction(message, commandData, args) {
     channel: message.channel,
     guild: message.guild,
     guildId: message.guild?.id,
+    inGuild: () => Boolean(message.guild),
+    inCachedGuild: () => Boolean(message.guild),
+    isChatInputCommand: () => true,
+    isModalSubmit: () => false,
+    isRepliable: () => true,
 
     commandName: commandData?.name || null,
     commandId: message.id,
@@ -84,6 +90,11 @@ export function createMockInteraction(message, commandData, args) {
         const cachedMember = message.guild.members.cache.get(id);
         if (cachedMember) {
           return cachedMember.user;
+        }
+
+        const cachedUser = message.client?.users?.cache?.get(id);
+        if (cachedUser) {
+          return cachedUser;
         }
 
         return {
@@ -109,7 +120,8 @@ export function createMockInteraction(message, commandData, args) {
         const mentionMatch = channelId.match(/<#(\d+)>/);
         const id = mentionMatch ? mentionMatch[1] : channelId;
 
-        return message.guild.channels.fetch(id).catch(() => null);
+        // Slash options resolve synchronously; guild channels are always cached with the Guilds intent.
+        return message.guild.channels.cache.get(id) ?? null;
       },
       getRole: (name) => {
         const roleId = options.getString(name);
@@ -118,9 +130,14 @@ export function createMockInteraction(message, commandData, args) {
         const mentionMatch = roleId.match(/<@&(\d+)>/);
         const id = mentionMatch ? mentionMatch[1] : roleId;
 
-        return message.guild.roles.fetch(id).catch(() => null);
+        return message.guild.roles.cache.get(id) ?? null;
       },
       getInteger: (name) => options.getInteger(name),
+      getNumber: (name) => {
+        const value = options.getString(name);
+        const parsed = value == null ? NaN : Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      },
       getBoolean: (name) => options.getBoolean(name),
       getSubcommand: () => options.getSubcommand(),
       getSubcommandGroup: () => options.getSubcommandGroup(),
@@ -136,6 +153,7 @@ export function createMockInteraction(message, commandData, args) {
     createdAt: message.createdAt,
     _commandStartTime: commandStartTime,
     _isPrefixCommand: true,
+    _sourceMessage: message,
 
     client: message.client,
 
@@ -188,7 +206,28 @@ export function supportsPrefixExecution(command) {
   return !!command.execute;
 }
 
+/**
+ * Slash commands receive resolved members; prefix commands only get mentions/IDs.
+ * Fetch mentioned members first so getUser/getMember work for members that are not cached yet.
+ */
+async function cacheMentionedMembers(message, args) {
+  if (!message.guild?.members?.fetch) return;
+  const ids = new Set();
+  for (const arg of args) {
+    const match = String(arg).match(/^(?:<@!?(\d{17,20})>|(\d{17,20}))$/u);
+    if (match) ids.add(match[1] || match[2]);
+  }
+  await Promise.all([...ids]
+    .filter((id) => !message.guild.members.cache.has(id))
+    .map(async (id) => {
+      const member = await message.guild.members.fetch(id).catch(() => null);
+      // Users outside the server (e.g. for unban) are still resolved so replies show their tag.
+      if (!member) await message.client?.users?.fetch?.(id).catch(() => null);
+    }));
+}
+
 export async function executePrefixCommand(command, message, args, client, prefixOverride = null, guildConfig = null) {
+  await cacheMentionedMembers(message, args);
   const mockInteraction = createMockInteraction(message, command.data, args);
   const coordinator = mockInteraction._responseCoordinator;
   const prefix = prefixOverride || getCommandPrefix();
@@ -219,5 +258,7 @@ export async function executePrefixCommand(command, message, args, client, prefi
       command: command.data?.name,
       source: 'messageAdapter.executePrefixCommand',
     });
+  } finally {
+    scheduleNoPermissionDelete(coordinator.getReplyMessage());
   }
 }

@@ -16,12 +16,7 @@ export default {
             const latency = Date.now() - startTime;
             const apiLatency = Math.max(0, Math.round(interaction.client.ws.ping));
 
-            const embed = createEmbed({ title: 'Pong!', description: null }).addFields(
-                { name: 'Bot Latency', value: `${latency}ms`, inline: true },
-                { name: 'API Latency', value: `${apiLatency}ms`, inline: true },
-            );
-
-            await pingingMessage.edit({ content: null, embeds: [embed] });
+            await pingingMessage.edit({ content: `🏓 Pong! ${latency}ms | API ${apiLatency}ms`, embeds: [] });
         } catch (error) {
             logger.error('Ping prefix command error:', error);
             if (!interaction.replied && !interaction._replyMessage) {
@@ -57,14 +52,9 @@ export default {
             const apiLatency = Math.max(0, Math.round(interaction.client.ws.ping));
             logger.info(`execute - calculated latency: ${latency}ms, apiLatency: ${apiLatency}ms`);
 
-            const embed = createEmbed({ title: "Pong!", description: null }).addFields(
-                { name: "Bot Latency", value: `${latency}ms`, inline: true },
-                { name: "API Latency", value: `${apiLatency}ms`, inline: true },
-            );
-
             await InteractionHelper.safeEditReply(interaction, {
-                content: null,
-                embeds: [embed],
+                content: `🏓 Pong! ${latency}ms | API ${apiLatency}ms`,
+                embeds: [],
             });
         } catch (error) {
             logger.error('Ping command error:', error);

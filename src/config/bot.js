@@ -24,7 +24,7 @@ export const botConfig = {
     activities: [
       {
         name: "Custom Status", // required by Discord API, not shown in the client
-        state: "stalking",     // this is what people actually see
+        state: "made to help u <3 ",     // this is what people actually see
         type: 4,               // Custom
       },
     ],
@@ -158,53 +158,20 @@ export const botConfig = {
   // =========================
   // ECONOMY SETTINGS
   // =========================
+  // The currency is Chaos Credits (CC): game rewards and caps live in src/config/cc.js.
+  // Members only earn CC from games (daily, work, crime, rob, beg, fish, mine, gamble and pay were removed).
   economy: {
     currency: {
-      // Currency display name.
-      name: "coins",
-      // Plural display name.
-      namePlural: "coins",
-      // Currency symbol shown in balances.
-      symbol: "$",
+      name: "CC",
+      namePlural: "CC",
+      symbol: "🌀",
     },
-
-    // Starting balance for new users.
-    startingBalance: 0,
-
-    // Maximum bank amount before upgrades (if upgrades are used).
-    baseBankCapacity: 100000,
-
-    // Daily reward amount.
-    dailyAmount: 100,
-
-    // Work command random payout range.
-    workMin: 10,
-    workMax: 100,
-
-    // Beg command random payout range.
-    begMin: 5,
-    begMax: 50,
-
-    // Command cooldowns (milliseconds).
-    cooldowns: {
-      daily: 24 * 60 * 60 * 1000,
-      work: 60 * 60 * 1000,
-      crime: 2 * 60 * 60 * 1000,
-      rob: 4 * 60 * 60 * 1000,
-    },
-
-    // Chance to succeed when robbing (0.4 = 40%).
-    robSuccessRate: 0.4,
-
-    // Jail time after failed rob (milliseconds).
-    // 3600000 = 1 hour.
-    robFailJailTime: 3600000,
   },
 
   // =========================
   // SHOP SETTINGS
   // =========================
-  // Add shop defaults here when needed.
+  // The CC store catalog is src/config/store/ccStoreItems.js.
   shop: {
 
   },

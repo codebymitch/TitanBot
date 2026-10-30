@@ -1,6 +1,8 @@
 // Player event handlers for Riffy. Adapted from Musicify playerHandler (Apache-2.0).
 
 import { logger } from '../../utils/logger.js';
+import { isHomeGuild } from '../../config/homeGuild.js';
+import { retryFailedTrack, failedTrackLine } from './trackRetry.js';
 import { getGuildMusicData, clearUpdateInterval } from './playerStore.js';
 import {
     buildNowPlayingEmbed,
@@ -226,12 +228,17 @@ export function setupPlayerHandler(client) {
     client.riffy.on('trackError', async (player, track, payload) => {
         logger.error(`Track error in ${player.guildId} for "${track?.info?.title}":`, payload?.error || payload);
         const guildData = getGuildMusicData(player.guildId);
-        if (guildData.playerChannelId) {
-            const channel = client.channels.cache.get(guildData.playerChannelId);
-            if (channel) {
-                channel.send(`Failed to play **${track?.info?.title || 'track'}**. Skipping...`).catch(() => null);
-            }
+        const channel = guildData.playerChannelId ? client.channels.cache.get(guildData.playerChannelId) : null;
+        if (!isHomeGuild(player.guildId)) {
+            channel?.send(`Failed to play **${track?.info?.title || 'track'}**. Skipping...`).catch(() => null);
+            return;
         }
+        // Our server: try the same song from another source first; say something only when nothing plays.
+        const copy = await retryFailedTrack(client, player, track).catch((error) => {
+            logger.warn(`Music retry failed in ${player.guildId}: ${error.message}`);
+            return null;
+        });
+        if (!copy) channel?.send({ content: failedTrackLine(track), allowedMentions: { parse: [] } }).catch(() => null);
     });
 
     client.riffy.on('trackStuck', async (player, track, payload) => {

@@ -1,7 +1,6 @@
 import { createEmbed } from '../../../utils/embeds.js';
-import { getGuildConfig } from '../../../services/config/guildConfig.js';
-import { logEvent, EVENT_TYPES, resolveLogChannel } from '../../../services/loggingService.js';
-import { formatLogLine, resolveUserAuthor } from '../../../utils/logging/logEmbeds.js';
+import { NO_REASON } from '../../../utils/moderationCard.js';
+import { sendReport, REPORT_CHANNEL_ID } from '../../../services/reportChannelService.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { logger } from '../../../utils/logger.js';
@@ -15,37 +14,22 @@ export default {
         }
 
         const targetUser = interaction.options.getUser('user');
-        const reason = interaction.options.getString('reason');
+        const reason = interaction.options.getString('reason')?.trim() || NO_REASON;
         const guildId = interaction.guildId;
 
-        const guildConfig = await getGuildConfig(client, guildId);
-        const reportChannelId = resolveLogChannel(guildConfig, 'reports');
-
-        if (!reportChannelId) {
-            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'The report channel has not been set up. Ask a moderator to use `/logging dashboard` or `/logging channel`.' });
-        }
-
-        const ownerMention = interaction.guild.ownerId
-            ? `<@${interaction.guild.ownerId}> New report!`
-            : 'New report!';
-
-        await logEvent({
-            client,
-            guildId,
-            eventType: EVENT_TYPES.REPORT_FILE,
-            content: ownerMention,
-            data: {
-                title: 'User Report',
-                lines: [
-                    formatLogLine('Reported User', `${targetUser.tag} (\`${targetUser.id}\`)`),
-                    formatLogLine('Reported By', `${interaction.user.tag} (\`${interaction.user.id}\`)`),
-                    formatLogLine('Channel', interaction.channel.toString()),
-                ],
-                blockFields: [{ name: 'Reason', value: reason }],
-                author: await resolveUserAuthor(client, targetUser.id),
-                thumbnail: targetUser.displayAvatarURL(),
-            },
+        const sent = await sendReport(interaction.guild, {
+            reporter: interaction.user,
+            reportedUser: targetUser,
+            reason,
+            sourceChannel: interaction.channel,
+        }).catch((error) => {
+            logger.error('Failed to send report:', error);
+            return false;
         });
+
+        if (!sent) {
+            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `Could not send the report. Post it directly in <#${REPORT_CHANNEL_ID}>.` });
+        }
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [createEmbed({

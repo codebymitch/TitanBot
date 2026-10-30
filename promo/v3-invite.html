@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>CHAOS — ادعي صحابك</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body data-duration="20" data-cover="1.8" data-hits="1,13.4,16">
+<div id="stage">
+  <div class="bg"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div><div class="grid"></div><div class="noise"></div><div class="scan"></div><div class="vignette"></div></div>
+  <div class="brand"><span><b>C</b>HAOS</span></div>
+
+  <!-- 1. Hook -->
+  <section class="scene" data-start="0" data-end="3">
+    <div class="h1"><div class="glin" data-at="0.1">صاحبك</div><div class="glin" data-at="0.5">يساوي</div></div>
+    <div class="num gold slam" data-at="1" style="font-size:230px;text-shadow:0 0 70px rgba(255,200,61,.6)">1000 CC</div>
+    <div class="big-emoji pop" data-at="1.5" style="font-size:150px">😳</div>
+  </section>
+
+  <!-- 2. How -->
+  <section class="scene" data-start="3" data-end="9">
+    <div class="h2 up" data-at="0">إزاي؟ <span class="emoji">👇</span></div>
+    <div class="steps">
+      <div class="card step fromR" data-at="0.4"><div class="n">1</div><div class="tx">ابعتله انفايت<small>لينك السيرفر من عندك</small></div><div class="e">📨</div></div>
+      <div class="card step fromR" data-at="1.6"><div class="n">2</div><div class="tx">يوصل لفل 5<small>ويكمل 3 أيام في السيرفر</small></div><div class="e">⭐</div></div>
+      <div class="card step fromR" data-at="2.8"><div class="n">3</div><div class="tx">تاخد <span class="num gold" id="inv">0</span> <span class="gold">CC</span><small>في حسابك على طول</small></div><div class="e">💰</div></div>
+    </div>
+  </section>
+
+  <!-- 3. Invite roles -->
+  <section class="scene" data-start="9" data-end="13">
+    <div class="h2 up" data-at="0">وكل ما تجيب أكتر<br><span class="hl">رتبتك تكبر</span></div>
+    <div class="card tier pop" data-at="0.6" style="color:#f8c471"><span class="dot"></span><span class="nm">📨 5 Invites</span><span class="req">٥ انفايت</span></div>
+    <div class="card tier pop" data-at="0.9" style="color:#eb984e"><span class="dot"></span><span class="nm">💌 10 Invites</span><span class="req">١٠ انفايت</span></div>
+    <div class="card tier pop" data-at="1.2" style="color:#f4d03f"><span class="dot"></span><span class="nm">🏆 25 Invites</span><span class="req">٢٥ انفايت</span></div>
+  </section>
+
+  <!-- 4. The math -->
+  <section class="scene" data-start="13" data-end="16">
+    <div class="h2 up" data-at="0"><span class="num">10</span> صحاب =</div>
+    <div class="num gold slam" data-at="0.4" style="font-size:210px;text-shadow:0 0 70px rgba(255,200,61,.6)">10,000 CC</div>
+    <div class="h3 up" data-at="1">واتصدر <span class="num cyan">TOP INVITES</span> <span class="emoji">🏆</span></div>
+  </section>
+
+  <!-- 5. CTA -->
+  <section class="scene" data-start="16" data-end="20">
+    <div class="logo slam" data-t="CHAOS" data-at="0" style="font-size:240px">CHAOS</div>
+    <div class="h2 up" data-at="0.4">هات صحابك <span class="red">وتعالى</span> <span class="emoji">🔥</span></div>
+    <div class="pop" data-at="0.9"><div class="btn pulse">ادخل السيرفر</div></div>
+    <div class="cta-foot up" data-at="1.4" data-invite>
+      <div class="bio">اللينك في البايو <span class="bounce">👇</span></div>
+      <div class="link">discord.gg/…</div>
+    </div>
+  </section>
+
+  <div id="flash"></div>
+</div>
+<script src="shared.js"></script>
+<script>
+  const { hook, ease, local, fmt } = CHAOS;
+  // config/inviteRewards.js: 1000 CC once the invited member is level 5 and stayed 3 days.
+  hook(t => { document.getElementById('inv').textContent = fmt(1000 * ease.out(local(t, 6.1) / 1.2)); });
+</script>
+</body>
+</html>

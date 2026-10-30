@@ -144,3 +144,8 @@ dist
 # Database backup artifacts
 backups/
 *.dump
+
+# promo videos: local Playwright link and intermediate audio
+promo/node_modules/
+promo/out/*.wav
+promo/out/*.preview.mp4

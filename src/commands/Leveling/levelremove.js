@@ -4,6 +4,7 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { checkUserPermissions } from '../../utils/permissionGuard.js';
 import { removeLevels, getUserLevelData, getLevelingConfig } from '../../services/leveling/leveling.js';
 import { createEmbed } from '../../utils/embeds.js';
+import { syncMemberLevelRoles } from '../../services/leveling/levelRoleSyncService.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -72,6 +73,9 @@ export default {
     }
 
     const updatedData = await removeLevels(client, interaction.guildId, targetUser.id, levelsToRemove);
+
+    // Give the level roles for the new level (and take the ones above it).
+    await syncMemberLevelRoles(interaction.guild, member, updatedData.level, levelingConfig.roleRewards, { removeAbove: true, reason: `/levelremove by ${interaction.user.tag}` });
 
     await InteractionHelper.safeEditReply(interaction, {
       embeds: [

@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { Collection } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import botConfig from '../../config/bot.js';
+import { isDisabledGameCommand } from '../../config/games.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -80,6 +81,11 @@ export async function loadCommands(client) {
             command.filePath = normalizedPath;
             
             const primaryCommandName = command.data.name;
+            // The games moved to the games bot: their files stay but they aren't loaded (config/games.js).
+            if (isDisabledGameCommand(primaryCommandName)) {
+                logger.info(`Skipped game command: ${primaryCommandName} (GAMES_ENABLED is off)`);
+                continue;
+            }
             
             if (!uniqueCommandNames.has(primaryCommandName)) {
                 uniqueCommandNames.add(primaryCommandName);

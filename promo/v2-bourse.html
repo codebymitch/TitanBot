@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>CHAOS — البورصة</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .board .hdr { display: flex; justify-content: space-between; align-items: center; font-size: 44px; font-weight: 900; padding: 0 10px 18px; border-bottom: 2px solid var(--line); }
+  .board .hdr .clock { font-family: 'Anton'; font-size: 48px; direction: ltr; color: var(--gold); }
+  .board .row { padding: 10px 10px; font-size: 44px; }
+  .buy { display: flex; align-items: center; gap: 20px; font-size: 56px; font-weight: 900; }
+  .hours { display: flex; justify-content: space-between; font-size: 34px; color: var(--mute); font-weight: 700; margin-top: 14px; direction: ltr; }
+  .result { font-family: 'Anton'; font-size: 150px; color: var(--green); direction: ltr; text-shadow: 0 0 60px rgba(62,224,122,.6); }
+</style>
+</head>
+<body data-duration="22" data-cover="5.4" data-hits="5,11,18">
+<div id="stage">
+  <div class="bg"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div><div class="grid"></div><div class="noise"></div><div class="scan"></div><div class="vignette"></div></div>
+  <div class="brand"><span><b>C</b>HAOS</span></div>
+
+  <!-- 1. Hook -->
+  <section class="scene" data-start="0" data-end="3">
+    <div class="big-emoji pop" data-at="0">🤑</div>
+    <div class="h1"><div class="glin" data-at="0.3">ممكن تبقى</div><div class="slam" data-at="0.7" style="margin:30px 0"><span class="hl gold">غني</span></div><div class="glin" data-at="1.1">من ديسكورد؟</div></div>
+  </section>
+
+  <!-- 2. The board -->
+  <section class="scene" data-start="3" data-end="7.5">
+    <div class="h2 up" data-at="0">في <span class="num red">CHAOS</span> فيه <span class="green">بورصة</span></div>
+    <div class="card rows board fromL" data-at="0.3">
+      <div class="hdr"><span>📊 أسعار الساعة</span><span class="clock" id="clock">9:00</span></div>
+      <div id="board"></div>
+    </div>
+  </section>
+
+  <!-- 3. A good trade -->
+  <section class="scene" data-start="7.5" data-end="12.5">
+    <div class="buy up" data-at="0">اشتريت <span class="emoji">🚗</span> عربية بـ <span class="num gold">1,180 CC</span></div>
+    <div class="card chart pop" data-at="0.3">
+      <div class="head"><div class="title">🚗 عربية</div><div class="price"><span id="p2">1,180</span> CC</div></div>
+      <svg id="c2" viewBox="0 0 1000 400" preserveAspectRatio="none"></svg>
+      <div class="hours"><span>9:00</span><span>10:00</span><span>11:00</span><span>12:00</span><span>1:00</span></div>
+    </div>
+    <div class="h3 up" data-at="2.6">وبعتها بـ <span class="num gold">1,470 CC</span></div>
+    <div class="result slam" data-at="3.5">+267 CC</div>
+  </section>
+
+  <!-- 4. Risk -->
+  <section class="scene" data-start="12.5" data-end="15.5">
+    <div class="h2 shake" data-at="0">بس <span class="red">خلي بالك</span> <span class="emoji">⚠️</span></div>
+    <div class="card chart fromR" data-at="0.2">
+      <div class="head"><div class="title">✈️ طيارة</div><div class="price"><span id="p3">12,000</span> CC</div></div>
+      <svg id="c3" viewBox="0 0 1000 400" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="p up" data-at="1">الأسعار بتتحرك كل ساعة لحد <span class="num red">10%</span><br>ذكاء ولا حظ؟ <span class="emoji">🎲</span></div>
+  </section>
+
+  <!-- 5. Commands -->
+  <section class="scene" data-start="15.5" data-end="18">
+    <div class="h2 up" data-at="0">كله بـ <span class="hl">4 كلمات</span></div>
+    <div class="chips">
+      <div class="chip cmd pop" data-at="0.4">اسعار</div>
+      <div class="chip cmd pop" data-at="0.6">استثمار</div>
+      <div class="chip cmd pop" data-at="0.8">بيع</div>
+      <div class="chip cmd pop" data-at="1.0">ممتلكاتي</div>
+    </div>
+    <div class="p up" data-at="1.4">موتوسيكل، دهب، عربية، شقة، محل، عمارة، سفينة، طيارة</div>
+  </section>
+
+  <!-- 6. CTA -->
+  <section class="scene" data-start="18" data-end="22">
+    <div class="logo slam" data-t="CHAOS" data-at="0" style="font-size:240px">CHAOS</div>
+    <div class="h2 up" data-at="0.4">ادخل واعمل <span class="gold">ثروتك</span> <span class="emoji">💸</span></div>
+    <div class="pop" data-at="0.9"><div class="btn pulse">ادخل السيرفر</div></div>
+    <div class="cta-foot up" data-at="1.4" data-invite>
+      <div class="bio">اللينك في البايو <span class="bounce">👇</span></div>
+      <div class="link">discord.gg/…</div>
+    </div>
+  </section>
+
+  <div id="flash"></div>
+</div>
+<script src="shared.js"></script>
+<script>
+  const { hook, ease, local, fmt, lineChart } = CHAOS;
+  const $ = id => document.getElementById(id);
+  // Two hours of the real board (config/store/bourse.js assets; every move is within 10%).
+  const assets = [
+    ['🏍️', 'موتوسيكل', 412, 441], ['🥇', 'سبيكة دهب', 618, 597], ['🚗', 'عربية', 1180, 1242], ['🏠', 'شقة', 2395, 2461],
+    ['🏪', 'محل تجاري', 3870, 3712], ['🏢', 'عمارة', 6120, 6394], ['🚢', 'سفينة', 9240, 8615], ['✈️', 'طيارة', 12400, 13350],
+  ];
+  const prev = [398, 631, 1151, 2410, 3940, 5986, 9510, 12020];
+  $('board').innerHTML = assets.map(([e, n], i) => `<div class="row"><span class="e">${e}</span><span class="n">${n}</span><span class="v" id="bv${i}"></span><span class="delta" id="bd${i}"></span></div>`).join('');
+  hook(t => {
+    const next = t >= 5;  // the hour changes at 10:00, two seconds into the scene
+    const k = ease.out(local(t, 5) / 0.6);
+    $('clock').textContent = next ? '10:00' : '9:00';
+    assets.forEach(([, , a, b], i) => {
+      const v = next ? a + (b - a) * k : a, base = next ? a : prev[i];
+      const d = ((next ? b : a) - base) / base * 100;
+      $('bv' + i).textContent = fmt(v);
+      const el = $('bd' + i);
+      el.textContent = (d >= 0 ? '+' : '') + d.toFixed(1) + '%';
+      el.className = 'delta ' + (d >= 0 ? 'gain' : 'loss');
+    });
+  });
+  // 1,180 → 1,470 in four hours; selling takes a 1.5% fee: 1,470 − 23 = 1,447 → +267 CC.
+  const car = [1180, 1275, 1236, 1352, 1470];
+  hook(t => { $('p2').textContent = fmt(lineChart($('c2'), car, ease.inOut(local(t, 7.9) / 2.2), '#3ee07a')); });
+  const plane = [12000, 11100, 11480, 10390, 9620];
+  hook(t => { $('p3').textContent = fmt(lineChart($('c3'), plane, ease.inOut(local(t, 12.8) / 1.6), '#ff2e4d')); });
+</script>
+</body>
+</html>

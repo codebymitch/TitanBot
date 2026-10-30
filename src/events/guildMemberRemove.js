@@ -7,6 +7,7 @@ import { getServerCounters, updateCounter } from '../services/serverstatsService
 import { getGuildBirthdays, deleteBirthday } from '../utils/database.js';
 import { deleteUserLevelData } from '../services/leveling/leveling.js';
 import { logger } from '../utils/logger.js';
+import { isHomeGuild } from '../config/homeGuild.js';
 
 export default {
   name: Events.GuildMemberRemove,
@@ -137,7 +138,8 @@ export default {
             logger.debug('Error handling applications on member leave:', error);
         }
 
-        try {
+        // In our server the level is kept, so a member who comes back has it again (rejoinRestore.js).
+        if (!isHomeGuild(guild.id)) try {
             await deleteUserLevelData(member.client, guild.id, user.id);
             logger.debug(`Removed leveling data for user ${user.id} in guild ${guild.id}`);
         } catch (error) {

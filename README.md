@@ -29,10 +29,12 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 - **User Notes** - Keep detailed moderation records
 - **Case Management** - View and track all mod actions
 
-### Economy System
-- **Shop & Inventory** - Buy and manage items
-- **Gambling** - Risk it for rewards
-- **Pay System** - Transfer money between users
+### Chaos Credits (CC) & Games
+- **Clover wins** - Wins in the Clover games bot pay CC
+- **Group Games** - Roulette, musical chairs, mafia, trivia and more; the top 3 win CC
+- **Top CC** - Server leaderboard (see [docs/cc-and-games.md](docs/cc-and-games.md))
+- **Invite Rewards** - 1000 CC for every invited member who reaches level 5, `top invites`, `انفايت @member` and invite roles
+- **Give** - Send CC to a member, with a tax that grows for frequent senders
 
 ### Fun & Entertainment
 - **Random Facts** - Learn something new
@@ -59,6 +61,7 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 
 ### Leveling & XP System
 - **XP Tracking** - Automatic message-based XP
+- **Voice XP** - XP for every minute talking in voice with someone else, and `top voice`
 - **Level Roles** - Auto-assign roles by level
 - **Custom Configuration** - Personalize leveling
 
@@ -112,7 +115,7 @@ TitanBot is fully containerized for easy deployment.
    ```bash
    cp .env.example .env
    ```
-   Set at minimum `DISCORD_TOKEN`, `CLIENT_ID`, and `GUILD_ID`. Docker Compose also reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` from `.env` (defaults: `titanbot` / `password` / `titanbot`).
+   Set at minimum `DISCORD_TOKEN`, `CLIENT_ID`, and `GUILD_ID`. Docker Compose also reads `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` from `.env`. `POSTGRES_PASSWORD` is required (Compose refuses to start without it); the user and database default to `titanbot`. If your database volume was created with the old default password `password`, keep that value or change the password inside Postgres first.
 
 3. **Build and start the containers:**
    ```bash

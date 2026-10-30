@@ -13,26 +13,27 @@
     "migrate:keys:dry": "node scripts/migrate-keys.js --dry-run",
     "backup:db": "node scripts/backup.js",
     "restore:db": "node scripts/restore.js",
-    "backup:drill": "node scripts/restore-drill.js"
+    "backup:drill": "node scripts/restore-drill.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.1",
-    "axios": "^1.15.2",
+    "axios": "^1.20.0",
     "discord.js": "^14.26.4",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "node-cron": "^4.2.1",
     "pg": "^8.11.3",
+    "riffy": "1.0.12",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.25.76",
-    "riffy": "1.0.12"
+    "zod": "^3.25.76"
   },
   "engines": {
     "node": ">=20.10.0"
   },
   "overrides": {
     "form-data": "^4.0.6",
-    "undici": "^6.27.0"
+    "undici": "^6.28.1"
   }
 }

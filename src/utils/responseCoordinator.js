@@ -1,15 +1,39 @@
 // responseCoordinator.js — single respond-once gate for prefix and slash commands
 
-import { buildUserErrorEmbed } from './embeds.js';
 import { logger } from './logger.js';
+import { twoWordCommandAliases } from '../config/commands/commandAliases.js';
+import { usageHelp } from '../config/commands/usageHelp.js';
 
 function getCommandJson(commandData) {
   return commandData?.toJSON ? commandData.toJSON() : commandData;
 }
 
-export function buildPrefixUsage(prefix, commandData, validation) {
+const USAGE_EMBED_COLOR = 0xe67e22;
+const REPLY_TARGET_HINT = '💡 ممكن تعمل ريبلاي على رسالة العضو بدل المنشن';
+const OPTION_TYPE_LABELS = { 6: '@العضو', 7: '#الروم', 8: '@الرول', 9: '@العضو' };
+const OPTION_NAME_LABELS = {
+  reason: 'السبب',
+  duration: 'المدة',
+  amount: 'العدد',
+  limit: 'العدد',
+  message: 'الرسالة',
+  note: 'الملاحظة',
+  users: 'IDs',
+  delete_days: 'أيام_المسح',
+};
+
+function optionPlaceholder(option) {
+  const label = OPTION_TYPE_LABELS[option.type] || OPTION_NAME_LABELS[option.name] || option.name;
+  return option.required ? label : `[${label}]`;
+}
+
+/**
+ * Short usage line, e.g. `بان @العضو [السبب]` or `!todo add|list|remove`.
+ * `commandLabel` is what the member typed (Arabic alias, with or without prefix).
+ */
+export function buildPrefixUsage(prefix, commandData, validation, commandLabel = null) {
   const commandJson = getCommandJson(commandData);
-  const usageParts = [`${prefix}${commandJson.name}`];
+  const usageParts = [commandLabel || `${prefix}${commandJson.name}`];
 
   if (validation.subcommandGroupName) {
     usageParts.push(validation.subcommandGroupName);
@@ -17,16 +41,54 @@ export function buildPrefixUsage(prefix, commandData, validation) {
 
   if (validation.subcommandName) {
     usageParts.push(validation.subcommandName);
-  } else if (!validation.subcommandGroupName && commandJson.options?.some((opt) => opt.type === 1)) {
-    usageParts.push('[subcommand]');
+  } else if (!validation.subcommandGroupName && commandJson.options?.some((opt) => opt.type === 1 || opt.type === 2)) {
+    usageParts.push(commandJson.options.filter((opt) => opt.type === 1 || opt.type === 2).map((opt) => opt.name).join('|'));
   }
 
-  const optionDefs = validation.optionDefs || [];
-  for (const option of optionDefs) {
-    usageParts.push(`[${option.name}]`);
+  const help = usageHelp[commandJson.name];
+  if (help?.args && !validation.subcommandName && !validation.subcommandGroupName) {
+    usageParts.push(help.args);
+  } else {
+    for (const option of validation.optionDefs || []) {
+      usageParts.push(optionPlaceholder(option));
+    }
   }
 
   return usageParts.filter(Boolean).join(' ');
+}
+
+/** The command as the member typed it: `تايم`, `!ban`, or both words of `ماس بان`. */
+export function typedCommandLabel(content) {
+  const words = String(content || '').trim().split(/\s+/u);
+  if (!words[0]) return null;
+  return twoWordCommandAliases[`${words[0]} ${words[1] || ''}`] ? `${words[0]} ${words[1]}` : words[0];
+}
+
+/** A member can be picked by replying to their message when the command's first option is a user. */
+function takesReplyTarget(commandJson) {
+  return commandJson.options?.[0]?.type === 6;
+}
+
+/**
+ * Usage embed: title, what the command does, the usage line, then any extra fields from `usageHelp`.
+ */
+export function buildPrefixUsageEmbed(prefix, commandData, validation, commandLabel = null) {
+  const commandJson = getCommandJson(commandData);
+  const help = usageHelp[commandJson.name] || {};
+  const label = prefix && commandLabel?.startsWith(prefix) ? commandLabel.slice(prefix.length) : commandLabel || commandJson.name;
+  const subcommand = commandJson.options?.find((opt) => opt.name === validation.subcommandName);
+  const description = help.description || subcommand?.description || commandJson.description;
+
+  return {
+    color: USAGE_EMBED_COLOR,
+    title: `${help.emoji || '📌'} ${help.title || `أمر ${label}`}`,
+    ...(description ? { description } : {}),
+    fields: [
+      { name: '📌 الاستخدام', value: `\`\`\`\n${buildPrefixUsage(prefix, commandData, validation, commandLabel)}\n\`\`\`` },
+      ...(help.fields || []).map(([name, value]) => ({ name, value, inline: true })),
+    ],
+    ...(takesReplyTarget(commandJson) ? { footer: { text: REPLY_TARGET_HINT } } : {}),
+  };
 }
 
 export class ResponseCoordinator {
@@ -178,20 +240,14 @@ export class ResponseCoordinator {
     return this.interaction.followUp(payload);
   }
 
-  async respondUsage(usageLine) {
-    const embed = buildUserErrorEmbed(
-      'validation',
-      `Usage\n\`${usageLine}\``,
-      { titleOverride: 'Wrong Usage' }
-    );
-
-    const result = await this.respond({ embeds: [embed] });
+  async respondUsage(embed) {
+    const result = await this.respond({ content: '', embeds: [embed], components: [], allowedMentions: { parse: [] } });
     this.markFinalized('usage');
     return result;
   }
 
   async respondUsageFromCommand(prefix, commandData, validation) {
-    const usageLine = buildPrefixUsage(prefix, commandData, validation);
-    return this.respondUsage(usageLine);
+    const typedCommand = typedCommandLabel(this.message?.content);
+    return this.respondUsage(buildPrefixUsageEmbed(prefix, commandData, validation, typedCommand));
   }
 }

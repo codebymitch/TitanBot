@@ -24,7 +24,7 @@ export default {
                     option
                         .setName('reason')
                         .setDescription('The reason for the report (be detailed).')
-                        .setRequired(true)
+                        .setRequired(false)
                         .setMaxLength(500),
                 ),
         )

@@ -14,7 +14,6 @@ import {
 } from './musicEmbeds.js';
 import { refreshPlayerMessage } from './playerHandler.js';
 
-const YOUTUBE_URL_PATTERN = /(?:youtube\.com|youtu\.be)/i;
 const PLAYER_CONNECT_TIMEOUT_MS = 12_000;
 
 function getConnectedLavalinkNodes(client) {
@@ -109,7 +108,7 @@ export function assertInVoice(member) {
         throw new TitanBotError(
             'Not in voice channel',
             ErrorTypes.USER_INPUT,
-            'You need to be in a voice channel.',
+            '🎧 لازم تدخل روم فويس الأول عشان تشغل أغاني.',
         );
     }
 }
@@ -132,6 +131,17 @@ export async function ensurePlayer(client, interaction) {
     const guildId = interaction.guild.id;
     const guildData = getGuildMusicData(guildId);
     let player = getPlayer(client, guildId);
+
+    // While the bot plays for people in its voice room, only members in that room can add songs. When
+    // its room is empty (everyone left), a member in another room takes the bot there.
+    if (player?.voiceChannel && !canControlMusic(interaction.member, player)) {
+        const botChannel = interaction.guild.channels?.cache?.get(player.voiceChannel);
+        const listeners = botChannel?.members?.filter?.((member) => !member.user?.bot)?.size ?? 1;
+        if (listeners > 0 || typeof player.setVoiceChannel !== 'function') {
+            throw new TitanBotError('Wrong voice channel', ErrorTypes.PERMISSION, VOICE_CHANNEL_DENIAL);
+        }
+        player.setVoiceChannel(interaction.member.voice.channel.id, { deaf: true });
+    }
 
     if (!player) {
         player = client.riffy.createConnection({
@@ -196,14 +206,6 @@ export async function joinVoiceChannel(client, interaction) {
 }
 
 export async function playQuery(client, interaction, query) {
-    if (YOUTUBE_URL_PATTERN.test(query)) {
-        throw new TitanBotError(
-            'YouTube URL blocked',
-            ErrorTypes.USER_INPUT,
-            'YouTube links are not supported. Try a song name instead.',
-        );
-    }
-
     const { player, guildData } = await ensurePlayer(client, interaction);
 
     const result = await client.riffy.resolve({
@@ -278,6 +280,10 @@ export async function playQuery(client, interaction, query) {
         };
     }
 
+    // `error` = the link or playlist couldn't be loaded (private, region-locked, unsupported site).
+    if (loadType === 'error' || loadType === 'LOAD_FAILED') {
+        throw new TitanBotError('Load failed', ErrorTypes.USER_INPUT, 'Could not load that link or playlist. Check it is public, or try a song name.');
+    }
     throw new TitanBotError('No results', ErrorTypes.USER_INPUT, `No results found. (loadType: ${loadType})`);
 }
 

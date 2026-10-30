@@ -2,10 +2,11 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { WarningService } from '../../services/moderation/warningService.js';
 import { ModerationService } from '../../services/moderation/moderationService.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { issueWarning, warningCard, warningPunishment } from '../../services/moderation/warnEscalation.js';
+import { fetchRepliedMessage, sendModerationActionLog } from '../../services/moderation/moderationActionLogService.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("warn")
@@ -19,7 +20,7 @@ export default {
         .addStringOption((o) =>
             o
                 .setName("reason")
-                .setRequired(true)
+                .setRequired(false)
                 .setDescription("Reason for the warning"),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
@@ -51,15 +52,6 @@ export default {
             );
         }
 
-        if (!reason) {
-            throw new TitanBotError(
-                'Missing warning reason',
-                ErrorTypes.VALIDATION,
-                'You must provide a reason for the warning.',
-                { subtype: 'missing_required' },
-            );
-        }
-
         if (!member) {
             throw new TitanBotError(
                 "Target not found",
@@ -70,13 +62,14 @@ export default {
 
         ModerationService.assertModerationHierarchy(interaction.member, member, 'warn');
 
-        const { id, totalCount } = await WarningService.addWarning({
-            guildId,
-            userId: target.id,
-            moderatorId: moderator.id,
+        const repliedMessage = await fetchRepliedMessage(interaction);
+        const result = await issueWarning({
+            guild: interaction.guild,
+            member,
+            moderator: interaction.member,
             reason,
-            timestamp: Date.now()
         });
+        const { id, totalCount } = result;
 
         await logModerationAction({
             client,
@@ -85,24 +78,29 @@ export default {
                 action: "User Warned",
                 target: `${target.tag} (${target.id})`,
                 executor: `${moderator.tag} (${moderator.id})`,
-                reason,
+                reason: result.reason,
                 metadata: {
                     userId: target.id,
                     moderatorId: moderator.id,
                     totalWarns: totalCount,
                     warningNumber: totalCount,
-                    warningId: id
+                    warningId: id,
+                    autoTimeoutMs: result.timeoutApplied ? result.timeoutMs : 0
                 }
             }
         });
 
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                successEmbed(
-                    `⚠️ **Warned** ${target.tag}`,
-                    `**Reason:** ${reason}\n**Total Warns:** ${totalCount}`,
-                ),
-            ],
+        await sendModerationActionLog(interaction.guild, {
+            action: 'warn',
+            targetUser: target,
+            moderatorUser: moderator,
+            reason: result.reason,
+            warnings: totalCount,
+            punishment: warningPunishment(result),
+            channel: interaction.channel,
+            repliedMessage,
         });
+
+        await InteractionHelper.safeEditReply(interaction, warningCard({ userId: target.id, moderatorId: moderator.id, result }));
     }
 };

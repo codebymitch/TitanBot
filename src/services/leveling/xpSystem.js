@@ -6,12 +6,22 @@ import { logEvent, EVENT_TYPES } from '../loggingService.js';
 import { formatLogLine } from '../../utils/logging/logEmbeds.js';
 import { Mutex } from '../../utils/mutex.js';
 import { wrapServiceBoundary } from '../../utils/errorHandler.js';
+import { buildLevelUpMessage } from './levelUi.js';
+import { getChatCounts } from './chatCounter.js';
+import { getVoiceMinutes } from './voiceXp.js';
+import { syncMemberLevelRoles } from './levelRoleSyncService.js';
+import { awardLevelUp } from '../cc/ccService.js';
+import { checkInviteReward } from '../inviteRewardService.js';
+import { INVITE_REWARDS } from '../../config/inviteRewards.js';
+import { xpBoostMultiplier } from './xpBoostService.js';
+import { isHomeGuild } from '../../config/homeGuild.js';
 
 /**
  * Award XP to a member. Returns null when XP is skipped (disabled/invalid amount).
- * Throws on storage or unexpected failures.
+ * Throws on storage or unexpected failures. Voice XP passes `fromVoice` so it doesn't start the
+ * chat XP cooldown (`lastMessage`). An XP boost from the CC store (xpBoostService.js) doubles the amount.
  */
-export const addXp = wrapServiceBoundary(async function addXp(client, guild, member, xpToAdd) {
+export const addXp = wrapServiceBoundary(async function addXp(client, guild, member, xpToAdd, { fromVoice = false } = {}) {
   const lockKey = `leveling:${guild.id}:${member.user.id}`;
   return await Mutex.runExclusive(lockKey, async () => {
     if (!xpToAdd || xpToAdd <= 0) {
@@ -26,13 +36,21 @@ export const addXp = wrapServiceBoundary(async function addXp(client, guild, mem
 
     const levelData = await getUserLevelData(client, guild.id, member.user.id);
 
+    // An XP ×2 boost bought in the CC store (our server only); a failed read must not lose the XP.
+    const boost = !isHomeGuild(guild.id) ? 1 : await xpBoostMultiplier(client, guild.id, member.user.id, fromVoice ? 'voice' : 'chat').catch((error) => {
+      logger.warn(`Failed to read the XP boost of ${member.user.id}: ${error.message}`);
+      return 1;
+    });
+    xpToAdd *= boost;
+
     levelData.xp += xpToAdd;
     levelData.totalXp += xpToAdd;
-    levelData.lastMessage = Date.now();
+    if (!fromVoice) levelData.lastMessage = Date.now();
 
     let xpNeededForNextLevel = getXpForLevel(levelData.level);
     let didLevelUp = false;
     const initialLevel = levelData.level;
+    const rewardRoleIds = [];
 
     while (levelData.xp >= xpNeededForNextLevel && levelData.level < 1000) {
       levelData.xp -= xpNeededForNextLevel;
@@ -41,15 +59,24 @@ export const addXp = wrapServiceBoundary(async function addXp(client, guild, mem
       xpNeededForNextLevel = getXpForLevel(levelData.level);
 
       logger.info(`🎉 ${member.user.tag} leveled up to level ${levelData.level} in ${guild.name}`);
+    }
 
-      if (config.roleRewards && config.roleRewards[levelData.level]) {
-        await awardRoleReward(guild, member, config.roleRewards[levelData.level], levelData.level);
-      }
+    // Every level role the member has reached is given right away, including any they missed before.
+    if (didLevelUp && config.roleRewards) {
+      const { added } = await syncMemberLevelRoles(guild, member, levelData.level, config.roleRewards, { reason: 'Level reward' });
+      rewardRoleIds.push(...added);
     }
 
     if (didLevelUp) {
+      // CC for the new level(s); a failed payment must not lose the XP.
+      const ccReward = await awardLevelUp(client, guild.id, member.user.id, initialLevel, levelData.level)
+        .catch((error) => {
+          logger.error(`Failed to pay level-up CC to ${member.user.id}:`, error);
+          return null;
+        });
+
       if (config.announceLevelUp) {
-        await sendLevelUpAnnouncement(guild, member, levelData, config);
+        await sendLevelUpAnnouncement(guild, member, levelData, config, { fromLevel: initialLevel, rewardRoleIds, source: fromVoice ? 'voice' : 'chat', ccReward });
       }
 
       try {
@@ -75,6 +102,12 @@ export const addXp = wrapServiceBoundary(async function addXp(client, guild, mem
 
     await saveUserLevelData(client, guild.id, member.user.id, levelData);
 
+    // Reaching the invite level can pay whoever invited the member. Not awaited: it takes its own lock.
+    if (didLevelUp && levelData.level >= INVITE_REWARDS.level) {
+      checkInviteReward(client, guild, member.user.id, { level: levelData.level })
+        .catch((error) => logger.error(`Failed to check the invite reward for ${member.user.id}:`, error));
+    }
+
     return {
       level: levelData.level,
       xp: levelData.xp,
@@ -89,33 +122,18 @@ export const addXp = wrapServiceBoundary(async function addXp(client, guild, mem
   userMessage: 'Failed to award XP. Please try again.',
 });
 
-async function awardRoleReward(guild, member, roleId, level) {
+// Level-up messages go to this channel only, never to the chat. If it's missing, nothing is posted.
+const LEVEL_UP_CHANNEL_ID = '1552786804451573772';
+
+// One message per level-up (even when several levels are gained at once). It only pings the member
+// every 5 levels (see levelUi.js); the old free-text levelUpMessage is no longer used.
+async function sendLevelUpAnnouncement(guild, member, levelData, config, { fromLevel, rewardRoleIds, source, ccReward }) {
   try {
-    const role = guild.roles.cache.get(roleId);
-
-    if (!role) {
-      logger.warn(`Role ${roleId} not found for level ${level} reward in guild ${guild.id}`);
-      return;
-    }
-
-    if (member.roles.cache.has(roleId)) {
-      return;
-    }
-
-    await member.roles.add(role, `Level ${level} reward`);
-    logger.info(`✅ Awarded role ${role.name} to ${member.user.tag} for reaching level ${level}`);
-  } catch (error) {
-    logger.error(`Failed to award role reward to ${member.user.id}:`, error);
-  }
-}
-
-async function sendLevelUpAnnouncement(guild, member, levelData, config) {
-  try {
-    const levelUpChannel = config.levelUpChannel
-      ? guild.channels.cache.get(config.levelUpChannel)
-      : guild.systemChannel;
+    const levelUpChannel = guild.channels.cache.get(LEVEL_UP_CHANNEL_ID)
+      || await guild.channels.fetch(LEVEL_UP_CHANNEL_ID).catch(() => null);
 
     if (!levelUpChannel || !levelUpChannel.isTextBased()) {
+      logger.warn(`Level-up channel ${LEVEL_UP_CHANNEL_ID} was not found in ${guild.name}; level-up not announced.`);
       return;
     }
 
@@ -125,13 +143,25 @@ async function sendLevelUpAnnouncement(guild, member, levelData, config) {
       return;
     }
 
-    const message = config.levelUpMessage
-      .replace(/{user}/g, member.toString())
-      .replace(/{level}/g, levelData.level)
-      .replace(/{xp}/g, levelData.xp)
-      .replace(/{xpNeeded}/g, getXpForLevel(levelData.level + 1));
-
-    await levelUpChannel.send(message).catch(error => {
+    // The member's chat and voice totals, so the message shows both sides (best effort).
+    const client = guild.client;
+    const [messages, voiceMinutes] = await Promise.all([
+      getChatCounts(client, guild.id).then((counts) => counts[member.id] || 0).catch(() => null),
+      getVoiceMinutes(client, guild.id).then((minutes) => minutes[member.id] || 0).catch(() => null),
+    ]);
+    const payload = buildLevelUpMessage(member, {
+      fromLevel,
+      level: levelData.level,
+      xp: levelData.xp,
+      xpNeeded: getXpForLevel(levelData.level),
+      rewardRoleIds,
+      source,
+      messages,
+      voiceMinutes,
+      ccReward: ccReward?.amount || 0,
+      ccBoost: ccReward?.boost || 1,
+    });
+    await levelUpChannel.send(payload).catch(error => {
       logger.error(`Failed to send level up message in channel ${levelUpChannel.id}:`, error);
     });
   } catch (error) {
