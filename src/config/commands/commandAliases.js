@@ -20,11 +20,9 @@ export const subcommandAliases = {
 };
 
 export function resolveCommandAlias(commandName) {
-  const normalized = commandName.toLowerCase();
-  return commandAliases[normalized] || commandName;
+  return commandAliases[commandName.toLowerCase()] || commandName;
 }
 
 export function resolveSubcommandAlias(subcommandName) {
-  const normalized = subcommandName.toLowerCase();
-  return subcommandAliases[normalized] || subcommandName;
+  return subcommandAliases[subcommandName.toLowerCase()] || subcommandName;
 }
