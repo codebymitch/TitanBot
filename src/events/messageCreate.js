@@ -66,8 +66,8 @@ async function handlePrefixCommand(message, client) {
 
     const protection = await enforceAbuseProtection({ guildId: message.guild.id, user: message.author }, command, resolvedCommandName);
     if (!protection.allowed) {
-      const formattedCooldown = formatCooldownDuration(protection.remainingMs);
-      await message.channel.send({ embeds: [createEmbed({ title: 'Command Cooldown', description: `This command is on cooldown. Please wait ${formattedCooldown} before trying again.`, color: 'error' })] }).catch(() => {});
+      const cooldown = formatCooldownDuration(protection.remainingMs);
+      await message.channel.send({ embeds: [createEmbed({ title: 'Command Cooldown', description: `This command is on cooldown. Please wait ${cooldown} before trying again.`, color: 'error' })] }).catch(() => {});
       return;
     }
 

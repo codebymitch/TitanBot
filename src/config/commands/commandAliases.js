@@ -12,17 +12,10 @@ export const commandAliases = {
   userinfo: 'userinfo', whois: 'userinfo', ui: 'userinfo', serverstats: 'serverstats', ss: 'serverstats', sstats: 'serverstats',
   rr: 'reactroles', reactionroles: 'reactroles',
 };
-
 export const subcommandAliases = {
   l: 'list', ls: 'list', s: 'set', i: 'info', r: 'remove', rm: 'remove', del: 'remove', n: 'next', sc: 'setchannel',
   a: 'add', c: 'complete', done: 'complete', d: 'complete', start: 'create', stop: 'end', roll: 'reroll',
   add: 'add', remove: 'remove', list: 'list',
 };
-
-export function resolveCommandAlias(commandName) {
-  return commandAliases[commandName.toLowerCase()] || commandName;
-}
-
-export function resolveSubcommandAlias(subcommandName) {
-  return subcommandAliases[subcommandName.toLowerCase()] || subcommandName;
-}
+export function resolveCommandAlias(name) { return commandAliases[name.toLowerCase()] || name; }
+export function resolveSubcommandAlias(name) { return subcommandAliases[name.toLowerCase()] || name; }
