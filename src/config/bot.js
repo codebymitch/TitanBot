@@ -51,7 +51,7 @@ export const botConfig = {
     maintenanceMode: process.env.MAINTENANCE_MODE === "true",
 
     // Command prefix for text-based commands (e.g., "!" for "!ping").
-    // Supports both slash commands and prefix commands.
+    // The bot runs in prefix-only mode; slash commands are disabled.
     prefix: process.env.PREFIX || "!",
   },
 
