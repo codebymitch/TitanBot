@@ -10,15 +10,45 @@ const BASE_MAX_REWARD = 900;
 const FISHING_ROD_MULTIPLIER = 1.5;
 
 const FISH_TYPES = [
+    // Common
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
-    { name: 'Salmon', emoji: '🐟', rarity: 'common' },
+    { name: 'Salmon', emoji: '🐠', rarity: 'common' },
     { name: 'Trout', emoji: '🐟', rarity: 'common' },
-    { name: 'Tuna', emoji: '🐠', rarity: 'uncommon' },
-    { name: 'Swordfish', emoji: '🐠', rarity: 'uncommon' },
-    { name: 'Octopus', emoji: '🐙', rarity: 'rare' },
+
+    // Uncommon
+    { name: 'Tuna', emoji: '🐡', rarity: 'uncommon' },
+    { name: 'Swordfish', emoji: '🐟', rarity: 'uncommon' },
+    { name: 'Octopus', emoji: '🐙', rarity: 'uncommon' },
+
+    // Rare
     { name: 'Lobster', emoji: '🦞', rarity: 'rare' },
-    { name: 'Shark', emoji: '🦈', rarity: 'epic' },
-    { name: 'Whale', emoji: '🐋', rarity: 'legendary' },
+    { name: 'Shark', emoji: '🦈', rarity: 'rare' },
+    { name: 'Manta Ray', emoji: '🐟', rarity: 'rare' },
+
+    // Epic
+    { name: 'Golden Koi', emoji: '🐠', rarity: 'epic' },
+    { name: 'Blue Marlin', emoji: '🐟', rarity: 'epic' },
+    { name: 'Crystal Fish', emoji: '💎', rarity: 'epic' },
+
+    // Legendary
+    { name: 'Golden Shark', emoji: '🦈', rarity: 'legendary' },
+    { name: 'Sea Dragon', emoji: '🐉', rarity: 'legendary' },
+    { name: 'Golden Whale', emoji: '🐋', rarity: 'legendary' },
+
+    // Mythic
+    { name: 'Leviathan', emoji: '🐉', rarity: 'mythic' },
+    { name: 'Megalodon', emoji: '🦈', rarity: 'mythic' },
+    { name: 'Phoenix Koi', emoji: '🔥', rarity: 'mythic' },
+
+    // Secret
+    { name: 'Void Whale', emoji: '🌌', rarity: 'secret' },
+    { name: 'Ancient Kraken', emoji: '🐙', rarity: 'secret' },
+    { name: 'Abyss Serpent', emoji: '🐍', rarity: 'secret' },
+
+    // Divine (Above Secret)
+    { name: 'Cosmic Leviathan', emoji: '🌠', rarity: 'divine' },
+    { name: 'God of Ocean', emoji: '🔱', rarity: 'divine' },
+    { name: 'Eternal Whale', emoji: '🌌', rarity: 'divine' }
 ];
 
 const CATCH_MESSAGES = [
@@ -62,28 +92,50 @@ export default {
             }
 
             const rand = Math.random();
-            let fishCaught;
-            
-            if (rand < 0.5) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'common')[Math.floor(Math.random() * 3)];
-            } else if (rand < 0.75) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'uncommon')[Math.floor(Math.random() * 2)];
-            } else if (rand < 0.9) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'rare')[Math.floor(Math.random() * 2)];
+
+            let selectedRarity;
+
+            if (rand < 0.45) {
+                selectedRarity = 'common';
+            } else if (rand < 0.70) {
+                selectedRarity = 'uncommon';
+            } else if (rand < 0.85) {
+                selectedRarity = 'rare';
+            } else if (rand < 0.94) {
+                selectedRarity = 'epic';
             } else if (rand < 0.98) {
-                
-                fishCaught = FISH_TYPES.find(f => f.rarity === 'epic');
+                selectedRarity = 'legendary';
+            } else if (rand < 0.995) {
+                selectedRarity = 'mythic';
+            } else if (rand < 0.9995) {
+                selectedRarity = 'secret';
             } else {
-                
-                fishCaught = FISH_TYPES.find(f => f.rarity === 'legendary');
+                selectedRarity = 'divine';
             }
 
+            const availableFish = FISH_TYPES.filter(
+                f => f.rarity === selectedRarity
+            );
+        
+            const fishCaught = availableFish[
+                Math.floor(Math.random() * availableFish.length)
+            ];
+            const fishPrices = {
+                common: [300, 900],
+                uncommon: [1000, 2000],
+                rare: [2500, 4000],
+                epic: [5000, 8000],
+                legendary: [10000, 20000],
+                mythic: [30000, 50000],
+                secret: [75000, 150000],
+                divine: [250000, 500000]
+            };
+
+            const [minPrice, maxPrice] = fishPrices[fishCaught.rarity];
+
             const baseEarned = Math.floor(
-                Math.random() * (BASE_MAX_REWARD - BASE_MIN_REWARD + 1)
-            ) + BASE_MIN_REWARD;
+                Math.random() * (maxPrice - minPrice + 1)
+            ) + minPrice;
 
             let finalEarned = baseEarned;
             let multiplierMessage = "";
@@ -105,7 +157,10 @@ export default {
                 uncommon: '#2ECC71',
                 rare: '#3498DB',
                 epic: '#9B59B6',
-                legendary: '#F1C40F'
+                legendary: '#F1C40F',
+                mythic: '#E91E63',
+                secret: '#FF0000',
+                divine: '#00FFFF'
             };
 
             const embed = createEmbed({
