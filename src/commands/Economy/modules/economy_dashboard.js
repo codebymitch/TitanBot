@@ -140,7 +140,6 @@ async function updateConfigFile(currencySymbol, currencyName) {
 }
 
 export default {
-    prefixOnly: false,
     async execute(interaction, config, client) {
         try {
             const guild = interaction.guild;

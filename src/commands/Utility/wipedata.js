@@ -5,7 +5,6 @@ import { logger } from '../../utils/logger.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
-    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName('wipedata')
         .setDescription('Delete all your personal data from the bot (irreversible)'),

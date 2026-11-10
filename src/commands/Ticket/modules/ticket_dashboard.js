@@ -256,7 +256,6 @@ async function updateLivePanel(client, guild, config, guildId) {
 }
 
 export default {
-    prefixOnly: false,
     async execute(interaction, config, client) {
         try {
             const guildId = interaction.guild.id;
