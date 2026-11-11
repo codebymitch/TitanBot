@@ -191,7 +191,7 @@ roleId: null,
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
-            multiplier: 2000000,
+            multiplier: 2.2,
             duration: 300000
         }
     },
