@@ -161,14 +161,14 @@ export default {
                 Math.floor(Math.random() * availableFish.length)
             ];
             const fishPrices = {
-                common: [300, 800],
-                uncommon: [900, 1500],
-                rare: [2000, 2500],
-                epic: [3500, 6000],
-                legendary: [7500, 15000],
-                mythic: [30000, 50000],
-                secret: [60000, 100000],
-                divine: [125000, 350000]
+                common: [150, 400],
+                uncommon: [450, 750],
+                rare: [1000, 1250],
+                epic: [1750, 3000],
+                legendary: [3750, 7500],
+                mythic: [15000, 25000],
+                secret: [30000, 50000],
+                divine: [62500, 175000]
             };
 
             const [minPrice, maxPrice] = fishPrices[fishCaught.rarity];

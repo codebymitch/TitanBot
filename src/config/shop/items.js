@@ -80,12 +80,12 @@ roleId: null,
         id: 'fishing_rod_2',
         name: '🎣 Fishing Rod II',
         price: 25000,
-        description: 'A sturdy fishing rod. Boosts fishing earnings by 50%.',
+        description: 'A sturdy fishing rod. Boosts fishing earnings by 25%.',
         type: 'tool',
         durability: 150,
         effect: {
             type: 'fishing_yield',
-            multiplier: 1.5,
+            multiplier: 1.25,
             tier: 2
         }
     },
@@ -93,12 +93,12 @@ roleId: null,
         id: 'fishing_rod_3',
         name: '🎣 Fishing Rod III',
         price: 75000,
-        description: 'A reinforced fishing rod. Boosts fishing earnings by 100%.',
+        description: 'A reinforced fishing rod. Boosts fishing earnings by 50%.',
         type: 'tool',
         durability: 200,
         effect: {
             type: 'fishing_yield',
-            multiplier: 2.0,
+            multiplier: 1.5,
             tier: 3
         }
     },
@@ -106,12 +106,12 @@ roleId: null,
         id: 'fishing_rod_4',
         name: '🎣 Fishing Rod IV',
         price: 200000,
-        description: 'A premium fishing rod. Boosts fishing earnings by 150%.',
+        description: 'A premium fishing rod. Boosts fishing earnings by 75%.',
         type: 'tool',
         durability: 250,
         effect: {
             type: 'fishing_yield',
-            multiplier: 2.5,
+            multiplier: 1.75,
             tier: 4
         }
     },
@@ -119,12 +119,12 @@ roleId: null,
         id: 'fishing_rod_5',
         name: '🎣 Fishing Rod V',
         price: 500000,
-        description: 'A legendary fishing rod. Boosts fishing earnings by 200%.',
+        description: 'A legendary fishing rod. Boosts fishing earnings by 100%.',
         type: 'tool',
         durability: 300,
         effect: {
             type: 'fishing_yield',
-            multiplier: 3.0,
+            multiplier: 2.0,
             tier: 5
         }
     },
