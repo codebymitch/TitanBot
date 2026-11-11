@@ -7,6 +7,8 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
+const LUCK_POTION_IDS = new Set(['lucky_clover', 'lucky_charm']);
+const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
 export default {
     data: new SlashCommandBuilder()
@@ -140,6 +142,14 @@ export default {
             } else if (item.type === "upgrade") {
                 userData.upgrades[itemId] = true;
                 successDescription += `\n\n**✨ Your upgrade is now active!**`;
+            } else if (item.type === "consumable" && LUCK_POTION_IDS.has(itemId)) {
+                const now = Date.now();
+                const expiresAt = userData.luckPotionExpiresAt || {};
+                const currentExpiry = Math.max(now, Number(expiresAt[itemId]) || 0);
+                const duration = Number(item.effect?.duration) || DEFAULT_LUCK_POTION_DURATION_MS;
+                expiresAt[itemId] = currentExpiry + (duration * quantity);
+                userData.luckPotionExpiresAt = expiresAt;
+                successDescription += `\n\n🍀 **Active for ${Math.ceil((expiresAt[itemId] - now) / 60000)} minutes. Timer started at purchase.**`;
             } else if (item.type === "consumable" || item.type === "tool") {
                 userData.inventory[itemId] =
                     (userData.inventory[itemId] || 0) + quantity;

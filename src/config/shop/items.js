@@ -53,13 +53,13 @@ roleId: null,
         id: 'lucky_clover',
         name: 'Lucky Clover',
         price: 10000,
-        description: 'Increases the chance of winning a higher payout on `/gamble` once.',
+        description: 'Boosts `/gamble` win chance for 5 minutes after purchase.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'gamble_boost',
             multiplier: 1.5,
-            uses: 1
+            duration: 300000
         }
     },
     {
@@ -102,13 +102,13 @@ roleId: null,
         id: 'lucky_charm',
         name: '🍀 Lucky Charm',
         price: 10000,
-        description: 'Increases luck for gambling. Has 3 uses before being consumed.',
+        description: 'Boosts `/gamble` win chance for 5 minutes after purchase.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'gamble_boost',
             multiplier: 1.3,
-            uses: 3
+            duration: 300000
         }
     },
     {
