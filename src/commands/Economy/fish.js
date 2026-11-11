@@ -3,12 +3,14 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-
 import { getItemById } from '../../config/shop/items.js';
+import { getGuildConfig } from '../../services/config/guildConfig.js';
 
 const FISH_COOLDOWN = 0; 
 const BASE_MIN_REWARD = 300;
 const BASE_MAX_REWARD = 900;
+const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
+const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
 
 // Helper: find the highest-tier fishing rod the user owns
 function getBestFishingRod(inventory) {
@@ -22,11 +24,11 @@ function getBestFishingRod(inventory) {
     return null;
 }
 
-// Helper: find the highest-tier luck potion the user owns
-function getBestLuckPotion(inventory) {
+// Helper: find the highest-tier luck potion with an active timer
+function getBestActiveLuckPotion(potionExpiries, now) {
     for (let tier = 5; tier >= 1; tier--) {
         const id = `luck_potion_${tier}`;
-        if ((inventory[id] || 0) > 0) {
+        if (Number(potionExpiries[id]) > now) {
             const item = getItemById(id);
             if (item) return item;
         }
@@ -100,9 +102,28 @@ export default {
             const userData = await getEconomyData(client, guildId, userId);
             const lastFish = userData.lastFish || 0;
             const inventory = userData.inventory || {};
+            const potionExpiries = { ...(userData.luckPotionExpiresAt || {}) };
 
             const bestRod = getBestFishingRod(inventory);
-            const bestPotion = getBestLuckPotion(inventory);
+            for (let tier = 1; tier <= 5; tier++) {
+                const potionId = `luck_potion_${tier}`;
+                const legacyQuantity = Number(inventory[potionId] || 0);
+                if (legacyQuantity > 0) {
+                    const currentExpiry = Math.max(now, Number(potionExpiries[potionId]) || 0);
+                    const duration = Number(getItemById(potionId)?.effect?.duration)
+                        || DEFAULT_LUCK_POTION_DURATION_MS;
+                    potionExpiries[potionId] = currentExpiry + (duration * legacyQuantity);
+                    delete inventory[potionId];
+                }
+            }
+            const bestPotion = getBestActiveLuckPotion(potionExpiries, now);
+            userData.luckPotionExpiresAt = potionExpiries;
+
+            const guildConfig = await getGuildConfig(client, guildId);
+            const premiumRoleId = guildConfig.premiumRoleId;
+            const hasPremiumRole = Boolean(
+                premiumRoleId && interaction.member?.roles?.cache?.has(premiumRoleId)
+            );
 
             if (now < lastFish + FISH_COOLDOWN) {
                 const remaining = lastFish + FISH_COOLDOWN - now;
@@ -121,16 +142,16 @@ export default {
 
             let rand = Math.random();
 
-            // Apply luck potion boost (shifts roll toward rarer fish)
+            // Terapkan potion terkuat yang masih aktif tanpa menghabiskannya.
             let luckMultiplier = 1;
             let luckMessage = "";
             if (bestPotion) {
                 luckMultiplier = bestPotion.effect.multiplier || 1;
                 rand = Math.min(rand * luckMultiplier, 0.9999);
-                luckMessage = `\n🧪 **${bestPotion.name} Active: x${luckMultiplier} luck**`;
-                // Consume one use of the potion
-                inventory[bestPotion.id] = (inventory[bestPotion.id] || 0) - 1;
-                if (inventory[bestPotion.id] <= 0) delete inventory[bestPotion.id];
+                const minutesLeft = Math.ceil(
+                    (Number(potionExpiries[bestPotion.id]) - now) / 60000
+                );
+                luckMessage = `\n🧪 **${bestPotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
             }
 
             let selectedRarity;
@@ -177,21 +198,30 @@ export default {
                 Math.random() * (maxPrice - minPrice + 1)
             ) + minPrice;
 
-            let finalEarned = baseEarned;
-            let multiplierMessage = "";
-
+            let fishingMultiplier = 1;
+            const bonusMessages = [];
             if (bestRod) {
                 const rodMultiplier = bestRod.effect.multiplier || 1;
-                finalEarned = Math.floor(baseEarned * rodMultiplier);
+                fishingMultiplier *= rodMultiplier;
                 const boostPct = Math.round((rodMultiplier - 1) * 100);
-                multiplierMessage = `\n🎣 **${bestRod.name} Bonus: +${boostPct}%**`;
+                bonusMessages.push(`🎣 **${bestRod.name} Bonus: +${boostPct}%**`);
             }
+            if (hasPremiumRole) {
+                fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
+                const boostPct = Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100);
+                bonusMessages.push(`✨ **Premium Fishing Bonus: +${boostPct}%**`);
+            }
+            const finalEarned = Math.floor(baseEarned * fishingMultiplier);
+            const multiplierMessage = bonusMessages.length
+                ? `\n${bonusMessages.join('\n')}`
+                : "";
 
             const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];
 
             userData.wallet += finalEarned;
             userData.lastFish = now;
             userData.inventory = inventory;
+            userData.luckPotionExpiresAt = potionExpiries;
 
             await setEconomyData(client, guildId, userId, userData);
 

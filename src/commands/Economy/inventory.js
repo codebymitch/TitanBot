@@ -34,25 +34,26 @@ export default {
             }
 
             const inventory = userData.inventory || {};
-
-            let inventoryDescription = "Your inventory is currently empty.";
-
-            if (Object.keys(inventory).length > 0) {
-                inventoryDescription = Object.entries(inventory)
-                    .filter(
-                        ([itemId, quantity]) => {
-                            const item = SHOP_ITEMS.find(i => i.id === itemId);
-                            return quantity > 0 && item;
-                        }
-                    )
-                    .map(
-                        ([itemId, quantity]) => {
-                            const item = SHOP_ITEMS.find(i => i.id === itemId);
-                            return `**${item.name}:** ${quantity}x`;
-                        }
-                    )
-                    .join("\n");
-            }
+            const inventoryLines = Object.entries(inventory)
+                .filter(([itemId, quantity]) => {
+                    const item = SHOP_ITEMS.find(i => i.id === itemId);
+                    return Number(quantity) > 0 && item;
+                })
+                .map(([itemId, quantity]) => {
+                    const item = SHOP_ITEMS.find(i => i.id === itemId);
+                    return `**${item.name}:** ${quantity}x`;
+                });
+            const potionLines = Object.entries(userData.luckPotionExpiresAt || {})
+                .filter(([, expiresAt]) => Number(expiresAt) > Date.now())
+                .map(([itemId, expiresAt]) => {
+                    const item = SHOP_ITEMS.find(i => i.id === itemId);
+                    if (!item) return null;
+                    const minutesLeft = Math.ceil((Number(expiresAt) - Date.now()) / 60000);
+                    return `🧪 **${item.name}:** Active (${minutesLeft}m left)`;
+                })
+                .filter(Boolean);
+            const inventoryDescription = [...inventoryLines, ...potionLines].join("\n")
+                || "Your inventory is currently empty.";
 
             logger.info(`[ECONOMY] Inventory retrieved`, { 
                 userId, 
