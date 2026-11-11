@@ -28,7 +28,9 @@ export default {
         ),
 
     execute: withErrorHandling(async (interaction, config, client) => {
-        const deferred = await InteractionHelper.safeDefer(interaction);
+        const deferred = await InteractionHelper.safeDefer(interaction, {
+            flags: MessageFlags.Ephemeral,
+        });
         if (!deferred) return;
 
             const userId = interaction.user.id;
@@ -155,6 +157,21 @@ export default {
                 inline: true,
             });
 
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: [MessageFlags.Ephemeral] });
+            if (interaction._isPrefixCommand) {
+                try {
+                    await interaction.user.send({ embeds: [embed] });
+                    const sourceMessage = InteractionHelper.getCoordinator(interaction)?.message;
+                    await sourceMessage?.delete().catch(() => {});
+                } catch {
+                    const sourceMessage = InteractionHelper.getCoordinator(interaction)?.message;
+                    await sourceMessage?.delete().catch(() => {});
+                    await interaction.channel.send(
+                        `${interaction.user}, pembelian berhasil, tetapi DM bot kamu tertutup. Aktifkan DM agar struk pembelian bisa dikirim secara pribadi.`
+                    );
+                }
+                return;
+            }
+
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'buy' })
 };
