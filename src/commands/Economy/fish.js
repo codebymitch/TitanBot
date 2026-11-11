@@ -119,7 +119,10 @@ const FISH_TYPES = [
     { name: 'Primordial Serpent', emoji: '🐍', rarity: 'transcendent' },
     { name: 'Infinity Koi', emoji: '♾️', rarity: 'transcendent' },
     { name: 'Genesis Leviathan', emoji: '🌟', rarity: 'transcendent' },
-    { name: 'Celestia Dragon', emoji: '🐲', rarity: 'transcendent' }
+    { name: 'Celestia Dragon', emoji: '🐲', rarity: 'transcendent' },
+
+    // Celestial (Above Transcendent) — Kitsune sengaja TIDAK bisa dipancing
+    { name: 'Kitsune', emoji: '🦊', rarity: 'celestial' }
 ];
 
 const CATCH_MESSAGES = [
@@ -236,7 +239,8 @@ export default {
                 mythic: [15000, 25000],
                 secret: [30000, 50000],
                 divine: [62500, 175000],
-                transcendent: [250000, 500000]
+                transcendent: [250000, 500000],
+                celestial: [1000000, 5000000]
             };
 
             const [minPrice, maxPrice] = fishPrices[fishCaught.rarity];
@@ -281,7 +285,8 @@ export default {
                 mythic: '#E91E63',
                 secret: '#FF0000',
                 divine: '#00FFFF',
-                transcendent: '#FF00FF'
+                transcendent: '#FF00FF',
+                celestial: '#FF69B4'
             };
 
             const embed = createEmbed({
