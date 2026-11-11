@@ -206,7 +206,7 @@ export default {
                     (Number(potionExpiries[activePotion.id]) - now) / 60000
                 );
                 if (adminChances) {
-                    luckMessage = `\n👑 **${activePotion.name} Active: Luck +1000000% / Kitsune ${Math.round(adminChances.celestial * 100)}% (${minutesLeft}m left)**`;
+                    luckMessage = `\n👑 **${activePotion.name} Active: Kitsune ${Math.round(adminChances.celestial * 100)}% (${minutesLeft}m left)**`;
                 } else {
                     const luckMultiplier = activePotion.effect.multiplier || 1;
                     // Bias halus: potion menaikkan peluang ikan langka tanpa "membanjiri"
