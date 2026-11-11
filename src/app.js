@@ -11,7 +11,7 @@ import { getServerCounters, saveServerCounters, updateCounter } from './services
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
-import { loadCommands, clearSlashCommands as clearGlobalSlashCommands } from './handlers/loaders/commandLoader.js';
+import { loadCommands, registerCommands as registerGlobalSlashCommands } from './handlers/loaders/commandLoader.js';
 import { runSafeTask, handleTaskError, ErrorCodes } from './utils/errorHandler.js';
 import { initializeMusic } from './services/music/riffySetup.js';
 import { shutdownMusic } from './services/music/playerHandler.js';
@@ -90,9 +90,9 @@ class TitanBot extends Client {
       await this.login(this.config.bot.token);
       startupLog('Discord login successful');
       
-      startupLog('Prefix-only mode: clearing registered slash commands...');
-      await this.clearSlashCommands();
-      startupLog('Slash commands cleared');
+      startupLog('Registering slash commands globally...');
+      await this.registerCommands();
+      startupLog('Slash commands registration complete');
       
       const databaseMode = dbStatus.isDegraded
         ? 'Optional in-memory mode (data resets after restart)'
@@ -322,11 +322,11 @@ class TitanBot extends Client {
     }
   }
 
-  async clearSlashCommands() {
+  async registerCommands() {
     try {
-      await clearGlobalSlashCommands(this, { clientId: this.config.bot.clientId });
+      await registerGlobalSlashCommands(this, { clientId: this.config.bot.clientId });
     } catch (error) {
-      logger.error('Error clearing slash commands:', error);
+      logger.error('Error registering slash commands:', error);
     }
   }
 

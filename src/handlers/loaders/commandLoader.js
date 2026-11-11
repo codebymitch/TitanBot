@@ -101,24 +101,41 @@ export async function loadCommands(client) {
     return client.commands;
 }
 
-/**
- * Clears all globally registered slash commands.
- * The bot runs in prefix-only mode, so no slash commands are registered.
- */
-export async function clearSlashCommands(client, options = {}) {
+export async function registerCommands(client, options = {}) {
     const { clientId = null } = options;
 
     if (!clientId) {
-        throw new Error('CLIENT_ID is required to clear slash commands');
+        throw new Error('CLIENT_ID is required for slash command registration');
     }
 
     if (!client.rest) {
-        throw new Error('Discord REST client is not available to clear slash commands');
+        throw new Error('Discord REST client is not available for slash command registration');
     }
 
-    logger.info('Clearing registered global slash commands (prefix-only mode)...');
-    await client.rest.put(`/applications/${clientId}/commands`, { body: [] });
-    logger.info('Successfully cleared registered global slash commands');
+    const commands = [];
+    const registeredNames = new Set();
+
+    for (const command of client.commands.values()) {
+        if (!command.data?.toJSON) {
+            continue;
+        }
+
+        const commandJson = command.data.toJSON();
+        if (registeredNames.has(commandJson.name)) {
+            continue;
+        }
+
+        registeredNames.add(commandJson.name);
+        commands.push(commandJson);
+    }
+
+    if (commands.length > 100) {
+        throw new Error(`Cannot register ${commands.length} global slash commands; Discord allows at most 100`);
+    }
+
+    logger.info(`Registering ${commands.length} global slash commands...`);
+    await client.rest.put(`/applications/${clientId}/commands`, { body: commands });
+    logger.info('Successfully registered global slash commands');
 }
 
 export async function reloadCommand(client, commandName) {
