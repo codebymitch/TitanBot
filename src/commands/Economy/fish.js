@@ -121,7 +121,7 @@ const FISH_TYPES = [
     { name: 'Genesis Leviathan', emoji: '🌟', rarity: 'transcendent' },
     { name: 'Celestia Dragon', emoji: '🐲', rarity: 'transcendent' },
 
-    // Celestial (Above Transcendent) — Kitsune sengaja TIDAK bisa dipancing
+    // Celestial (Above Transcendent) — Kitsune, peluang 2x lebih susah dari transcendent
     { name: 'Kitsune', emoji: '🦊', rarity: 'celestial' }
 ];
 
@@ -217,10 +217,12 @@ export default {
                 selectedRarity = 'mythic';
             } else if (rand < 0.9995) {
                 selectedRarity = 'secret';
-            } else if (rand < 0.9998) {
+            } else if (rand < 0.9997) {
                 selectedRarity = 'divine';
-            } else {
+            } else if (rand < 0.9999) {
                 selectedRarity = 'transcendent';
+            } else {
+                selectedRarity = 'celestial';
             }
 
             const availableFish = FISH_TYPES.filter(
