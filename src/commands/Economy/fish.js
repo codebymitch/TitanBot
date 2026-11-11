@@ -1,5 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { getItemById } from '../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -7,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 const FISH_COOLDOWN = 45 * 60 * 1000; 
 const BASE_MIN_REWARD = 1500;
 const BASE_MAX_REWARD = 4500;
-const FISHING_ROD_MULTIPLIER = 1.5;
+const FISHING_ROD_MULTIPLIER = getItemById('fishing_rod')?.effect?.multiplier ?? 1.5;
 
 const FISH_TYPES = [
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
