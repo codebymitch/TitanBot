@@ -46,7 +46,7 @@ cooldown: 86400000,
 roleId: null,
         effect: {
             type: 'fishing_yield',
-            multiplier: 5
+            multiplier: 50000
         }
     },
     {
@@ -191,7 +191,7 @@ roleId: null,
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
-            multiplier: 2.2,
+            multiplier: 20000,
             duration: 300000
         }
     },
