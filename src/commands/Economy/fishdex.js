@@ -1,18 +1,17 @@
 import {
     ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
     ComponentType,
     EmbedBuilder,
     MessageFlags,
     SlashCommandBuilder,
+    StringSelectMenuBuilder,
 } from 'discord.js';
 import { FISH_TYPES } from './fish.js';
 import { getEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 
-const FISH_PER_PAGE = 5;
+const RARITIES = [...new Set(FISH_TYPES.map(fish => fish.rarity))];
 const RARITY_COLORS = {
     common: 0x95A5A6,
     uncommon: 0x2ECC71,
@@ -48,9 +47,8 @@ function createImageUrl(fish) {
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${seed}`;
 }
 
-function makeFishEmbeds(page, targetUser, fishCollection, totalPages) {
-    const start = page * FISH_PER_PAGE;
-    const pageFish = FISH_TYPES.slice(start, start + FISH_PER_PAGE);
+function makeFishEmbeds(rarity, targetUser, fishCollection) {
+    const pageFish = FISH_TYPES.filter(fish => fish.rarity === rarity);
     const caughtSpecies = FISH_TYPES.filter(
         fish => Number(fishCollection[fish.name]) > 0
     ).length;
@@ -73,7 +71,7 @@ function makeFishEmbeds(page, targetUser, fishCollection, totalPages) {
 
         if (index === pageFish.length - 1) {
             embed.setFooter({
-                text: `${targetUser.username}: ${caughtSpecies}/${FISH_TYPES.length} spesies | Halaman ${page + 1}/${totalPages}`,
+                text: `${targetUser.username}: ${caughtSpecies}/${FISH_TYPES.length} spesies | ${pageFish.length} ikan ${rarity}`,
                 iconURL: targetUser.displayAvatarURL(),
             });
         }
@@ -81,21 +79,18 @@ function makeFishEmbeds(page, targetUser, fishCollection, totalPages) {
     });
 }
 
-function makeComponents(page, totalPages, customIdPrefix, disabled = false) {
-    if (totalPages <= 1) return [];
-
+function makeComponents(selectedRarity, customIdPrefix, disabled = false) {
     return [
         new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`${customIdPrefix}_prev`)
-                .setLabel('Sebelumnya')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(disabled || page === 0),
-            new ButtonBuilder()
-                .setCustomId(`${customIdPrefix}_next`)
-                .setLabel('Berikutnya')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(disabled || page === totalPages - 1),
+            new StringSelectMenuBuilder()
+                .setCustomId(`${customIdPrefix}_rarity`)
+                .setPlaceholder('Pilih rarity ikan')
+                .setDisabled(disabled)
+                .addOptions(RARITIES.map(rarity => ({
+                    label: rarity.charAt(0).toUpperCase() + rarity.slice(1),
+                    value: rarity,
+                    default: rarity === selectedRarity,
+                }))),
         ),
     ];
 }
@@ -123,49 +118,41 @@ export default {
 
         const userData = await getEconomyData(client, interaction.guildId, targetUser.id);
         const fishCollection = userData.fishCollection || {};
-        const totalPages = Math.ceil(FISH_TYPES.length / FISH_PER_PAGE);
         const customIdPrefix = `fishdex_${interaction.id}`;
-        let page = 0;
+        let selectedRarity = RARITIES[0];
 
         await interaction.reply({
-            embeds: makeFishEmbeds(page, targetUser, fishCollection, totalPages),
-            components: makeComponents(page, totalPages, customIdPrefix),
+            embeds: makeFishEmbeds(selectedRarity, targetUser, fishCollection),
+            components: makeComponents(selectedRarity, customIdPrefix),
         });
         const message = await interaction.fetchReply();
         const collector = message.createMessageComponentCollector({
-            componentType: ComponentType.Button,
+            componentType: ComponentType.StringSelect,
             time: 300000,
         });
 
-        collector.on('collect', async buttonInteraction => {
-            if (buttonInteraction.user.id !== interaction.user.id) {
-                await buttonInteraction.reply({
-                    content: 'Hanya orang yang membuka fishdex ini yang bisa memakai tombolnya.',
+        collector.on('collect', async selectInteraction => {
+            if (selectInteraction.user.id !== interaction.user.id) {
+                await selectInteraction.reply({
+                    content: 'Hanya orang yang membuka fishdex ini yang bisa memilih rarity.',
                     flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
 
-            await buttonInteraction.deferUpdate();
-            if (buttonInteraction.customId === `${customIdPrefix}_prev` && page > 0) {
-                page--;
-            } else if (
-                buttonInteraction.customId === `${customIdPrefix}_next`
-                && page < totalPages - 1
-            ) {
-                page++;
-            }
+            await selectInteraction.deferUpdate();
+            selectedRarity = selectInteraction.values[0];
 
             await message.edit({
-                embeds: makeFishEmbeds(page, targetUser, fishCollection, totalPages),
-                components: makeComponents(page, totalPages, customIdPrefix),
+                embeds: makeFishEmbeds(selectedRarity, targetUser, fishCollection),
+                components: makeComponents(selectedRarity, customIdPrefix),
             });
         });
 
         collector.on('end', async () => {
             try {
                 await message.edit({
-                    components: makeComponents(page, totalPages, customIdPrefix, true),
+                    components: makeComponents(selectedRarity, customIdPrefix, true),
                 });
             } catch (error) {
                 logger.debug('fishdex: could not disable pagination buttons', {
