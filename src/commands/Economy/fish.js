@@ -274,7 +274,7 @@ export default {
                 secret: [30000, 50000],
                 divine: [62500, 175000],
                 transcendent: [250000, 500000],
-                celestial: [1000000, 5000000]
+                celestial: [10000000, 20000000]
             };
 
             const [minPrice, maxPrice] = fishPrices[fishCaught.rarity];
