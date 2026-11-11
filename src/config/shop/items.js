@@ -41,12 +41,12 @@ cooldown: 86400000,
         id: 'premium_role',
         name: 'Premium Server Role',
         price: 1500000,
-        description: 'A special role granting a fancy color and a 10% daily bonus.',
+        description: 'A special role granting a fancy color and a 10% fishing earnings bonus.',
         type: 'role',
 roleId: null,
         effect: {
-            type: 'daily_bonus',
-            multiplier: 5
+            type: 'fishing_yield',
+            multiplier: 1.1
         }
     },
     {
@@ -67,7 +67,7 @@ roleId: null,
         id: 'fishing_rod_1',
         name: '🎣 Fishing Rod I',
         price: 5000,
-        description: 'A basic fishing rod. Boosts fishing earnings by 0%.',
+        description: 'A basic fishing rod. Boosts fishing earnings by 10%.',
         type: 'tool',
         durability: 100,
         effect: {
@@ -116,7 +116,7 @@ roleId: null,
         }
     },
     {
-        id: 'fishibg_rod_5',
+        id: 'fishing_rod_5',
         name: '🎣 Fishing Rod V',
         price: 500000,
         description: 'A legendary fishing rod. Boosts fishing earnings by 100%.',
@@ -134,65 +134,65 @@ roleId: null,
         id: 'luck_potion_1',
         name: '🧪 Luck Potion I',
         price: 10000,
-        description: 'Boosts your fishing luck slightly for one catch. Higher chance of rarer fish.',
+        description: 'Boosts your fishing luck slightly for 5 minutes. Higher chance of rarer fish.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
             multiplier: 1.15,
-            uses: 1
+            duration: 300000
         }
     },
     {
         id: 'luck_potion_2',
         name: '🧪 Luck Potion II',
         price: 30000,
-        description: 'Boosts your fishing luck for one catch. Noticeably higher chance of rarer fish.',
+        description: 'Boosts your fishing luck for 5 minutes. Noticeably higher chance of rarer fish.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
             multiplier: 1.3,
-            uses: 1
+            duration: 300000
         }
     },
     {
         id: 'luck_potion_3',
         name: '🧪 Luck Potion III',
         price: 75000,
-        description: 'Boosts your fishing luck for one catch. Good chance of rarer fish.',
+        description: 'Boosts your fishing luck for 5 minutes. Good chance of rarer fish.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
             multiplier: 1.5,
-            uses: 1
+            duration: 300000
         }
     },
     {
         id: 'luck_potion_4',
         name: '🧪 Luck Potion IV',
         price: 150000,
-        description: 'Boosts your fishing luck for one catch. Great chance of rarer fish.',
+        description: 'Boosts your fishing luck for 5 minutes. Great chance of rarer fish.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
             multiplier: 1.8,
-            uses: 1
+            duration: 300000
         }
     },
     {
         id: 'luck_potion_5',
         name: '🧪 Luck Potion V',
         price: 300000,
-        description: 'Maximizes your fishing luck for one catch. Best chance of legendary+ fish.',
+        description: 'Maximizes your fishing luck for 5 minutes. Best chance of legendary+ fish.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
             multiplier: 2.2,
-            uses: 1
+            duration: 300000
         }
     },
     {
