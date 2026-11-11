@@ -46,7 +46,7 @@ cooldown: 86400000,
 roleId: null,
         effect: {
             type: 'fishing_yield',
-            multiplier: 5
+            multiplier: 4
         }
     },
     {
@@ -133,7 +133,7 @@ roleId: null,
     {
         id: 'luck_potion_1',
         name: '🧪 Luck Potion I',
-        price: 10000,
+        price: 1000,
         description: 'Boosts your fishing luck slightly for 5 minutes. Higher chance of rarer fish.',
         type: 'consumable',
         maxQuantity: 10,
@@ -146,7 +146,7 @@ roleId: null,
     {
         id: 'luck_potion_2',
         name: '🧪 Luck Potion II',
-        price: 30000,
+        price: 7000,
         description: 'Boosts your fishing luck for 5 minutes. Noticeably higher chance of rarer fish.',
         type: 'consumable',
         maxQuantity: 10,
@@ -159,7 +159,7 @@ roleId: null,
     {
         id: 'luck_potion_3',
         name: '🧪 Luck Potion III',
-        price: 75000,
+        price: 50000,
         description: 'Boosts your fishing luck for 5 minutes. Good chance of rarer fish.',
         type: 'consumable',
         maxQuantity: 10,
@@ -172,7 +172,7 @@ roleId: null,
     {
         id: 'luck_potion_4',
         name: '🧪 Luck Potion IV',
-        price: 150000,
+        price: 100000,
         description: 'Boosts your fishing luck for 5 minutes. Great chance of rarer fish.',
         type: 'consumable',
         maxQuantity: 10,
@@ -185,14 +185,14 @@ roleId: null,
     {
         id: 'luck_potion_5',
         name: '🧪 Luck Potion V',
-        price: 300000,
+        price: 150000,
         description: 'Maximizes your fishing luck for 5 minutes. Best chance of legendary+ fish.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
-            multiplier: 2.2,
-            duration: 300000
+            multiplier: 20000,
+            duration: 2.1
         }
     },
 
@@ -200,7 +200,7 @@ roleId: null,
     {
         id: 'admin_potion',
         name: '👑 Admin Potion',
-        price: 1,
+        price: 100,
         description: 'Admin potion. Activate with `/use` for 5 minutes of great luck: Divine 30%, Transcendent 20%, Kitsune 10%. Can be gifted with `/give`.',
         type: 'consumable',
         effect: {

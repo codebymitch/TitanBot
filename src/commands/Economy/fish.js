@@ -274,7 +274,7 @@ export default {
                 secret: [30000, 50000],
                 divine: [62500, 175000],
                 transcendent: [250000, 500000],
-                celestial: [1000000, 5000000]
+                celestial: [10000000, 20000000]
             };
 
             const [minPrice, maxPrice] = fishPrices[fishCaught.rarity];
@@ -294,7 +294,7 @@ export default {
             if (hasPremiumRole) {
                 fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
                 const boostPct = Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100);
-                bonusMessages.push(`✨ **Premium Fishing Bonus: +${boostPct}%**`);
+                bonusMessages.push(`✨ **Premium Role Bonus: +${boostPct}%**`);
             }
             const finalEarned = Math.floor(baseEarned * fishingMultiplier);
             const multiplierMessage = bonusMessages.length
