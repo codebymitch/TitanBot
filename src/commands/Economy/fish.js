@@ -44,41 +44,82 @@ const FISH_TYPES = [
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
     { name: 'Salmon', emoji: '🐠', rarity: 'common' },
     { name: 'Trout', emoji: '🐟', rarity: 'common' },
+    { name: 'Carp', emoji: '🐟', rarity: 'common' },
+    { name: 'Catfish', emoji: '🐟', rarity: 'common' },
+    { name: 'Perch', emoji: '🐟', rarity: 'common' },
+    { name: 'Sardine', emoji: '🐟', rarity: 'common' },
+    { name: 'Mackerel', emoji: '🐟', rarity: 'common' },
 
     // Uncommon
     { name: 'Tuna', emoji: '🐡', rarity: 'uncommon' },
     { name: 'Swordfish', emoji: '🐟', rarity: 'uncommon' },
     { name: 'Octopus', emoji: '🐙', rarity: 'uncommon' },
+    { name: 'Barracuda', emoji: '🐟', rarity: 'uncommon' },
+    { name: 'Pufferfish', emoji: '🐡', rarity: 'uncommon' },
+    { name: 'Snapper', emoji: '🐠', rarity: 'uncommon' },
+    { name: 'Mahi Mahi', emoji: '🐠', rarity: 'uncommon' },
 
     // Rare
     { name: 'Lobster', emoji: '🦞', rarity: 'rare' },
     { name: 'Shark', emoji: '🦈', rarity: 'rare' },
     { name: 'Manta Ray', emoji: '🐟', rarity: 'rare' },
+    { name: 'Stingray', emoji: '🐟', rarity: 'rare' },
+    { name: 'Anglerfish', emoji: '🐡', rarity: 'rare' },
+    { name: 'Moray Eel', emoji: '🐍', rarity: 'rare' },
+    { name: 'Hammerhead Shark', emoji: '🦈', rarity: 'rare' },
 
     // Epic
     { name: 'Golden Koi', emoji: '🐠', rarity: 'epic' },
     { name: 'Blue Marlin', emoji: '🐟', rarity: 'epic' },
     { name: 'Crystal Fish', emoji: '💎', rarity: 'epic' },
+    { name: 'Moonfish', emoji: '🌙', rarity: 'epic' },
+    { name: 'Electric Eel', emoji: '⚡', rarity: 'epic' },
+    { name: 'Ruby Grouper', emoji: '🔴', rarity: 'epic' },
+    { name: 'Sapphire Tuna', emoji: '🔵', rarity: 'epic' },
 
     // Legendary
     { name: 'Golden Shark', emoji: '🦈', rarity: 'legendary' },
     { name: 'Sea Dragon', emoji: '🐉', rarity: 'legendary' },
     { name: 'Golden Whale', emoji: '🐋', rarity: 'legendary' },
+    { name: 'Storm Serpent', emoji: '🌩️', rarity: 'legendary' },
+    { name: 'Aurora Whale', emoji: '🌌', rarity: 'legendary' },
+    { name: 'Thunder Marlin', emoji: '⚡', rarity: 'legendary' },
+    { name: 'Emerald Leviathan', emoji: '💚', rarity: 'legendary' },
 
     // Mythic
     { name: 'Leviathan', emoji: '🐉', rarity: 'mythic' },
     { name: 'Megalodon', emoji: '🦈', rarity: 'mythic' },
     { name: 'Phoenix Koi', emoji: '🔥', rarity: 'mythic' },
+    { name: 'Celestial Turtle', emoji: '🐢', rarity: 'mythic' },
+    { name: 'Abyssal Dragon', emoji: '🐉', rarity: 'mythic' },
+    { name: 'Star Kraken', emoji: '🐙', rarity: 'mythic' },
+    { name: 'Obsidian Whale', emoji: '🐋', rarity: 'mythic' },
 
     // Secret
     { name: 'Void Whale', emoji: '🌌', rarity: 'secret' },
     { name: 'Ancient Kraken', emoji: '🐙', rarity: 'secret' },
     { name: 'Abyss Serpent', emoji: '🐍', rarity: 'secret' },
+    { name: 'Shadow Leviathan', emoji: '🌑', rarity: 'secret' },
+    { name: 'Eclipse Ray', emoji: '🌘', rarity: 'secret' },
+    { name: 'Genesis Eel', emoji: '⚡', rarity: 'secret' },
+    { name: 'Nebula Shark', emoji: '🦈', rarity: 'secret' },
 
     // Divine (Above Secret)
     { name: 'Cosmic Leviathan', emoji: '🌠', rarity: 'divine' },
     { name: 'God of Ocean', emoji: '🔱', rarity: 'divine' },
-    { name: 'Eternal Whale', emoji: '🌌', rarity: 'divine' }
+    { name: 'Eternal Whale', emoji: '🌌', rarity: 'divine' },
+    { name: 'Ocean Titan', emoji: '🌊', rarity: 'divine' },
+    { name: 'Holy Megalodon', emoji: '✨', rarity: 'divine' },
+    { name: 'Astral Dragon', emoji: '🐉', rarity: 'divine' },
+    { name: 'Solar Koi', emoji: '☀️', rarity: 'divine' },
+
+    // Transcendent (Above Divine)
+    { name: 'Chronos Whale', emoji: '⏳', rarity: 'transcendent' },
+    { name: 'Omnipotent Kraken', emoji: '👑', rarity: 'transcendent' },
+    { name: 'Primordial Serpent', emoji: '🐍', rarity: 'transcendent' },
+    { name: 'Infinity Koi', emoji: '♾️', rarity: 'transcendent' },
+    { name: 'Genesis Leviathan', emoji: '🌟', rarity: 'transcendent' },
+    { name: 'Celestia Dragon', emoji: '🐲', rarity: 'transcendent' }
 ];
 
 const CATCH_MESSAGES = [
@@ -173,8 +214,10 @@ export default {
                 selectedRarity = 'mythic';
             } else if (rand < 0.9995) {
                 selectedRarity = 'secret';
-            } else {
+            } else if (rand < 0.9998) {
                 selectedRarity = 'divine';
+            } else {
+                selectedRarity = 'transcendent';
             }
 
             const availableFish = FISH_TYPES.filter(
@@ -192,7 +235,8 @@ export default {
                 legendary: [3750, 7500],
                 mythic: [15000, 25000],
                 secret: [30000, 50000],
-                divine: [62500, 175000]
+                divine: [62500, 175000],
+                transcendent: [250000, 500000]
             };
 
             const [minPrice, maxPrice] = fishPrices[fishCaught.rarity];
@@ -236,7 +280,8 @@ export default {
                 legendary: '#F1C40F',
                 mythic: '#E91E63',
                 secret: '#FF0000',
-                divine: '#00FFFF'
+                divine: '#00FFFF',
+                transcendent: '#FF00FF'
             };
 
             const embed = createEmbed({
