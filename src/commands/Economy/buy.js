@@ -7,12 +7,14 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
+const ADMIN_POTION_ID = 'admin_potion';
 const LUCK_POTION_IDS = new Set([
     'luck_potion_1',
     'luck_potion_2',
     'luck_potion_3',
     'luck_potion_4',
     'luck_potion_5',
+    ADMIN_POTION_ID,
 ]);
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
@@ -107,6 +109,27 @@ export default {
                 }
             }
 
+            if (itemId === ADMIN_POTION_ID) {
+                if (quantity > 1) {
+                    throw createError(
+                        "Invalid quantity for admin potion",
+                        ErrorTypes.VALIDATION,
+                        `You can only purchase **${item.name}** one at a time.`,
+                        { itemId, quantity }
+                    );
+                }
+                const activeUntil = Number(userData.luckPotionExpiresAt?.[ADMIN_POTION_ID]) || 0;
+                if (activeUntil > Date.now()) {
+                    const secondsLeft = Math.ceil((activeUntil - Date.now()) / 1000);
+                    throw createError(
+                        "Admin potion on cooldown",
+                        ErrorTypes.RATE_LIMIT,
+                        `**${item.name}** is still active. You can buy it again in **${secondsLeft}s**.`,
+                        { itemId, secondsLeft }
+                    );
+                }
+            }
+
             userData.wallet -= totalCost;
 
             let successDescription = `You successfully purchased ${quantity}x **${item.name}** for **$${totalCost.toLocaleString()}**!`;
@@ -151,8 +174,13 @@ export default {
                 const duration = Number(item.effect?.duration) || DEFAULT_LUCK_POTION_DURATION_MS;
                 potionExpiries[itemId] = currentExpiry + (duration * quantity);
                 userData.luckPotionExpiresAt = potionExpiries;
-                const activeMinutes = Math.ceil((potionExpiries[itemId] - now) / 60000);
-                successDescription += `\n\n🧪 **Active for ${activeMinutes} minutes. Timer started at purchase.**`;
+                if (itemId === ADMIN_POTION_ID) {
+                    const activeSeconds = Math.ceil((potionExpiries[itemId] - now) / 1000);
+                    successDescription += `\n\n👑 **Active for ${activeSeconds}s: Divine 30% / Transcendent 20% / Kitsune 10%. Timer started at purchase.**`;
+                } else {
+                    const activeMinutes = Math.ceil((potionExpiries[itemId] - now) / 60000);
+                    successDescription += `\n\n🧪 **Active for ${activeMinutes} minutes. Timer started at purchase.**`;
+                }
             } else if (item.type === "consumable" || item.type === "tool") {
                 userData.inventory[itemId] =
                     (userData.inventory[itemId] || 0) + quantity;

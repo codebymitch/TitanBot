@@ -195,6 +195,27 @@ roleId: null,
             duration: 300000
         }
     },
+
+    // ===== Admin Potion (bisa dibeli 1x, aktif 1 menit, cooldown 1 menit) =====
+    {
+        id: 'admin_potion',
+        name: '👑 Admin Potion',
+        price: 1000000,
+        description: 'Admin potion. For 1 minute, greatly boosts luck: Divine 30%, Transcendent 20%, Kitsune 10%. Max 1, can buy again after 1 minute.',
+        type: 'consumable',
+        maxQuantity: 1,
+        cooldown: 60000,
+        effect: {
+            type: 'fishing_luck',
+            admin: true,
+            chances: {
+                divine: 0.3,
+                transcendent: 0.2,
+                celestial: 0.1
+            },
+            duration: 60000
+        }
+    },
     {
         id: 'pickaxe',
         name: '⛏️ Pickaxe',
