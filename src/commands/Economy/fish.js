@@ -1,4 +1,5 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
+import axios from 'axios';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -323,6 +324,23 @@ export default {
                 celestial: '#FF69B4'
             };
 
+            // Gaya prompt gambar per rarity (dipakai untuk generate gambar AI ikan).
+            const rarityImageHints = {
+                common: 'common freshwater fish, realistic photo',
+                uncommon: 'tropical fish, realistic photo',
+                rare: 'large deep sea fish, dramatic lighting, realistic',
+                epic: 'rare glowing fish, vivid colors, fantasy',
+                legendary: 'legendary mythical sea creature, glowing aura, epic',
+                mythic: 'mythical giant sea monster, magical glow, epic fantasy',
+                secret: 'mysterious shadowy abyssal creature, dark magic, epic',
+                divine: 'divine celestial sea god creature, holy golden light, epic',
+                transcendent: 'transcendent cosmic sea leviathan, galaxies and starlight, ultra epic',
+                celestial: 'kawaii pink nine tailed fox fish, glowing pink aura, magical, cute anime style'
+            };
+
+            const imagePrompt = `${fishCaught.name}, ${rarityImageHints[fishCaught.rarity] || 'fish'}, single subject, centered, highly detailed`;
+            const fishImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=768&height=768&nologo=true`;
+
             const embed = createEmbed({
                 title: 'Fishing Success!',
                 description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}${luckMessage}`,
@@ -339,9 +357,27 @@ export default {
                         value: fishCaught.rarity.charAt(0).toUpperCase() + fishCaught.rarity.slice(1),
                         inline: true,
                     }
-                )
-                
+                );
 
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+            // Ambil gambar AI ikan, lalu lampirkan (lebih andal daripada pasang URL langsung).
+            const files = [];
+            try {
+                const imageResponse = await axios.get(fishImageUrl, {
+                    responseType: 'arraybuffer',
+                    timeout: 15000,
+                });
+                const imageBuffer = Buffer.from(imageResponse.data);
+                if (imageBuffer.length > 1000) {
+                    files.push(new AttachmentBuilder(imageBuffer, { name: 'fish.jpg' }));
+                    embed.setImage('attachment://fish.jpg');
+                } else {
+                    embed.setImage(fishImageUrl);
+                }
+            } catch {
+                // Kalau gagal generate, biarkan Discord mencoba fetch URL langsung.
+                embed.setImage(fishImageUrl);
+            }
+
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed], files });
     }, { command: 'fish' })
 };
