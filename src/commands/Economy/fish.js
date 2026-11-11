@@ -194,9 +194,12 @@ export default {
             let luckMessage = "";
             if (bestPotion) {
                 luckMultiplier = bestPotion.effect.multiplier || 1;
-                // Potion tidak bisa menembus celestial (Kitsune): cap di bawah ambang 0.9999,
-                // jadi paling tinggi hanya sampai transcendent.
-                rand = Math.min(rand * luckMultiplier, 0.9998);
+                // Bias halus: potion menaikkan peluang ikan langka tanpa "membanjiri"
+                // tier atas (dulu rand dikali lalu di-cap, sehingga transcendent jadi
+                // sangat mudah). Hasil tetap dibatasi 0.9998 agar potion tidak bisa
+                // menembus celestial (Kitsune).
+                rand = 1 - Math.pow(1 - rand, luckMultiplier);
+                if (rand > 0.9998) rand = 0.9998;
                 const minutesLeft = Math.ceil(
                     (Number(potionExpiries[bestPotion.id]) - now) / 60000
                 );
