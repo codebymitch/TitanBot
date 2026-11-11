@@ -61,19 +61,6 @@ export default {
         const now = Date.now();
         const potionExpiries = userData.luckPotionExpiresAt || {};
 
-        if (itemId === ADMIN_POTION_ID) {
-            const activeUntil = Number(potionExpiries[ADMIN_POTION_ID]) || 0;
-            if (activeUntil > now) {
-                const secondsLeft = Math.ceil((activeUntil - now) / 1000);
-                throw createError(
-                    "Admin potion already active",
-                    ErrorTypes.RATE_LIMIT,
-                    `**${item.name}** is already active for **${secondsLeft}s**.`,
-                    { itemId, secondsLeft }
-                );
-            }
-        }
-
         const duration = Number(item.effect?.duration) || DEFAULT_LUCK_POTION_DURATION_MS;
         const currentExpiry = Math.max(now, Number(potionExpiries[itemId]) || 0);
         potionExpiries[itemId] = currentExpiry + duration;

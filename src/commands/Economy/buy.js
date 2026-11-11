@@ -110,26 +110,6 @@ export default {
                 }
             }
 
-            if (itemId === ADMIN_POTION_ID) {
-                if (quantity > 1) {
-                    throw createError(
-                        "Invalid quantity for admin potion",
-                        ErrorTypes.VALIDATION,
-                        `You can only purchase **${item.name}** one at a time.`,
-                        { itemId, quantity }
-                    );
-                }
-                const held = Number(userData.inventory?.[ADMIN_POTION_ID]) || 0;
-                if (held >= 1) {
-                    throw createError(
-                        "Admin potion already held",
-                        ErrorTypes.VALIDATION,
-                        `You already hold an **${item.name}**. Use it with \`/use\` first.`,
-                        { itemId }
-                    );
-                }
-            }
-
             userData.wallet -= totalCost;
 
             let successDescription = `You successfully purchased ${quantity}x **${item.name}** for **$${totalCost.toLocaleString()}**!`;
