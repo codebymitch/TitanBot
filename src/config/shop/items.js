@@ -40,13 +40,13 @@ cooldown: 86400000,
     {
         id: 'premium_role',
         name: 'Premium Server Role',
-        price: 1000000,
+        price: 1500000,
         description: 'A special role granting a fancy color and a 10% daily bonus.',
         type: 'role',
 roleId: null,
         effect: {
             type: 'daily_bonus',
-            multiplier: 1.1
+            multiplier: 5
         }
     },
     {
