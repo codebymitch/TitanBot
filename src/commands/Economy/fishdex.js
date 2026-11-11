@@ -101,7 +101,6 @@ function makeComponents(page, totalPages, customIdPrefix, disabled = false) {
 }
 
 export default {
-    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName('fishdex')
         .setDescription('Lihat index ikan tangkapanmu atau pengguna lain')
