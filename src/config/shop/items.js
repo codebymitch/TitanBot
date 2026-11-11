@@ -200,7 +200,7 @@ roleId: null,
     {
         id: 'admin_potion',
         name: '👑 Admin Potion',
-        price: 1000000,
+        price: 1,
         description: 'Admin potion. For 1 minute, greatly boosts luck: Divine 30%, Transcendent 20%, Kitsune 10%. Max 1, can buy again after 1 minute.',
         type: 'consumable',
         maxQuantity: 1,
