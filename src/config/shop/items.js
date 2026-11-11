@@ -66,12 +66,12 @@ roleId: null,
         id: 'fishing_rod',
         name: '🎣 Fishing Rod',
         price: 5000,
-        description: 'Increases fishing earnings by 50%.',
+        description: 'Increases fishing earnings by 10%.',
         type: 'tool',
         durability: 100,
         effect: {
             type: 'fishing_yield',
-            multiplier: 1.5
+            multiplier: 1.1
         }
     },
     {

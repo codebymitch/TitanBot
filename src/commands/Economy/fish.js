@@ -8,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 const FISH_COOLDOWN = 45 * 60 * 1000; 
 const BASE_MIN_REWARD = 1500;
 const BASE_MAX_REWARD = 4500;
-const FISHING_ROD_MULTIPLIER = getItemById('fishing_rod')?.effect?.multiplier ?? 1.5;
+const FISHING_ROD_MULTIPLIER = getItemById('fishing_rod')?.effect?.multiplier ?? 1.1;
 
 const FISH_TYPES = [
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
@@ -92,7 +92,7 @@ export default {
 
             if (hasFishingRod) {
                 finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
-                multiplierMessage = `\n🎣 **Fishing Rod Bonus: +50%**`;
+                multiplierMessage = `\n🎣 **Fishing Rod Bonus: +10%**`;
             }
 
             const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];
