@@ -44,7 +44,7 @@ function createImageUrl(fish) {
     for (let i = 0; i < fish.name.length; i++) {
         seed = (seed * 31 + fish.name.charCodeAt(i)) >>> 0;
     }
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${seed}`;
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=256&height=256&nologo=true&seed=${seed}`;
 }
 
 function makeFishEmbeds(rarity, targetUser, fishCollection) {
@@ -61,10 +61,8 @@ function makeFishEmbeds(rarity, targetUser, fishCollection) {
 
         if (count > 0) {
             embed
-                .setDescription(
-                    `**Rarity:** ${fish.rarity.charAt(0).toUpperCase() + fish.rarity.slice(1)}\n**Tertangkap:** ${count} kali`
-                )
-                .setImage(createImageUrl(fish));
+                .setDescription(`Tertangkap **${count}x**`)
+                .setThumbnail(createImageUrl(fish));
         } else {
             embed.setDescription('Belum tertangkap');
         }
