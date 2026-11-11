@@ -8,13 +8,14 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
 const ADMIN_POTION_ID = 'admin_potion';
+// Potion ini langsung aktif saat dibeli. Admin potion TIDAK termasuk di sini:
+// admin potion disimpan ke inventory dulu supaya bisa dipakai (/use) atau dikirim (/give).
 const LUCK_POTION_IDS = new Set([
     'luck_potion_1',
     'luck_potion_2',
     'luck_potion_3',
     'luck_potion_4',
     'luck_potion_5',
-    ADMIN_POTION_ID,
 ]);
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
@@ -118,6 +119,15 @@ export default {
                         { itemId, quantity }
                     );
                 }
+                const held = Number(userData.inventory?.[ADMIN_POTION_ID]) || 0;
+                if (held >= 1) {
+                    throw createError(
+                        "Admin potion already held",
+                        ErrorTypes.VALIDATION,
+                        `You already hold an **${item.name}**. Use it with \`/use\` first.`,
+                        { itemId }
+                    );
+                }
                 const activeUntil = Number(userData.luckPotionExpiresAt?.[ADMIN_POTION_ID]) || 0;
                 if (activeUntil > Date.now()) {
                     const secondsLeft = Math.ceil((activeUntil - Date.now()) / 1000);
@@ -174,18 +184,15 @@ export default {
                 const duration = Number(item.effect?.duration) || DEFAULT_LUCK_POTION_DURATION_MS;
                 potionExpiries[itemId] = currentExpiry + (duration * quantity);
                 userData.luckPotionExpiresAt = potionExpiries;
-                if (itemId === ADMIN_POTION_ID) {
-                    const activeSeconds = Math.ceil((potionExpiries[itemId] - now) / 1000);
-                    successDescription += `\n\n👑 **Active for ${activeSeconds}s: Divine 30% / Transcendent 20% / Kitsune 10%. Timer started at purchase.**`;
-                } else {
-                    const activeMinutes = Math.ceil((potionExpiries[itemId] - now) / 60000);
-                    successDescription += `\n\n🧪 **Active for ${activeMinutes} minutes. Timer started at purchase.**`;
-                }
+                const activeMinutes = Math.ceil((potionExpiries[itemId] - now) / 60000);
+                successDescription += `\n\n🧪 **Active for ${activeMinutes} minutes. Timer started at purchase.**`;
             } else if (item.type === "consumable" || item.type === "tool") {
                 userData.inventory[itemId] =
                     (userData.inventory[itemId] || 0) + quantity;
                 if (item.type === "tool") {
                     successDescription += `\n\n**🛠️ ${item.name} added to your inventory!**`;
+                } else if (itemId === ADMIN_POTION_ID) {
+                    successDescription += `\n\n👑 **Added to your inventory!** Activate it with \`/use item_id:${ADMIN_POTION_ID}\` or gift it with \`/give\`.`;
                 }
             }
 

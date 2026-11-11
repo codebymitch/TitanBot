@@ -196,12 +196,12 @@ roleId: null,
         }
     },
 
-    // ===== Admin Potion (bisa dibeli 1x, aktif 1 menit, cooldown 1 menit) =====
+    // ===== Admin Potion (disimpan di inventory, dipakai dengan /use, bisa dikirim dengan /give) =====
     {
         id: 'admin_potion',
         name: '👑 Admin Potion',
         price: 1000000,
-        description: 'Admin potion. For 1 minute, greatly boosts luck: Divine 30%, Transcendent 20%, Kitsune 10%. Max 1, can buy again after 1 minute.',
+        description: 'Admin potion. Activate with `/use` for 1 minute of great luck: Divine 30%, Transcendent 20%, Kitsune 10%. Max 1 held. Can be gifted with `/give`.',
         type: 'consumable',
         maxQuantity: 1,
         cooldown: 60000,
