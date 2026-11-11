@@ -161,7 +161,7 @@ export default {
                 Math.floor(Math.random() * availableFish.length)
             ];
             const fishPrices = {
-                common: [150, 400],
+                common: [200, 450],
                 uncommon: [450, 750],
                 rare: [1000, 1250],
                 epic: [1750, 3000],
