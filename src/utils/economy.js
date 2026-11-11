@@ -356,8 +356,12 @@ export function getShopInventory() {
             name: 'Fishing Rod',
             emoji: '🎣',
             price: 500,
-            description: 'Catch fish to sell for profit!',
-            type: 'tool'
+            description: 'Increases fishing earnings by 10%.',
+            type: 'tool',
+            effect: {
+                type: 'fishing_yield',
+                multiplier: 1.1
+            }
         },
         {
             id: 'hunting_rifle',

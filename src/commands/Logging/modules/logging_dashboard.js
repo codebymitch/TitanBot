@@ -176,7 +176,6 @@ export async function refreshDashboardMessage(interaction, client) {
 }
 
 export default {
-  prefixOnly: false,
   async execute(interaction, config, client) {
     try {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {

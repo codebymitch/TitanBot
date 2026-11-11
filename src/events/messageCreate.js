@@ -5,8 +5,7 @@ import { addXp } from '../services/leveling/xpSystem.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { parsePrefixCommand } from '../utils/prefixParser.js';
 import { supportsPrefixExecution, executePrefixCommand, resolvePrefixAccessKey } from '../utils/messageAdapter.js';
-import { resolveCommandAlias, resolveSubcommandAlias } from '../config/commands/commandAliases.js';
-import { getPrefixRestriction } from '../config/commands/prefixRestrictions.js';
+import { resolveCommandAlias } from '../config/commands/commandAliases.js';
 import { getGuildConfig } from '../services/config/guildConfig.js';
 import { getCommandPrefix, getBotMessage, isBotOwner, isCommandCategoryEnabled, isMaintenanceMode } from '../config/bot.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
@@ -95,16 +94,7 @@ async function handlePrefixCommand(message, client) {
       return;
     }
 
-    const restriction = getPrefixRestriction(command, args, resolveSubcommandAlias);
-    if (!supportsPrefixExecution(command) || restriction.blocked) {
-      if (restriction.blocked && restriction.reason) {
-        const embed = createEmbed({
-          title: 'Slash Command Only',
-          description: `${restriction.reason}\nUse \`/${resolvedCommandName}\` instead.`,
-          color: 'info',
-        });
-        await message.channel.send({ embeds: [embed] }).catch(() => {});
-      }
+    if (!supportsPrefixExecution(command)) {
       return;
     }
 

@@ -170,7 +170,6 @@ async function refreshDashboard(rootInteraction, cfg, guildId) {
 }
 
 export default {
-    prefixOnly: false,
     async execute(interaction, config, client) {
         try {
             const guildId = interaction.guild.id;

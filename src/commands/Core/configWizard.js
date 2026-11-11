@@ -603,7 +603,6 @@ async function handleSettingModalSubmit(selectInteraction, rootInteraction, sett
 }
 
 export default {
-    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName('configwizard')
         .setDescription('Open the server configuration dashboard and setup wizard')

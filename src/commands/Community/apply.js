@@ -35,7 +35,6 @@ function getApplicationStatusPresentation(statusValue) {
 }
 
 export default {
-    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName("apply")
         .setDescription("Manage role applications")

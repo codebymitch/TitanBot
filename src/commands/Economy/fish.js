@@ -1,13 +1,25 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { getItemById } from '../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getGuildConfig } from '../../services/config/guildConfig.js';
 
 const FISH_COOLDOWN = 45 * 60 * 1000; 
-const BASE_MIN_REWARD = 300;
-const BASE_MAX_REWARD = 900;
-const FISHING_ROD_MULTIPLIER = 1.5;
+const BASE_MIN_REWARD = 1500;
+const BASE_MAX_REWARD = 4500;
+const FISHING_ROD_MULTIPLIER = getItemById('fishing_rod')?.effect?.multiplier ?? 1.1;
+const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
+const LUCK_POTION_IDS = [
+    'luck_potion_5',
+    'luck_potion_4',
+    'luck_potion_3',
+    'luck_potion_2',
+    'luck_potion_1',
+];
+const LUCK_POTION_FISH_COOLDOWN = 30 * 1000;
+const DEFAULT_LUCK_POTION_DURATION = 5 * 60 * 1000;
 
 const FISH_TYPES = [
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
@@ -29,6 +41,23 @@ const CATCH_MESSAGES = [
     "You reel in your catch with expert precision...",
 ];
 
+function getFishForLuckBonus(luckBonus = 0) {
+    const roll = Math.random();
+    const commonThreshold = 0.5 - luckBonus;
+    const uncommonThreshold = 0.75 - (luckBonus * 0.6);
+    const rareThreshold = 0.9 - (luckBonus * 0.3);
+    const epicThreshold = 0.98 - (luckBonus * 0.1);
+
+    let rarity = 'legendary';
+    if (roll < commonThreshold) rarity = 'common';
+    else if (roll < uncommonThreshold) rarity = 'uncommon';
+    else if (roll < rareThreshold) rarity = 'rare';
+    else if (roll < epicThreshold) rarity = 'epic';
+
+    const fishOfRarity = FISH_TYPES.filter((fish) => fish.rarity === rarity);
+    return fishOfRarity[Math.floor(Math.random() * fishOfRarity.length)];
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName('fish')
@@ -44,59 +73,81 @@ export default {
 
             const userData = await getEconomyData(client, guildId, userId);
             const lastFish = userData.lastFish || 0;
-            const hasFishingRod = userData.inventory["fishing_rod"] || 0;
+            const hasFishingRod = userData.fishingRodOwned === true
+                || Number(userData.inventory?.["fishing_rod"] || 0) > 0;
+            const guildConfig = await getGuildConfig(client, guildId);
+            const premiumRoleId = guildConfig.premiumRoleId;
+            const hasPremiumRole = Boolean(
+                premiumRoleId && interaction.member?.roles?.cache?.has(premiumRoleId)
+            );
+            const inventory = userData.inventory || {};
+            const potionExpiries = { ...(userData.luckPotionExpiresAt || {}) };
 
-            if (now < lastFish + FISH_COOLDOWN) {
-                const remaining = lastFish + FISH_COOLDOWN - now;
+            for (const potionId of LUCK_POTION_IDS) {
+                const legacyQuantity = Number(inventory[potionId] || 0);
+                if (Number(potionExpiries[potionId]) <= now && legacyQuantity > 0) {
+                    const duration = Number(getItemById(potionId)?.effect?.duration)
+                        || DEFAULT_LUCK_POTION_DURATION;
+                    potionExpiries[potionId] = now + (duration * legacyQuantity);
+                    inventory[potionId] = 0;
+                }
+            }
+
+            userData.luckPotionExpiresAt = potionExpiries;
+            const activePotionId = LUCK_POTION_IDS.find(
+                (potionId) => Number(potionExpiries[potionId]) > now
+            ) || null;
+            const luckBonus = activePotionId
+                ? Number(getItemById(activePotionId)?.effect?.fishingLuckBonus) || 0
+                : 0;
+            const fishCooldown = activePotionId ? LUCK_POTION_FISH_COOLDOWN : FISH_COOLDOWN;
+
+            if (now < lastFish + fishCooldown) {
+                const remaining = lastFish + fishCooldown - now;
                 const hours = Math.floor(remaining / (1000 * 60 * 60));
                 const minutes = Math.floor(
                     (remaining % (1000 * 60 * 60)) / (1000 * 60),
                 );
+                const seconds = Math.ceil((remaining % (1000 * 60)) / 1000);
 
                 throw createError(
                     "Fishing cooldown active",
                     ErrorTypes.RATE_LIMIT,
-                    `You're too tired to fish right now. Rest for **${hours}h ${minutes}m** before fishing again.`,
+                    `You're too tired to fish right now. Rest for **${hours}h ${minutes}m ${seconds}s** before fishing again.`,
                     { remaining, cooldownType: 'fish' }
                 );
             }
 
-            const rand = Math.random();
-            let fishCaught;
-            
-            if (rand < 0.5) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'common')[Math.floor(Math.random() * 3)];
-            } else if (rand < 0.75) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'uncommon')[Math.floor(Math.random() * 2)];
-            } else if (rand < 0.9) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'rare')[Math.floor(Math.random() * 2)];
-            } else if (rand < 0.98) {
-                
-                fishCaught = FISH_TYPES.find(f => f.rarity === 'epic');
-            } else {
-                
-                fishCaught = FISH_TYPES.find(f => f.rarity === 'legendary');
-            }
+            const fishCaught = getFishForLuckBonus(luckBonus);
 
             const baseEarned = Math.floor(
                 Math.random() * (BASE_MAX_REWARD - BASE_MIN_REWARD + 1)
             ) + BASE_MIN_REWARD;
 
-            let finalEarned = baseEarned;
-            let multiplierMessage = "";
-
-            if (hasFishingRod > 0) {
-                finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
-                multiplierMessage = `\n🎣 **Fishing Rod Bonus: +50%**`;
+            let fishingMultiplier = 1;
+            const bonusMessages = [];
+            if (hasFishingRod) {
+                fishingMultiplier *= FISHING_ROD_MULTIPLIER;
+                bonusMessages.push(`🎣 **Fishing Rod Bonus: +${Math.round((FISHING_ROD_MULTIPLIER - 1) * 100)}%**`);
             }
+            if (hasPremiumRole) {
+                fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
+                bonusMessages.push(`✨ **Premium Fishing Bonus: +${Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100)}%**`);
+            }
+            const finalEarned = Math.floor(baseEarned * fishingMultiplier);
+            const multiplierMessage = bonusMessages.length ? `\n${bonusMessages.join('\n')}` : "";
 
             const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];
+            const luckMessage = activePotionId
+                ? `\n🍀 **${getItemById(activePotionId).name} Active:** +${Math.round(luckBonus * 100)}% chance for higher-rarity fish.`
+                : "";
+            const nextFishingText = activePotionId ? "30 seconds while your potion is active." : "45 minutes.";
 
             userData.wallet += finalEarned;
             userData.lastFish = now;
+            if (hasFishingRod) {
+                userData.fishingRodOwned = true;
+            }
 
             await setEconomyData(client, guildId, userId, userData);
 
@@ -110,7 +161,7 @@ export default {
 
             const embed = createEmbed({
                 title: 'Fishing Success!',
-                description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}`,
+                description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}${luckMessage}`,
                 color: rarityColors[fishCaught.rarity]
             })
                 .addFields(
@@ -125,7 +176,7 @@ export default {
                         inline: true,
                     }
                 )
-                .setFooter({ text: `Next fishing trip available in 45 minutes.` });
+                .setFooter({ text: `Next fishing trip available in ${nextFishingText}` });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'fish' })

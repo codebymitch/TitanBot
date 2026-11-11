@@ -1039,7 +1039,6 @@ async function handleJsonExport(selectInteraction, rootInteraction, state) {
 }
 
 export default {
-    slashOnly: true,
     data: new SlashCommandBuilder()
         .setName('embedbuilder')
         .setDescription('Build and post a fully custom embed with live preview')

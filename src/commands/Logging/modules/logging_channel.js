@@ -12,7 +12,6 @@ const DESTINATION_LABELS = {
 };
 
 export default {
-  prefixOnly: false,
   async execute(interaction, config, client) {
     try {
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
