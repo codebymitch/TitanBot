@@ -64,7 +64,7 @@ roleId: null,
     },
     // ===== Fishing Rods (Tiers I - V) =====
     {
-        id: 'fishing_rod_1',
+        id: 'rod1',
         name: '🎣 Fishing Rod I',
         price: 5000,
         description: 'A basic fishing rod. Boosts fishing earnings by 0%.',
@@ -77,7 +77,7 @@ roleId: null,
         }
     },
     {
-        id: 'fishing_rod_2',
+        id: 'rod2',
         name: '🎣 Fishing Rod II',
         price: 25000,
         description: 'A sturdy fishing rod. Boosts fishing earnings by 25%.',
@@ -90,7 +90,7 @@ roleId: null,
         }
     },
     {
-        id: 'fishing_rod_3',
+        id: 'rod3',
         name: '🎣 Fishing Rod III',
         price: 75000,
         description: 'A reinforced fishing rod. Boosts fishing earnings by 50%.',
@@ -103,7 +103,7 @@ roleId: null,
         }
     },
     {
-        id: 'fishing_rod_4',
+        id: 'rod4',
         name: '🎣 Fishing Rod IV',
         price: 200000,
         description: 'A premium fishing rod. Boosts fishing earnings by 75%.',
@@ -116,7 +116,7 @@ roleId: null,
         }
     },
     {
-        id: 'fishing_rod_5',
+        id: 'rod5',
         name: '🎣 Fishing Rod V',
         price: 500000,
         description: 'A legendary fishing rod. Boosts fishing earnings by 100%.',
@@ -131,7 +131,7 @@ roleId: null,
 
     // ===== Luck Potions (Tiers I - V) =====
     {
-        id: 'luck_potion_1',
+        id: 'luck1',
         name: '🧪 Luck Potion I',
         price: 10000,
         description: 'Boosts your fishing luck slightly for one catch. Higher chance of rarer fish.',
@@ -144,7 +144,7 @@ roleId: null,
         }
     },
     {
-        id: 'luck_potion_2',
+        id: 'luck2',
         name: '🧪 Luck Potion II',
         price: 30000,
         description: 'Boosts your fishing luck for one catch. Noticeably higher chance of rarer fish.',
@@ -157,7 +157,7 @@ roleId: null,
         }
     },
     {
-        id: 'luck_potion_3',
+        id: 'luck3',
         name: '🧪 Luck Potion III',
         price: 75000,
         description: 'Boosts your fishing luck for one catch. Good chance of rarer fish.',
@@ -170,7 +170,7 @@ roleId: null,
         }
     },
     {
-        id: 'luck_potion_4',
+        id: 'luck4',
         name: '🧪 Luck Potion IV',
         price: 150000,
         description: 'Boosts your fishing luck for one catch. Great chance of rarer fish.',
@@ -183,7 +183,7 @@ roleId: null,
         }
     },
     {
-        id: 'luck_potion_5',
+        id: 'luck5',
         name: '🧪 Luck Potion V',
         price: 300000,
         description: 'Maximizes your fishing luck for one catch. Best chance of legendary+ fish.',
