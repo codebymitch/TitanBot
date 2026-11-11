@@ -90,7 +90,7 @@ export default {
             let finalEarned = baseEarned;
             let multiplierMessage = "";
 
-            if (hasFishingRod > 0) {
+            if (hasFishingRod) {
                 finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
                 multiplierMessage = `\n🎣 **Fishing Rod Bonus: +50%**`;
             }
