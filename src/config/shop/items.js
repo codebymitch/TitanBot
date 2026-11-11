@@ -53,13 +53,13 @@ roleId: null,
         id: 'lucky_clover',
         name: 'Lucky Clover',
         price: 10000,
-        description: 'Boosts the chance of catching higher-rarity fish for 5 minutes after purchase.',
+        description: 'Increases the chance of winning a higher payout on `/gamble` once.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
-            type: 'fishing_luck',
-            fishingLuckBonus: 0.1,
-            duration: 300000
+            type: 'gamble_boost',
+            multiplier: 1.5,
+            uses: 1
         }
     },
     {
@@ -102,12 +102,77 @@ roleId: null,
         id: 'lucky_charm',
         name: '🍀 Lucky Charm',
         price: 10000,
-        description: 'Boosts the chance of catching higher-rarity fish for 5 minutes after purchase.',
+        description: 'Increases luck for gambling. Has 3 uses before being consumed.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'gamble_boost',
+            multiplier: 1.3,
+            uses: 3
+        }
+    },
+    {
+        id: 'luck_potion_1',
+        name: 'Luck Potion I',
+        price: 10000,
+        description: 'Boosts higher-rarity fish chances by 5% for 5 minutes after purchase.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
             type: 'fishing_luck',
-            fishingLuckBonus: 0.08,
+            fishingLuckBonus: 0.05,
+            duration: 300000
+        }
+    },
+    {
+        id: 'luck_potion_2',
+        name: 'Luck Potion II',
+        price: 20000,
+        description: 'Boosts higher-rarity fish chances by 10% for 5 minutes after purchase.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            fishingLuckBonus: 0.1,
+            duration: 300000
+        }
+    },
+    {
+        id: 'luck_potion_3',
+        name: 'Luck Potion III',
+        price: 30000,
+        description: 'Boosts higher-rarity fish chances by 15% for 5 minutes after purchase.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            fishingLuckBonus: 0.15,
+            duration: 300000
+        }
+    },
+    {
+        id: 'luck_potion_4',
+        name: 'Luck Potion IV',
+        price: 40000,
+        description: 'Boosts higher-rarity fish chances by 20% for 5 minutes after purchase.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            fishingLuckBonus: 0.2,
+            duration: 300000
+        }
+    },
+    {
+        id: 'luck_potion_5',
+        name: 'Luck Potion V',
+        price: 50000,
+        description: 'Boosts higher-rarity fish chances by 25% for 5 minutes after purchase.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            fishingLuckBonus: 0.25,
             duration: 300000
         }
     },

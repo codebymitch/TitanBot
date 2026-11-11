@@ -7,7 +7,13 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
-const LUCK_POTION_IDS = new Set(['lucky_clover', 'lucky_charm']);
+const LUCK_POTION_IDS = new Set([
+    'luck_potion_1',
+    'luck_potion_2',
+    'luck_potion_3',
+    'luck_potion_4',
+    'luck_potion_5',
+]);
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
 export default {

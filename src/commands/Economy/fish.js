@@ -9,7 +9,13 @@ const FISH_COOLDOWN = 45 * 60 * 1000;
 const BASE_MIN_REWARD = 1500;
 const BASE_MAX_REWARD = 4500;
 const FISHING_ROD_MULTIPLIER = getItemById('fishing_rod')?.effect?.multiplier ?? 1.1;
-const LUCK_POTION_IDS = ['lucky_clover', 'lucky_charm'];
+const LUCK_POTION_IDS = [
+    'luck_potion_5',
+    'luck_potion_4',
+    'luck_potion_3',
+    'luck_potion_2',
+    'luck_potion_1',
+];
 const LUCK_POTION_FISH_COOLDOWN = 30 * 1000;
 const DEFAULT_LUCK_POTION_DURATION = 5 * 60 * 1000;
 
