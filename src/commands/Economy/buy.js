@@ -141,6 +141,9 @@ export default {
             } else if (item.type === "consumable" || item.type === "tool") {
                 userData.inventory[itemId] =
                     (userData.inventory[itemId] || 0) + quantity;
+                if (itemId === "fishing_rod") {
+                    userData.fishingRodOwned = true;
+                }
                 if (item.type === "tool") {
                     successDescription += `\n\n**🛠️ ${item.name} added to your inventory!**`;
                 }

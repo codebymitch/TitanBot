@@ -45,7 +45,8 @@ export default {
 
             const userData = await getEconomyData(client, guildId, userId);
             const lastFish = userData.lastFish || 0;
-            const hasFishingRod = userData.inventory["fishing_rod"] || 0;
+            const hasFishingRod = userData.fishingRodOwned === true
+                || Number(userData.inventory?.["fishing_rod"] || 0) > 0;
 
             if (now < lastFish + FISH_COOLDOWN) {
                 const remaining = lastFish + FISH_COOLDOWN - now;
@@ -98,6 +99,9 @@ export default {
 
             userData.wallet += finalEarned;
             userData.lastFish = now;
+            if (hasFishingRod) {
+                userData.fishingRodOwned = true;
+            }
 
             await setEconomyData(client, guildId, userId, userData);
 
