@@ -323,28 +323,6 @@ export default {
                 celestial: '#FF69B4'
             };
 
-            // Gaya prompt gambar per rarity (dipakai untuk generate gambar AI ikan).
-            const rarityImageHints = {
-                common: 'common freshwater fish, realistic photo',
-                uncommon: 'tropical fish, realistic photo',
-                rare: 'large deep sea fish, dramatic lighting, realistic',
-                epic: 'rare glowing fish, vivid colors, fantasy',
-                legendary: 'legendary mythical sea creature, glowing aura, epic',
-                mythic: 'mythical giant sea monster, magical glow, epic fantasy',
-                secret: 'mysterious shadowy abyssal creature, dark magic, epic',
-                divine: 'divine celestial sea god creature, holy golden light, epic',
-                transcendent: 'transcendent cosmic sea leviathan, galaxies and starlight, ultra epic',
-                celestial: 'kawaii pink nine tailed fox fish, glowing pink aura, magical, cute anime style'
-            };
-
-            const imagePrompt = `${fishCaught.name}, ${rarityImageHints[fishCaught.rarity] || 'fish'}, single subject, centered, highly detailed`;
-            // Seed tetap per ikan supaya gambarnya konsisten & cepat (ter-cache).
-            let seed = 0;
-            for (let i = 0; i < fishCaught.name.length; i++) {
-                seed = (seed * 31 + fishCaught.name.charCodeAt(i)) >>> 0;
-            }
-            const fishImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=512&height=512&nologo=true&seed=${seed}`;
-
             const embed = createEmbed({
                 title: 'Fishing Success!',
                 description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}${luckMessage}`,
@@ -361,9 +339,7 @@ export default {
                         value: fishCaught.rarity.charAt(0).toUpperCase() + fishCaught.rarity.slice(1),
                         inline: true,
                     }
-                )
-                // Pasang URL gambar langsung: bot membalas instan, Discord yang memuat gambarnya.
-                .setImage(fishImageUrl);
+                );
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'fish' })
