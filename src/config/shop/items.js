@@ -204,7 +204,6 @@ roleId: null,
         description: 'Admin potion. Activate with `/use` for 1 minute of great luck: Divine 30%, Transcendent 20%, Kitsune 10%. Max 1 held. Can be gifted with `/give`.',
         type: 'consumable',
         maxQuantity: 1,
-        cooldown: 60000,
         effect: {
             type: 'fishing_luck',
             admin: true,

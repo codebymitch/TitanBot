@@ -128,16 +128,6 @@ export default {
                         { itemId }
                     );
                 }
-                const activeUntil = Number(userData.luckPotionExpiresAt?.[ADMIN_POTION_ID]) || 0;
-                if (activeUntil > Date.now()) {
-                    const secondsLeft = Math.ceil((activeUntil - Date.now()) / 1000);
-                    throw createError(
-                        "Admin potion on cooldown",
-                        ErrorTypes.RATE_LIMIT,
-                        `**${item.name}** is still active. You can buy it again in **${secondsLeft}s**.`,
-                        { itemId, secondsLeft }
-                    );
-                }
             }
 
             userData.wallet -= totalCost;
