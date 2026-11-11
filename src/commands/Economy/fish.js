@@ -4,11 +4,13 @@ import { getItemById } from '../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getGuildConfig } from '../../services/config/guildConfig.js';
 
 const FISH_COOLDOWN = 45 * 60 * 1000; 
 const BASE_MIN_REWARD = 1500;
 const BASE_MAX_REWARD = 4500;
 const FISHING_ROD_MULTIPLIER = getItemById('fishing_rod')?.effect?.multiplier ?? 1.1;
+const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
 const LUCK_POTION_IDS = [
     'luck_potion_5',
     'luck_potion_4',
@@ -73,6 +75,11 @@ export default {
             const lastFish = userData.lastFish || 0;
             const hasFishingRod = userData.fishingRodOwned === true
                 || Number(userData.inventory?.["fishing_rod"] || 0) > 0;
+            const guildConfig = await getGuildConfig(client, guildId);
+            const premiumRoleId = guildConfig.premiumRoleId;
+            const hasPremiumRole = Boolean(
+                premiumRoleId && interaction.member?.roles?.cache?.has(premiumRoleId)
+            );
             const inventory = userData.inventory || {};
             const potionExpiries = { ...(userData.luckPotionExpiresAt || {}) };
 
@@ -117,13 +124,18 @@ export default {
                 Math.random() * (BASE_MAX_REWARD - BASE_MIN_REWARD + 1)
             ) + BASE_MIN_REWARD;
 
-            let finalEarned = baseEarned;
-            let multiplierMessage = "";
-
+            let fishingMultiplier = 1;
+            const bonusMessages = [];
             if (hasFishingRod) {
-                finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
-                multiplierMessage = `\n🎣 **Fishing Rod Bonus: +10%**`;
+                fishingMultiplier *= FISHING_ROD_MULTIPLIER;
+                bonusMessages.push(`🎣 **Fishing Rod Bonus: +${Math.round((FISHING_ROD_MULTIPLIER - 1) * 100)}%**`);
             }
+            if (hasPremiumRole) {
+                fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
+                bonusMessages.push(`✨ **Premium Fishing Bonus: +${Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100)}%**`);
+            }
+            const finalEarned = Math.floor(baseEarned * fishingMultiplier);
+            const multiplierMessage = bonusMessages.length ? `\n${bonusMessages.join('\n')}` : "";
 
             const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];
             const luckMessage = activePotionId
