@@ -8,6 +8,13 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
 
+function getShopItem(itemId) {
+    return SHOP_ITEMS.find(item => item.id === itemId)
+        || (itemId === 'fishibg_rod_5'
+            ? SHOP_ITEMS.find(item => item.id === 'fishing_rod_5')
+            : null);
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName('inventory')
@@ -36,17 +43,17 @@ export default {
             const inventory = userData.inventory || {};
             const inventoryLines = Object.entries(inventory)
                 .filter(([itemId, quantity]) => {
-                    const item = SHOP_ITEMS.find(i => i.id === itemId);
+                    const item = getShopItem(itemId);
                     return Number(quantity) > 0 && item;
                 })
                 .map(([itemId, quantity]) => {
-                    const item = SHOP_ITEMS.find(i => i.id === itemId);
+                    const item = getShopItem(itemId);
                     return `**${item.name}:** ${quantity}x`;
                 });
             const potionLines = Object.entries(userData.luckPotionExpiresAt || {})
                 .filter(([, expiresAt]) => Number(expiresAt) > Date.now())
                 .map(([itemId, expiresAt]) => {
-                    const item = SHOP_ITEMS.find(i => i.id === itemId);
+                    const item = getShopItem(itemId);
                     if (!item) return null;
                     const minutesLeft = Math.ceil((Number(expiresAt) - Date.now()) / 60000);
                     return `🧪 **${item.name}:** Active (${minutesLeft}m left)`;

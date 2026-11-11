@@ -40,7 +40,7 @@ cooldown: 86400000,
     {
         id: 'premium_role',
         name: 'Premium Server Role',
-        price: 1000000,
+        price: 1500000,
         description: 'A special role granting a fancy color and a 10% fishing earnings bonus.',
         type: 'role',
 roleId: null,

@@ -16,7 +16,10 @@ const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multipli
 function getBestFishingRod(inventory) {
     for (let tier = 5; tier >= 1; tier--) {
         const id = `fishing_rod_${tier}`;
-        if ((inventory[id] || 0) > 0) {
+        const legacyTierFiveQuantity = tier === 5
+            ? Number(inventory.fishibg_rod_5 || 0)
+            : 0;
+        if (Number(inventory[id] || 0) > 0 || legacyTierFiveQuantity > 0) {
             const item = getItemById(id);
             if (item) return item;
         }
