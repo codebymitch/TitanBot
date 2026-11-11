@@ -1,5 +1,4 @@
-import { SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
-import axios from 'axios';
+import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -339,7 +338,12 @@ export default {
             };
 
             const imagePrompt = `${fishCaught.name}, ${rarityImageHints[fishCaught.rarity] || 'fish'}, single subject, centered, highly detailed`;
-            const fishImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=768&height=768&nologo=true`;
+            // Seed tetap per ikan supaya gambarnya konsisten & cepat (ter-cache).
+            let seed = 0;
+            for (let i = 0; i < fishCaught.name.length; i++) {
+                seed = (seed * 31 + fishCaught.name.charCodeAt(i)) >>> 0;
+            }
+            const fishImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=512&height=512&nologo=true&seed=${seed}`;
 
             const embed = createEmbed({
                 title: 'Fishing Success!',
@@ -357,27 +361,10 @@ export default {
                         value: fishCaught.rarity.charAt(0).toUpperCase() + fishCaught.rarity.slice(1),
                         inline: true,
                     }
-                );
+                )
+                // Pasang URL gambar langsung: bot membalas instan, Discord yang memuat gambarnya.
+                .setImage(fishImageUrl);
 
-            // Ambil gambar AI ikan, lalu lampirkan (lebih andal daripada pasang URL langsung).
-            const files = [];
-            try {
-                const imageResponse = await axios.get(fishImageUrl, {
-                    responseType: 'arraybuffer',
-                    timeout: 15000,
-                });
-                const imageBuffer = Buffer.from(imageResponse.data);
-                if (imageBuffer.length > 1000) {
-                    files.push(new AttachmentBuilder(imageBuffer, { name: 'fish.jpg' }));
-                    embed.setImage('attachment://fish.jpg');
-                } else {
-                    embed.setImage(fishImageUrl);
-                }
-            } catch {
-                // Kalau gagal generate, biarkan Discord mencoba fetch URL langsung.
-                embed.setImage(fishImageUrl);
-            }
-
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed], files });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'fish' })
 };
