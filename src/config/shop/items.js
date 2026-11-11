@@ -62,16 +62,137 @@ roleId: null,
             uses: 1
         }
     },
+    // ===== Fishing Rods (Tiers I - V) =====
     {
-        id: 'fishing_rod',
-        name: '🎣 Fishing Rod',
+        id: 'fishing_rod_1',
+        name: '🎣 Fishing Rod I',
         price: 5000,
-        description: 'Used for fishing commands',
+        description: 'A basic fishing rod. Boosts fishing earnings by 0%.',
         type: 'tool',
         durability: 100,
         effect: {
             type: 'fishing_yield',
-            multiplier: 1.0
+            multiplier: 1.0,
+            tier: 1
+        }
+    },
+    {
+        id: 'fishing_rod_2',
+        name: '🎣 Fishing Rod II',
+        price: 25000,
+        description: 'A sturdy fishing rod. Boosts fishing earnings by 50%.',
+        type: 'tool',
+        durability: 150,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 1.5,
+            tier: 2
+        }
+    },
+    {
+        id: 'fishing_rod_3',
+        name: '🎣 Fishing Rod III',
+        price: 75000,
+        description: 'A reinforced fishing rod. Boosts fishing earnings by 100%.',
+        type: 'tool',
+        durability: 200,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 2.0,
+            tier: 3
+        }
+    },
+    {
+        id: 'fishing_rod_4',
+        name: '🎣 Fishing Rod IV',
+        price: 200000,
+        description: 'A premium fishing rod. Boosts fishing earnings by 150%.',
+        type: 'tool',
+        durability: 250,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 2.5,
+            tier: 4
+        }
+    },
+    {
+        id: 'fishing_rod_5',
+        name: '🎣 Fishing Rod V',
+        price: 500000,
+        description: 'A legendary fishing rod. Boosts fishing earnings by 200%.',
+        type: 'tool',
+        durability: 300,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 3.0,
+            tier: 5
+        }
+    },
+
+    // ===== Luck Potions (Tiers I - V) =====
+    {
+        id: 'luck_potion_1',
+        name: '🧪 Luck Potion I',
+        price: 10000,
+        description: 'Boosts your fishing luck slightly for one catch. Higher chance of rarer fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 1.15,
+            uses: 1
+        }
+    },
+    {
+        id: 'luck_potion_2',
+        name: '🧪 Luck Potion II',
+        price: 30000,
+        description: 'Boosts your fishing luck for one catch. Noticeably higher chance of rarer fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 1.3,
+            uses: 1
+        }
+    },
+    {
+        id: 'luck_potion_3',
+        name: '🧪 Luck Potion III',
+        price: 75000,
+        description: 'Boosts your fishing luck for one catch. Good chance of rarer fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 1.5,
+            uses: 1
+        }
+    },
+    {
+        id: 'luck_potion_4',
+        name: '🧪 Luck Potion IV',
+        price: 150000,
+        description: 'Boosts your fishing luck for one catch. Great chance of rarer fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 1.8,
+            uses: 1
+        }
+    },
+    {
+        id: 'luck_potion_5',
+        name: '🧪 Luck Potion V',
+        price: 300000,
+        description: 'Maximizes your fishing luck for one catch. Best chance of legendary+ fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 2.2,
+            uses: 1
         }
     },
     {

@@ -4,10 +4,35 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
+import { getItemById } from '../../config/shop/items.js';
+
 const FISH_COOLDOWN = 0; 
 const BASE_MIN_REWARD = 300;
 const BASE_MAX_REWARD = 900;
-const FISHING_ROD_MULTIPLIER = 1.5;
+
+// Helper: find the highest-tier fishing rod the user owns
+function getBestFishingRod(inventory) {
+    for (let tier = 5; tier >= 1; tier--) {
+        const id = `fishing_rod_${tier}`;
+        if ((inventory[id] || 0) > 0) {
+            const item = getItemById(id);
+            if (item) return item;
+        }
+    }
+    return null;
+}
+
+// Helper: find the highest-tier luck potion the user owns
+function getBestLuckPotion(inventory) {
+    for (let tier = 5; tier >= 1; tier--) {
+        const id = `luck_potion_${tier}`;
+        if ((inventory[id] || 0) > 0) {
+            const item = getItemById(id);
+            if (item) return item;
+        }
+    }
+    return null;
+}
 
 const FISH_TYPES = [
     // Common
@@ -74,7 +99,10 @@ export default {
 
             const userData = await getEconomyData(client, guildId, userId);
             const lastFish = userData.lastFish || 0;
-            const hasFishingRod = userData.inventory["fishing_rod"] || 0;
+            const inventory = userData.inventory || {};
+
+            const bestRod = getBestFishingRod(inventory);
+            const bestPotion = getBestLuckPotion(inventory);
 
             if (now < lastFish + FISH_COOLDOWN) {
                 const remaining = lastFish + FISH_COOLDOWN - now;
@@ -91,7 +119,19 @@ export default {
                 );
             }
 
-            const rand = Math.random();
+            let rand = Math.random();
+
+            // Apply luck potion boost (shifts roll toward rarer fish)
+            let luckMultiplier = 1;
+            let luckMessage = "";
+            if (bestPotion) {
+                luckMultiplier = bestPotion.effect.multiplier || 1;
+                rand = Math.min(rand * luckMultiplier, 0.9999);
+                luckMessage = `\n🧪 **${bestPotion.name} Active: x${luckMultiplier} luck**`;
+                // Consume one use of the potion
+                inventory[bestPotion.id] = (inventory[bestPotion.id] || 0) - 1;
+                if (inventory[bestPotion.id] <= 0) delete inventory[bestPotion.id];
+            }
 
             let selectedRarity;
 
@@ -140,15 +180,18 @@ export default {
             let finalEarned = baseEarned;
             let multiplierMessage = "";
 
-            if (hasFishingRod > 0) {
-                finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
-                multiplierMessage = `\n🎣 **Fishing Rod Bonus: +50%**`;
+            if (bestRod) {
+                const rodMultiplier = bestRod.effect.multiplier || 1;
+                finalEarned = Math.floor(baseEarned * rodMultiplier);
+                const boostPct = Math.round((rodMultiplier - 1) * 100);
+                multiplierMessage = `\n🎣 **${bestRod.name} Bonus: +${boostPct}%**`;
             }
 
             const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];
 
             userData.wallet += finalEarned;
             userData.lastFish = now;
+            userData.inventory = inventory;
 
             await setEconomyData(client, guildId, userId, userData);
 
@@ -165,7 +208,7 @@ export default {
 
             const embed = createEmbed({
                 title: 'Fishing Success!',
-                description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}`,
+                description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}${luckMessage}`,
                 color: rarityColors[fishCaught.rarity]
             })
                 .addFields(
