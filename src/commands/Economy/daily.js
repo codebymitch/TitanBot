@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
-import { getGuildConfig } from '../../services/config/guildConfig.js';
 import { formatDuration } from '../../utils/embeds.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
@@ -10,7 +9,6 @@ import { botConfig } from '../../config/bot.js';
 
 const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
 const DAILY_AMOUNT = botConfig.economy?.dailyAmount ?? 100;
-const PREMIUM_BONUS_PERCENTAGE = 0.1;
 
 export default {
     data: new SlashCommandBuilder()
@@ -50,25 +48,7 @@ export default {
                 );
             }
 
-            const guildConfig = await getGuildConfig(client, guildId);
-            const PREMIUM_ROLE_ID = guildConfig.premiumRoleId;
-
-            let earned = DAILY_AMOUNT;
-            let bonusMessage = "";
-            let hasPremiumRole = false;
-
-            if (
-                PREMIUM_ROLE_ID &&
-                interaction.member &&
-                interaction.member.roles.cache.has(PREMIUM_ROLE_ID)
-            ) {
-                const bonusAmount = Math.floor(
-                    DAILY_AMOUNT * PREMIUM_BONUS_PERCENTAGE,
-                );
-                earned += bonusAmount;
-                bonusMessage = `\n✨ **Premium Bonus:** +$${bonusAmount.toLocaleString()}`;
-                hasPremiumRole = true;
-            }
+            const earned = DAILY_AMOUNT;
 
             userData.wallet = (userData.wallet || 0) + earned;
             userData.lastDaily = now;
@@ -80,13 +60,12 @@ export default {
                 guildId,
                 amount: earned,
                 newWallet: userData.wallet,
-                hasPremium: hasPremiumRole,
                 timestamp: new Date().toISOString()
             });
 
             const embed = successEmbed(
                 "✅ Daily Claimed!",
-                `You have claimed your daily **$${earned.toLocaleString()}**!${bonusMessage}`
+                `You have claimed your daily **$${earned.toLocaleString()}**!`
             )
                 .addFields({
                     name: "New Cash Balance",
@@ -94,9 +73,7 @@ export default {
                     inline: true,
                 })
                 .setFooter({
-                    text: hasPremiumRole
-                        ? `Next claim in 24 hours. (Premium Active)`
-                        : `Next claim in 24 hours.`,
+                    text: `Next claim in 24 hours.`,
                 });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });

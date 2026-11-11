@@ -2,7 +2,7 @@ export const shopItems = [
     {
         id: 'extra_work',
         name: 'Extra Work Shift',
-        price: 5000,
+        price: 300000,
         description: 'Allows 1 extra use of the `/work` command.',
         type: 'consumable',
         maxQuantity: 5,
@@ -16,7 +16,7 @@ cooldown: 86400000,
     {
         id: 'bank_upgrade_1',
         name: 'Bank Upgrade I',
-        price: 15000,
+        price: 150000,
         description: 'Increases bank capacity and allows more funds to be deposited.',
         type: 'upgrade',
         maxLevel: 5,
@@ -40,19 +40,19 @@ cooldown: 86400000,
     {
         id: 'premium_role',
         name: 'Premium Server Role',
-        price: 15000,
-        description: 'A special role granting a fancy color and a 10% daily bonus.',
+        price: 1500000,
+        description: 'A special role granting a fancy color and a 10% fishing earnings bonus.',
         type: 'role',
 roleId: null,
         effect: {
-            type: 'daily_bonus',
-            multiplier: 1.1
+            type: 'fishing_yield',
+            multiplier: 4
         }
     },
     {
         id: 'lucky_clover',
         name: 'Lucky Clover',
-        price: 10000,
+        price: 100000,
         description: 'Increases the chance of winning a higher payout on `/gamble` once.',
         type: 'consumable',
         maxQuantity: 10,
@@ -62,22 +62,162 @@ roleId: null,
             uses: 1
         }
     },
+    // ===== Fishing Rods (Tiers I - V) =====
     {
-        id: 'fishing_rod',
-        name: '🎣 Fishing Rod',
+        id: 'fishing_rod_1',
+        name: '🎣 Fishing Rod I',
         price: 5000,
-        description: 'Used for fishing commands',
+        description: 'A basic fishing rod. Boosts fishing earnings by 10%.',
         type: 'tool',
         durability: 100,
         effect: {
             type: 'fishing_yield',
-            multiplier: 1.0
+            multiplier: 1.1,
+            tier: 1
+        }
+    },
+    {
+        id: 'fishing_rod_2',
+        name: '🎣 Fishing Rod II',
+        price: 25000,
+        description: 'A sturdy fishing rod. Boosts fishing earnings by 25%.',
+        type: 'tool',
+        durability: 150,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 1.25,
+            tier: 2
+        }
+    },
+    {
+        id: 'fishing_rod_3',
+        name: '🎣 Fishing Rod III',
+        price: 75000,
+        description: 'A reinforced fishing rod. Boosts fishing earnings by 50%.',
+        type: 'tool',
+        durability: 200,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 1.5,
+            tier: 3
+        }
+    },
+    {
+        id: 'fishing_rod_4',
+        name: '🎣 Fishing Rod IV',
+        price: 200000,
+        description: 'A premium fishing rod. Boosts fishing earnings by 75%.',
+        type: 'tool',
+        durability: 250,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 1.75,
+            tier: 4
+        }
+    },
+    {
+        id: 'fishing_rod_5',
+        name: '🎣 Fishing Rod V',
+        price: 500000,
+        description: 'A legendary fishing rod. Boosts fishing earnings by 100%.',
+        type: 'tool',
+        durability: 300,
+        effect: {
+            type: 'fishing_yield',
+            multiplier: 2.0,
+            tier: 5
+        }
+    },
+
+    // ===== Luck Potions (Tiers I - V) =====
+    {
+        id: 'luck_potion_1',
+        name: '🧪 Luck Potion I',
+        price: 1000,
+        description: 'Boosts your fishing luck slightly for 5 minutes. Higher chance of rarer fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 1.15,
+            duration: 300000
+        }
+    },
+    {
+        id: 'luck_potion_2',
+        name: '🧪 Luck Potion II',
+        price: 7000,
+        description: 'Boosts your fishing luck for 5 minutes. Noticeably higher chance of rarer fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 1.3,
+            duration: 300000
+        }
+    },
+    {
+        id: 'luck_potion_3',
+        name: '🧪 Luck Potion III',
+        price: 50000,
+        description: 'Boosts your fishing luck for 5 minutes. Good chance of rarer fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 1.5,
+            duration: 300000
+        }
+    },
+    {
+        id: 'luck_potion_4',
+        name: '🧪 Luck Potion IV',
+        price: 100000,
+        description: 'Boosts your fishing luck for 5 minutes. Great chance of rarer fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 1.8,
+            duration: 300000
+        }
+    },
+    {
+        id: 'luck_potion_5',
+        name: '🧪 Luck Potion V',
+        price: 150000,
+        description: 'Maximizes your fishing luck for 5 minutes. Best chance of legendary+ fish.',
+        type: 'consumable',
+        maxQuantity: 10,
+        effect: {
+            type: 'fishing_luck',
+            multiplier: 20000,
+            duration: 2.1
+        }
+    },
+
+    // ===== Admin Potion (disimpan di inventory, dipakai dengan /use, bisa dikirim dengan /give) =====
+    {
+        id: 'admin_potion',
+        name: '👑 Admin Potion',
+        price: 100,
+        description: 'Admin potion. Activate with `/use` for 5 minutes of great luck: Divine 30%, Transcendent 20%, Kitsune 10%. Can be gifted with `/give`.',
+        type: 'consumable',
+        effect: {
+            type: 'fishing_luck',
+            admin: true,
+            chances: {
+                divine: 0.3,
+                transcendent: 0.2,
+                celestial: 0.1
+            },
+            duration: 300000
         }
     },
     {
         id: 'pickaxe',
         name: '⛏️ Pickaxe',
-        price: 7500,
+        price: 75000,
         description: 'Used for mining commands',
         type: 'tool',
         durability: 100,
@@ -89,7 +229,7 @@ roleId: null,
     {
         id: 'laptop',
         name: '💻 Laptop',
-        price: 15000,
+        price: 500000,
         description: 'Increases work earnings',
         type: 'tool',
         durability: 200,
@@ -101,10 +241,10 @@ roleId: null,
     {
         id: 'lucky_charm',
         name: '🍀 Lucky Charm',
-        price: 10000,
+        price: 100000,
         description: 'Increases luck for gambling. Has 3 uses before being consumed.',
         type: 'consumable',
-        maxQuantity: 10,
+        maxQuantity: 100,
         effect: {
             type: 'gamble_boost',
             multiplier: 1.3,
@@ -114,7 +254,7 @@ roleId: null,
     {
         id: 'bank_note',
         name: '📜 Bank Note',
-        price: 25000,
+        price: 250000,
         description: 'Increases bank capacity by 10,000. Can be purchased multiple times.',
         type: 'tool',
         durability: null,
@@ -126,7 +266,7 @@ roleId: null,
     {
         id: 'personal_safe',
         name: '🔒 Personal Safe',
-        price: 30000,
+        price: 300000,
         description: 'Protects your money from theft. Prevents others from robbing you.',
         type: 'tool',
         durability: null,

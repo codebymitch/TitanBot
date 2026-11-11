@@ -1,0 +1,35 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { Riffy } = require('riffy');
+
+const nodes = [
+  { host: 'lava-v4.millohost.my.id', port: 443, password: 'https://discord.gg/mjS5J2K3ep', secure: true, name: 'MilloHost' },
+];
+
+const fakeClient = {
+  user: { id: '123456789' },
+  guilds: { cache: new Map() },
+  ws: { shards: new Map([[0, { send() {} }]]) },
+  on() {},
+};
+
+const riffy = new Riffy(fakeClient, nodes, {
+  send() {},
+  defaultSearchPlatform: 'ytmsearch',
+  restVersion: 'v4',
+  bypassChecks: { nodeFetchInfo: true },
+});
+
+riffy.on('debug', (msg) => console.log('[DEBUG]', msg));
+riffy.on('nodeConnect', (node) => console.log(`CONNECTED: ${node.name}`));
+riffy.on('nodeError', (node, err) => console.log(`ERROR ${node.name}: ${err?.message || err}`));
+riffy.on('nodeDisconnect', (node, e) => console.log(`DISCONNECT: ${node.name} code=${e?.event?.code}`));
+
+riffy.init('123456789');
+
+setTimeout(() => {
+  for (const node of riffy.nodeMap.values()) {
+    console.log(`${node.name}: connected=${node.connected}, wsUrl=${node.wsUrl}`);
+  }
+  process.exit(0);
+}, 8000);
