@@ -4,7 +4,6 @@ import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { reconcileTicketPanels, reconcileVerificationPanels, reconcileReactionRolePanelHealth } from "../services/panelHealthService.js";
 import { reconcileLevelRoles } from "../services/leveling/levelRoleSyncService.js";
-import { initRiffyAfterReady } from "../services/music/riffySetup.js";
 
 export default {
   name: Events.ClientReady,
@@ -17,10 +16,6 @@ export default {
       startupLog(`Ready! Logged in as ${client.user.tag}`);
       startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
       startupLog(`Loaded ${client.commands.size} commands`);
-
-      if (client.config?.features?.music) {
-        initRiffyAfterReady(client);
-      }
 
       const reconciliationSummary = await reconcileReactionRoleMessages(client);
       startupLog(

@@ -13,7 +13,6 @@ export const CATEGORY_ICONS = {
   Leveling: '📊',
   Logging: '📝',
   Moderation: '🛡️',
-  Music: '🎵',
   Reaction_roles: '🎭',
   Search: '🔍',
   ServerStats: '📈',
