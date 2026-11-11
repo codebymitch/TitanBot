@@ -40,7 +40,7 @@ function getBestActiveLuckPotion(potionExpiries, now) {
     return null;
 }
 
-const FISH_TYPES = [
+export const FISH_TYPES = [
     // Common
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
     { name: 'Salmon', emoji: '🐠', rarity: 'common' },
@@ -305,6 +305,9 @@ export default {
 
             userData.wallet += finalEarned;
             userData.lastFish = now;
+            userData.fishCollection = userData.fishCollection || {};
+            userData.fishCollection[fishCaught.name] =
+                (Number(userData.fishCollection[fishCaught.name]) || 0) + 1;
             userData.inventory = inventory;
             userData.luckPotionExpiresAt = potionExpiries;
 

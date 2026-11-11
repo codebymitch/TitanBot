@@ -18,6 +18,7 @@ export const DEFAULT_ECONOMY_DATA = {
     lastDeposit: 0,
     lastWithdraw: 0,
     inventory: {},
+    fishCollection: {},
     upgrades: {},
     cooldowns: {}
 };
