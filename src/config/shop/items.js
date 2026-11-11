@@ -207,9 +207,9 @@ roleId: null,
             type: 'fishing_luck',
             admin: true,
             chances: {
-                divine: 0.3,
-                transcendent: 0.2,
-                celestial: 1000
+                divine: 0.5,
+                transcendent: 0.4,
+                celestial: 0.3
             },
             duration: 300000
         }
