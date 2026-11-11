@@ -43,7 +43,7 @@ const FISH_TYPES = [
     // Common
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
     { name: 'Salmon', emoji: '🐠', rarity: 'common' },
-    { name: 'Trout', emoji: '🐟', rarity: 'common' },
+    { name: 'forel', emoji: '🐟', rarity: 'common' },
     { name: 'Carp', emoji: '🐟', rarity: 'common' },
     { name: 'Catfish', emoji: '🐟', rarity: 'common' },
     { name: 'Perch', emoji: '🐟', rarity: 'common' },
@@ -126,11 +126,16 @@ const FISH_TYPES = [
 ];
 
 const CATCH_MESSAGES = [
-    "You cast your line into the crystal clear waters...",
-    "You wait patiently as your bobber floats...",
-    "After a few minutes of waiting, you feel a tug...",
-    "The water ripples as something takes your bait...",
-    "You reel in your catch with expert precision...",
+    "Kamu melemparkan kailmu ke dalam air yang sangat jernih...",
+    "Kamu menunggu dengan sabar saat pelampung pancingmu mengapung...",
+    "Setelah beberapa menit menunggu, kamu merasakan tarikan pada kailmu...",
+    "Air mulai beriak saat sesuatu memakan umpanmu...",
+    "Kamu menarik hasil tangkapanmu dengan sangat ahli...",
+    "Pelampungmu tenggelam! Sepertinya ada ikan yang menyambar...",
+    "Air di sekitarmu mulai bergejolak...",
+    "Tarikan semakin kuat, sepertinya ikan ini cukup besar...",
+    "Kailmu bergerak liar, tangkapanmu berusaha melarikan diri...",
+    "Setelah perjuangan panjang, akhirnya kamu berhasil mendapatkan ikan...",
 ];
 
 export default {
