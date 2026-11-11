@@ -46,7 +46,7 @@ cooldown: 86400000,
 roleId: null,
         effect: {
             type: 'fishing_yield',
-            multiplier: 1.1
+            multiplier: 20
         }
     },
     {
