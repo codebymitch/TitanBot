@@ -194,7 +194,9 @@ export default {
             let luckMessage = "";
             if (bestPotion) {
                 luckMultiplier = bestPotion.effect.multiplier || 1;
-                rand = Math.min(rand * luckMultiplier, 0.9999);
+                // Potion tidak bisa menembus celestial (Kitsune): cap di bawah ambang 0.9999,
+                // jadi paling tinggi hanya sampai transcendent.
+                rand = Math.min(rand * luckMultiplier, 0.9998);
                 const minutesLeft = Math.ceil(
                     (Number(potionExpiries[bestPotion.id]) - now) / 60000
                 );
