@@ -53,12 +53,12 @@ roleId: null,
         id: 'lucky_clover',
         name: 'Lucky Clover',
         price: 10000,
-        description: 'Boosts `/gamble` win chance for 5 minutes after purchase.',
+        description: 'Boosts the chance of catching higher-rarity fish for 5 minutes after purchase.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
-            type: 'gamble_boost',
-            multiplier: 1.5,
+            type: 'fishing_luck',
+            fishingLuckBonus: 0.1,
             duration: 300000
         }
     },
@@ -102,12 +102,12 @@ roleId: null,
         id: 'lucky_charm',
         name: '🍀 Lucky Charm',
         price: 10000,
-        description: 'Boosts `/gamble` win chance for 5 minutes after purchase.',
+        description: 'Boosts the chance of catching higher-rarity fish for 5 minutes after purchase.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
-            type: 'gamble_boost',
-            multiplier: 1.3,
+            type: 'fishing_luck',
+            fishingLuckBonus: 0.08,
             duration: 300000
         }
     },
