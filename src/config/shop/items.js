@@ -64,7 +64,7 @@ roleId: null,
     },
     // ===== Fishing Rods (Tiers I - V) =====
     {
-        id: 'rod1',
+        id: 'fishing_rod_1',
         name: '🎣 Fishing Rod I',
         price: 5000,
         description: 'A basic fishing rod. Boosts fishing earnings by 0%.',
@@ -77,7 +77,7 @@ roleId: null,
         }
     },
     {
-        id: 'rod2',
+        id: 'fishing_rod_2',
         name: '🎣 Fishing Rod II',
         price: 25000,
         description: 'A sturdy fishing rod. Boosts fishing earnings by 25%.',
@@ -90,7 +90,7 @@ roleId: null,
         }
     },
     {
-        id: 'rod3',
+        id: 'fishing_rod_3',
         name: '🎣 Fishing Rod III',
         price: 75000,
         description: 'A reinforced fishing rod. Boosts fishing earnings by 50%.',
@@ -103,7 +103,7 @@ roleId: null,
         }
     },
     {
-        id: 'rod4',
+        id: 'fishing_rod_4',
         name: '🎣 Fishing Rod IV',
         price: 200000,
         description: 'A premium fishing rod. Boosts fishing earnings by 75%.',
@@ -116,7 +116,7 @@ roleId: null,
         }
     },
     {
-        id: 'rod5',
+        id: 'fishibg_rod_5',
         name: '🎣 Fishing Rod V',
         price: 500000,
         description: 'A legendary fishing rod. Boosts fishing earnings by 100%.',
