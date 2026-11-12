@@ -4,6 +4,7 @@
 
 export const CATEGORY_ICONS = {
   Birthday: '🎂',
+  AutoReactions: '🔁',
   Community: '👥',
   Core: 'ℹ️',
   Economy: '💰',

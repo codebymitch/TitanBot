@@ -463,6 +463,7 @@ export const botConfig = {
     // Security and self-service systems.
     verification: true,
     reactionRoles: true,
+    autoReactions: true,
     joinToCreate: true,
 
     // Utility/quality-of-life modules.
@@ -538,6 +539,7 @@ const COMMAND_CATEGORY_FEATURE_MAP = {
   logging: "logging",
   moderation: "moderation",
   reaction_roles: "reactionRoles",
+  autoreactions: "autoReactions",
   search: "search",
   sticky: "sticky",
   serverstats: "counter",

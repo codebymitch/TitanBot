@@ -16,6 +16,7 @@ import {
   recordCorrectCount,
 } from '../services/countingGameService.js';
 import { handleStickyMessage } from '../services/stickyService.js';
+import { handleAutoReaction } from '../services/autoReactionService.js';
 
 export default {
   name: Events.MessageCreate,
@@ -31,6 +32,8 @@ export default {
       }
 
       await handleStickyMessage(message, client);
+
+      await handleAutoReaction(message, client);
 
       await handlePrefixCommand(message, client);
     } catch (error) {

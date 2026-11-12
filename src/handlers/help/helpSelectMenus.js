@@ -30,6 +30,7 @@ const CATEGORY_ICONS = {
     Counter: "🔢",
     Tools: "🛠️",
     Sticky: "📌",
+    AutoReactions: "🔁",
     Search: "🔍",
     "Reaction Roles": "🎭",
     Community: "👥",
