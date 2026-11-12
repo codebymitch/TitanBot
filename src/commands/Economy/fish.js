@@ -10,6 +10,7 @@ const FISH_COOLDOWN = 0;
 const BASE_MIN_REWARD = 300;
 const BASE_MAX_REWARD = 900;
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
+const ADMIN_POTION_ID = 'admin_potion';
 const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
 
 // Helper: find the highest-tier fishing rod the user owns
@@ -194,44 +195,65 @@ export default {
 
             let rand = Math.random();
 
-            const activePotion = bestPotion;
+            // Potion admin punya prioritas dan efek khusus; kalau tidak ada, pakai potion luck biasa.
+            const adminActive = Number(potionExpiries[ADMIN_POTION_ID]) > now;
+            const activePotion = adminActive ? getItemById(ADMIN_POTION_ID) : bestPotion;
+            const adminChances = activePotion?.effect?.admin ? activePotion.effect.chances : null;
 
             let luckMessage = "";
             if (activePotion) {
                 const minutesLeft = Math.ceil(
                     (Number(potionExpiries[activePotion.id]) - now) / 60000
                 );
-                const luckMultiplier = activePotion.effect.multiplier || 1;
-                // Bias halus: potion menaikkan peluang ikan langka tanpa "membanjiri"
-                // tier atas. Hasil tetap dibatasi 0.9998 agar potion tidak bisa
-                // menembus celestial (Kitsune).
-                rand = 1 - Math.pow(1 - rand, luckMultiplier);
-                if (rand > 0.9998) rand = 0.9998;
-                luckMessage = `\n🧪 **${activePotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
+                if (adminChances) {
+                    // Admin potion: luck sangat besar (mis. 1000% = x10) plus peluang Kitsune tetap.
+                    const adminLuckMultiplier = activePotion.effect.multiplier || 1;
+                    rand = 1 - Math.pow(1 - rand, adminLuckMultiplier);
+                    if (rand > 0.9998) rand = 0.9998;
+                    const kitsuneChance = Math.round((adminChances.celestial || 0) * 100);
+                    luckMessage = `\n👑 **${activePotion.name} Active: ${Math.round(adminLuckMultiplier * 100)}% luck & Kitsune ${kitsuneChance}% (${minutesLeft}m left)**`;
+                } else {
+                    const luckMultiplier = activePotion.effect.multiplier || 1;
+                    // Bias halus: potion menaikkan peluang ikan langka tanpa "membanjiri"
+                    // tier atas. Hasil tetap dibatasi 0.9998 agar potion tidak bisa
+                    // menembus celestial (Kitsune).
+                    rand = 1 - Math.pow(1 - rand, luckMultiplier);
+                    if (rand > 0.9998) rand = 0.9998;
+                    luckMessage = `\n🧪 **${activePotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
+                }
             }
 
             let selectedRarity;
 
-            if (rand < 0.45) {
-                selectedRarity = 'common';
-            } else if (rand < 0.70) {
-                selectedRarity = 'uncommon';
-            } else if (rand < 0.85) {
-                selectedRarity = 'rare';
-            } else if (rand < 0.94) {
-                selectedRarity = 'epic';
-            } else if (rand < 0.98) {
-                selectedRarity = 'legendary';
-            } else if (rand < 0.995) {
-                selectedRarity = 'mythic';
-            } else if (rand < 0.9995) {
-                selectedRarity = 'secret';
-            } else if (rand < 0.9997) {
-                selectedRarity = 'divine';
-            } else if (rand < 0.9999) {
-                selectedRarity = 'transcendent';
-            } else {
-                selectedRarity = 'celestial';
+            // Potion admin: peluang tetap untuk Kitsune (celestial); sisanya pakai luck di atas.
+            if (adminChances) {
+                if (Math.random() < (adminChances.celestial || 0)) {
+                    selectedRarity = 'celestial';
+                }
+            }
+
+            if (!selectedRarity) {
+                if (rand < 0.45) {
+                    selectedRarity = 'common';
+                } else if (rand < 0.70) {
+                    selectedRarity = 'uncommon';
+                } else if (rand < 0.85) {
+                    selectedRarity = 'rare';
+                } else if (rand < 0.94) {
+                    selectedRarity = 'epic';
+                } else if (rand < 0.98) {
+                    selectedRarity = 'legendary';
+                } else if (rand < 0.995) {
+                    selectedRarity = 'mythic';
+                } else if (rand < 0.9995) {
+                    selectedRarity = 'secret';
+                } else if (rand < 0.9997) {
+                    selectedRarity = 'divine';
+                } else if (rand < 0.9999) {
+                    selectedRarity = 'transcendent';
+                } else {
+                    selectedRarity = 'celestial';
+                }
             }
 
             const availableFish = FISH_TYPES.filter(

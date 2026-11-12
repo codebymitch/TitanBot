@@ -5,6 +5,7 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
+const ADMIN_POTION_ID = 'admin_potion';
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
 export default {
@@ -75,7 +76,10 @@ export default {
         await setEconomyData(client, guildId, userId, userData);
 
         const activeSeconds = Math.ceil((potionExpiries[itemId] - now) / 1000);
-        const description = `You used **${item.name}**! It is now active for **${activeSeconds}s**.`;
+        let description = `You used **${item.name}**! It is now active for **${activeSeconds}s**.`;
+        if (itemId === ADMIN_POTION_ID) {
+            description += `\n\n👑 **Luck: 1000% / Kitsune: 10%**`;
+        }
 
         const embed = successEmbed("✨ Item Used", description);
 
