@@ -58,6 +58,15 @@ export default {
                 );
             }
 
+            if (item.requiredRoleId && !interaction.member.roles.cache.has(item.requiredRoleId)) {
+                throw createError(
+                    "Restricted item",
+                    ErrorTypes.VALIDATION,
+                    `**${item.name}** can only be purchased by members with the required role.`,
+                    { itemId, requiredRoleId: item.requiredRoleId }
+                );
+            }
+
             if (quantity < 1) {
                 throw createError(
                     "Invalid quantity",

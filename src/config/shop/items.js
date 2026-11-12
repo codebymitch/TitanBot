@@ -203,6 +203,7 @@ roleId: null,
         price: 100,
         description: 'Admin potion. Activate with `/use` for 5 minutes of 1000% luck and a 10% chance of Kitsune. Can be gifted with `/give`.',
         type: 'consumable',
+        requiredRoleId: '1569773580185764026',
         effect: {
             type: 'fishing_luck',
             admin: true,
