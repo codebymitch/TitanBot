@@ -288,12 +288,12 @@ export default {
                 const rodMultiplier = bestRod.effect.multiplier || 1;
                 fishingMultiplier *= rodMultiplier;
                 const boostPct = Math.round((rodMultiplier - 1) * 100);
-                bonusMessages.push(`**${bestRod.name} Bonus: +${boostPct}% income**`);
+                bonusMessages.push(`**${bestRod.name} Bonus: +${boostPct}%**`);
             }
             if (hasPremiumRole) {
                 fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
                 const boostPct = Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100);
-                bonusMessages.push(`**Premium Role Bonus: +${boostPct}% income**`);
+                bonusMessages.push(`**Premium Role Bonus: +${boostPct}%**`);
             }
             const finalEarned = Math.floor(baseEarned * fishingMultiplier);
             const multiplierMessage = bonusMessages.length
