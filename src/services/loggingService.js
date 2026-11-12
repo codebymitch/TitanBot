@@ -27,9 +27,6 @@ const EVENT_TYPES = {
   MODERATION_DM: 'moderation.dm',
   MODERATION_CONFIG: 'moderation.config',
 
-  LEVELING_LEVELUP: 'leveling.levelup',
-  LEVELING_MILESTONE: 'leveling.milestone',
-
   MESSAGE_DELETE: 'message.delete',
   MESSAGE_EDIT: 'message.edit',
   MESSAGE_BULK_DELETE: 'message.bulkdelete',
@@ -75,8 +72,6 @@ const EVENT_COLORS = {
   'moderation.unlock': 0x2ecc71,
   'moderation.dm': 0x3498db,
   'moderation.config': 0x5865F2,
-  'leveling.levelup': 0x00ff00,
-  'leveling.milestone': 0xFFD700,
   'message.delete': 0x8b0000,
   'message.edit': 0xFFA500,
   'message.bulkdelete': 0xFF0000,
@@ -115,8 +110,6 @@ const EVENT_ICONS = {
   'moderation.unlock': '🔓',
   'moderation.dm': '✉️',
   'moderation.config': '⚙️',
-  'leveling.levelup': '📈',
-  'leveling.milestone': '🏆',
   'message.delete': '❌',
   'message.edit': '✏️',
   'message.bulkdelete': '🗑️',

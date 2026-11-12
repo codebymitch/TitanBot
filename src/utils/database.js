@@ -27,9 +27,6 @@ export {
     getEconomyPrefix,
     getAFKKey,
     getWelcomeConfigKey,
-    getLevelingKey,
-    getUserLevelKey,
-    getUserLevelPrefix,
     getApplicationRolesKey,
     getApplicationSettingsKey,
     getUserApplicationsKey,
@@ -64,8 +61,6 @@ import { db, getFromDb, setInDb } from './database/wrapper.js';
 import {
     getGuildConfigKey,
     getGuildBirthdaysKey,
-    getLevelingKey,
-    getUserLevelKey,
     getApplicationRolesKey,
     getApplicationSettingsKey,
     getUserApplicationsKey,
@@ -75,7 +70,6 @@ import {
     getWelcomeConfigKey,
     getEconomyKey,
     getAFKKey,
-    getUserLevelPrefix,
 } from './database/keys.js';
 
 export async function insertVerificationAudit(record) {
@@ -431,170 +425,6 @@ export async function updateWelcomeConfig(client, guildId, updates) {
     } catch (error) {
         logger.error(`Error updating welcome config for guild ${guildId}:`, error);
         throw error;
-    }
-}
-
-export async function getLevelingConfig(client, guildId) {
-    const key = getLevelingKey(guildId);
-    try {
-        const config = await getFromDb(key, {
-            enabled: false,
-            xpPerMessage: 10,
-            xpPerMinute: 60,
-            cooldownEnabled: true,
-            messageLengthMultiplier: true,
-            levelUpMessages: true,
-            levelUpChannel: null,
-            roles: {},
-            milestones: {}
-        });
-        
-        return config;
-    } catch (error) {
-        logger.error('Error getting leveling config:', error);
-        return {
-            enabled: false,
-            xpPerMessage: 10,
-            xpPerMinute: 60,
-            cooldownEnabled: true,
-            messageLengthMultiplier: true,
-            levelUpMessages: true,
-            levelUpChannel: null,
-            roles: {},
-            milestones: {}
-        };
-    }
-}
-
-export async function saveLevelingConfig(client, guildId, config) {
-    const key = getLevelingKey(guildId);
-    try {
-        await setInDb(key, config);
-        return true;
-    } catch (error) {
-        logger.error(`Error saving leveling config for guild ${guildId}:`, error);
-        return false;
-    }
-}
-
-export async function getUserLevelData(client, guildId, userId) {
-    const key = getUserLevelKey(guildId, userId);
-    try {
-        const data = await getFromDb(key, null);
-        if (!data) {
-            return {
-                xp: 0,
-                level: 0,
-                totalXp: 0,
-                lastMessage: 0,
-                rank: 0,
-                xpToNextLevel: getXpForLevel(1)
-            };
-        }
-        
-        const levelData = {
-            xp: data.xp || 0,
-            level: data.level || 0,
-            totalXp: data.totalXp || 0,
-            lastMessage: data.lastMessage || 0,
-            rank: data.rank || 0,
-            xpToNextLevel: getXpForLevel((data.level || 0) + 1)
-        };
-        
-        return levelData;
-    } catch (error) {
-        logger.error(`Error getting level data for user ${userId} in guild ${guildId}:`, error);
-        return {
-            xp: 0,
-            level: 0,
-            totalXp: 0,
-            lastMessage: 0,
-            rank: 0,
-            xpToNextLevel: getXpForLevel(1)
-        };
-    }
-}
-
-export async function saveUserLevelData(client, guildId, userId, data) {
-    const key = getUserLevelKey(guildId, userId);
-    try {
-        const levelData = {
-            ...data,
-            xp: data.xp || 0,
-            level: data.level || 0,
-            totalXp: data.totalXp || 0,
-            lastMessage: data.lastMessage || 0,
-            rank: data.rank || 0,
-            updatedAt: Date.now()
-        };
-        
-        await setInDb(key, levelData);
-        return true;
-    } catch (error) {
-        logger.error(`Error saving level data for user ${userId} in guild ${guildId}:`, error);
-        return false;
-    }
-}
-
-export function getXpForLevel(level) {
-    return 5 * Math.pow(level, 2) + 50 * level + 50;
-}
-
-export async function getLeaderboard(client, guildId, limit = 10) {
-    try {
-        if (!client.db || typeof client.db.list !== "function") {
-            logger.error("Database client is not available for getLeaderboard.");
-            return [];
-        }
-
-        const prefix = getUserLevelPrefix(guildId);
-        let keys = await client.db.list(prefix);
-        
-        if (!Array.isArray(keys)) {
-            if (typeof keys === 'object' && keys !== null) {
-                keys = Object.keys(keys).filter(key => key.startsWith(prefix));
-            } else {
-                return [];
-            }
-        }
-        
-        if (keys.length === 0) {
-            return [];
-        }
-        
-        const userDataPromises = keys.map(async (key) => {
-            try {
-                const userId = key.replace(prefix, '');
-                const data = await client.db.get(key);
-                if (!data) return null;
-                
-                const unwrapped = unwrapReplitData(data);
-                return {
-                    userId,
-                    xp: unwrapped.xp || 0,
-                    level: unwrapped.level || 0,
-                    totalXp: unwrapped.totalXp || 0,
-rank: 0
-                };
-            } catch (error) {
-                logger.error(`Error processing leaderboard key ${key}:`, error);
-                return null;
-            }
-        });
-        
-        let userData = (await Promise.all(userDataPromises)).filter(Boolean);
-        
-        userData.sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
-        
-        userData = userData.map((user, index) => ({
-            ...user,
-            rank: index + 1
-        }));
-        
-        return userData.slice(0, limit);
-    } catch (error) {
-        logger.error(`Error getting leaderboard for guild ${guildId}:`, error);
-        return [];
     }
 }
 

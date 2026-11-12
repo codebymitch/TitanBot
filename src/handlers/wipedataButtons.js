@@ -6,12 +6,10 @@ import { logger } from '../utils/logger.js';
 import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
 import {
     getEconomyKey,
-    getUserLevelKey,
     getAFKKey,
     getWarningsKey,
     getUserNotesKey,
     getEconomyPrefix,
-    getUserLevelPrefix,
 } from '../utils/database.js';
 const wipedataConfirmHandler = {
   name: 'wipedata_yes',
@@ -25,7 +23,6 @@ const wipedataConfirmHandler = {
 
       const dataKeyPatterns = [
         getEconomyKey(guildId, userId),
-        getUserLevelKey(guildId, userId),
         getAFKKey(guildId, userId),
         getWarningsKey(guildId, userId),
         getUserNotesKey(guildId, userId),
@@ -41,7 +38,6 @@ const wipedataConfirmHandler = {
         `birthday:${guildId}:${userId}`,
         `balance:${guildId}:${userId}`,
         `user:${guildId}:${userId}`,
-        `leveling:${guildId}:${userId}`,
         `crimexp:${guildId}:${userId}`,
         `robxp:${guildId}:${userId}`,
         `crime_cooldown:${guildId}:${userId}`,
@@ -50,7 +46,6 @@ const wipedataConfirmHandler = {
         `lastWork:${guildId}:${userId}`,
         `lastCrime:${guildId}:${userId}`,
         `lastRob:${guildId}:${userId}`,
-        `${guildId}:leveling:users:${userId}`,
       ];
 
       let deletedCount = 0;
@@ -75,7 +70,6 @@ const wipedataConfirmHandler = {
             `${guildId}:${userId}`,
             `${guildId}:`,
             getEconomyPrefix(guildId),
-            getUserLevelPrefix(guildId),
             `level:${guildId}:`,
             `xp:${guildId}:`,
             `user:${guildId}:`

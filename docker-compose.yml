@@ -20,7 +20,6 @@ services:
       - POSTGRES_SSL=false
       - AUTO_MIGRATE=true
       - LOG_LEVEL=${LOG_LEVEL:-warn}
-      - LAVALINK_NODES_FILE=lavalink/nodes.json
       - PORT=3000
       - WEB_HOST=0.0.0.0
     ports:
@@ -34,19 +33,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
-    networks:
-      - titan-network
-
-  lavalink:
-    profiles:
-      - local-lavalink
-    image: ghcr.io/lavalink-devs/lavalink:4
-    container_name: titanbot-lavalink
-    restart: unless-stopped
-    environment:
-      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-    volumes:
-      - ./lavalink/application.yml:/opt/Lavalink/application.yml
     networks:
       - titan-network
 
