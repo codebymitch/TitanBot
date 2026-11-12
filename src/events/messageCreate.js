@@ -15,6 +15,7 @@ import {
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
+import { handleStickyMessage } from '../services/stickyService.js';
 
 export default {
   name: Events.MessageCreate,
@@ -28,6 +29,8 @@ export default {
       if (countingProcessed) {
         return;
       }
+
+      await handleStickyMessage(message, client);
 
       await handlePrefixCommand(message, client);
     } catch (error) {

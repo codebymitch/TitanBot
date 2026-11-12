@@ -70,6 +70,7 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 ### Utility Tools
 - **Report System** - Report issues to staff
 - **Todo Lists** - Personal task management
+- **Sticky Messages** - Keep a message pinned to the bottom of a channel
 - **First Message** - Jump to channel's first message
 
 ### Welcome System

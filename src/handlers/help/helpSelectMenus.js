@@ -29,6 +29,7 @@ const CATEGORY_ICONS = {
     Giveaway: "🎉",
     Counter: "🔢",
     Tools: "🛠️",
+    Sticky: "📌",
     Search: "🔍",
     "Reaction Roles": "🎭",
     Community: "👥",

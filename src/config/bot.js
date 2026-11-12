@@ -468,6 +468,7 @@ export const botConfig = {
     // Utility/quality-of-life modules.
     voice: true,
     search: true,
+    sticky: true,
     tools: true,
     utility: true,
     community: true,
@@ -538,6 +539,7 @@ const COMMAND_CATEGORY_FEATURE_MAP = {
   moderation: "moderation",
   reaction_roles: "reactionRoles",
   search: "search",
+  sticky: "sticky",
   serverstats: "counter",
   ticket: "tickets",
   tools: "tools",
