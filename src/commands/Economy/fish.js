@@ -206,7 +206,12 @@ export default {
                     (Number(potionExpiries[activePotion.id]) - now) / 60000
                 );
                 if (adminChances) {
-                    luckMessage = `\n👑 **${activePotion.name} Active: Kitsune ${Math.round(adminChances.celestial * 100)}% (${minutesLeft}m left)**`;
+                    // Admin potion: luck sangat besar (mis. 1000% = x10) plus peluang Kitsune tetap.
+                    const adminLuckMultiplier = activePotion.effect.multiplier || 1;
+                    rand = 1 - Math.pow(1 - rand, adminLuckMultiplier);
+                    if (rand > 0.9998) rand = 0.9998;
+                    const kitsuneChance = Math.round((adminChances.celestial || 0) * 100);
+                    luckMessage = `\n👑 **${activePotion.name} Active: ${Math.round(adminLuckMultiplier * 100)}% luck & Kitsune ${kitsuneChance}% (${minutesLeft}m left)**`;
                 } else {
                     const luckMultiplier = activePotion.effect.multiplier || 1;
                     // Bias halus: potion menaikkan peluang ikan langka tanpa "membanjiri"
@@ -220,15 +225,9 @@ export default {
 
             let selectedRarity;
 
-            // Potion admin: peluang tetap divine/transcendent/celestial; sisanya (40%) normal.
+            // Potion admin: peluang tetap untuk Kitsune (celestial); sisanya pakai luck di atas.
             if (adminChances) {
-                const roll = Math.random();
-                let acc = 0;
-                if (roll < (acc += adminChances.divine)) {
-                    selectedRarity = 'divine';
-                } else if (roll < (acc += adminChances.transcendent)) {
-                    selectedRarity = 'transcendent';
-                } else if (roll < (acc += adminChances.celestial)) {
+                if (Math.random() < (adminChances.celestial || 0)) {
                     selectedRarity = 'celestial';
                 }
             }

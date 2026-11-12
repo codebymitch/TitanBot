@@ -78,7 +78,7 @@ export default {
         const activeSeconds = Math.ceil((potionExpiries[itemId] - now) / 1000);
         let description = `You used **${item.name}**! It is now active for **${activeSeconds}s**.`;
         if (itemId === ADMIN_POTION_ID) {
-            description += `\n\n👑 **Luck: Divine 30% / Transcendent 20% / Kitsune 10%**`;
+            description += `\n\n👑 **Luck: 1000% / Kitsune: 10%**`;
         }
 
         const embed = successEmbed("✨ Item Used", description);

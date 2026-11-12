@@ -201,15 +201,14 @@ roleId: null,
         id: 'admin_potion',
         name: '👑 Admin Potion',
         price: 100,
-        description: 'Admin potion. Activate with `/use` for 5 minutes of great luck: Divine 30%,Transcendent 20%,Kitsune 10%. Can be gifted with `/give`.',
+        description: 'Admin potion. Activate with `/use` for 5 minutes of 1000% luck and a 10% chance of Kitsune. Can be gifted with `/give`.',
         type: 'consumable',
         effect: {
             type: 'fishing_luck',
             admin: true,
+            multiplier: 10,
             chances: {
-                divine: 0.5,
-                transcendent: 0.4,
-                celestial: 0.3
+                celestial: 0.1
             },
             duration: 300000
         }

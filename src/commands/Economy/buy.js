@@ -3,7 +3,6 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { shopItems } from '../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { getGuildConfig } from '../../services/config/guildConfig.js';
-import { isBotOwner } from '../../config/bot.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -55,15 +54,6 @@ export default {
                     `Item ${itemId} not found`,
                     ErrorTypes.VALIDATION,
                     `The item ID \`${itemId}\` does not exist in the shop.`,
-                    { itemId }
-                );
-            }
-
-            if (itemId === ADMIN_POTION_ID && !isBotOwner(userId)) {
-                throw createError(
-                    "Restricted item",
-                    ErrorTypes.VALIDATION,
-                    `**${item.name}** is a restricted item and can only be purchased by the bot owner.`,
                     { itemId }
                 );
             }

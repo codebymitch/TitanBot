@@ -1,27 +1,20 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder, MessageFlags } from 'discord.js';
 import { shopItems } from '../../../config/shop/items.js';
-import { getColor, isBotOwner } from '../../../config/bot.js';
+import { getColor } from '../../../config/bot.js';
 import { logger } from '../../../utils/logger.js';
 import { handleInteractionError } from '../../../utils/errorHandler.js';
-
-const ADMIN_POTION_ID = 'admin_potion';
 
 export default {
     async execute(interaction, config, client) {
         try {
-            const isOwner = isBotOwner(interaction.user.id);
-            const visibleItems = isOwner
-                ? shopItems
-                : shopItems.filter(item => item.id !== ADMIN_POTION_ID);
-
             const TARGET_MAX_PAGES = 3;
-            const ITEMS_PER_PAGE = Math.max(1, Math.ceil(visibleItems.length / TARGET_MAX_PAGES));
-            const totalPages = Math.ceil(visibleItems.length / ITEMS_PER_PAGE);
+            const ITEMS_PER_PAGE = Math.max(1, Math.ceil(shopItems.length / TARGET_MAX_PAGES));
+            const totalPages = Math.ceil(shopItems.length / ITEMS_PER_PAGE);
             let currentPage = 1;
 
             const createShopEmbed = (page) => {
                 const startIndex = (page - 1) * ITEMS_PER_PAGE;
-                const pageItems = visibleItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+                const pageItems = shopItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
                 const embed = new EmbedBuilder()
                     .setTitle('Store')
                     .setColor(getColor('primary'))
