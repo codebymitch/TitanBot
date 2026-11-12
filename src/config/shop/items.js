@@ -195,24 +195,6 @@ roleId: null,
             duration: 300000
         }
     },
-
-    // ===== Admin Potion (disimpan di inventory, dipakai dengan /use, bisa dikirim dengan /give) =====
-    {
-        id: 'admin_potion',
-        name: '👑 Admin Potion',
-        price: 100,
-        description: 'Admin potion. Activate with `/use` for 5 minutes of 1000% luck and a 10% chance of Kitsune. Can be gifted with `/give`.',
-        type: 'consumable',
-        effect: {
-            type: 'fishing_luck',
-            admin: true,
-            multiplier: 10,
-            chances: {
-                celestial: 0.1
-            },
-            duration: 300000
-        }
-    },
     {
         id: 'pickaxe',
         name: '⛏️ Pickaxe',
