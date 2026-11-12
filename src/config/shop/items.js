@@ -34,7 +34,7 @@ cooldown: 86400000,
         durability: 100,
         effect: {
             type: 'mining_yield',
-            multiplier: 2.0
+            multiplier: 2.0,
         }
     },
     {
@@ -46,7 +46,7 @@ cooldown: 86400000,
 roleId: null,
         effect: {
             type: 'fishing_yield',
-            multiplier: 5
+            multiplier: 5,
         }
     },
     {
