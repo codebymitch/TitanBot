@@ -5,17 +5,16 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-const ADMIN_POTION_ID = 'admin_potion';
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
 export default {
     data: new SlashCommandBuilder()
         .setName('use')
-        .setDescription('Use a consumable item from your inventory (e.g. Admin Potion)')
+        .setDescription('Use a consumable item from your inventory')
         .addStringOption(option =>
             option
                 .setName('item_id')
-                .setDescription('ID of the item to use (e.g. admin_potion)')
+                .setDescription('ID of the item to use')
                 .setRequired(true)
         ),
 
@@ -76,10 +75,7 @@ export default {
         await setEconomyData(client, guildId, userId, userData);
 
         const activeSeconds = Math.ceil((potionExpiries[itemId] - now) / 1000);
-        let description = `You used **${item.name}**! It is now active for **${activeSeconds}s**.`;
-        if (itemId === ADMIN_POTION_ID) {
-            description += `\n\n👑 **Luck: 1000% / Kitsune: 10%**`;
-        }
+        const description = `You used **${item.name}**! It is now active for **${activeSeconds}s**.`;
 
         const embed = successEmbed("✨ Item Used", description);
 

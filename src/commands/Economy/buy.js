@@ -7,9 +7,7 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
-const ADMIN_POTION_ID = 'admin_potion';
-// Potion ini langsung aktif saat dibeli. Admin potion TIDAK termasuk di sini:
-// admin potion disimpan ke inventory dulu supaya bisa dipakai (/use) atau dikirim (/give).
+// Potion ini langsung aktif saat dibeli.
 const LUCK_POTION_IDS = new Set([
     'luck_potion_1',
     'luck_potion_2',
@@ -161,8 +159,6 @@ export default {
                     (userData.inventory[itemId] || 0) + quantity;
                 if (item.type === "tool") {
                     successDescription += `\n\n**🛠️ ${item.name} added to your inventory!**`;
-                } else if (itemId === ADMIN_POTION_ID) {
-                    successDescription += `\n\n👑 **Added to your inventory!** Activate it with \`/use item_id:${ADMIN_POTION_ID}\` or gift it with \`/give\`.`;
                 }
             }
 

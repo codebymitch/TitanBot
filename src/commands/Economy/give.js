@@ -19,7 +19,7 @@ export default {
         .addStringOption(option =>
             option
                 .setName('item_id')
-                .setDescription('ID of the item to give (e.g. admin_potion)')
+                .setDescription('ID of the item to give')
                 .setRequired(true)
         )
         .addIntegerOption(option =>
