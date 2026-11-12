@@ -319,7 +319,7 @@ export default {
                 epic: '#9B59B6',
                 legendary: '#F1C40F',
                 mythic: '#E91E63',
-                secret: '#FF0000',
+                secret: '#404850',
                 divine: '#00FFFF',
                 transcendent: '#FF00FF',
                 celestial: '#FF69B4'
