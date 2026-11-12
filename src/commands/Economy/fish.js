@@ -211,7 +211,7 @@ export default {
                     rand = 1 - Math.pow(1 - rand, adminLuckMultiplier);
                     if (rand > 0.9998) rand = 0.9998;
                     const kitsuneChance = Math.round((adminChances.celestial || 0) * 100);
-                    luckMessage = `\n👑 **${activePotion.name} Active: ${Math.round(adminLuckMultiplier * 100)}% luck & Kitsune ${kitsuneChance}% (${minutesLeft}m left)**`;
+                    luckMessage = `\n**${activePotion.name} Active: ${Math.round(adminLuckMultiplier * 100)}% luck & Kitsune ${kitsuneChance}% (${minutesLeft}m left)**`;
                 } else {
                     const luckMultiplier = activePotion.effect.multiplier || 1;
                     // Bias halus: potion menaikkan peluang ikan langka tanpa "membanjiri"
@@ -219,7 +219,7 @@ export default {
                     // menembus celestial (Kitsune).
                     rand = 1 - Math.pow(1 - rand, luckMultiplier);
                     if (rand > 0.9998) rand = 0.9998;
-                    luckMessage = `\n🧪 **${activePotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
+                    luckMessage = `\n**${activePotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
                 }
             }
 
@@ -288,12 +288,12 @@ export default {
                 const rodMultiplier = bestRod.effect.multiplier || 1;
                 fishingMultiplier *= rodMultiplier;
                 const boostPct = Math.round((rodMultiplier - 1) * 100);
-                bonusMessages.push(`🎣 **${bestRod.name} Bonus: +${boostPct}% income**`);
+                bonusMessages.push(`**${bestRod.name} Bonus: +${boostPct}% income**`);
             }
             if (hasPremiumRole) {
                 fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
                 const boostPct = Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100);
-                bonusMessages.push(`✨ **Premium Role Bonus: +${boostPct}% income**`);
+                bonusMessages.push(`**Premium Role Bonus: +${boostPct}% income**`);
             }
             const finalEarned = Math.floor(baseEarned * fishingMultiplier);
             const multiplierMessage = bonusMessages.length
