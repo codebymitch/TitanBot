@@ -26,7 +26,6 @@ const CATEGORY_ICONS = {
     Moderation: "🛡️",
     Economy: "💰",
     Fun: "🎮",
-    Leveling: "📊",
     Utility: "🔧",
     Ticket: "🎫",
     Welcome: "👋",

@@ -30,7 +30,7 @@ src/
   - Verification/             -> member verification flow
   - JoinToCreate/             -> dynamic voice channel creation
   - Reaction_roles/           -> automatic role assignment
-  - Birthday/, Fun/, Giveaway/, Leveling/, Search/, Tools/, Utility/, Welcome/
+  - Birthday/, Fun/, Giveaway/, Search/, Tools/, Utility/, Welcome/
 
 - config/                     -> centralized configuration modules
 - events/                     -> Discord event listeners

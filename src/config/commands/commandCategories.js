@@ -10,7 +10,6 @@ export const CATEGORY_ICONS = {
   Fun: '🎮',
   Giveaway: '🎉',
   JoinToCreate: '🔌',
-  Leveling: '📊',
   Logging: '📝',
   Moderation: '🛡️',
   Reaction_roles: '🎭',
