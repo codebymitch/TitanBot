@@ -47,7 +47,7 @@ function buildStatusEmbed(snapshot, guildName) {
     }
 
     for (const group of groups) {
-        lines.push('——————————');
+        lines.push('═════════════════════');
         lines.push(`**${group.name}**`);
         lines.push('');
 
