@@ -374,9 +374,11 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
     for (const group of groups) {
         lines.push('——————————');
         lines.push(`**${group.name}**`);
+        lines.push('');
 
         if (group.bots.length === 0) {
             lines.push('_Belum ada bot di grup ini._');
+            lines.push('');
             continue;
         }
 
