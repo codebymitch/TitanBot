@@ -24,7 +24,7 @@ export const botConfig = {
     activities: [
       {
         name: "Custom Status", // required by Discord API, not shown in the client
-        state: "stalking",     // this is what people actually see
+        state: "hari hari mau eek",     // this is what people actually see
         type: 4,               // Custom
       },
     ],
@@ -97,7 +97,7 @@ export const botConfig = {
       secondary: "#2F3136",
 
       // Standard status colors for success/error/warning/info messages.
-      success: "#57F287",
+      success: "#ff88d7",
       error: "#ED4245",
       warning: "#FEE75C",
       info: "#3498DB",
@@ -141,7 +141,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: "MannNayla",
       // Footer icon URL (null = no icon).
       icon: null,
     },
@@ -450,7 +450,6 @@ export const botConfig = {
   features: {
     // Core systems.
     economy: true,
-    leveling: true,
     moderation: true,
     logging: true,
     welcome: true,
@@ -464,16 +463,17 @@ export const botConfig = {
     // Security and self-service systems.
     verification: true,
     reactionRoles: true,
+    autoReactions: true,
     joinToCreate: true,
 
     // Utility/quality-of-life modules.
     voice: true,
     search: true,
+    sticky: true,
     tools: true,
     utility: true,
     community: true,
     fun: true,
-    music: true,
   },
 };
 
@@ -536,12 +536,12 @@ const COMMAND_CATEGORY_FEATURE_MAP = {
   fun: "fun",
   giveaway: "giveaways",
   jointocreate: "joinToCreate",
-  leveling: "leveling",
   logging: "logging",
   moderation: "moderation",
-  music: "music",
   reaction_roles: "reactionRoles",
+  autoreactions: "autoReactions",
   search: "search",
+  sticky: "sticky",
   serverstats: "counter",
   ticket: "tickets",
   tools: "tools",

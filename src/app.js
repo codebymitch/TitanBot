@@ -13,8 +13,6 @@ import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/loaders/commandLoader.js';
 import { runSafeTask, handleTaskError, ErrorCodes } from './utils/errorHandler.js';
-import { initializeMusic } from './services/music/riffySetup.js';
-import { shutdownMusic } from './services/music/playerHandler.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/database/schemaVersion.js';
 
@@ -84,8 +82,6 @@ class TitanBot extends Client {
       await this.loadHandlers();
       startupLog('Handlers loaded');
 
-      initializeMusic(this);
-      
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
       startupLog('Discord login successful');
@@ -342,10 +338,6 @@ class TitanBot extends Client {
       cron.getTasks().forEach(task => task.stop());
       logger.info('✅ Cron jobs stopped');
 
-      logger.info('Stopping music players...');
-      await shutdownMusic(this);
-      logger.info('✅ Music players stopped');
-
       if (this.webServer) {
         logger.info('Closing web server...');
         await new Promise((resolve) => this.webServer.close(resolve));
@@ -406,10 +398,6 @@ try {
         logger.warn('Recoverable Discord interaction rejection:', reason?.message || reason);
         return;
       }
-      if (reason?.message?.includes('Queue is empty')) {
-        return;
-      }
-
       // A stray rejection is a bug to fix, not a reason to take the bot down.
       // Log loudly with full context; the central task handler categorizes it.
       handleTaskError('unhandled_rejection', reason instanceof Error ? reason : new Error(String(reason)), {

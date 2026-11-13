@@ -25,8 +25,7 @@
     "pg": "^8.11.3",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.25.76",
-    "riffy": "1.0.12"
+    "zod": "^3.25.76"
   },
   "engines": {
     "node": ">=20.10.0"

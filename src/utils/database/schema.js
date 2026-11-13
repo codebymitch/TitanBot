@@ -91,29 +91,6 @@ export const tableStatements = [
         FOREIGN KEY (guild_id) REFERENCES ${t.guilds}(id) ON DELETE CASCADE
     )`,
 
-    `CREATE TABLE IF NOT EXISTS ${t.leveling_configs} (
-        guild_id VARCHAR(20) PRIMARY KEY,
-        config JSONB NOT NULL DEFAULT '{}',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (guild_id) REFERENCES ${t.guilds}(id) ON DELETE CASCADE
-    )`,
-
-    `CREATE TABLE IF NOT EXISTS ${t.user_levels} (
-        guild_id VARCHAR(20),
-        user_id VARCHAR(20),
-        xp BIGINT DEFAULT 0,
-        level INTEGER DEFAULT 0,
-        total_xp BIGINT DEFAULT 0,
-        last_message TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        rank INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (guild_id, user_id),
-        FOREIGN KEY (guild_id) REFERENCES ${t.guilds}(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES ${t.users}(id) ON DELETE CASCADE
-    )`,
-
     `CREATE TABLE IF NOT EXISTS ${t.economy} (
         guild_id VARCHAR(20),
         user_id VARCHAR(20),
@@ -186,8 +163,6 @@ export const indexStatements = [
     `CREATE INDEX IF NOT EXISTS idx_tickets_expires_at ON ${t.tickets}(expires_at)`,
     `CREATE INDEX IF NOT EXISTS idx_afk_status_guild_id ON ${t.afk_status}(guild_id)`,
     `CREATE INDEX IF NOT EXISTS idx_afk_status_expires_at ON ${t.afk_status}(expires_at)`,
-    `CREATE INDEX IF NOT EXISTS idx_user_levels_guild_id ON ${t.user_levels}(guild_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_user_levels_xp ON ${t.user_levels}(xp)`,
     `CREATE INDEX IF NOT EXISTS idx_economy_guild_id ON ${t.economy}(guild_id)`,
     `CREATE INDEX IF NOT EXISTS idx_verification_audit_guild_id ON ${t.verification_audit}(guild_id)`,
     `CREATE INDEX IF NOT EXISTS idx_verification_audit_user_id ON ${t.verification_audit}(user_id)`,
@@ -214,8 +189,6 @@ export const triggerDefinitions = [
     { name: 'update_guilds_updated_at', table: t.guilds },
     { name: 'update_users_updated_at', table: t.users },
     { name: 'update_welcome_configs_updated_at', table: t.welcome_configs },
-    { name: 'update_leveling_configs_updated_at', table: t.leveling_configs },
-    { name: 'update_user_levels_updated_at', table: t.user_levels },
     { name: 'update_economy_updated_at', table: t.economy },
     { name: 'update_application_roles_updated_at', table: t.application_roles },
     { name: 'update_invite_tracking_updated_at', table: t.invite_tracking },
