@@ -5,7 +5,7 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getItemById } from '../../config/shop/items.js';
 import { getGuildConfig } from '../../services/config/guildConfig.js';
-import { rollFishingCatch, RARITY_COLORS } from './fish.js';
+import { pickFish, resolveActivePotions, rollRarityWithPotion, RARITY_COLORS } from './fish.js';
 
 const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
 
@@ -53,6 +53,28 @@ export default {
 
             const catchCount = Number(bestNet.effect?.catches) || 5;
 
+            // Potion luck applies per fish, same rule as /fish.
+            const now = Date.now();
+            const { potionExpiries, bestPotion, adminPotion } =
+                resolveActivePotions(inventory, userData, now);
+            const activePotion = adminPotion || bestPotion;
+            const adminChances = adminPotion?.effect?.chances || null;
+
+            let luckMessage = "";
+            if (activePotion) {
+                const minutesLeft = Math.ceil(
+                    (Number(potionExpiries[activePotion.id]) - now) / 60000
+                );
+                if (adminChances) {
+                    const adminLuckMultiplier = activePotion.effect.multiplier || 1;
+                    const kitsuneChance = Math.round((adminChances.celestial || 0) * 100);
+                    luckMessage = `\n👑 **${activePotion.name} Active: ${Math.round(adminLuckMultiplier * 100)}% luck & Kitsune ${kitsuneChance}% (${minutesLeft}m left)**`;
+                } else {
+                    const luckMultiplier = activePotion.effect.multiplier || 1;
+                    luckMessage = `\n🧪 **${activePotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
+                }
+            }
+
             // Netting bonuses: net + premium role only (Fishing Rod does NOT apply here).
             const guildConfig = await getGuildConfig(client, guildId);
             const premiumRoleId = guildConfig.premiumRoleId;
@@ -73,15 +95,15 @@ export default {
                 bonusMessages.push(`✨ **Premium Role Bonus: +${Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100)}%**`);
             }
 
-            // Tiap ikan di-roll rarity-nya sendiri secara acak (tergantung luck),
-            // jadi satu netting bisa berisi campuran rarity.
+            // Tiap ikan di-roll rarity-nya sendiri secara acak (tergantung luck +
+            // efek potion), jadi satu netting bisa berisi campuran rarity.
             let totalEarned = 0;
             let bestRarityIndex = -1;
             const caughtLines = [];
             const collectionGains = {};
 
             for (let i = 0; i < catchCount; i++) {
-                const { fish, baseEarned } = rollFishingCatch();
+                const { fish, baseEarned } = pickFish(rollRarityWithPotion(activePotion));
                 const earned = Math.floor(baseEarned * fishingMultiplier);
                 totalEarned += earned;
                 caughtLines.push(`• ${fish.rarity} - ${fish.name} - $${earned.toLocaleString()}`);
@@ -97,6 +119,7 @@ export default {
                 userData.fishCollection[name] = (Number(userData.fishCollection[name]) || 0) + count;
             }
             userData.inventory = inventory;
+            userData.luckPotionExpiresAt = potionExpiries;
 
             await setEconomyData(client, guildId, userId, userData);
 
@@ -107,7 +130,7 @@ export default {
 
             const embed = createEmbed({
                 title: '🕸️ Netting Success!',
-                description: `You cast your **${bestNet.name}** and hauled in **${catchCount} fish**!\n\n${caughtLines.join('\n')}${multiplierMessage}`,
+                description: `You cast your **${bestNet.name}** and hauled in **${catchCount} fish**!\n\n${caughtLines.join('\n')}${multiplierMessage}${luckMessage}`,
                 color: bestRarity ? RARITY_COLORS[bestRarity] : 'primary'
             })
                 .addFields(

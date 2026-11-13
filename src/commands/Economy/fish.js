@@ -179,6 +179,54 @@ export function rollFishingCatch() {
     return pickFish(selectRarity(Math.random()));
 }
 
+// Resolve a user's active potion state: convert legacy inventory potions into
+// running timers, then return the active luck potion (and admin potion if any).
+export function resolveActivePotions(inventory, userData, now) {
+    const potionExpiries = { ...(userData.luckPotionExpiresAt || {}) };
+    for (let tier = 1; tier <= 5; tier++) {
+        const potionId = `luck_potion_${tier}`;
+        const legacyQuantity = Number(inventory[potionId] || 0);
+        if (legacyQuantity > 0) {
+            const currentExpiry = Math.max(now, Number(potionExpiries[potionId]) || 0);
+            const duration = Number(getItemById(potionId)?.effect?.duration)
+                || DEFAULT_LUCK_POTION_DURATION_MS;
+            potionExpiries[potionId] = currentExpiry + (duration * legacyQuantity);
+            delete inventory[potionId];
+        }
+    }
+
+    const bestPotion = getBestActiveLuckPotion(potionExpiries, now);
+    let adminPotion = null;
+    for (const [potionId, expiry] of Object.entries(potionExpiries)) {
+        if (Number(expiry) > now) {
+            const potionItem = getItemById(potionId);
+            if (potionItem?.effect?.admin) {
+                adminPotion = potionItem;
+                break;
+            }
+        }
+    }
+
+    return { potionExpiries, bestPotion, adminPotion };
+}
+
+// Roll a rarity from a random value biased by the given potion's luck.
+// Admin potions also get a flat chance at the top tier (celestial/Kitsune).
+export function rollRarityWithPotion(activePotion) {
+    const adminChances = activePotion?.effect?.chances || null;
+    if (adminChances && Math.random() < (adminChances.celestial || 0)) {
+        return 'celestial';
+    }
+
+    let rand = Math.random();
+    if (activePotion) {
+        const luckMultiplier = activePotion.effect.multiplier || 1;
+        rand = 1 - Math.pow(1 - rand, luckMultiplier);
+        if (rand > 0.9998) rand = 0.9998;
+    }
+    return selectRarity(rand);
+}
+
 const CATCH_MESSAGES = [
     "Kamu melemparkan kailmu ke dalam air yang sangat jernih...",
     "Kamu menunggu dengan sabar saat pelampung pancingmu mengapung...",
@@ -208,21 +256,9 @@ export default {
             const userData = await getEconomyData(client, guildId, userId);
             const lastFish = userData.lastFish || 0;
             const inventory = userData.inventory || {};
-            const potionExpiries = { ...(userData.luckPotionExpiresAt || {}) };
-
             const bestRod = getBestFishingRod(inventory);
-            for (let tier = 1; tier <= 5; tier++) {
-                const potionId = `luck_potion_${tier}`;
-                const legacyQuantity = Number(inventory[potionId] || 0);
-                if (legacyQuantity > 0) {
-                    const currentExpiry = Math.max(now, Number(potionExpiries[potionId]) || 0);
-                    const duration = Number(getItemById(potionId)?.effect?.duration)
-                        || DEFAULT_LUCK_POTION_DURATION_MS;
-                    potionExpiries[potionId] = currentExpiry + (duration * legacyQuantity);
-                    delete inventory[potionId];
-                }
-            }
-            const bestPotion = getBestActiveLuckPotion(potionExpiries, now);
+            const { potionExpiries, bestPotion, adminPotion: activeAdminPotion } =
+                resolveActivePotions(inventory, userData, now);
             userData.luckPotionExpiresAt = potionExpiries;
 
             const guildConfig = await getGuildConfig(client, guildId);
@@ -246,19 +282,6 @@ export default {
                 );
             }
 
-            let rand = Math.random();
-
-            // Cari potion admin yang sedang aktif (mis. admin_potion).
-            let activeAdminPotion = null;
-            for (const [potionId, expiry] of Object.entries(potionExpiries)) {
-                if (Number(expiry) > now) {
-                    const potionItem = getItemById(potionId);
-                    if (potionItem?.effect?.admin) {
-                        activeAdminPotion = potionItem;
-                        break;
-                    }
-                }
-            }
             const activePotion = activeAdminPotion || bestPotion;
             const adminChances = activeAdminPotion?.effect?.chances || null;
 
@@ -270,33 +293,15 @@ export default {
                 if (adminChances) {
                     // Admin potion: luck sangat besar (mis. 1000% = x10) plus peluang Kitsune tetap.
                     const adminLuckMultiplier = activePotion.effect.multiplier || 1;
-                    rand = 1 - Math.pow(1 - rand, adminLuckMultiplier);
-                    if (rand > 0.9998) rand = 0.9998;
                     const kitsuneChance = Math.round((adminChances.celestial || 0) * 100);
                     luckMessage = `\n👑 **${activePotion.name} Active: ${Math.round(adminLuckMultiplier * 100)}% luck & Kitsune ${kitsuneChance}% (${minutesLeft}m left)**`;
                 } else {
                     const luckMultiplier = activePotion.effect.multiplier || 1;
-                    // Bias halus: potion menaikkan peluang ikan langka tanpa "membanjiri"
-                    // tier atas. Hasil tetap dibatasi 0.9998 agar potion tidak bisa
-                    // menembus celestial (Kitsune).
-                    rand = 1 - Math.pow(1 - rand, luckMultiplier);
-                    if (rand > 0.9998) rand = 0.9998;
                     luckMessage = `\n🧪 **${activePotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
                 }
             }
 
-            let selectedRarity;
-
-            // Potion admin: peluang tetap untuk Kitsune (celestial); sisanya pakai luck di atas.
-            if (adminChances) {
-                if (Math.random() < (adminChances.celestial || 0)) {
-                    selectedRarity = 'celestial';
-                }
-            }
-
-            if (!selectedRarity) {
-                selectedRarity = selectRarity(rand);
-            }
+            const selectedRarity = rollRarityWithPotion(activePotion);
 
             const { fish: fishCaught, baseEarned } = pickFish(selectedRarity);
 
