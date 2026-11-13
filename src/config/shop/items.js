@@ -208,59 +208,64 @@ roleId: null,
         effect: {
             type: 'fishing_net',
             tier: 1,
-            catches: 5
+            catches: 5,
+            multiplier: 1.10
         }
     },
     {
         id: 'fishing_net_2',
         name: '🕸️ Fishing Net II',
         price: 1250000,
-        description: 'Cast a wide net to haul in 10 fish at once with `/netting`.',
+        description: 'Cast a wide net to haul in 10 fish at once with `/netting`. Bonus +25% coin.',
         type: 'tool',
         durability: null,
         effect: {
             type: 'fishing_net',
             tier: 2,
-            catches: 10
+            catches: 10,
+            multiplier: 1.25
         }
     },
     {
         id: 'fishing_net_3',
         name: '🕸️ Fishing Net III',
         price: 3500000,
-        description: 'Cast a wide net to haul in 15 fish at once with `/netting`.',
+        description: 'Cast a wide net to haul in 15 fish at once with `/netting`. Bonus +45% coin.',
         type: 'tool',
         durability: null,
         effect: {
             type: 'fishing_net',
             tier: 3,
-            catches: 15
+            catches: 15,
+            multiplier: 1.45
         }
     },
     {
         id: 'fishing_net_4',
         name: '🕸️ Fishing Net IV',
         price: 9000000,
-        description: 'Cast a wide net to haul in 20 fish at once with `/netting`.',
+        description: 'Cast a wide net to haul in 20 fish at once with `/netting`. Bonus +70% coin.',
         type: 'tool',
         durability: null,
         effect: {
             type: 'fishing_net',
             tier: 4,
-            catches: 20
+            catches: 20,
+            multiplier: 1.70
         }
     },
     {
         id: 'fishing_net_5',
         name: '🕸️ Fishing Net V',
         price: 22000000,
-        description: 'Cast a wide net to haul in 25 fish at once with `/netting`.',
+        description: 'Cast a wide net to haul in 25 fish at once with `/netting`. Bonus +100% coin.',
         type: 'tool',
         durability: null,
         effect: {
             type: 'fishing_net',
             tier: 5,
-            catches: 25
+            catches: 25,
+            multiplier: 2.00
         }
     },
 

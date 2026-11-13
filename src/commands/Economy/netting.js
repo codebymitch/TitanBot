@@ -78,6 +78,12 @@ export default {
 
             let fishingMultiplier = 1;
             const bonusMessages = [];
+
+            const netMultiplier = Number(bestNet.effect?.multiplier) || 1;
+            if (netMultiplier > 1) {
+                fishingMultiplier *= netMultiplier;
+                bonusMessages.push(`🕸️ **${bestNet.name} Bonus: +${Math.round((netMultiplier - 1) * 100)}%**`);
+            }
             if (bestRod) {
                 const rodMultiplier = bestRod.effect.multiplier || 1;
                 fishingMultiplier *= rodMultiplier;
