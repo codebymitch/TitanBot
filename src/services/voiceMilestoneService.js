@@ -6,7 +6,8 @@
 // milestone role is removed, so a member always holds at most one voice tier.
 
 import { logger } from '../utils/logger.js';
-import { EmbedBuilder } from 'discord.js';
+import { AttachmentBuilder, EmbedBuilder } from 'discord.js';
+import { renderVoiceMilestoneCard } from './voiceMilestoneCard.js';
 import {
   getVoiceMilestoneConfigKey,
   getVoiceMilestoneUserKey,
@@ -234,21 +235,35 @@ function formatAnnouncementDuration(ms) {
   return `${minutes} menit`;
 }
 
-async function announceMilestone(client, guild, userId, totalMs, milestone, config) {
-  if (!config.announcementChannelId) return;
+async function postMilestoneAnnouncement(
+  client,
+  guild,
+  userId,
+  totalMs,
+  milestone,
+  config,
+  { isTest = false, fallbackMember = null } = {},
+) {
+  if (!config.announcementChannelId) return { ok: false, reason: 'channel_not_set' };
 
   try {
     const channel = guild.channels.cache.get(config.announcementChannelId)
       || await guild.channels.fetch(config.announcementChannelId).catch(() => null);
-    if (!channel?.isTextBased?.() || typeof channel.send !== 'function') return;
+    if (!channel?.isTextBased?.() || typeof channel.send !== 'function') {
+      return { ok: false, reason: 'channel_unavailable' };
+    }
 
+    const member = fallbackMember
+      || guild.members.cache.get(userId)
+      || await guild.members.fetch(userId).catch(() => null);
+    if (!member) return { ok: false, reason: 'member_unavailable' };
     const role = milestone.roleId ? guild.roles.cache.get(milestone.roleId) : null;
     const next = config.milestones.find((entry) => entry.hours > milestone.hours);
     const embed = new EmbedBuilder()
       .setColor(role?.color || 0xD6B15E)
-      .setTitle('🎙️ Voice Milestone')
+      .setTitle(isTest ? '🧪 TEST · VOICE MILESTONE' : '🎙️ VOICE MILESTONE')
       .setDescription(
-        `Selamat! Kamu mencapai **${role?.name || milestone.label}** setelah ` +
+        `${isTest ? 'Preview:' : 'Selamat!'} Kamu mencapai **${role?.name || milestone.label}** setelah ` +
         `**${formatAnnouncementDuration(totalMs)}** di voice channel.`,
       )
       .addFields(
@@ -259,16 +274,64 @@ async function announceMilestone(client, guild, userId, totalMs, milestone, conf
           inline: true,
         },
       )
-      .setFooter({ text: 'Manay Society' });
+      .setFooter({
+        text: isTest ? 'Manay Society · Test preview, role dan progres tidak berubah' : 'Manay Society',
+      });
 
-    await channel.send({
-      content: `<@${userId}>`,
+    let cardBuffer = null;
+    try {
+      cardBuffer = await renderVoiceMilestoneCard({
+        member,
+        milestone,
+        next,
+        totalMs,
+        roleColor: role?.color,
+        isTest,
+      });
+      embed.setImage('attachment://voice-milestone.png');
+    } catch (error) {
+      logger.warn(`Failed to render voice milestone card for ${userId}:`, error);
+    }
+
+    const payload = {
+      content: isTest ? '🧪 Ini preview pengumuman; role dan progres tidak diubah.' : `<@${userId}>`,
       embeds: [embed],
-      allowedMentions: { users: [userId] },
-    });
+      allowedMentions: { users: isTest ? [] : [userId] },
+    };
+    if (cardBuffer) {
+      payload.files = [new AttachmentBuilder(cardBuffer, { name: 'voice-milestone.png' })];
+    }
+    await channel.send(payload);
+    return { ok: true, channelId: channel.id, imageGenerated: Boolean(cardBuffer) };
   } catch (error) {
     logger.warn(`Failed to announce voice milestone for ${userId} in guild ${guild.id}:`, error);
+    return { ok: false, reason: 'send_failed' };
   }
+}
+
+export async function sendVoiceMilestoneTestAnnouncement(
+  client,
+  guild,
+  userId,
+  hours = null,
+  fallbackMember = null,
+) {
+  const config = await getVoiceMilestoneConfig(client, guild.id);
+  const milestone = hours == null
+    ? config.milestones[0]
+    : config.milestones.find((entry) => entry.hours === hours);
+
+  if (!milestone) return { ok: false, reason: 'milestone_not_found' };
+
+  return postMilestoneAnnouncement(
+    client,
+    guild,
+    userId,
+    hoursToMs(milestone.hours),
+    milestone,
+    config,
+    { isTest: true, fallbackMember },
+  );
 }
 
 async function commitSession(client, guildId, userId, { resume = false } = {}) {
@@ -303,7 +366,7 @@ async function commitSession(client, guildId, userId, { resume = false } = {}) {
   if (guild && roles.granted) {
     const milestone = config.milestones.find((entry) => entry.roleId === roles.granted);
     if (milestone) {
-      await announceMilestone(client, guild, userId, data.totalMs, milestone, config);
+      await postMilestoneAnnouncement(client, guild, userId, data.totalMs, milestone, config);
     }
   }
 
@@ -413,6 +476,7 @@ export default {
   saveVoiceMilestoneConfig,
   getVoiceMilestoneData,
   getMilestoneProgress,
+  sendVoiceMilestoneTestAnnouncement,
   resetVoiceMilestoneData,
   trackVoiceJoin,
   trackVoiceLeave,

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.1",
+    "@napi-rs/canvas": "^1.1.1",
     "axios": "^1.15.2",
     "discord.js": "^14.26.4",
     "dotenv": "^17.2.3",

@@ -1,0 +1,225 @@
+import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+
+const CARD_WIDTH = 1200;
+const CARD_HEIGHT = 420;
+const HOUR_MS = 60 * 60 * 1000;
+const BACKGROUND_PATH = fileURLToPath(new URL('../assets/voice-milestone-background.jpg', import.meta.url));
+
+let backgroundPromise;
+
+function roundedRect(context, x, y, width, height, radius) {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.lineTo(x + width - radius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + radius);
+  context.lineTo(x + width, y + height - radius);
+  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  context.lineTo(x + radius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - radius);
+  context.lineTo(x, y + radius);
+  context.quadraticCurveTo(x, y, x + radius, y);
+  context.closePath();
+}
+
+function fitText(context, text, x, y, maxWidth, fontSize, minFontSize = 20) {
+  let size = fontSize;
+  context.font = `bold ${size}px sans-serif`;
+
+  while (context.measureText(text).width > maxWidth && size > minFontSize) {
+    size -= 2;
+    context.font = `bold ${size}px sans-serif`;
+  }
+
+  context.fillText(text, x, y);
+}
+
+function toHexColor(color) {
+  if (typeof color === 'string' && /^#[\da-f]{6}$/i.test(color)) return color;
+  if (Number.isFinite(Number(color)) && Number(color) > 0) {
+    return `#${Number(color).toString(16).padStart(6, '0').slice(-6)}`;
+  }
+  return '#D6B15E';
+}
+
+function drawShield(context, x, y, size, color) {
+  const points = [
+    [x + size * 0.12, y],
+    [x + size * 0.88, y],
+    [x + size * 0.84, y + size * 0.55],
+    [x + size * 0.5, y + size],
+    [x + size * 0.16, y + size * 0.55],
+  ];
+
+  context.beginPath();
+  context.moveTo(...points[0]);
+  for (const point of points.slice(1)) context.lineTo(...point);
+  context.closePath();
+  context.fillStyle = color;
+  context.fill();
+  context.lineWidth = 9;
+  context.strokeStyle = 'rgba(12, 17, 19, 0.9)';
+  context.stroke();
+
+  context.beginPath();
+  context.moveTo(x + size * 0.25, y + size * 0.13);
+  context.lineTo(x + size * 0.75, y + size * 0.13);
+  context.lineTo(x + size * 0.72, y + size * 0.52);
+  context.lineTo(x + size * 0.5, y + size * 0.81);
+  context.lineTo(x + size * 0.28, y + size * 0.52);
+  context.closePath();
+  context.lineWidth = 3;
+  context.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+  context.stroke();
+}
+
+async function getBackground() {
+  backgroundPromise ??= readFile(BACKGROUND_PATH).then(loadImage);
+  return backgroundPromise;
+}
+
+async function getAvatar(member) {
+  const avatarUrl = member?.user?.displayAvatarURL?.({ extension: 'png', size: 256 });
+  if (!avatarUrl) return null;
+
+  try {
+    const response = await fetch(avatarUrl);
+    if (!response.ok) return null;
+    return await loadImage(Buffer.from(await response.arrayBuffer()));
+  } catch {
+    return null;
+  }
+}
+
+function formatHours(ms) {
+  const hours = Math.floor(Math.max(0, ms) / HOUR_MS);
+  const minutes = Math.floor((Math.max(0, ms) % HOUR_MS) / 60000);
+  if (hours && minutes) return `${hours}h ${minutes}m`;
+  return hours ? `${hours}h` : `${minutes}m`;
+}
+
+export async function renderVoiceMilestoneCard({
+  member,
+  milestone,
+  next,
+  totalMs,
+  roleColor,
+  isTest = false,
+}) {
+  const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
+  const context = canvas.getContext('2d');
+  const background = await getBackground();
+  const scale = Math.max(CARD_WIDTH / background.width, CARD_HEIGHT / background.height);
+  const backgroundWidth = background.width * scale;
+  const backgroundHeight = background.height * scale;
+  context.drawImage(
+    background,
+    (CARD_WIDTH - backgroundWidth) / 2,
+    (CARD_HEIGHT - backgroundHeight) / 2,
+    backgroundWidth,
+    backgroundHeight,
+  );
+
+  context.fillStyle = 'rgba(9, 14, 17, 0.62)';
+  context.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+  roundedRect(context, 24, 22, CARD_WIDTH - 48, CARD_HEIGHT - 44, 28);
+  context.fillStyle = 'rgba(12, 18, 20, 0.5)';
+  context.fill();
+  context.lineWidth = 2;
+  context.strokeStyle = `${toHexColor(roleColor)}B8`;
+  context.stroke();
+
+  const accent = toHexColor(roleColor);
+  const displayName = member?.displayName
+    || member?.user?.globalName
+    || member?.user?.username
+    || 'Manay Member';
+  const avatar = await getAvatar(member);
+
+  context.textBaseline = 'alphabetic';
+  context.fillStyle = accent;
+  context.font = 'bold 18px sans-serif';
+  context.letterSpacing = '3px';
+  context.fillText(isTest ? 'MANAY SOCIETY  /  TEST PREVIEW' : 'MANAY SOCIETY  /  VOICE MILESTONE', 310, 74);
+  context.letterSpacing = '0px';
+
+  context.fillStyle = '#E7EAEB';
+  fitText(context, displayName, 310, 123, 570, 28, 20);
+
+  context.fillStyle = '#AAB3B6';
+  context.font = 'bold 14px sans-serif';
+  context.letterSpacing = '2px';
+  context.fillText(isTest ? 'PREVIEW TIER' : 'NEW TIER', 310, 160);
+  context.letterSpacing = '0px';
+
+  context.fillStyle = accent;
+  fitText(context, milestone.label.toUpperCase(), 310, 208, 650, 48, 28);
+
+  const avatarX = 178;
+  const avatarY = 220;
+  const avatarRadius = 72;
+  context.beginPath();
+  context.arc(avatarX, avatarY, avatarRadius + 8, 0, Math.PI * 2);
+  context.fillStyle = 'rgba(8, 12, 14, 0.92)';
+  context.fill();
+  context.lineWidth = 4;
+  context.strokeStyle = accent;
+  context.stroke();
+
+  context.save();
+  context.beginPath();
+  context.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
+  context.clip();
+  if (avatar) {
+    context.drawImage(avatar, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
+  } else {
+    context.fillStyle = '#33413D';
+    context.fillRect(avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
+    context.fillStyle = '#F5F5F5';
+    context.font = 'bold 52px sans-serif';
+    context.textAlign = 'center';
+    context.fillText(displayName.slice(0, 1).toUpperCase(), avatarX, avatarY + 18);
+    context.textAlign = 'start';
+  }
+  context.restore();
+
+  drawShield(context, 980, 92, 150, accent);
+
+  context.fillStyle = '#AAB3B6';
+  context.font = 'bold 13px sans-serif';
+  context.letterSpacing = '2px';
+  context.fillText('TOTAL VOICE', 310, 273);
+  context.fillText(next ? `NEXT · ${next.hours} HOURS` : 'NEXT MILESTONE', 660, 273);
+  context.letterSpacing = '0px';
+
+  context.fillStyle = '#F5F6F6';
+  context.font = 'bold 26px sans-serif';
+  context.fillText(formatHours(totalMs), 310, 309);
+  fitText(context, next ? next.label.toUpperCase() : 'HALL OF FAME', 660, 309, 420, 23, 18);
+
+  const currentHours = milestone.hours * HOUR_MS;
+  const nextHours = next ? next.hours * HOUR_MS : currentHours;
+  const progress = next
+    ? Math.max(0, Math.min(1, (totalMs - currentHours) / (nextHours - currentHours)))
+    : 1;
+  const progressX = 310;
+  const progressY = 344;
+  const progressWidth = 765;
+  roundedRect(context, progressX, progressY, progressWidth, 12, 6);
+  context.fillStyle = 'rgba(229, 236, 235, 0.25)';
+  context.fill();
+  if (progress > 0) {
+    roundedRect(context, progressX, progressY, Math.max(12, progressWidth * progress), 12, 6);
+    context.fillStyle = accent;
+    context.fill();
+  }
+
+  context.fillStyle = '#D8DEDF';
+  context.font = 'bold 14px sans-serif';
+  context.textAlign = 'right';
+  context.fillText(`${Math.round(progress * 100)}%`, 1076, 337);
+  context.textAlign = 'start';
+
+  return canvas.toBuffer('image/png');
+}
