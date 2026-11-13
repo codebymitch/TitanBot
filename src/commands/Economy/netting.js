@@ -84,7 +84,7 @@ export default {
                 const { fish, baseEarned } = rollFishingCatch();
                 const earned = Math.floor(baseEarned * fishingMultiplier);
                 totalEarned += earned;
-                caughtLines.push(`• ${fish.name} — $${earned.toLocaleString()}`);
+                caughtLines.push(`• ${fish.rarity} - ${fish.name} - $${earned.toLocaleString()}`);
                 collectionGains[fish.name] = (collectionGains[fish.name] || 0) + 1;
 
                 const rarityIndex = RARITY_ORDER.indexOf(fish.rarity);
