@@ -276,6 +276,9 @@ export { MAX_GROUPS, MAX_BOTS_PER_GROUP };
 
 const LIVE_REFRESH_INTERVAL_MS = 30 * 1000; // 30 detik
 
+const EMOJI_AVAILABLE = '<:true:1570728068996276264>';
+const EMOJI_IN_USE = '<:false:1570728088613027860>';
+
 /**
  * Simpan referensi pesan live status untuk guild tertentu.
  */
@@ -358,8 +361,8 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
     const total = availableCount + inUseCount;
 
     const lines = [];
-    lines.push(`🟢 **Tersedia** · ${availableCount}`);
-    lines.push(`🔴 **Sedang digunakan** · ${inUseCount}`);
+    lines.push(`${EMOJI_AVAILABLE} **Tersedia** · ${availableCount}`);
+    lines.push(`${EMOJI_IN_USE} **Sedang digunakan** · ${inUseCount}`);
     lines.push('');
 
     if (groups.length === 0) {
@@ -377,19 +380,15 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
         }
 
         for (const bot of group.bots) {
-            const statusEmoji = bot.inVoice ? '🔴' : '🟢';
+            const statusEmoji = bot.inVoice ? EMOJI_IN_USE : EMOJI_AVAILABLE;
             const statusLabel = bot.inVoice ? 'digunakan' : 'Tersedia';
             lines.push(`${statusEmoji} **${truncateStr(bot.displayName, 40)}** · ${statusLabel}`);
 
             if (bot.inVoice) {
                 const channel = bot.voiceChannelName
-                    ? `🔊 ${truncateStr(bot.voiceChannelName, 40)}`
-                    : '';
-                const track = bot.nowPlaying
-                    ? `🎵 ${truncateStr(bot.nowPlaying, 60)}`
-                    : '';
-                const detail = [channel, track].filter(Boolean).join(' · ');
-                lines.push(`└ ${detail || '—'}`);
+                    ? `🔊 ${truncateStr(bot.voiceChannelName, 50)}`
+                    : '—';
+                lines.push(`└ ${channel}`);
             } else {
                 lines.push('└ Belum terhubung ke voice');
             }

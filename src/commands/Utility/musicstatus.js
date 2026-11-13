@@ -15,6 +15,9 @@ import {
     clearLiveMessage,
 } from '../../services/musicStatusService.js';
 
+const EMOJI_AVAILABLE = '<:true:1570728068996276264>';
+const EMOJI_IN_USE = '<:false:1570728088613027860>';
+
 function hasManageGuildPermission(member) {
     return member?.permissions?.has?.(PermissionFlagsBits.ManageGuild) ?? false;
 }
@@ -29,18 +32,13 @@ function truncate(str, max) {
     return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
-function formatNowPlaying(activity) {
-    if (!activity) return '—';
-    return truncate(activity, 80);
-}
-
 function buildStatusEmbed(snapshot, guildName) {
     const { groups, availableCount, inUseCount } = snapshot;
     const total = availableCount + inUseCount;
 
     const lines = [];
-    lines.push(`🟢 **Tersedia** · ${availableCount}`);
-    lines.push(`🔴 **Sedang digunakan** · ${inUseCount}`);
+    lines.push(`${EMOJI_AVAILABLE} **Tersedia** · ${availableCount}`);
+    lines.push(`${EMOJI_IN_USE} **Sedang digunakan** · ${inUseCount}`);
     lines.push('');
 
     if (groups.length === 0) {
@@ -58,19 +56,15 @@ function buildStatusEmbed(snapshot, guildName) {
         }
 
         for (const bot of group.bots) {
-            const statusEmoji = bot.inVoice ? '🔴' : '🟢';
+            const statusEmoji = bot.inVoice ? EMOJI_IN_USE : EMOJI_AVAILABLE;
             const statusLabel = bot.inVoice ? 'digunakan' : 'Tersedia';
             lines.push(`${statusEmoji} **${truncate(bot.displayName, 40)}** · ${statusLabel}`);
 
             if (bot.inVoice) {
                 const channel = bot.voiceChannelName
-                    ? `🔊 ${truncate(bot.voiceChannelName, 40)}`
-                    : '';
-                const track = bot.nowPlaying
-                    ? `🎵 ${truncate(bot.nowPlaying, 60)}`
-                    : '';
-                const detail = [channel, track].filter(Boolean).join(' · ');
-                lines.push(`└ ${detail || '—'}`);
+                    ? `🔊 ${truncate(bot.voiceChannelName, 50)}`
+                    : '—';
+                lines.push(`└ ${channel}`);
             } else {
                 lines.push('└ Belum terhubung ke voice');
             }
