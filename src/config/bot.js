@@ -547,6 +547,7 @@ const COMMAND_CATEGORY_FEATURE_MAP = {
   tools: "tools",
   utility: "utility",
   verification: "verification",
+  voicemilestone: "voice",
   welcome: "welcome",
 };
 

@@ -22,6 +22,7 @@ export const CATEGORY_ICONS = {
   Tools: '🛠️',
   Utility: '🔧',
   Verification: '✅',
+  VoiceMilestone: '🔊',
   Welcome: '👋',
 };
 
