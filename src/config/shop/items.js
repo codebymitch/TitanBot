@@ -201,7 +201,7 @@ roleId: null,
     {
         id: 'fishing_net_1',
         name: '🕸️ Fishing Net I',
-        price: 400000,
+        price: 550000,
         description: 'Cast a wide net to haul in 5 fish at once with `/netting`.',
         type: 'tool',
         durability: null,
