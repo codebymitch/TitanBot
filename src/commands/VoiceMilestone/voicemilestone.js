@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { getColor } from '../../config/bot.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -69,7 +69,11 @@ async function handleSetup(interaction, client) {
         roleId: existingByHours.get(preset.hours)?.roleId ?? null,
     }));
 
-    const saved = await saveVoiceMilestoneConfig(client, guild.id, { enabled: true, milestones });
+    const saved = await saveVoiceMilestoneConfig(client, guild.id, {
+        enabled: true,
+        announcementChannelId: config.announcementChannelId,
+        milestones,
+    });
     const missing = saved.milestones.filter((m) => !m.roleId).length;
 
     const embed = baseEmbed('Voice Milestone Setup', saved)
@@ -78,9 +82,17 @@ async function handleSetup(interaction, client) {
             'Tracking is now enabled.\n\n' +
             (missing > 0
                 ? `Assign each tier's role with \`/voicemilestone setrole\` — ${missing} tier(s) still need a role.`
-                : 'Every tier has a role assigned.'),
+                : 'Every tier has a role assigned.') +
+            '\nSet the public announcement channel with `/voicemilestone setchannel`.',
         )
-        .addFields({ name: 'Ladder', value: milestoneListLines(guild, saved.milestones) });
+        .addFields(
+            { name: 'Ladder', value: milestoneListLines(guild, saved.milestones) },
+            {
+                name: 'Announcement Channel',
+                value: saved.announcementChannelId ? `<#${saved.announcementChannelId}>` : '`Not set`',
+                inline: true,
+            },
+        );
 
     await replyEmbed(interaction, embed);
 }
@@ -124,6 +136,24 @@ async function handleSetRole(interaction, client) {
     await replyEmbed(interaction, embed);
 }
 
+async function handleSetChannel(interaction, client) {
+    const guild = interaction.guild;
+    const channel = interaction.options.getChannel('channel');
+    const config = await getVoiceMilestoneConfig(client, guild.id);
+    const saved = await saveVoiceMilestoneConfig(client, guild.id, {
+        ...config,
+        announcementChannelId: channel?.id ?? null,
+    });
+
+    const embed = baseEmbed('Voice Milestone Announcements', saved)
+        .setDescription(
+            channel
+                ? `Milestone announcements will be posted in ${channel}.`
+                : 'Milestone announcements are disabled. Voice tracking and role rewards remain enabled.',
+        );
+    await replyEmbed(interaction, embed);
+}
+
 async function handleRemove(interaction, client) {
     const guild = interaction.guild;
     const hours = interaction.options.getInteger('hours', true);
@@ -157,7 +187,14 @@ async function handleList(interaction, client) {
             `**Status:** ${config.enabled ? 'Enabled' : 'Disabled'}\n` +
             'Members keep the highest tier they have reached; lower tier roles are removed automatically.',
         )
-        .addFields({ name: `Ladder (${config.milestones.length})`, value: milestoneListLines(guild, config.milestones) });
+        .addFields(
+            { name: `Ladder (${config.milestones.length})`, value: milestoneListLines(guild, config.milestones) },
+            {
+                name: 'Announcement Channel',
+                value: config.announcementChannelId ? `<#${config.announcementChannelId}>` : '`Not set`',
+                inline: true,
+            },
+        );
 
     await replyEmbed(interaction, embed);
 }
@@ -272,6 +309,16 @@ export default {
                         .setMaxLength(100)))
         .addSubcommand((subcommand) =>
             subcommand
+                .setName('setchannel')
+                .setDescription('Set or disable the public milestone announcement channel')
+                .addChannelOption((option) =>
+                    option
+                        .setName('channel')
+                        .setDescription('Announcement text channel; leave empty to disable announcements')
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setRequired(false)))
+        .addSubcommand((subcommand) =>
+            subcommand
                 .setName('remove')
                 .setDescription('Remove a voice milestone tier')
                 .addIntegerOption((option) =>
@@ -342,6 +389,9 @@ export default {
                     break;
                 case 'setrole':
                     await handleSetRole(interaction, client);
+                    break;
+                case 'setchannel':
+                    await handleSetChannel(interaction, client);
                     break;
                 case 'remove':
                     await handleRemove(interaction, client);

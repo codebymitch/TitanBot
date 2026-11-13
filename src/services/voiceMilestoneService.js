@@ -6,6 +6,7 @@
 // milestone role is removed, so a member always holds at most one voice tier.
 
 import { logger } from '../utils/logger.js';
+import { EmbedBuilder } from 'discord.js';
 import {
   getVoiceMilestoneConfigKey,
   getVoiceMilestoneUserKey,
@@ -86,7 +87,7 @@ export function normalizeMilestones(list) {
 
 export async function getVoiceMilestoneConfig(client, guildId) {
   if (!client?.db) {
-    return { enabled: false, milestones: [] };
+    return { enabled: false, announcementChannelId: null, milestones: [] };
   }
 
   try {
@@ -94,17 +95,19 @@ export async function getVoiceMilestoneConfig(client, guildId) {
     const base = raw && typeof raw === 'object' ? raw : {};
     return {
       enabled: base.enabled === true,
+      announcementChannelId: base.announcementChannelId ? String(base.announcementChannelId) : null,
       milestones: normalizeMilestones(base.milestones),
     };
   } catch (error) {
     logger.error(`Error reading voice milestone config for guild ${guildId}:`, error);
-    return { enabled: false, milestones: [] };
+    return { enabled: false, announcementChannelId: null, milestones: [] };
   }
 }
 
 export async function saveVoiceMilestoneConfig(client, guildId, config) {
   const normalized = {
     enabled: config?.enabled === true,
+    announcementChannelId: config?.announcementChannelId ? String(config.announcementChannelId) : null,
     milestones: normalizeMilestones(config?.milestones),
   };
 
@@ -221,6 +224,53 @@ async function syncMemberMilestones(client, guild, userId, totalMs, config) {
   return { granted, removed };
 }
 
+function formatAnnouncementDuration(ms) {
+  const totalMinutes = Math.floor(Math.max(0, Number(ms) || 0) / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours && minutes) return `${hours} jam ${minutes} menit`;
+  if (hours) return `${hours} jam`;
+  return `${minutes} menit`;
+}
+
+async function announceMilestone(client, guild, userId, totalMs, milestone, config) {
+  if (!config.announcementChannelId) return;
+
+  try {
+    const channel = guild.channels.cache.get(config.announcementChannelId)
+      || await guild.channels.fetch(config.announcementChannelId).catch(() => null);
+    if (!channel?.isTextBased?.() || typeof channel.send !== 'function') return;
+
+    const role = milestone.roleId ? guild.roles.cache.get(milestone.roleId) : null;
+    const next = config.milestones.find((entry) => entry.hours > milestone.hours);
+    const embed = new EmbedBuilder()
+      .setColor(role?.color || 0xD6B15E)
+      .setTitle('🎙️ Voice Milestone')
+      .setDescription(
+        `Selamat! Kamu mencapai **${role?.name || milestone.label}** setelah ` +
+        `**${formatAnnouncementDuration(totalMs)}** di voice channel.`,
+      )
+      .addFields(
+        { name: 'Total Voice', value: formatAnnouncementDuration(totalMs), inline: true },
+        {
+          name: 'Target Berikutnya',
+          value: next ? `**${next.label}** (${next.hours} jam)` : '🏆 Tier tertinggi tercapai!',
+          inline: true,
+        },
+      )
+      .setFooter({ text: 'Manay Society' });
+
+    await channel.send({
+      content: `<@${userId}>`,
+      embeds: [embed],
+      allowedMentions: { users: [userId] },
+    });
+  } catch (error) {
+    logger.warn(`Failed to announce voice milestone for ${userId} in guild ${guild.id}:`, error);
+  }
+}
+
 async function commitSession(client, guildId, userId, { resume = false } = {}) {
   const key = sessionKey(guildId, userId);
   const startedAt = activeSessions.get(key);
@@ -249,6 +299,13 @@ async function commitSession(client, guildId, userId, { resume = false } = {}) {
   const roles = guild
     ? await syncMemberMilestones(client, guild, userId, data.totalMs, config)
     : { granted: null, removed: [] };
+
+  if (guild && roles.granted) {
+    const milestone = config.milestones.find((entry) => entry.roleId === roles.granted);
+    if (milestone) {
+      await announceMilestone(client, guild, userId, data.totalMs, milestone, config);
+    }
+  }
 
   return { guildId, userId, totalMs: data.totalMs, deltaMs, ...roles };
 }
