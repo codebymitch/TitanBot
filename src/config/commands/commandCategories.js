@@ -16,6 +16,7 @@ export const CATEGORY_ICONS = {
   Reaction_roles: '🎭',
   Search: '🔍',
   ServerStats: '📈',
+  Streak: '🔥',
   Sticky: '📌',
   Ticket: '🎫',
   Tools: '🛠️',

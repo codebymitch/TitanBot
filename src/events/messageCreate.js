@@ -17,6 +17,7 @@ import {
 } from '../services/countingGameService.js';
 import { handleStickyMessage } from '../services/stickyService.js';
 import { handleAutoReaction } from '../services/autoReactionService.js';
+import StreakService from '../services/streakService.js';
 
 export default {
   name: Events.MessageCreate,
@@ -34,6 +35,8 @@ export default {
       await handleStickyMessage(message, client);
 
       await handleAutoReaction(message, client);
+
+      await handleStreakInteraction(message, client);
 
       await handlePrefixCommand(message, client);
     } catch (error) {
@@ -171,5 +174,44 @@ async function handleCountingGame(message, client) {
   } catch (error) {
     logger.error('Error handling counting game:', error);
     return false;
+  }
+}
+
+async function handleStreakInteraction(message, client) {
+  try {
+    const mentionedUsers = message.mentions?.users;
+    const repliedUser = message.mentions?.repliedUser;
+
+    if ((!mentionedUsers || mentionedUsers.size === 0) && !repliedUser) {
+      return;
+    }
+
+    const targetIds = new Set();
+
+    if (repliedUser?.id) {
+      targetIds.add(repliedUser.id);
+    }
+    if (mentionedUsers) {
+      for (const user of mentionedUsers.values()) {
+        targetIds.add(user.id);
+      }
+    }
+
+    targetIds.delete(message.author.id);
+
+    for (const targetId of targetIds) {
+      const target = mentionedUsers?.get(targetId)
+        || await client.users.fetch(targetId).catch(() => null);
+
+      if (!target || target.bot) {
+        continue;
+      }
+
+      await StreakService.recordInteraction(client, message.guild.id, message.author.id, targetId, {
+        timestamp: message.createdTimestamp,
+      });
+    }
+  } catch (error) {
+    logger.error('Error handling streak interaction:', error);
   }
 }
