@@ -192,7 +192,7 @@ export const removeBot = wrapServiceBoundary(async function removeBot(client, gu
  * Returns a list of groups with enriched bot data (display name, in-voice status, current activity).
  */
 export async function buildStatusSnapshot(guild, config) {
-    const { groups } = extractConfig(config);
+    const { groups } = config;
 
     const result = [];
     let availableCount = 0;

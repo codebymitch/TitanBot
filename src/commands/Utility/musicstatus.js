@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { TitanBotError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -184,14 +184,16 @@ export default {
             // Command yang membutuhkan manage guild — defer ephemeral
             await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
 
-            if (subcommand === 'add') {
+            if (isGroupCmd) {
+                if (subcommand === 'add') {
+                    await handleGroupAdd(interaction);
+                } else if (subcommand === 'remove') {
+                    await handleGroupRemove(interaction);
+                }
+            } else if (subcommand === 'add') {
                 await handleAdd(interaction);
             } else if (subcommand === 'remove') {
                 await handleRemove(interaction);
-            } else if (isGroupCmd && subcommand === 'add') {
-                await handleGroupAdd(interaction);
-            } else if (isGroupCmd && subcommand === 'remove') {
-                await handleGroupRemove(interaction);
             }
         } catch (error) {
             try {
