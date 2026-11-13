@@ -9,8 +9,9 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 const SHOP_ITEMS = shopItems;
 
 function getShopItem(itemId) {
-    return SHOP_ITEMS.find(item => item.id === itemId)
-        || (itemId === 'fishibg_rod_5'
+    const normalized = String(itemId).toLowerCase();
+    return SHOP_ITEMS.find(item => item.id.toLowerCase() === normalized)
+        || (normalized === 'fishibg_rod_5'
             ? SHOP_ITEMS.find(item => item.id === 'fishing_rod_5')
             : null);
 }

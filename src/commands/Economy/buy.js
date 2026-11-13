@@ -47,7 +47,7 @@ export default {
             const itemId = interaction.options.getString("item_id").toLowerCase();
             const quantity = interaction.options.getInteger("quantity") || 1;
 
-            const item = SHOP_ITEMS.find(i => i.id === itemId);
+            const item = SHOP_ITEMS.find(i => i.id.toLowerCase() === itemId);
 
             if (!item) {
                 throw createError(

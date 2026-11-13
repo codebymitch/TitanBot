@@ -5,6 +5,7 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { botConfig } from '../../config/bot.js';
+import { getItemById } from '../../config/shop/items.js';
 
 const WORK_COOLDOWN = botConfig.economy?.cooldowns?.work ?? 30 * 60 * 1000;
 const MIN_WORK_AMOUNT = botConfig.economy?.workMin ?? 10;
@@ -79,6 +80,25 @@ export default {
             if (hasLaptop > 0) {
                 earned = Math.floor(earned * LAPTOP_MULTIPLIER);
                 multiplierMessage = "\n💻 **Laptop Bonus:** +50% earnings!";
+            }
+
+            // Potion yang sedang aktif bisa memberi bonus income (mis. Potion Admin Mann).
+            const potionExpiries = userData.luckPotionExpiresAt || {};
+            let incomeMultiplier = 1;
+            let incomeBuffMessage = "";
+            for (const [potionId, expiry] of Object.entries(potionExpiries)) {
+                if (Number(expiry) > now) {
+                    const potionItem = getItemById(potionId);
+                    const potionIncome = Number(potionItem?.effect?.incomeMultiplier) || 1;
+                    if (potionIncome > incomeMultiplier) {
+                        incomeMultiplier = potionIncome;
+                        incomeBuffMessage = `\n👑 **${potionItem.name} Bonus:** +${Math.round((potionIncome - 1) * 100)}% income!`;
+                    }
+                }
+            }
+            if (incomeMultiplier > 1) {
+                earned = Math.floor(earned * incomeMultiplier);
+                multiplierMessage += incomeBuffMessage;
             }
 
             userData.wallet = (userData.wallet || 0) + earned;

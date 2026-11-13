@@ -214,6 +214,26 @@ roleId: null,
             duration: 300000
         }
     },
+
+    // ===== Potion Admin Mann (khusus role, dipakai dengan /use) =====
+    {
+        id: 'potion_admin_ByMann',
+        name: '👑 Potion Admin Mann',
+        price: 1,
+        description: 'Exclusive admin potion. Activate with `/use` for 5 minutes: 1000% luck, 1000% income, and a 50% chance of Kitsune.',
+        type: 'consumable',
+        requiredRoleId: '1569773580185764026',
+        effect: {
+            type: 'fishing_luck',
+            admin: true,
+            multiplier: 10,
+            incomeMultiplier: 10,
+            chances: {
+                celestial: 0.5
+            },
+            duration: 300000
+        }
+    },
     {
         id: 'pickaxe',
         name: '⛏️ Pickaxe',
@@ -278,7 +298,8 @@ roleId: null,
 ];
 
 export function getItemById(itemId) {
-    return shopItems.find(item => item.id === itemId);
+    const normalized = String(itemId).toLowerCase();
+    return shopItems.find(item => item.id.toLowerCase() === normalized);
 }
 
 export function getItemsByType(type) {

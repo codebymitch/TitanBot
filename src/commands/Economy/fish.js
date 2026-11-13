@@ -10,7 +10,6 @@ const FISH_COOLDOWN = 0;
 const BASE_MIN_REWARD = 300;
 const BASE_MAX_REWARD = 900;
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
-const ADMIN_POTION_ID = 'admin_potion';
 const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
 
 // Helper: find the highest-tier fishing rod the user owns
@@ -195,10 +194,19 @@ export default {
 
             let rand = Math.random();
 
-            // Potion admin punya prioritas dan efek khusus; kalau tidak ada, pakai potion luck biasa.
-            const adminActive = Number(potionExpiries[ADMIN_POTION_ID]) > now;
-            const activePotion = adminActive ? getItemById(ADMIN_POTION_ID) : bestPotion;
-            const adminChances = activePotion?.effect?.admin ? activePotion.effect.chances : null;
+            // Cari potion admin yang sedang aktif (mis. admin_potion atau potion_admin_ByMann).
+            let activeAdminPotion = null;
+            for (const [potionId, expiry] of Object.entries(potionExpiries)) {
+                if (Number(expiry) > now) {
+                    const potionItem = getItemById(potionId);
+                    if (potionItem?.effect?.admin) {
+                        activeAdminPotion = potionItem;
+                        break;
+                    }
+                }
+            }
+            const activePotion = activeAdminPotion || bestPotion;
+            const adminChances = activeAdminPotion?.effect?.chances || null;
 
             let luckMessage = "";
             if (activePotion) {
