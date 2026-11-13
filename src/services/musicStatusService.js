@@ -387,6 +387,8 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
             } else {
                 lines.push('└ Belum terhubung ke voice');
             }
+
+            lines.push('');
         }
     }
 

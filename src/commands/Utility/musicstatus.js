@@ -68,6 +68,8 @@ function buildStatusEmbed(snapshot, guildName) {
             } else {
                 lines.push('└ Belum terhubung ke voice');
             }
+
+            lines.push('');
         }
     }
 
