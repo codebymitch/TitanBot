@@ -94,6 +94,8 @@ export default {
                 bonusMessages.push(`✨ **Premium Role Bonus: +${Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100)}%**`);
             }
 
+            // Tiap ikan di-roll rarity-nya sendiri secara acak (tergantung luck),
+            // jadi satu netting bisa berisi campuran rarity.
             let totalEarned = 0;
             let bestRarityIndex = -1;
             const caughtLines = [];
