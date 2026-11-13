@@ -194,7 +194,7 @@ export default {
 
             let rand = Math.random();
 
-            // Cari potion admin yang sedang aktif (mis. admin_potion atau potion_admin_ByMann).
+            // Cari potion admin yang sedang aktif (mis. admin_potion).
             let activeAdminPotion = null;
             for (const [potionId, expiry] of Object.entries(potionExpiries)) {
                 if (Number(expiry) > now) {

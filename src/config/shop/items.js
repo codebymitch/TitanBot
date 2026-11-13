@@ -215,25 +215,6 @@ roleId: null,
         }
     },
 
-    // ===== Potion Admin Mann (khusus role, dipakai dengan /use) =====
-    {
-        id: 'admin_potion_ByMann',
-        name: '👑 Admin Potion Mann',
-        price: 1,
-        description: 'Exclusive admin potion. Activate with `/use` for 5 minutes: 1000% luck, 1000% income, and a 50% chance of Kitsune.',
-        type: 'consumable',
-        requiredRoleId: '1569773580185764026',
-        effect: {
-            type: 'fishing_luck',
-            admin: true,
-            multiplier: 100,
-            incomeMultiplier: 100,
-            chances: {
-                celestial: 1
-            },
-            duration: 300000
-        }
-    },
     {
         id: 'pickaxe',
         name: '⛏️ Pickaxe',
