@@ -15,8 +15,8 @@ import {
     clearLiveMessage,
 } from '../../services/musicStatusService.js';
 
-const EMOJI_AVAILABLE = '<:true:1570728068996276264>';
-const EMOJI_IN_USE = '<:false:1570728088613027860>';
+const EMOJI_AVAILABLE = '🟢';
+const EMOJI_IN_USE = '🔴';
 
 function hasManageGuildPermission(member) {
     return member?.permissions?.has?.(PermissionFlagsBits.ManageGuild) ?? false;

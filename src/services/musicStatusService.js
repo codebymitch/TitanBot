@@ -276,8 +276,8 @@ export { MAX_GROUPS, MAX_BOTS_PER_GROUP };
 
 const LIVE_REFRESH_INTERVAL_MS = 30 * 1000; // 30 detik
 
-const EMOJI_AVAILABLE = '<:true:1570728068996276264>';
-const EMOJI_IN_USE = '<:false:1570728088613027860>';
+const EMOJI_AVAILABLE = '🟢';
+const EMOJI_IN_USE = '🔴';
 
 /**
  * Simpan referensi pesan live status untuk guild tertentu.
