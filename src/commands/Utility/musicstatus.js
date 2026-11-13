@@ -7,6 +7,7 @@ import {
     getMusicStatusConfig,
     createGroup,
     deleteGroup,
+    renameGroup,
     addBot,
     removeBot,
     buildStatusSnapshot,
@@ -15,8 +16,8 @@ import {
     clearLiveMessage,
 } from '../../services/musicStatusService.js';
 
-const EMOJI_AVAILABLE = '🟢';
-const EMOJI_IN_USE = '🔴';
+const EMOJI_AVAILABLE = '<a:loadinggreen:1570737155142189096>';
+const EMOJI_IN_USE = '<a:loadingred:1570737219738804295>';
 
 function hasManageGuildPermission(member) {
     return member?.permissions?.has?.(PermissionFlagsBits.ManageGuild) ?? false;
@@ -157,6 +158,23 @@ export default {
                 )
                 .addSubcommand(sub =>
                     sub
+                        .setName('edit')
+                        .setDescription('Ubah nama grup bot musik.')
+                        .addStringOption(opt =>
+                            opt
+                                .setName('name')
+                                .setDescription('Nama grup saat ini.')
+                                .setRequired(true),
+                        )
+                        .addStringOption(opt =>
+                            opt
+                                .setName('newname')
+                                .setDescription('Nama baru untuk grup.')
+                                .setRequired(true),
+                        ),
+                )
+                .addSubcommand(sub =>
+                    sub
                         .setName('list')
                         .setDescription('Tampilkan daftar grup dan bot di dalamnya.'),
                 ),
@@ -223,6 +241,8 @@ export default {
                     await handleGroupAdd(interaction);
                 } else if (subcommand === 'remove') {
                     await handleGroupRemove(interaction);
+                } else if (subcommand === 'edit') {
+                    await handleGroupEdit(interaction);
                 }
             } else if (subcommand === 'add') {
                 await handleAdd(interaction);
@@ -358,6 +378,33 @@ async function handleGroupRemove(interaction) {
         embeds: [successEmbed(
             'Grup Dihapus',
             `Grup **${group.name}** dan semua bot di dalamnya telah dihapus.`,
+        )],
+    });
+}
+
+async function handleGroupEdit(interaction) {
+    const client = interaction.client;
+    const guildId = interaction.guildId;
+    const name = interaction.options.getString('name', true);
+    const newName = interaction.options.getString('newname', true);
+
+    const config = await getMusicStatusConfig(client, guildId);
+    const group = findGroupByName(config.groups, name);
+
+    if (!group) {
+        throw new TitanBotError(
+            'Group not found',
+            ErrorTypes.VALIDATION,
+            `Grup **${name}** tidak ditemukan.`,
+        );
+    }
+
+    const updated = await renameGroup(client, guildId, group.id, newName);
+
+    await InteractionHelper.safeEditReply(interaction, {
+        embeds: [successEmbed(
+            'Grup Diperbarui',
+            `Grup **${name}** berhasil diubah menjadi **${updated.name}**.`,
         )],
     });
 }
