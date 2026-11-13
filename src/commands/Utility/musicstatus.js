@@ -62,7 +62,7 @@ function buildStatusEmbed(snapshot, guildName) {
 
             if (bot.inVoice) {
                 const channel = bot.voiceChannelId
-                    ? `🔊 <#${bot.voiceChannelId}>`
+                    ? `<#${bot.voiceChannelId}>`
                     : '—';
                 lines.push(`└ ${channel}`);
             } else {
