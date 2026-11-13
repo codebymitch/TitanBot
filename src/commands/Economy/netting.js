@@ -99,6 +99,7 @@ export default {
             // efek potion), jadi satu netting bisa berisi campuran rarity.
             let totalEarned = 0;
             let bestRarityIndex = -1;
+            let bestCatch = null;
             const caughtLines = [];
             const collectionGains = {};
 
@@ -106,10 +107,16 @@ export default {
                 const { fish, baseEarned } = pickFish(rollRarityWithPotion(activePotion));
                 const earned = Math.floor(baseEarned * fishingMultiplier);
                 totalEarned += earned;
-                caughtLines.push(`• ${fish.rarity} - ${fish.name} - $${earned.toLocaleString()}`);
+                const catchLine = `${fish.rarity} - ${fish.name} - $${earned.toLocaleString()}`;
+                caughtLines.push(`• ${catchLine}`);
                 collectionGains[fish.name] = (collectionGains[fish.name] || 0) + 1;
 
                 const rarityIndex = RARITY_ORDER.indexOf(fish.rarity);
+                if (!bestCatch || rarityIndex > bestCatch.rarityIndex ||
+                    (rarityIndex === bestCatch.rarityIndex && earned > bestCatch.earned)) {
+                    bestCatch = { line: catchLine, earned, rarityIndex };
+                }
+
                 if (rarityIndex > bestRarityIndex) bestRarityIndex = rarityIndex;
             }
 
@@ -126,11 +133,14 @@ export default {
             const multiplierMessage = bonusMessages.length
                 ? `\n\n${bonusMessages.join('\n')}`
                 : "";
+            const bestCatchMessage = bestCatch
+                ? `\n\n• highest net catch :\n  ${bestCatch.line}`
+                : "";
             const bestRarity = bestRarityIndex >= 0 ? RARITY_ORDER[bestRarityIndex] : null;
 
             const embed = createEmbed({
                 title: '🕸️ Netting Success!',
-                description: `You cast your **${bestNet.name}** and hauled in **${catchCount} fish**!\n\n${caughtLines.join('\n')}${multiplierMessage}${luckMessage}`,
+                description: `You cast your **${bestNet.name}** and hauled in **${catchCount} fish**!\n\n${caughtLines.join('\n')}${bestCatchMessage}${multiplierMessage}${luckMessage}`,
                 color: bestRarity ? RARITY_COLORS[bestRarity] : 'primary'
             })
                 .addFields(
