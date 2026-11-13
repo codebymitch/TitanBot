@@ -134,7 +134,7 @@ export default {
                 ? `\n\n${bonusMessages.join('\n')}`
                 : "";
             const bestCatchMessage = bestCatch
-                ? `\n\n• highest net catch :\n  ${bestCatch.line}`
+                ? `\n\n**• highest net catch :**\n  **${bestCatch.line}**`
                 : "";
             const bestRarity = bestRarityIndex >= 0 ? RARITY_ORDER[bestRarityIndex] : null;
 
