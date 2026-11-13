@@ -26,21 +26,6 @@ function getBestFishingNet(inventory) {
     return null;
 }
 
-// Highest-tier rod the user owns, used for the fishing earnings bonus.
-function getBestFishingRod(inventory) {
-    for (let tier = 5; tier >= 1; tier--) {
-        const id = `fishing_rod_${tier}`;
-        const legacyTierFiveQuantity = tier === 5
-            ? Number(inventory.fishibg_rod_5 || 0)
-            : 0;
-        if (Number(inventory[id] || 0) > 0 || legacyTierFiveQuantity > 0) {
-            const item = getItemById(id);
-            if (item) return item;
-        }
-    }
-    return null;
-}
-
 export default {
     data: new SlashCommandBuilder()
         .setName('netting')
@@ -68,8 +53,7 @@ export default {
 
             const catchCount = Number(bestNet.effect?.catches) || 5;
 
-            // Same earnings bonuses as /fish (best rod + premium role).
-            const bestRod = getBestFishingRod(inventory);
+            // Netting bonuses: net + premium role only (Fishing Rod does NOT apply here).
             const guildConfig = await getGuildConfig(client, guildId);
             const premiumRoleId = guildConfig.premiumRoleId;
             const hasPremiumRole = Boolean(
@@ -83,11 +67,6 @@ export default {
             if (netMultiplier > 1) {
                 fishingMultiplier *= netMultiplier;
                 bonusMessages.push(`🕸️ **${bestNet.name} Bonus: +${Math.round((netMultiplier - 1) * 100)}%**`);
-            }
-            if (bestRod) {
-                const rodMultiplier = bestRod.effect.multiplier || 1;
-                fishingMultiplier *= rodMultiplier;
-                bonusMessages.push(`🎣 **${bestRod.name} Bonus: +${Math.round((rodMultiplier - 1) * 100)}%**`);
             }
             if (hasPremiumRole) {
                 fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
