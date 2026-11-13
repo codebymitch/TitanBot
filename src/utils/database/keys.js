@@ -104,6 +104,18 @@ export function getServerCountersKey(guildId) {
     return `guild:${guildId}:counters`;
 }
 
+export function getVoiceMilestoneConfigKey(guildId) {
+    return `guild:${guildId}:voicemilestone:config`;
+}
+
+export function getVoiceMilestoneUserKey(guildId, userId) {
+    return `guild:${guildId}:voicemilestone:users:${userId}`;
+}
+
+export function getVoiceMilestoneUsersPrefix(guildId) {
+    return `guild:${guildId}:voicemilestone:users:`;
+}
+
 export function getGiveawayEntryKey(userId, giveawayId) {
     return `giveaway:${userId}:${giveawayId}`;
 }
