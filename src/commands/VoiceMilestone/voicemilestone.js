@@ -13,6 +13,7 @@ import {
     resetVoiceMilestoneData,
     applyMilestonesForMember,
     recheckAllMembers,
+    sendVoiceMilestoneTestAnnouncement,
 } from '../../services/voiceMilestoneService.js';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -83,7 +84,8 @@ async function handleSetup(interaction, client) {
             (missing > 0
                 ? `Assign each tier's role with \`/voicemilestone setrole\` — ${missing} tier(s) still need a role.`
                 : 'Every tier has a role assigned.') +
-            '\nSet the public announcement channel with `/voicemilestone setchannel`.',
+            '\nSet the public announcement channel with `/voicemilestone setchannel`.' +
+            '\nPreview an announcement with `/voicemilestone test`.',
         )
         .addFields(
             { name: 'Ladder', value: milestoneListLines(guild, saved.milestones) },
@@ -150,6 +152,37 @@ async function handleSetChannel(interaction, client) {
             channel
                 ? `Milestone announcements will be posted in ${channel}.`
                 : 'Milestone announcements are disabled. Voice tracking and role rewards remain enabled.',
+        );
+    await replyEmbed(interaction, embed);
+}
+
+async function handleTest(interaction, client) {
+    const hours = interaction.options.getInteger('hours');
+    const result = await sendVoiceMilestoneTestAnnouncement(
+        client,
+        interaction.guild,
+        interaction.user.id,
+        hours,
+        interaction.member,
+    );
+
+    if (!result.ok) {
+        const message = result.reason === 'channel_not_set'
+            ? 'Set an announcement channel first with `/voicemilestone setchannel`.'
+            : result.reason === 'milestone_not_found'
+                ? 'That tier is not configured. Run `/voicemilestone setup` first.'
+                : 'Could not send the preview. Check the bot has access and Attach Files permission in the announcement channel.';
+        await replyUserError(interaction, {
+            type: ErrorTypes.CONFIGURATION,
+            message,
+        });
+        return;
+    }
+
+    const embed = baseEmbed('Voice Milestone Test', { enabled: true })
+        .setDescription(
+            `Preview sent to <#${result.channelId}>. No voice time or roles were changed.` +
+            (result.imageGenerated ? '' : '\nThe text preview was sent, but the card image could not be rendered.'),
         );
     await replyEmbed(interaction, embed);
 }
@@ -319,6 +352,23 @@ export default {
                         .setRequired(false)))
         .addSubcommand((subcommand) =>
             subcommand
+                .setName('test')
+                .setDescription('Send a preview announcement without changing voice time or roles')
+                .addIntegerOption((option) => {
+                    option
+                        .setName('hours')
+                        .setDescription('Milestone tier to preview (defaults to the first tier)')
+                        .setRequired(false);
+                    for (const milestone of VOICE_MILESTONE_PRESET) {
+                        option.addChoices({
+                            name: `${milestone.label} (${milestone.hours}h)`,
+                            value: milestone.hours,
+                        });
+                    }
+                    return option;
+                }))
+        .addSubcommand((subcommand) =>
+            subcommand
                 .setName('remove')
                 .setDescription('Remove a voice milestone tier')
                 .addIntegerOption((option) =>
@@ -392,6 +442,9 @@ export default {
                     break;
                 case 'setchannel':
                     await handleSetChannel(interaction, client);
+                    break;
+                case 'test':
+                    await handleTest(interaction, client);
                     break;
                 case 'remove':
                     await handleRemove(interaction, client);
