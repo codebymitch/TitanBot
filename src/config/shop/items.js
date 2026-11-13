@@ -196,6 +196,74 @@ roleId: null,
         }
     },
 
+    // ===== Fishing Nets (Tiers I - V) =====
+    // Dipakai lewat /netting (atau !netting). Tiap tier menambah 5 ikan per jaring.
+    {
+        id: 'fishing_net_1',
+        name: '🕸️ Fishing Net I',
+        price: 400000,
+        description: 'Cast a wide net to haul in 5 fish at once with `/netting`.',
+        type: 'tool',
+        durability: null,
+        effect: {
+            type: 'fishing_net',
+            tier: 1,
+            catches: 5
+        }
+    },
+    {
+        id: 'fishing_net_2',
+        name: '🕸️ Fishing Net II',
+        price: 1250000,
+        description: 'Cast a wide net to haul in 10 fish at once with `/netting`.',
+        type: 'tool',
+        durability: null,
+        effect: {
+            type: 'fishing_net',
+            tier: 2,
+            catches: 10
+        }
+    },
+    {
+        id: 'fishing_net_3',
+        name: '🕸️ Fishing Net III',
+        price: 3500000,
+        description: 'Cast a wide net to haul in 15 fish at once with `/netting`.',
+        type: 'tool',
+        durability: null,
+        effect: {
+            type: 'fishing_net',
+            tier: 3,
+            catches: 15
+        }
+    },
+    {
+        id: 'fishing_net_4',
+        name: '🕸️ Fishing Net IV',
+        price: 9000000,
+        description: 'Cast a wide net to haul in 20 fish at once with `/netting`.',
+        type: 'tool',
+        durability: null,
+        effect: {
+            type: 'fishing_net',
+            tier: 4,
+            catches: 20
+        }
+    },
+    {
+        id: 'fishing_net_5',
+        name: '🕸️ Fishing Net V',
+        price: 22000000,
+        description: 'Cast a wide net to haul in 25 fish at once with `/netting`.',
+        type: 'tool',
+        durability: null,
+        effect: {
+            type: 'fishing_net',
+            tier: 5,
+            catches: 25
+        }
+    },
+
     // ===== Admin Potion (disimpan di inventory, dipakai dengan /use, bisa dikirim dengan /give) =====
     {
         id: 'admin_potion',

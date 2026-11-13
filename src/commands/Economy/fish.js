@@ -125,6 +125,60 @@ export const FISH_TYPES = [
     { name: 'Kitsune', emoji: '🦊', rarity: 'celestial' }
 ];
 
+export const FISH_PRICES = {
+    common: [200, 450],
+    uncommon: [450, 750],
+    rare: [1000, 1250],
+    epic: [1750, 3000],
+    legendary: [3750, 7500],
+    mythic: [15000, 25000],
+    secret: [30000, 50000],
+    divine: [62500, 175000],
+    transcendent: [250000, 500000],
+    celestial: [10000000, 20000000]
+};
+
+export const RARITY_COLORS = {
+    common: '#95A5A6',
+    uncommon: '#2ECC71',
+    rare: '#3498DB',
+    epic: '#9B59B6',
+    legendary: '#F1C40F',
+    mythic: '#E91E63',
+    secret: '#404850',
+    divine: '#00FFFF',
+    transcendent: '#FF00FF',
+    celestial: '#FF69B4'
+};
+
+// Map a random roll (0-1) to a rarity using the standard catch distribution.
+export function selectRarity(roll) {
+    if (roll < 0.45) return 'common';
+    if (roll < 0.70) return 'uncommon';
+    if (roll < 0.85) return 'rare';
+    if (roll < 0.94) return 'epic';
+    if (roll < 0.98) return 'legendary';
+    if (roll < 0.995) return 'mythic';
+    if (roll < 0.9995) return 'secret';
+    if (roll < 0.9997) return 'divine';
+    if (roll < 0.9999) return 'transcendent';
+    return 'celestial';
+}
+
+// Pick a random fish of a given rarity and roll its sale value.
+export function pickFish(rarity) {
+    const availableFish = FISH_TYPES.filter(f => f.rarity === rarity);
+    const fish = availableFish[Math.floor(Math.random() * availableFish.length)];
+    const [minPrice, maxPrice] = FISH_PRICES[rarity];
+    const baseEarned = Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+    return { fish, baseEarned };
+}
+
+// Roll a fresh catch with the standard distribution (no potion/luck modifiers).
+export function rollFishingCatch() {
+    return pickFish(selectRarity(Math.random()));
+}
+
 const CATCH_MESSAGES = [
     "Kamu melemparkan kailmu ke dalam air yang sangat jernih...",
     "Kamu menunggu dengan sabar saat pelampung pancingmu mengapung...",
@@ -241,54 +295,10 @@ export default {
             }
 
             if (!selectedRarity) {
-                if (rand < 0.45) {
-                    selectedRarity = 'common';
-                } else if (rand < 0.70) {
-                    selectedRarity = 'uncommon';
-                } else if (rand < 0.85) {
-                    selectedRarity = 'rare';
-                } else if (rand < 0.94) {
-                    selectedRarity = 'epic';
-                } else if (rand < 0.98) {
-                    selectedRarity = 'legendary';
-                } else if (rand < 0.995) {
-                    selectedRarity = 'mythic';
-                } else if (rand < 0.9995) {
-                    selectedRarity = 'secret';
-                } else if (rand < 0.9997) {
-                    selectedRarity = 'divine';
-                } else if (rand < 0.9999) {
-                    selectedRarity = 'transcendent';
-                } else {
-                    selectedRarity = 'celestial';
-                }
+                selectedRarity = selectRarity(rand);
             }
 
-            const availableFish = FISH_TYPES.filter(
-                f => f.rarity === selectedRarity
-            );
-        
-            const fishCaught = availableFish[
-                Math.floor(Math.random() * availableFish.length)
-            ];
-            const fishPrices = {
-                common: [200, 450],
-                uncommon: [450, 750],
-                rare: [1000, 1250],
-                epic: [1750, 3000],
-                legendary: [3750, 7500],
-                mythic: [15000, 25000],
-                secret: [30000, 50000],
-                divine: [62500, 175000],
-                transcendent: [250000, 500000],
-                celestial: [10000000, 20000000]
-            };
-
-            const [minPrice, maxPrice] = fishPrices[fishCaught.rarity];
-
-            const baseEarned = Math.floor(
-                Math.random() * (maxPrice - minPrice + 1)
-            ) + minPrice;
+            const { fish: fishCaught, baseEarned } = pickFish(selectedRarity);
 
             let fishingMultiplier = 1;
             const bonusMessages = [];
@@ -320,23 +330,10 @@ export default {
 
             await setEconomyData(client, guildId, userId, userData);
 
-            const rarityColors = {
-                common: '#95A5A6',
-                uncommon: '#2ECC71',
-                rare: '#3498DB',
-                epic: '#9B59B6',
-                legendary: '#F1C40F',
-                mythic: '#E91E63',
-                secret: '#404850',
-                divine: '#00FFFF',
-                transcendent: '#FF00FF',
-                celestial: '#FF69B4'
-            };
-
             const embed = createEmbed({
                 title: 'Fishing Success!',
                 description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}${luckMessage}`,
-                color: rarityColors[fishCaught.rarity]
+                color: RARITY_COLORS[fishCaught.rarity]
             })
                 .addFields(
                     {
