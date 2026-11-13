@@ -3,6 +3,7 @@ import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { reconcileTicketPanels, reconcileVerificationPanels, reconcileReactionRolePanelHealth } from "../services/panelHealthService.js";
+import { startLiveStatusUpdater } from "../services/musicStatusService.js";
 
 export default {
   name: Events.ClientReady,
@@ -35,6 +36,9 @@ export default {
       startupLog(
         `Reaction role panel health: scanned ${reactionRolePanelSummary.scannedPanels} panels, healthy ${reactionRolePanelSummary.healthyPanels}, deleted ${reactionRolePanelSummary.deletedPanels}, missing channel ${reactionRolePanelSummary.missingChannels}, recovered ${reactionRolePanelSummary.recoveredIds}, errors ${reactionRolePanelSummary.errors}`
       );
+
+      // Mulai auto-refresh untuk live status bot musik
+      startLiveStatusUpdater(client);
 
     } catch (error) {
       logger.error("Error in ready event:", error);

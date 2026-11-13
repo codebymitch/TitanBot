@@ -41,7 +41,8 @@ export const DEFAULT_GUILD_CONFIG = {
         enabled: false
     },
     musicStatus: {
-        groups: []
+        groups: [],
+        live: { channelId: null, messageId: null }
     }
 };
 

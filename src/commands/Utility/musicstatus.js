@@ -10,6 +10,9 @@ import {
     addBot,
     removeBot,
     buildStatusSnapshot,
+    buildLiveStatusEmbed,
+    setLiveMessage,
+    clearLiveMessage,
 } from '../../services/musicStatusService.js';
 
 function hasManageGuildPermission(member) {
@@ -153,12 +156,29 @@ export default {
                         .setName('list')
                         .setDescription('Tampilkan daftar grup dan bot di dalamnya.'),
                 ),
+        )
+        .addSubcommandGroup(group =>
+            group
+                .setName('live')
+                .setDescription('Kelola status bot musik live (auto-refresh).')
+                .addSubcommand(sub =>
+                    sub
+                        .setName('start')
+                        .setDescription('Kirim status bot musik yang otomatis ter-refresh ke channel ini.'),
+                )
+                .addSubcommand(sub =>
+                    sub
+                        .setName('stop')
+                        .setDescription('Hentikan auto-refresh status bot musik.'),
+                ),
         ),
 
     async execute(interaction) {
         try {
             const subcommand = interaction.options.getSubcommand(true);
-            const isGroupCmd = interaction.options.getSubcommandGroup() === 'group';
+            const subcommandGroup = interaction.options.getSubcommandGroup();
+            const isGroupCmd = subcommandGroup === 'group';
+            const isLiveCmd = subcommandGroup === 'live';
 
             // view & group list tidak butuh ManageGuild
             if (subcommand !== 'view' && !(isGroupCmd && subcommand === 'list')) {
@@ -178,6 +198,16 @@ export default {
 
             if (isGroupCmd && subcommand === 'list') {
                 await handleGroupList(interaction);
+                return;
+            }
+
+            // live start/stop tidak ephemeral (kirim ke channel)
+            if (isLiveCmd) {
+                if (subcommand === 'start') {
+                    await handleLiveStart(interaction);
+                } else if (subcommand === 'stop') {
+                    await handleLiveStop(interaction);
+                }
                 return;
             }
 
@@ -250,11 +280,13 @@ async function handleAdd(interaction) {
 
     await addBot(client, guildId, group.id, botUser.id);
 
+    // Tampilkan preview status terbaru agar user langsung lihat botnya muncul
+    const updatedConfig = await getMusicStatusConfig(client, guildId);
+    const snapshot = await buildStatusSnapshot(interaction.guild, updatedConfig);
+    const embed = buildStatusEmbed(snapshot, interaction.guild.name);
+
     await InteractionHelper.safeEditReply(interaction, {
-        embeds: [successEmbed(
-            'Bot Ditambahkan',
-            `**${botUser.username}** telah ditambahkan ke grup **${group.name}**.`,
-        )],
+        embeds: [embed],
     });
 }
 
@@ -359,4 +391,76 @@ async function handleGroupList(interaction) {
 
 function infoEmbedWrap(title, body) {
     return createEmbed({ title, description: body, color: 'info' });
+}
+
+async function handleLiveStart(interaction) {
+    await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+    const client = interaction.client;
+    const guildId = interaction.guildId;
+
+    const config = await getMusicStatusConfig(client, guildId);
+
+    if (config.live?.channelId && config.live?.messageId) {
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [infoEmbedWrap(
+                'Live Status Sudah Aktif',
+                'Live status bot musik sudah berjalan di channel lain. Gunakan `/musicstatus live stop` terlebih dahulu jika ingin pindah channel.',
+            )],
+        });
+        return;
+    }
+
+    const snapshot = await buildStatusSnapshot(interaction.guild, config);
+    const embed = buildLiveStatusEmbed(snapshot, interaction.guild.name);
+
+    // Kirim pesan live ke channel (terlihat semua orang)
+    const liveMessage = await interaction.channel.send({ embeds: [embed] });
+
+    // Simpan referensi ke config
+    await setLiveMessage(client, guildId, interaction.channelId, liveMessage.id);
+
+    await InteractionHelper.safeEditReply(interaction, {
+        embeds: [successEmbed(
+            'Live Status Aktif',
+            `Status bot musik sekarang otomatis ter-refresh setiap 30 detik di channel ini.`,
+        )],
+    });
+}
+
+async function handleLiveStop(interaction) {
+    await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+    const client = interaction.client;
+    const guildId = interaction.guildId;
+
+    const config = await getMusicStatusConfig(client, guildId);
+
+    if (!config.live?.channelId || !config.live?.messageId) {
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [infoEmbedWrap(
+                'Tidak Ada Live Status',
+                'Live status bot musik belum diaktifkan. Gunakan `/musicstatus live start` untuk mengaktifkannya.',
+            )],
+        });
+        return;
+    }
+
+    // Coba hapus pesan live sebelumnya (opsional, tidak fatal jika gagal)
+    try {
+        const channel = interaction.guild.channels.cache.get(config.live.channelId);
+        if (channel) {
+            const msg = await channel.messages.fetch(config.live.messageId).catch(() => null);
+            if (msg) await msg.delete().catch(() => {});
+        }
+    } catch {
+        // abaikan
+    }
+
+    await clearLiveMessage(client, guildId);
+
+    await InteractionHelper.safeEditReply(interaction, {
+        embeds: [successEmbed(
+            'Live Status Dihentikan',
+            'Auto-refresh status bot musik telah dihentikan.',
+        )],
+    });
 }
