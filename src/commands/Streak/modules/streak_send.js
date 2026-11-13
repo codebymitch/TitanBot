@@ -25,7 +25,16 @@ export default {
             });
         }
 
-        const { streak, incremented } = await StreakService.recordInteraction(client, guildId, userId, target.id);
+        const result = await StreakService.recordInteraction(client, guildId, userId, target.id);
+
+        if (!result.recorded) {
+            return await replyUserError(interaction, {
+                type: ErrorTypes.VALIDATION,
+                message: `You don't have an accepted streak with ${target}. Send a request first with \`/streak request\`.`
+            });
+        }
+
+        const { streak, incremented } = result;
         const today = StreakService.toDayKey(Date.now());
         const countedToday = streak.lastBothDay === today;
 

@@ -26,16 +26,26 @@ export default {
         }
 
         const streak = await StreakService.getStreak(client, guildId, userId, target.id);
-        const current = streak?.currentCount || 0;
-        const best = streak?.best || 0;
 
-        if (!streak || (current === 0 && best === 0)) {
-            const embed = infoEmbed(
-                'No Streak Yet',
-                `You and ${target} do not have a streak. Start one with \`/streak send\` — you both need to send today.`
-            );
+        if (!streak || !streak.accepted) {
+            const incoming = await StreakService.getStreakRequest(client, guildId, target.id, userId);
+            const outgoing = incoming ? null : await StreakService.getStreakRequest(client, guildId, userId, target.id);
+
+            let body;
+            if (incoming) {
+                body = `${target} sent you a streak request. Accept it with the buttons on the request message.`;
+            } else if (outgoing) {
+                body = `You have a pending streak request to ${target}. Waiting for them to accept.`;
+            } else {
+                body = `You and ${target} do not have a streak yet. Start one with \`/streak request\`.`;
+            }
+
+            const embed = infoEmbed('No Streak Yet', body);
             return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
         }
+
+        const current = streak.currentCount;
+        const best = streak.best;
 
         const embed = createEmbed({
             title: 'Streak',

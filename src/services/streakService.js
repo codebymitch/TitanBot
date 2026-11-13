@@ -1,7 +1,8 @@
 // streakService.js
 //
 // TikTok-style pairwise streaks. A streak is tracked between exactly two users
-// inside a guild. The streak advances by one day each time BOTH users interact
+// inside a guild and only becomes active once the invited user accepts the
+// streak request. It then advances by one day each time BOTH users interact
 // with each other on the same UTC calendar day. If a full day passes without
 // both users interacting, the streak is considered broken and resets to 0.
 
@@ -41,6 +42,28 @@ class StreakService {
     }
 
     return parts;
+  }
+
+  static buildRequestPrefix(guildId) {
+    return `${STREAK_KEY_PREFIX}${guildId}:streakreq:`;
+  }
+
+  static buildRequestKey(guildId, fromUserId, toUserId) {
+    return `${StreakService.buildRequestPrefix(guildId)}${String(fromUserId)}_${String(toUserId)}`;
+  }
+
+  static parseRequestKey(key, guildId) {
+    const prefix = StreakService.buildRequestPrefix(guildId);
+    if (typeof key !== 'string' || !key.startsWith(prefix)) {
+      return null;
+    }
+
+    const parts = key.slice(prefix.length).split('_');
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      return null;
+    }
+
+    return { from: parts[0], to: parts[1] };
   }
 
   /** UTC calendar day as YYYY-MM-DD, or null for an invalid timestamp. */
@@ -104,6 +127,8 @@ class StreakService {
     return {
       guildId: String(guildId),
       users: [first, second],
+      accepted: base.accepted === true,
+      acceptedAt: Number(base.acceptedAt) || null,
       count: asPositiveInt(base.count),
       best: asPositiveInt(base.best),
       totalInteractions: asPositiveInt(base.totalInteractions),
@@ -111,6 +136,18 @@ class StreakService {
       lastInteraction,
       createdAt: Number(base.createdAt) || null,
       updatedAt: Number(base.updatedAt) || null,
+    };
+  }
+
+  static normalizeRequest(raw, guildId, fromUserId, toUserId) {
+    const base = raw && typeof raw === 'object' ? raw : {};
+    return {
+      guildId: String(guildId),
+      from: String(fromUserId),
+      to: String(toUserId),
+      status: typeof base.status === 'string' ? base.status : 'pending',
+      createdAt: Number(base.createdAt) || null,
+      respondedAt: Number(base.respondedAt) || null,
     };
   }
 
@@ -160,6 +197,20 @@ class StreakService {
     const key = StreakService.buildStreakKey(ids.guildId, ids.userA, ids.userB);
 
     const raw = await client.db.get(key, null);
+
+    // Streaks only count after the invited user accepted the request.
+    if (!raw || raw.accepted !== true) {
+      return {
+        recorded: false,
+        reason: raw ? 'not_accepted' : 'no_streak',
+        incremented: false,
+        day,
+        streak: raw
+          ? StreakService.withStatus(StreakService.normalizeStreak(raw, ids.guildId, [ids.userA, ids.userB]), timestamp)
+          : null,
+      };
+    }
+
     const streak = StreakService.normalizeStreak(raw, ids.guildId, [ids.userA, ids.userB]);
 
     if (!streak.createdAt) {
@@ -201,11 +252,165 @@ class StreakService {
     }
 
     return {
+      recorded: true,
+      reason: null,
       streak: StreakService.withStatus(streak, timestamp),
       incremented,
       day,
       direction: { from: String(fromUserId), to: partnerId },
     };
+  }
+
+  static async getStreakRequest(client, guildId, fromUserId, toUserId) {
+    const ids = StreakService.assertPair(guildId, fromUserId, toUserId, { operation: 'getStreakRequest' });
+    const raw = await client.db.get(StreakService.buildRequestKey(ids.guildId, ids.userA, ids.userB), null);
+
+    if (!raw) {
+      return null;
+    }
+
+    return StreakService.normalizeRequest(raw, ids.guildId, ids.userA, ids.userB);
+  }
+
+  static async sendStreakRequest(client, guildId, fromUserId, toUserId, meta = {}) {
+    const ids = StreakService.assertPair(guildId, fromUserId, toUserId, { operation: 'sendStreakRequest' });
+
+    const existingStreak = await client.db.get(
+      StreakService.buildStreakKey(ids.guildId, ids.userA, ids.userB),
+      null
+    );
+    if (existingStreak?.accepted === true) {
+      throw createError(
+        'Streak already exists',
+        ErrorTypes.VALIDATION,
+        'You already have an active streak with this user.',
+        { guildId: ids.guildId, fromUserId: ids.userA, toUserId: ids.userB, operation: 'sendStreakRequest' }
+      );
+    }
+
+    const requestKey = StreakService.buildRequestKey(ids.guildId, ids.userA, ids.userB);
+    const existingRequest = await client.db.get(requestKey, null);
+    if (existingRequest) {
+      throw createError(
+        'Streak request already pending',
+        ErrorTypes.VALIDATION,
+        'You already have a pending streak request with this user.',
+        { guildId: ids.guildId, fromUserId: ids.userA, toUserId: ids.userB, operation: 'sendStreakRequest' }
+      );
+    }
+
+    const request = {
+      guildId: ids.guildId,
+      fromUserId: ids.userA,
+      toUserId: ids.userB,
+      status: 'pending',
+      createdAt: Date.now(),
+      respondedAt: null,
+      channelId: meta.channelId ? String(meta.channelId) : null,
+      messageId: meta.messageId ? String(meta.messageId) : null,
+    };
+
+    await client.db.set(requestKey, request);
+
+    logger.info('[STREAK] Request sent', { guildId: ids.guildId, from: ids.userA, to: ids.userB });
+
+    return StreakService.normalizeRequest(request, ids.guildId, ids.userA, ids.userB);
+  }
+
+  static async acceptStreakRequest(client, guildId, fromUserId, toUserId) {
+    const ids = StreakService.assertPair(guildId, fromUserId, toUserId, { operation: 'acceptStreakRequest' });
+    const requestKey = StreakService.buildRequestKey(ids.guildId, ids.userA, ids.userB);
+    const raw = await client.db.get(requestKey, null);
+
+    if (!raw) {
+      throw createError(
+        'Streak request not found',
+        ErrorTypes.VALIDATION,
+        'This streak request is no longer available.',
+        { guildId: ids.guildId, fromUserId: ids.userA, toUserId: ids.userB, operation: 'acceptStreakRequest' }
+      );
+    }
+
+    const timestamp = Date.now();
+    const streakKey = StreakService.buildStreakKey(ids.guildId, ids.userA, ids.userB);
+    const streak = StreakService.normalizeStreak(await client.db.get(streakKey, null), ids.guildId, [ids.userA, ids.userB]);
+
+    streak.accepted = true;
+    streak.acceptedAt = streak.acceptedAt || timestamp;
+    streak.createdAt = streak.createdAt || timestamp;
+    streak.updatedAt = timestamp;
+
+    await client.db.set(streakKey, streak);
+    await client.db.delete(requestKey);
+
+    logger.info('[STREAK] Request accepted', { guildId: ids.guildId, users: [ids.userA, ids.userB] });
+
+    return {
+      streak: StreakService.withStatus(streak, timestamp),
+      request: StreakService.normalizeRequest(raw, ids.guildId, ids.userA, ids.userB),
+    };
+  }
+
+  static async declineStreakRequest(client, guildId, fromUserId, toUserId) {
+    const ids = StreakService.assertPair(guildId, fromUserId, toUserId, { operation: 'declineStreakRequest' });
+    const requestKey = StreakService.buildRequestKey(ids.guildId, ids.userA, ids.userB);
+    const raw = await client.db.get(requestKey, null);
+
+    if (!raw) {
+      throw createError(
+        'Streak request not found',
+        ErrorTypes.VALIDATION,
+        'This streak request is no longer available.',
+        { guildId: ids.guildId, fromUserId: ids.userA, toUserId: ids.userB, operation: 'declineStreakRequest' }
+      );
+    }
+
+    await client.db.delete(requestKey);
+
+    logger.info('[STREAK] Request declined', { guildId: ids.guildId, from: ids.userA, to: ids.userB });
+
+    return StreakService.normalizeRequest(raw, ids.guildId, ids.userA, ids.userB);
+  }
+
+  static async getPendingRequests(client, guildId, userId, options = {}) {
+    const validGuildId = validateDiscordId(guildId, 'guildId');
+    const validUserId = validateDiscordId(String(userId), 'userId');
+
+    if (!validGuildId || !validUserId) {
+      throw createError(
+        'Invalid streak identifiers',
+        ErrorTypes.VALIDATION,
+        'A valid guild and user are required.',
+        { guildId, userId, operation: 'getPendingRequests' }
+      );
+    }
+
+    const direction = options.direction || 'all';
+    const keys = await client.db.list(StreakService.buildRequestPrefix(validGuildId));
+    const results = [];
+
+    for (const key of keys) {
+      const parsed = StreakService.parseRequestKey(key, validGuildId);
+      if (!parsed) {
+        continue;
+      }
+
+      const isIncoming = parsed.to === validUserId;
+      const isOutgoing = parsed.from === validUserId;
+      if (direction === 'incoming' && !isIncoming) continue;
+      if (direction === 'outgoing' && !isOutgoing) continue;
+      if (direction === 'all' && !isIncoming && !isOutgoing) continue;
+
+      const raw = await client.db.get(key, null);
+      if (!raw) {
+        continue;
+      }
+
+      results.push(StreakService.normalizeRequest(raw, validGuildId, parsed.from, parsed.to));
+    }
+
+    results.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return results;
   }
 
   static async getUserStreaks(client, guildId, userId, options = {}) {
@@ -236,6 +441,9 @@ class StreakService {
       }
 
       const streak = StreakService.withStatus(StreakService.normalizeStreak(raw, validGuildId, users));
+      if (!streak.accepted) {
+        continue;
+      }
       if (options.activeOnly && !streak.active) {
         continue;
       }
@@ -277,7 +485,7 @@ class StreakService {
       }
 
       const streak = StreakService.withStatus(StreakService.normalizeStreak(raw, validGuildId, users));
-      if (streak.currentCount <= 0) {
+      if (!streak.accepted || streak.currentCount <= 0) {
         continue;
       }
       entries.push(streak);

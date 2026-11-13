@@ -43,6 +43,8 @@ function serializeStreak(streak) {
   return {
     guildId: streak.guildId,
     users: streak.users,
+    accepted: streak.accepted,
+    acceptedAt: streak.acceptedAt,
     current: streak.currentCount,
     count: streak.count,
     best: streak.best,
@@ -51,6 +53,17 @@ function serializeStreak(streak) {
     lastInteraction: streak.lastInteraction,
     totalInteractions: streak.totalInteractions,
     updatedAt: streak.updatedAt,
+  };
+}
+
+function serializeRequest(request) {
+  return {
+    guildId: request.guildId,
+    from: request.from,
+    to: request.to,
+    status: request.status,
+    createdAt: request.createdAt,
+    respondedAt: request.respondedAt,
   };
 }
 
@@ -121,9 +134,69 @@ export function registerStreakApi(app, client) {
     try {
       const { fromUserId, toUserId, timestamp } = req.body || {};
       const result = await StreakService.recordInteraction(client, req.params.guildId, fromUserId, toUserId, { timestamp });
-      res.status(201).json({ incremented: result.incremented, day: result.day, streak: serializeStreak(result.streak) });
+
+      if (!result.recorded) {
+        return res.status(409).json({
+          recorded: false,
+          reason: result.reason,
+          message: 'There is no accepted streak for this pair. Send and accept a streak request first.',
+        });
+      }
+
+      res.status(201).json({
+        recorded: true,
+        incremented: result.incremented,
+        day: result.day,
+        streak: serializeStreak(result.streak),
+      });
     } catch (error) {
       sendError(res, error, 'Failed to record streak interaction.');
+    }
+  });
+
+  router.post('/:guildId/requests', async (req, res) => {
+    try {
+      const { fromUserId, toUserId, channelId } = req.body || {};
+      const request = await StreakService.sendStreakRequest(client, req.params.guildId, fromUserId, toUserId, { channelId });
+      res.status(201).json({ request: serializeRequest(request) });
+    } catch (error) {
+      sendError(res, error, 'Failed to send streak request.');
+    }
+  });
+
+  router.get('/:guildId/requests/:userId', async (req, res) => {
+    try {
+      const direction = ['incoming', 'outgoing'].includes(req.query.direction) ? req.query.direction : 'all';
+      const requests = await StreakService.getPendingRequests(client, req.params.guildId, req.params.userId, { direction });
+      res.json({
+        guildId: req.params.guildId,
+        userId: req.params.userId,
+        direction,
+        requests: requests.map(serializeRequest),
+      });
+    } catch (error) {
+      sendError(res, error, 'Failed to load streak requests.');
+    }
+  });
+
+  router.post('/:guildId/requests/:fromUserId/:toUserId/respond', async (req, res) => {
+    try {
+      const { fromUserId, toUserId } = req.params;
+      const { action } = req.body || {};
+
+      if (action === 'accept') {
+        const { streak } = await StreakService.acceptStreakRequest(client, req.params.guildId, fromUserId, toUserId);
+        return res.json({ status: 'accepted', streak: serializeStreak(streak) });
+      }
+
+      if (action === 'decline') {
+        await StreakService.declineStreakRequest(client, req.params.guildId, fromUserId, toUserId);
+        return res.json({ status: 'declined' });
+      }
+
+      return res.status(400).json({ error: 'validation', message: "action must be either 'accept' or 'decline'." });
+    } catch (error) {
+      sendError(res, error, 'Failed to respond to streak request.');
     }
   });
 

@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 import streakView from './modules/streak_view.js';
+import streakRequest from './modules/streak_request.js';
 import streakSend from './modules/streak_send.js';
 import streakList from './modules/streak_list.js';
 import streakLeaderboard from './modules/streak_leaderboard.js';
@@ -18,6 +19,17 @@ export default {
                     option
                         .setName('user')
                         .setDescription('The member to view the streak with')
+                        .setRequired(true)
+                )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('request')
+                .setDescription('Send a streak request to a member')
+                .addUserOption(option =>
+                    option
+                        .setName('user')
+                        .setDescription('The member to request a streak with')
                         .setRequired(true)
                 )
         )
@@ -49,6 +61,8 @@ export default {
         switch (subcommand) {
             case 'view':
                 return await streakView.execute(interaction, config, client);
+            case 'request':
+                return await streakRequest.execute(interaction, config, client);
             case 'send':
                 return await streakSend.execute(interaction, config, client);
             case 'list':
