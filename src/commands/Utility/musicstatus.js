@@ -61,8 +61,8 @@ function buildStatusEmbed(snapshot, guildName) {
             lines.push(`${statusEmoji} **${truncate(bot.displayName, 40)}** · ${statusLabel}`);
 
             if (bot.inVoice) {
-                const channel = bot.voiceChannelName
-                    ? `🔊 ${truncate(bot.voiceChannelName, 50)}`
+                const channel = bot.voiceChannelId
+                    ? `🔊 <#${bot.voiceChannelId}>`
                     : '—';
                 lines.push(`└ ${channel}`);
             } else {

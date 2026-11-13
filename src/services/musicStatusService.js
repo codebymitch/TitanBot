@@ -230,6 +230,7 @@ export async function buildStatusSnapshot(guild, config) {
                 displayName,
                 inVoice,
                 voiceChannelName: voiceChannel?.name || null,
+                voiceChannelId: voiceChannel?.id || null,
                 nowPlaying: activity,
                 user: member?.user || null,
             });
@@ -385,8 +386,8 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
             lines.push(`${statusEmoji} **${truncateStr(bot.displayName, 40)}** · ${statusLabel}`);
 
             if (bot.inVoice) {
-                const channel = bot.voiceChannelName
-                    ? `🔊 ${truncateStr(bot.voiceChannelName, 50)}`
+                const channel = bot.voiceChannelId
+                    ? `🔊 <#${bot.voiceChannelId}>`
                     : '—';
                 lines.push(`└ ${channel}`);
             } else {
