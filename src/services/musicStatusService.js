@@ -382,8 +382,14 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
             lines.push(`${statusEmoji} **${truncateStr(bot.displayName, 40)}** · ${statusLabel}`);
 
             if (bot.inVoice) {
-                const track = bot.nowPlaying ? truncateStr(bot.nowPlaying, 80) : '—';
-                lines.push(`└ 🎵 ${track}`);
+                const channel = bot.voiceChannelName
+                    ? `🔊 ${truncateStr(bot.voiceChannelName, 40)}`
+                    : '';
+                const track = bot.nowPlaying
+                    ? `🎵 ${truncateStr(bot.nowPlaying, 60)}`
+                    : '';
+                const detail = [channel, track].filter(Boolean).join(' · ');
+                lines.push(`└ ${detail || '—'}`);
             } else {
                 lines.push('└ Belum terhubung ke voice');
             }
