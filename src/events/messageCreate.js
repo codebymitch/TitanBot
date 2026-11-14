@@ -1,8 +1,5 @@
 import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { getLevelingConfig, getUserLevelData } from '../services/leveling/leveling.js';
-import { addXp } from '../services/leveling/xpSystem.js';
-import { checkRateLimit } from '../utils/rateLimiter.js';
 import { parsePrefixCommand } from '../utils/prefixParser.js';
 import { supportsPrefixExecution, executePrefixCommand, resolvePrefixAccessKey } from '../utils/messageAdapter.js';
 import { resolveCommandAlias, resolveSubcommandAlias } from '../config/commands/commandAliases.js';
@@ -18,9 +15,9 @@ import {
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
-
-const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
-const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
+import { handleStickyMessage } from '../services/stickyService.js';
+import { handleAutoReaction } from '../services/autoReactionService.js';
+import StreakService from '../services/streakService.js';
 
 export default {
   name: Events.MessageCreate,
@@ -35,9 +32,13 @@ export default {
         return;
       }
 
-      await handlePrefixCommand(message, client);
+      await handleStickyMessage(message, client);
 
-      await handleLeveling(message, client);
+      await handleAutoReaction(message, client);
+
+      await handleStreakInteraction(message, client);
+
+      await handlePrefixCommand(message, client);
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
     }
@@ -55,12 +56,6 @@ async function handlePrefixCommand(message, client) {
     }
 
     let { commandName, args } = parsed;
-    const musicPrefixShortcut = commandName.toLowerCase();
-    const MUSIC_PREFIX_SHORTCUTS = new Set(['leave', 'pause', 'resume', 'skip', 'stop', 'volume']);
-    if (MUSIC_PREFIX_SHORTCUTS.has(musicPrefixShortcut)) {
-      commandName = 'music';
-      args = [musicPrefixShortcut, ...args];
-    }
 
     logger.info(`Prefix command detected: ${commandName}, args: ${args.join(', ')}`);
 
@@ -182,72 +177,41 @@ async function handleCountingGame(message, client) {
   }
 }
 
-async function handleLeveling(message, client) {
+async function handleStreakInteraction(message, client) {
   try {
-    const rateLimitKey = `xp-event:${message.guild.id}:${message.author.id}`;
-    const canProcess = await checkRateLimit(rateLimitKey, MESSAGE_XP_RATE_LIMIT_ATTEMPTS, MESSAGE_XP_RATE_LIMIT_WINDOW_MS);
-    if (!canProcess) {
+    const mentionedUsers = message.mentions?.users;
+    const repliedUser = message.mentions?.repliedUser;
+
+    if ((!mentionedUsers || mentionedUsers.size === 0) && !repliedUser) {
       return;
     }
 
-    const levelingConfig = await getLevelingConfig(client, message.guild.id);
-    
-    if (!levelingConfig?.enabled) {
-      return;
-    }
+    const targetIds = new Set();
 
-    if (levelingConfig.ignoredChannels?.includes(message.channel.id)) {
-      return;
+    if (repliedUser?.id) {
+      targetIds.add(repliedUser.id);
     }
-
-    if (levelingConfig.ignoredRoles?.length > 0) {
-      const member = await message.guild.members.fetch(message.author.id).catch(() => {
-        return null;
-      });
-      if (member && member.roles.cache.some(role => levelingConfig.ignoredRoles.includes(role.id))) {
-        return;
+    if (mentionedUsers) {
+      for (const user of mentionedUsers.values()) {
+        targetIds.add(user.id);
       }
     }
 
-    if (levelingConfig.blacklistedUsers?.includes(message.author.id)) {
-      return;
-    }
+    targetIds.delete(message.author.id);
 
-    if (!message.content || message.content.trim().length === 0) {
-      return;
-    }
+    for (const targetId of targetIds) {
+      const target = mentionedUsers?.get(targetId)
+        || await client.users.fetch(targetId).catch(() => null);
 
-    const userData = await getUserLevelData(client, message.guild.id, message.author.id);
+      if (!target || target.bot) {
+        continue;
+      }
 
-    const cooldownTime = levelingConfig.xpCooldown || 60;
-    const now = Date.now();
-    const timeSinceLastMessage = now - (userData.lastMessage || 0);
-
-    if (timeSinceLastMessage < cooldownTime * 1000) {
-      return;
-    }
-
-    const minXP = levelingConfig.xpRange?.min || levelingConfig.xpPerMessage?.min || 15;
-    const maxXP = levelingConfig.xpRange?.max || levelingConfig.xpPerMessage?.max || 25;
-
-    const safeMinXP = Math.max(1, minXP);
-    const safeMaxXP = Math.max(safeMinXP, maxXP);
-
-    const xpToGive = Math.floor(Math.random() * (safeMaxXP - safeMinXP + 1)) + safeMinXP;
-
-    let finalXP = xpToGive;
-    if (levelingConfig.xpMultiplier && levelingConfig.xpMultiplier > 1) {
-      finalXP = Math.floor(finalXP * levelingConfig.xpMultiplier);
-    }
-
-    const result = await addXp(client, message.guild, message.member, finalXP);
-
-    if (result?.leveledUp) {
-      logger.info(
-        `${message.author.tag} leveled up to level ${result.level} in ${message.guild.name}`
-      );
+      await StreakService.recordInteraction(client, message.guild.id, message.author.id, targetId, {
+        timestamp: message.createdTimestamp,
+      });
     }
   } catch (error) {
-    logger.error('Error handling leveling for message:', error);
+    logger.error('Error handling streak interaction:', error);
   }
 }

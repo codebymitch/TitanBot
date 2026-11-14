@@ -57,11 +57,6 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 </td>
 <td width="50%" valign="top">
 
-### Leveling & XP System
-- **XP Tracking** - Automatic message-based XP
-- **Level Roles** - Auto-assign roles by level
-- **Custom Configuration** - Personalize leveling
-
 ### Giveaways & Events
 - **Multiple Winners** - Support multi-winner giveaways
 - **Auto Picking** - Automatic winner selection
@@ -75,17 +70,14 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 ### Utility Tools
 - **Report System** - Report issues to staff
 - **Todo Lists** - Personal task management
+- **Sticky Messages** - Keep a message pinned to the bottom of a channel
+- **Auto Reactions** - Automatically react to messages by channel or keyword
 - **First Message** - Jump to channel's first message
 
 ### Welcome System
 - **Welcome Messages** - Greet new members
 - **Auto Roles** - Assign roles on join
 - **Custom Embeds** - Personalized messages
-  
-### Music
-- **24/7 Mode** - Play music 24/7
-- **Interative Button System** - Manage music through buttons
-- **Supports EVERY platform** - Supports spotify, deezer, youtube, apple music
   
 </td>
 </tr>
@@ -125,23 +117,7 @@ TitanBot is fully containerized for easy deployment.
    curl http://localhost:3000/health
    ```
 
-This starts the bot and PostgreSQL. The compose file sets `POSTGRES_SSL=false` and `AUTO_MIGRATE=true` for the bundled database. Music uses public Lavalink v4 nodes from `lavalink/nodes.json` by default.
-
-### Music
-
-Music uses [Lavalink v4](https://github.com/lavalink-devs/Lavalink) via [Riffy](https://github.com/riffy-rb/riffy), similar to [Musicify](https://github.com/codebymitch/Musicify).
-
-1. By default, the bot loads multiple public v4 SSL nodes from [`lavalink/nodes.json`](lavalink/nodes.json) (sourced from [lavalink.darrennathanael.com](https://lavalink.darrennathanael.com/SSL/Lavalink-SSL/)). Edit that file to add or remove nodes.
-2. To self-host Lavalink instead, run `docker compose --profile local-lavalink up -d` and set single-node env vars in `.env`:
-   ```env
-   LAVALINK_HOST=lavalink
-   LAVALINK_PORT=2333
-   LAVALINK_PASSWORD=youshallnotpass
-   LAVALINK_SECURE=false
-   ```
-   Remove or rename `lavalink/nodes.json` so the bot falls back to those env vars.
-3. Override nodes inline with `LAVALINK_NODES` (JSON array) or point at another file with `LAVALINK_NODES_FILE`.
-4. Use `/play <song>` from a voice channel, or `/join` to connect without playing. Prefix shortcuts: `join`, `np`, `leave`, `pause`, `resume`, `skip`, `stop`, `volume <0-100>`, or `music <subcommand>`. Use `/nowplaying` and `/queue` for status; `/music` for loop, shuffle, seek, and other controls.
+This starts the bot and PostgreSQL. The compose file sets `POSTGRES_SSL=false` and `AUTO_MIGRATE=true` for the bundled database.
 
 ### Using GitHub Container Registry
 
@@ -218,7 +194,7 @@ Slash commands are registered **globally** on startup (via `CLIENT_ID`), so the 
 
 Notes:
 - Global slash commands may take up to about an hour to propagate on first deploy
-- Each server has **isolated** data: config, economy, tickets, leveling, dashboards, warnings, etc. (all keys are scoped as `guild:{guildId}:...`)
+- Each server has **isolated** data: config, economy, tickets, dashboards, warnings, etc. (all keys are scoped as `guild:{guildId}:...`)
 - In the [Discord Developer Portal](https://discord.com/developers/applications), ensure your bot is not restricted to a single guild if you plan to invite it elsewhere
 - Generate an OAuth2 invite URL from the [Discord Developer Portal](https://discord.com/developers/applications) (OAuth2 → URL Generator, scopes: `bot` and `applications.commands`)
 

@@ -3,8 +3,7 @@ import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { reconcileTicketPanels, reconcileVerificationPanels, reconcileReactionRolePanelHealth } from "../services/panelHealthService.js";
-import { reconcileLevelRoles } from "../services/leveling/levelRoleSyncService.js";
-import { initRiffyAfterReady } from "../services/music/riffySetup.js";
+import { startLiveStatusUpdater } from "../services/musicStatusService.js";
 
 export default {
   name: Events.ClientReady,
@@ -17,10 +16,6 @@ export default {
       startupLog(`Ready! Logged in as ${client.user.tag}`);
       startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
       startupLog(`Loaded ${client.commands.size} commands`);
-
-      if (client.config?.features?.music) {
-        initRiffyAfterReady(client);
-      }
 
       const reconciliationSummary = await reconcileReactionRoleMessages(client);
       startupLog(
@@ -42,10 +37,9 @@ export default {
         `Reaction role panel health: scanned ${reactionRolePanelSummary.scannedPanels} panels, healthy ${reactionRolePanelSummary.healthyPanels}, deleted ${reactionRolePanelSummary.deletedPanels}, missing channel ${reactionRolePanelSummary.missingChannels}, recovered ${reactionRolePanelSummary.recoveredIds}, errors ${reactionRolePanelSummary.errors}`
       );
 
-      const levelRoleSummary = await reconcileLevelRoles(client);
-      startupLog(
-        `Level role sync: scanned ${levelRoleSummary.scannedGuilds} guilds, pruned ${levelRoleSummary.prunedRewardEntries} stale rewards, re-awarded ${levelRoleSummary.rolesReAwarded} roles, errors ${levelRoleSummary.errors}`
-      );
+      // Mulai auto-refresh untuk live status bot musik
+      startLiveStatusUpdater(client);
+
     } catch (error) {
       logger.error("Error in ready event:", error);
     }

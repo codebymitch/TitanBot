@@ -7,6 +7,17 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
+const ADMIN_POTION_ID = 'admin_potion';
+// Potion ini langsung aktif saat dibeli. Admin potion TIDAK termasuk di sini:
+// admin potion disimpan ke inventory dulu supaya bisa dipakai (/use) atau dikirim (/give).
+const LUCK_POTION_IDS = new Set([
+    'luck_potion_1',
+    'luck_potion_2',
+    'luck_potion_3',
+    'luck_potion_4',
+    'luck_potion_5',
+]);
+const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
 export default {
     data: new SlashCommandBuilder()
@@ -36,7 +47,7 @@ export default {
             const itemId = interaction.options.getString("item_id").toLowerCase();
             const quantity = interaction.options.getInteger("quantity") || 1;
 
-            const item = SHOP_ITEMS.find(i => i.id === itemId);
+            const item = SHOP_ITEMS.find(i => i.id.toLowerCase() === itemId);
 
             if (!item) {
                 throw createError(
@@ -44,6 +55,15 @@ export default {
                     ErrorTypes.VALIDATION,
                     `The item ID \`${itemId}\` does not exist in the shop.`,
                     { itemId }
+                );
+            }
+
+            if (item.requiredRoleId && !interaction.member.roles.cache.has(item.requiredRoleId)) {
+                throw createError(
+                    "Restricted item",
+                    ErrorTypes.VALIDATION,
+                    `**${item.name}** can only be purchased by members with the required role.`,
+                    { itemId, requiredRoleId: item.requiredRoleId }
                 );
             }
 
@@ -136,11 +156,22 @@ export default {
             } else if (item.type === "upgrade") {
                 userData.upgrades[itemId] = true;
                 successDescription += `\n\n**✨ Your upgrade is now active!**`;
+            } else if (item.type === "consumable" && LUCK_POTION_IDS.has(itemId)) {
+                const now = Date.now();
+                const potionExpiries = userData.luckPotionExpiresAt || {};
+                const currentExpiry = Math.max(now, Number(potionExpiries[itemId]) || 0);
+                const duration = Number(item.effect?.duration) || DEFAULT_LUCK_POTION_DURATION_MS;
+                potionExpiries[itemId] = currentExpiry + (duration * quantity);
+                userData.luckPotionExpiresAt = potionExpiries;
+                const activeMinutes = Math.ceil((potionExpiries[itemId] - now) / 60000);
+                successDescription += `\n\n🧪 **Active for ${activeMinutes} minutes. Timer started at purchase.**`;
             } else if (item.type === "consumable" || item.type === "tool") {
                 userData.inventory[itemId] =
                     (userData.inventory[itemId] || 0) + quantity;
                 if (item.type === "tool") {
                     successDescription += `\n\n**🛠️ ${item.name} added to your inventory!**`;
+                } else if (itemId === ADMIN_POTION_ID) {
+                    successDescription += `\n\n👑 **Added to your inventory!** Activate it with \`/use item_id:${ADMIN_POTION_ID}\` or gift it with \`/give\`.`;
                 }
             }
 

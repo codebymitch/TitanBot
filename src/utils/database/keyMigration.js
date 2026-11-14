@@ -20,14 +20,6 @@ async function keyExists(client, canonicalKey) {
         return result.rows.length > 0;
     }
 
-    if (parsed.type === 'user_level') {
-        const result = await client.query(
-            `SELECT 1 FROM ${pgConfig.tables.user_levels} WHERE guild_id = $1 AND user_id = $2 LIMIT 1`,
-            [parsed.guildId, parsed.userId],
-        );
-        return result.rows.length > 0;
-    }
-
     if (parsed.type === 'counters') {
         const result = await client.query(
             `SELECT counters FROM ${pgConfig.tables.guilds} WHERE id = $1 AND counters IS NOT NULL AND counters <> '[]'::jsonb LIMIT 1`,
@@ -95,35 +87,6 @@ async function migrateEconomyFromTemp(client, legacyKey, value) {
            data = EXCLUDED.data,
            updated_at = CURRENT_TIMESTAMP`,
         [parsed.guildId, parsed.userId, wallet, bank, JSON.stringify(payload ?? {})],
-    );
-}
-
-async function migrateUserLevelFromTemp(client, legacyKey, value) {
-    const parsed = parseKey(canonicalizeKey(legacyKey));
-    const payload = typeof value === 'string' ? JSON.parse(value) : value;
-    const lastMessageValue = payload?.lastMessage ?? payload?.last_message;
-
-    await ensureParentRows(client, parsed.guildId, parsed.userId);
-    await client.query(
-        `INSERT INTO ${pgConfig.tables.user_levels}
-         (guild_id, user_id, xp, level, total_xp, last_message, rank, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-         ON CONFLICT (guild_id, user_id) DO UPDATE SET
-           xp = EXCLUDED.xp,
-           level = EXCLUDED.level,
-           total_xp = EXCLUDED.total_xp,
-           last_message = EXCLUDED.last_message,
-           rank = EXCLUDED.rank,
-           updated_at = CURRENT_TIMESTAMP`,
-        [
-            parsed.guildId,
-            parsed.userId,
-            Number(payload?.xp) || 0,
-            Number(payload?.level) || 0,
-            Number(payload?.totalXp ?? payload?.total_xp) || 0,
-            resolveTimestampValue(lastMessageValue),
-            Number(payload?.rank) || 0,
-        ],
     );
 }
 
@@ -225,12 +188,6 @@ export async function runKeyMigration({ pool, dryRun = false, force = false, log
                 if (!dryRun) {
                     if (parsed.type === 'economy') {
                         await migrateEconomyFromTemp(client, legacyKey, row.value);
-                        await client.query(
-                            `DELETE FROM ${pgConfig.tables.temp_data} WHERE key = $1`,
-                            [legacyKey],
-                        );
-                    } else if (parsed.type === 'user_level') {
-                        await migrateUserLevelFromTemp(client, legacyKey, row.value);
                         await client.query(
                             `DELETE FROM ${pgConfig.tables.temp_data} WHERE key = $1`,
                             [legacyKey],
