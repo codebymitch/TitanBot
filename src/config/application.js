@@ -1,7 +1,6 @@
 import { fileURLToPath } from "url";
 import path from "path";
 import botConfig, { validateConfig } from "./bot.js";
-import { shopConfig as shop } from "./shop/index.js";
 import { pgConfig } from "./database/postgres.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,11 +23,6 @@ const appConfig = {
     clientId: process.env.CLIENT_ID,
     // Retained for tutorial/setup compatibility; not used for command registration.
     guildId: process.env.GUILD_ID,
-
-    shop: {
-      ...botConfig.shop,
-      ...shop,
-    },
   },
 
   // PostgreSQL configuration - Primary production database
@@ -69,8 +63,6 @@ const appConfig = {
       max: 100,
     },
   },
-
-  shop,
 
   features: {
     ...botConfig.features,

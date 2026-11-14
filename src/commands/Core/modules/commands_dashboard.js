@@ -120,7 +120,7 @@ export function buildOverviewEmbed(snapshot, guild) {
 
   return createEmbed({
     title: '⚙️ Command Access',
-    description: `Manage slash and prefix commands for **${guild.name}**. Subcommands (e.g. \`birthday list\`) are listed separately.`,
+    description: `Manage slash and prefix commands for **${guild.name}**. Subcommands (e.g. \`music volume\`) are listed separately.`,
     color: 'info',
     fields,
     footer: '🔒 commands & configwizard always stay available',

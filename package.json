@@ -9,8 +9,6 @@
     "migrate": "node scripts/migrate.js apply",
     "migrate:check": "node scripts/migrate.js check",
     "migrate:status": "node scripts/migrate.js status",
-    "migrate:keys": "node scripts/migrate-keys.js",
-    "migrate:keys:dry": "node scripts/migrate-keys.js --dry-run",
     "backup:db": "node scripts/backup.js",
     "restore:db": "node scripts/restore.js",
     "backup:drill": "node scripts/restore-drill.js"

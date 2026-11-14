@@ -20,14 +20,11 @@ const CONFIG_VALIDATION_RULES = {
     adminRole: { type: 'role', required: false },
     prefix: { type: 'string', required: false, maxLength: 10, minLength: 1 },
     dmOnClose: { type: 'boolean', required: false },
-    maxTicketsPerUser: { type: 'number', required: false, min: 1, max: 50 },
-    birthdayChannelId: { type: 'channel', required: false },
     logIgnore: { type: 'object', required: false },
     logging: { type: 'object', required: false }
 };
 
 const SETTING_CONFLICTS = {
-    'birthdayChannelId': [],
     'logging': [],
 };
 
@@ -45,8 +42,6 @@ const ConfigValueSchemas = Object.freeze({
     adminRole: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
     prefix: z.string().min(1).max(10),
     dmOnClose: z.boolean(),
-    maxTicketsPerUser: z.number().int().min(1).max(50),
-    birthdayChannelId: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
     logIgnore: LogIgnoreSchema,
     logging: LoggingConfigSchema,
 });

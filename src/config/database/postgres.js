@@ -5,17 +5,6 @@ const configuredTables = {
     guilds: 'guilds',
     users: 'users',
     guild_users: 'guild_users',
-    birthdays: 'birthdays',
-    giveaways: 'giveaways',
-    tickets: 'ticket_data',
-    afk_status: 'afk_status',
-    welcome_configs: 'welcome_configs',
-    leveling_configs: 'leveling_configs',
-    user_levels: 'user_levels',
-    economy: 'economy',
-    invite_tracking: 'invite_tracking',
-    application_roles: 'application_roles',
-    verification_audit: 'verification_audit',
     temp_data: 'temp_data',
     cache_data: 'cache_data',
 };
@@ -24,17 +13,6 @@ const allowedTableIdentifiers = new Set([
     'guilds',
     'users',
     'guild_users',
-    'birthdays',
-    'giveaways',
-    'ticket_data',
-    'afk_status',
-    'welcome_configs',
-    'leveling_configs',
-    'user_levels',
-    'economy',
-    'invite_tracking',
-    'application_roles',
-    'verification_audit',
     'temp_data',
     'cache_data',
 ]);
@@ -130,31 +108,7 @@ export const pgConfig = {
     },
     
     tables: validatedTables,
-    
-    defaultTTL: {
-        userSession: 86400,
-        
-        temp: 3600,
-        
-        cache: 1800,
-        
-        guildConfig: null,
-        
-        economy: null,
-        
-        leveling: null,
-        
-        giveaway: null,
-        
-        ticket: 604800,
-        
-        afk: 86400,
-        
-        welcome: null,
-        
-        birthday: null,
-    },
-    
+
     features: {
         pooling: true,
         ssl: process.env.NODE_ENV === 'production',

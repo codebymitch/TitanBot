@@ -6,9 +6,6 @@
 export const SLASH_ONLY_COMMANDS = new Set([
   'configwizard',
   'help',
-  'embedbuilder',
-  'wipedata',
-  'apply',
 ]);
 
 /** Subcommands blocked for every command when invoked via prefix. */
@@ -33,8 +30,6 @@ export const COMMAND_BLOCKED_SUBCOMMANDS = {
     'clear',
     '247',
   ]),
-  birthday: new Set(['setchannel']),
-  report: new Set(['setchannel']),
 };
 
 function collectSubcommandNames(commandJson) {
