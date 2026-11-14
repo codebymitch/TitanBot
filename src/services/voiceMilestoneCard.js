@@ -123,6 +123,7 @@ export async function renderVoiceMilestoneCard({
   totalMs,
   roleColor,
   isTest = false,
+  rank = null,
 }) {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const context = canvas.getContext('2d');
@@ -139,10 +140,10 @@ export async function renderVoiceMilestoneCard({
     backgroundHeight,
   );
 
-  context.fillStyle = 'rgba(9, 14, 17, 0.62)';
+  context.fillStyle = 'rgba(9, 14, 17, 0.58)';
   context.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
-  roundedRect(context, 24, 22, CARD_WIDTH - 48, CARD_HEIGHT - 44, 28);
-  context.fillStyle = 'rgba(12, 18, 20, 0.5)';
+  roundedRect(context, 28, 24, CARD_WIDTH - 56, CARD_HEIGHT - 48, 28);
+  context.fillStyle = 'rgba(12, 18, 20, 0.45)';
   context.fill();
   context.lineWidth = 2;
   context.strokeStyle = `${toHexColor(roleColor)}B8`;
@@ -155,33 +156,15 @@ export async function renderVoiceMilestoneCard({
     || 'Manay Member';
   const avatar = await getAvatar(member);
 
-  context.textBaseline = 'alphabetic';
-  context.fillStyle = accent;
-  context.font = fontString(18);
-  context.letterSpacing = '3px';
-  context.fillText(isTest ? 'MANAY SOCIETY  /  TEST PREVIEW' : 'MANAY SOCIETY  /  VOICE MILESTONE', 310, 74);
-  context.letterSpacing = '0px';
-
-  context.fillStyle = '#E7EAEB';
-  fitText(context, displayName, 310, 123, 570, 28, 20);
-
-  context.fillStyle = '#AAB3B6';
-  context.font = fontString(14);
-  context.letterSpacing = '2px';
-  context.fillText(isTest ? 'PREVIEW TIER' : 'NEW TIER', 310, 160);
-  context.letterSpacing = '0px';
-
-  context.fillStyle = accent;
-  fitText(context, milestone.label.toUpperCase(), 310, 208, 650, 48, 28);
-
-  const avatarX = 178;
-  const avatarY = 220;
-  const avatarRadius = 72;
+  // ---- Avatar (left) ----
+  const avatarX = 170;
+  const avatarY = 210;
+  const avatarRadius = 82;
   context.beginPath();
   context.arc(avatarX, avatarY, avatarRadius + 8, 0, Math.PI * 2);
   context.fillStyle = 'rgba(8, 12, 14, 0.92)';
   context.fill();
-  context.lineWidth = 4;
+  context.lineWidth = 5;
   context.strokeStyle = accent;
   context.stroke();
 
@@ -195,49 +178,80 @@ export async function renderVoiceMilestoneCard({
     context.fillStyle = '#33413D';
     context.fillRect(avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
     context.fillStyle = '#F5F5F5';
-    context.font = fontString(52);
+    context.font = fontString(58);
     context.textAlign = 'center';
-    context.fillText(displayName.slice(0, 1).toUpperCase(), avatarX, avatarY + 18);
+    context.fillText(displayName.slice(0, 1).toUpperCase(), avatarX, avatarY + 20);
     context.textAlign = 'start';
   }
   context.restore();
 
-  drawShield(context, 980, 92, 150, accent);
+  // ---- Shield badge (right) ----
+  drawShield(context, 990, 70, 170, accent);
 
-  context.fillStyle = '#AAB3B6';
-  context.font = fontString(13);
-  context.letterSpacing = '2px';
-  context.fillText('TOTAL VOICE', 310, 273);
-  context.fillText(next ? `NEXT · ${next.hours} HOURS` : 'NEXT MILESTONE', 660, 273);
+  // ---- Top label + username + tier (center area) ----
+  const contentX = 310;
+
+  context.textBaseline = 'alphabetic';
+  context.fillStyle = accent;
+  context.font = fontString(17);
+  context.letterSpacing = '4px';
+  context.fillText(isTest ? 'MANAY SOCIETY  ·  TEST PREVIEW' : 'MANAY SOCIETY  ·  VOICE MILESTONE', contentX, 76);
   context.letterSpacing = '0px';
 
   context.fillStyle = '#F5F6F6';
-  context.font = fontString(26);
-  context.fillText(formatHours(totalMs), 310, 309);
-  fitText(context, next ? next.label.toUpperCase() : 'HALL OF FAME', 660, 309, 420, 23, 18);
+  fitText(context, displayName, contentX, 132, 600, 38, 22);
 
+  context.fillStyle = '#AAB3B6';
+  context.font = fontString(14);
+  context.letterSpacing = '3px';
+  context.fillText(isTest ? 'PREVIEW TIER' : 'TIER BARU', contentX, 166);
+  context.letterSpacing = '0px';
+
+  context.fillStyle = accent;
+  fitText(context, milestone.label.toUpperCase(), contentX, 232, 620, 68, 36);
+
+  // ---- Progress bar ----
   const currentHours = milestone.hours * HOUR_MS;
   const nextHours = next ? next.hours * HOUR_MS : currentHours;
   const progress = next
     ? Math.max(0, Math.min(1, (totalMs - currentHours) / (nextHours - currentHours)))
     : 1;
   const progressX = 310;
-  const progressY = 344;
-  const progressWidth = 765;
-  roundedRect(context, progressX, progressY, progressWidth, 12, 6);
-  context.fillStyle = 'rgba(229, 236, 235, 0.25)';
+  const progressY = 262;
+  const progressWidth = 660;
+  roundedRect(context, progressX, progressY, progressWidth, 10, 5);
+  context.fillStyle = 'rgba(229, 236, 235, 0.22)';
   context.fill();
   if (progress > 0) {
-    roundedRect(context, progressX, progressY, Math.max(12, progressWidth * progress), 12, 6);
+    roundedRect(context, progressX, progressY, Math.max(10, progressWidth * progress), 10, 5);
     context.fillStyle = accent;
     context.fill();
   }
-
   context.fillStyle = '#D8DEDF';
   context.font = fontString(14);
   context.textAlign = 'right';
-  context.fillText(`${Math.round(progress * 100)}%`, 1076, 337);
+  context.fillText(`${Math.round(progress * 100)}%`, 976, 256);
   context.textAlign = 'start';
+
+  // ---- Bottom 3 columns: TOTAL VOICE / GLOBAL RANK / BERIKUTNYA ----
+  const colY = 318;
+  const col1X = 310;
+  const col2X = 560;
+  const col3X = 810;
+
+  context.fillStyle = '#AAB3B6';
+  context.font = fontString(14);
+  context.letterSpacing = '2px';
+  context.fillText('TOTAL VOICE', col1X, colY);
+  context.fillText('GLOBAL RANK', col2X, colY);
+  context.fillText(next ? `BERIKUTNYA  ·  ${next.hours} JAM` : 'TIER MAKSIMAL', col3X, colY);
+  context.letterSpacing = '0px';
+
+  context.fillStyle = '#F5F6F6';
+  context.font = fontString(30);
+  context.fillText(formatHours(totalMs), col1X, colY + 42);
+  context.fillText(rank ? `#${rank}` : '#—', col2X, colY + 42);
+  fitText(context, next ? next.label.toUpperCase() : 'HALL OF FAME', col3X, colY + 42, 300, 26, 18);
 
   return canvas.toBuffer('image/png');
 }

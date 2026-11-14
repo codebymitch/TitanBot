@@ -167,6 +167,31 @@ export function getMilestoneProgress(totalMs, milestones) {
   return { current, next, sorted };
 }
 
+/** Compute this member's global rank (1 = highest total voice) within the guild. */
+export async function getVoiceMilestoneRank(client, guildId, userId, totalMs) {
+  if (!client?.db) return null;
+
+  try {
+    const prefix = getVoiceMilestoneUsersPrefix(guildId);
+    const keys = await client.db.list(prefix);
+    let rank = 1;
+
+    for (const key of keys) {
+      const entryUserId = key.slice(prefix.length);
+      if (!entryUserId || entryUserId === userId) continue;
+
+      const raw = await client.db.get(key, null);
+      const ms = Math.max(0, Math.floor(Number(raw?.totalMs) || 0));
+      if (ms > totalMs) rank += 1;
+    }
+
+    return rank;
+  } catch (error) {
+    logger.debug(`Failed to compute voice milestone rank for ${guildId}:${userId}:`, error);
+    return null;
+  }
+}
+
 async function syncMemberMilestones(client, guild, userId, totalMs, config) {
   const configured = config.milestones.filter((m) => m.roleId);
   if (configured.length === 0) {
@@ -280,6 +305,7 @@ async function postMilestoneAnnouncement(
 
     let cardBuffer = null;
     try {
+      const rank = await getVoiceMilestoneRank(client, guild.id, userId, totalMs);
       cardBuffer = await renderVoiceMilestoneCard({
         member,
         milestone,
@@ -287,6 +313,7 @@ async function postMilestoneAnnouncement(
         totalMs,
         roleColor: role?.color,
         isTest,
+        rank,
       });
       embed.setImage('attachment://voice-milestone.png');
     } catch (error) {
@@ -476,6 +503,7 @@ export default {
   saveVoiceMilestoneConfig,
   getVoiceMilestoneData,
   getMilestoneProgress,
+  getVoiceMilestoneRank,
   sendVoiceMilestoneTestAnnouncement,
   resetVoiceMilestoneData,
   trackVoiceJoin,
