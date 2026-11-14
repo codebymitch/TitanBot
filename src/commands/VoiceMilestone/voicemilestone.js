@@ -14,6 +14,7 @@ import {
     applyMilestonesForMember,
     recheckAllMembers,
     sendVoiceMilestoneTestAnnouncement,
+    configureVoiceLeaderboard,
 } from '../../services/voiceMilestoneService.js';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -71,8 +72,8 @@ async function handleSetup(interaction, client) {
     }));
 
     const saved = await saveVoiceMilestoneConfig(client, guild.id, {
+        ...config,
         enabled: true,
-        announcementChannelId: config.announcementChannelId,
         milestones,
     });
     const missing = saved.milestones.filter((m) => !m.roleId).length;
@@ -310,6 +311,19 @@ async function handleReset(interaction, client) {
     await replyEmbed(interaction, embed);
 }
 
+async function handleLeaderboard(interaction, client) {
+    const channel = interaction.options.getChannel('channel');
+    const result = await configureVoiceLeaderboard(client, interaction.guild, channel);
+
+    const embed = baseEmbed('Live Voice Leaderboard', { enabled: true })
+        .setDescription(
+            result.enabled
+                ? `Board Top Voice sudah dipasang di <#${result.channelId}> dan akan diperbarui otomatis setiap 5 menit.`
+                : 'Live Voice Leaderboard dinonaktifkan dan pesan board sebelumnya dihapus.',
+        );
+    await replyEmbed(interaction, embed);
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName('voicemilestone')
@@ -417,7 +431,17 @@ export default {
                     option
                         .setName('user')
                         .setDescription('The member whose voice time should be reset')
-                        .setRequired(true))),
+                        .setRequired(true)))
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName('leaderboard')
+                .setDescription('Pasang atau matikan pesan live Top Voice')
+                .addChannelOption((option) =>
+                    option
+                        .setName('channel')
+                        .setDescription('Channel untuk board; kosongkan untuk mematikannya')
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setRequired(false))),
 
     async execute(interaction, guildConfig, client) {
         const subcommand = interaction.options.getSubcommand();
@@ -463,6 +487,9 @@ export default {
                     break;
                 case 'reset':
                     await handleReset(interaction, client);
+                    break;
+                case 'leaderboard':
+                    await handleLeaderboard(interaction, client);
                     break;
                 default:
                     await replyUserError(interaction, {

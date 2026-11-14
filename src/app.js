@@ -341,6 +341,10 @@ class TitanBot extends Client {
       
       logger.info('Stopping cron jobs...');
       cron.getTasks().forEach(task => task.stop());
+      if (this.voiceMilestoneLeaderboardTimer) {
+        clearInterval(this.voiceMilestoneLeaderboardTimer);
+        this.voiceMilestoneLeaderboardTimer = null;
+      }
       logger.info('✅ Cron jobs stopped');
 
       if (this.webServer) {
