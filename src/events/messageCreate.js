@@ -12,6 +12,7 @@ import { getCommandPrefix, getBotMessage, isBotOwner, isCommandCategoryEnabled, 
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { createEmbed } from '../utils/embeds.js';
 import { isCommandEnabled } from '../services/commandAccessService.js';
+import { handleBotMention } from '../services/botMentionService.js';
 import {
   getCountingGameConfig,
   saveCountingGameConfig,
@@ -35,7 +36,15 @@ export default {
         return;
       }
 
-      await handlePrefixCommand(message, client);
+      // A ping to the bot (staff only) is answered here and is never parsed as a prefix command.
+      const mentionHandled = await handleBotMention(message, client).catch((error) => {
+        logger.error('Error handling bot mention:', error);
+        return false;
+      });
+
+      if (!mentionHandled) {
+        await handlePrefixCommand(message, client);
+      }
 
       await handleLeveling(message, client);
     } catch (error) {
