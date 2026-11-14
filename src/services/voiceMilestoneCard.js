@@ -1,4 +1,4 @@
-import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -6,8 +6,25 @@ const CARD_WIDTH = 1200;
 const CARD_HEIGHT = 420;
 const HOUR_MS = 60 * 60 * 1000;
 const BACKGROUND_PATH = fileURLToPath(new URL('../assets/voice-milestone-background.jpg', import.meta.url));
+const FONT_REGULAR_PATH = fileURLToPath(new URL('../assets/fonts/DejaVuSans.ttf', import.meta.url));
+const FONT_BOLD_PATH = fileURLToPath(new URL('../assets/fonts/DejaVuSans-Bold.ttf', import.meta.url));
+
+const FONT_FAMILY = 'Manay Sans';
+const FONT_BOLD_FAMILY = 'Manay Sans Bold';
 
 let backgroundPromise;
+let fontsRegistered = false;
+
+function ensureFonts() {
+  if (fontsRegistered) return;
+  GlobalFonts.registerFromPath(FONT_REGULAR_PATH, FONT_FAMILY);
+  GlobalFonts.registerFromPath(FONT_BOLD_PATH, FONT_BOLD_FAMILY);
+  fontsRegistered = true;
+}
+
+function fontString(size, bold = true) {
+  return `${bold ? '' : ''}${size}px "${bold ? FONT_BOLD_FAMILY : FONT_FAMILY}"`;
+}
 
 function roundedRect(context, x, y, width, height, radius) {
   context.beginPath();
@@ -25,11 +42,11 @@ function roundedRect(context, x, y, width, height, radius) {
 
 function fitText(context, text, x, y, maxWidth, fontSize, minFontSize = 20) {
   let size = fontSize;
-  context.font = `bold ${size}px sans-serif`;
+  context.font = fontString(size);
 
   while (context.measureText(text).width > maxWidth && size > minFontSize) {
     size -= 2;
-    context.font = `bold ${size}px sans-serif`;
+    context.font = fontString(size);
   }
 
   context.fillText(text, x, y);
@@ -109,6 +126,7 @@ export async function renderVoiceMilestoneCard({
 }) {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const context = canvas.getContext('2d');
+  ensureFonts();
   const background = await getBackground();
   const scale = Math.max(CARD_WIDTH / background.width, CARD_HEIGHT / background.height);
   const backgroundWidth = background.width * scale;
@@ -139,7 +157,7 @@ export async function renderVoiceMilestoneCard({
 
   context.textBaseline = 'alphabetic';
   context.fillStyle = accent;
-  context.font = 'bold 18px sans-serif';
+  context.font = fontString(18);
   context.letterSpacing = '3px';
   context.fillText(isTest ? 'MANAY SOCIETY  /  TEST PREVIEW' : 'MANAY SOCIETY  /  VOICE MILESTONE', 310, 74);
   context.letterSpacing = '0px';
@@ -148,7 +166,7 @@ export async function renderVoiceMilestoneCard({
   fitText(context, displayName, 310, 123, 570, 28, 20);
 
   context.fillStyle = '#AAB3B6';
-  context.font = 'bold 14px sans-serif';
+  context.font = fontString(14);
   context.letterSpacing = '2px';
   context.fillText(isTest ? 'PREVIEW TIER' : 'NEW TIER', 310, 160);
   context.letterSpacing = '0px';
@@ -177,7 +195,7 @@ export async function renderVoiceMilestoneCard({
     context.fillStyle = '#33413D';
     context.fillRect(avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
     context.fillStyle = '#F5F5F5';
-    context.font = 'bold 52px sans-serif';
+    context.font = fontString(52);
     context.textAlign = 'center';
     context.fillText(displayName.slice(0, 1).toUpperCase(), avatarX, avatarY + 18);
     context.textAlign = 'start';
@@ -187,14 +205,14 @@ export async function renderVoiceMilestoneCard({
   drawShield(context, 980, 92, 150, accent);
 
   context.fillStyle = '#AAB3B6';
-  context.font = 'bold 13px sans-serif';
+  context.font = fontString(13);
   context.letterSpacing = '2px';
   context.fillText('TOTAL VOICE', 310, 273);
   context.fillText(next ? `NEXT · ${next.hours} HOURS` : 'NEXT MILESTONE', 660, 273);
   context.letterSpacing = '0px';
 
   context.fillStyle = '#F5F6F6';
-  context.font = 'bold 26px sans-serif';
+  context.font = fontString(26);
   context.fillText(formatHours(totalMs), 310, 309);
   fitText(context, next ? next.label.toUpperCase() : 'HALL OF FAME', 660, 309, 420, 23, 18);
 
@@ -216,7 +234,7 @@ export async function renderVoiceMilestoneCard({
   }
 
   context.fillStyle = '#D8DEDF';
-  context.font = 'bold 14px sans-serif';
+  context.font = fontString(14);
   context.textAlign = 'right';
   context.fillText(`${Math.round(progress * 100)}%`, 1076, 337);
   context.textAlign = 'start';
