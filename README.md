@@ -143,6 +143,15 @@ Music uses [Lavalink v4](https://github.com/lavalink-devs/Lavalink) via [Riffy](
 3. Override nodes inline with `LAVALINK_NODES` (JSON array) or point at another file with `LAVALINK_NODES_FILE`.
 4. Use `/play <song>` from a voice channel, or `/join` to connect without playing. Prefix shortcuts: `join`, `np`, `leave`, `pause`, `resume`, `skip`, `stop`, `volume <0-100>`, or `music <subcommand>`. Use `/nowplaying` and `/queue` for status; `/music` for loop, shuffle, seek, and other controls.
 
+### AI replies (Gemini)
+
+Staff can ping the bot to talk to it:
+
+- `@Bot` alone → "I'm Strommc bot, how can I help you today?"
+- `@Bot <question>` → the answer from Google Gemini (replies to the same message, no channel locking, no extra pings)
+
+Set `GEMINI_API_KEY` in `.env` (key from [Google AI Studio](https://aistudio.google.com/apikey)). Only staff are answered — anyone with Administrator, Manage Server, Manage Messages, Timeout, Kick or Ban permission, bot owners (`OWNER_IDS`), and roles listed in `STAFF_ROLE_IDS`. Everyone else's pings are ignored. Each staff member is limited to 5 questions per minute. Optional: `GEMINI_MODEL`, `GEMINI_TIMEOUT_MS`, `BOT_DISPLAY_NAME`.
+
 ### Using GitHub Container Registry
 
 The bot is automatically published to GitHub Container Registry on every push to main.
