@@ -159,7 +159,7 @@ async function buildChatLeaderboardPayload(client, guild) {
       rankingLines.length ? rankingLines.join('\n') : 'Belum ada pesan yang tercatat.',
       '═════════════════════',
       `<:users:1571422486841528463> **${participantCount} peserta** · <a:typing:1571436147610095646> **${formatCount(totalMessages)} total pesan**`,
-      'Manay Society · Refresh tiap 5 menit',
+      '<:ManaySocietyV2:1571439027381604363> Manay Society · <a:repeat:1571423818335916102> Refresh tiap 5 menit',
     ].join('\n'))
     .setTimestamp();
 
