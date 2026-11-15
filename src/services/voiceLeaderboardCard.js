@@ -7,8 +7,10 @@ const HEIGHT = 540;
 const BACKGROUND_PATH = fileURLToPath(new URL('../assets/voice-milestone-background.jpg', import.meta.url));
 const FONT_REGULAR_PATH = fileURLToPath(new URL('../assets/fonts/DejaVuSans.ttf', import.meta.url));
 const FONT_BOLD_PATH = fileURLToPath(new URL('../assets/fonts/DejaVuSans-Bold.ttf', import.meta.url));
+const DISPLAY_FONT_PATH = fileURLToPath(new URL('../assets/fonts/BebasNeue-Regular.ttf', import.meta.url));
 const FONT_FAMILY = 'Manay Sans';
 const FONT_BOLD_FAMILY = 'Manay Sans Bold';
+const DISPLAY_FONT_FAMILY = 'Manay Display';
 let backgroundPromise;
 let fontsRegistered = false;
 
@@ -16,11 +18,16 @@ function ensureFonts() {
   if (fontsRegistered) return;
   GlobalFonts.registerFromPath(FONT_REGULAR_PATH, FONT_FAMILY);
   GlobalFonts.registerFromPath(FONT_BOLD_PATH, FONT_BOLD_FAMILY);
+  GlobalFonts.registerFromPath(DISPLAY_FONT_PATH, DISPLAY_FONT_FAMILY);
   fontsRegistered = true;
 }
 
 function fontString(size, bold = true) {
   return `${size}px "${bold ? FONT_BOLD_FAMILY : FONT_FAMILY}"`;
+}
+
+function displayFontString(size) {
+  return `${size}px "${DISPLAY_FONT_FAMILY}"`;
 }
 
 async function loadAvatar(member) {
@@ -124,9 +131,9 @@ export async function renderVoiceLeaderboardCard({ entries }) {
   titleGradient.addColorStop(0, '#D58BFF');
   titleGradient.addColorStop(1, '#F5C842');
   context.fillStyle = titleGradient;
-  context.font = fontString(54);
-  context.letterSpacing = '3px';
-  context.fillText('TOP VOICE', 48, 76);
+  context.font = displayFontString(70);
+  context.letterSpacing = '4px';
+  context.fillText('TOP VOICE', 48, 79);
   context.letterSpacing = '0px';
   context.fillStyle = '#F2EAF8';
   context.font = fontString(20);
@@ -172,7 +179,7 @@ export async function renderVoiceLeaderboardCard({ entries }) {
     context.fill();
     context.textAlign = 'center';
     context.fillStyle = '#101416';
-    context.font = fontString(23);
+    context.font = displayFontString(31);
     context.fillText(String(entry.rank), badgeX, badgeY + 8);
 
     context.fillStyle = '#FFFFFF';
@@ -180,7 +187,7 @@ export async function renderVoiceLeaderboardCard({ entries }) {
     fitCenteredText(context, name, slot.x, cardY + (index === 0 ? 270 : 238), slot.width - 28, 27, 17);
 
     context.fillStyle = '#D28AFF';
-    context.font = fontString(index === 0 ? 35 : 31);
+    context.font = displayFontString(index === 0 ? 49 : 43);
     context.fillText(formatDuration(entry.totalMs), slot.x, cardY + (index === 0 ? 320 : 280));
     context.fillStyle = '#E7DDF0';
     context.font = fontString(17);
