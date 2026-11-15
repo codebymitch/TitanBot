@@ -585,8 +585,15 @@ async function buildVoiceLeaderboardPayload(client, guild) {
     cardEmbed.setDescription('Belum ada waktu voice yang tercatat.');
   }
 
-  const rankingLines = entries.map((entry) =>
-    `**${entry.rank}.** <@${entry.userId}> · **${formatLeaderboardDuration(entry.totalMs)}**`);
+  const rankingLines = entries.flatMap((entry) => {
+    const arrow = entry.rank <= 3
+      ? '<a:zarrowgold:1548599742622212097>'
+      : '<a:white_arrow:1548313513360097332>';
+    return [
+      `**${entry.rank}.** <@${entry.userId}>`,
+      `${arrow} **${formatLeaderboardDuration(entry.totalMs)}**`,
+    ];
+  });
   const listEmbed = new EmbedBuilder()
     .setColor(0xA753D2)
     .setTitle('🏆 TOP 10 ALL-TIME')
