@@ -578,7 +578,7 @@ async function buildVoiceLeaderboardPayload(client, guild) {
     ? await renderVoiceLeaderboardCard({ guild, entries: podium })
     : null;
   const cardEmbed = new EmbedBuilder()
-    .setColor(0xD6B15E);
+    .setColor(0xA753D2);
   if (image) {
     cardEmbed.setImage('attachment://voice-leaderboard.png');
   } else {
