@@ -560,15 +560,15 @@ async function buildVoiceLeaderboardPayload(client, guild) {
   const podium = entries.slice(0, 3);
   const image = podium.length ? await renderVoiceLeaderboardCard({ guild, entries: podium }) : null;
   const lines = entries.map((entry) => {
-    const medal = ['🥇', '🥈', '🥉'][entry.rank - 1] || `**${entry.rank}.**`;
-    return `${medal} <@${entry.userId}> · **${formatLeaderboardDuration(entry.totalMs)}**`;
+    const name = entry.displayName.replace(/[*_~`|]/g, '');
+    return `**#${entry.rank} | ${name}** (<@${entry.userId}>) · Total voice: **${formatLeaderboardDuration(entry.totalMs)}**`;
   });
 
   const embed = new EmbedBuilder()
     .setColor(0xD6B15E)
     .setTitle('🎙️ Top Voice')
     .setDescription(
-      `**Anggota dengan total waktu voice terlama**\n` +
+      `**Anggota dengan total waktu voice terlama**\n\n` +
       (lines.length ? lines.join('\n') : 'Belum ada waktu voice yang tercatat.'),
     )
     .setFooter({ text: 'Diperbarui otomatis setiap 5 menit · Waktu sesi aktif ikut dihitung' })

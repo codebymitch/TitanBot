@@ -101,17 +101,27 @@ export async function renderVoiceLeaderboardCard({ entries }) {
 
     drawAvatar(context, avatars[index], entry.member, slot.x, cardY + 82, slot.radius, slot.accent);
 
+    const badgeX = slot.x + slot.radius * 0.72;
+    const badgeY = cardY + 82 - slot.radius * 0.72;
+    context.beginPath();
+    context.arc(badgeX, badgeY, 27, 0, Math.PI * 2);
+    context.fillStyle = slot.accent;
+    context.fill();
     context.fillStyle = slot.accent;
     context.font = 'bold 23px sans-serif';
     context.textAlign = 'center';
-    context.fillText(`#${entry.rank}`, slot.x, cardY + 166);
+    context.fillStyle = '#101416';
+    context.font = 'bold 20px sans-serif';
+    context.fillText(`#${entry.rank}`, badgeX, badgeY + 7);
+
     context.fillStyle = '#FFFFFF';
-    context.font = 'bold 22px sans-serif';
-    const name = entry.displayName.length > 22 ? `${entry.displayName.slice(0, 21)}…` : entry.displayName;
-    context.fillText(name, slot.x, cardY + 203);
+    context.font = 'bold 24px sans-serif';
+    const name = entry.displayName.length > 22 ? `${entry.displayName.slice(0, 21)}...` : entry.displayName;
+    context.fillText(name, slot.x, cardY + (index === 0 ? 230 : 182));
+
     context.fillStyle = slot.accent;
     context.font = `bold ${index === 0 ? 34 : 29}px sans-serif`;
-    context.fillText(formatDuration(entry.totalMs), slot.x, cardY + 250);
+    context.fillText(`TOTAL VOICE  ${formatDuration(entry.totalMs)}`, slot.x, cardY + (index === 0 ? 280 : 222));
     context.textAlign = 'start';
   }
 
