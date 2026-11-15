@@ -92,18 +92,105 @@ function drawAvatar(context, avatar, member, x, y, radius, accent) {
   context.restore();
 }
 
-function drawCrown(context, x, y, color) {
+function drawCrown(context, x, y) {
+  context.save();
+  context.shadowColor = 'rgba(255, 184, 24, 0.6)';
+  context.shadowBlur = 18;
+  context.shadowOffsetY = 4;
+
   context.beginPath();
-  context.moveTo(x - 40, y + 20);
-  context.lineTo(x - 34, y - 12);
-  context.lineTo(x - 12, y + 5);
-  context.lineTo(x, y - 25);
-  context.lineTo(x + 15, y + 5);
-  context.lineTo(x + 35, y - 12);
-  context.lineTo(x + 41, y + 20);
+  context.moveTo(x - 70, y + 4);
+  context.lineTo(x - 48, y + 27);
+  context.lineTo(x - 34, y - 3);
+  context.lineTo(x - 12, y + 22);
+  context.lineTo(x, y - 20);
+  context.lineTo(x + 15, y + 22);
+  context.lineTo(x + 38, y - 3);
+  context.lineTo(x + 50, y + 27);
+  context.lineTo(x + 70, y + 4);
+  context.lineTo(x + 58, y + 49);
+  context.lineTo(x - 58, y + 49);
   context.closePath();
-  context.fillStyle = color;
+  const body = context.createLinearGradient(x - 64, y, x + 54, y + 48);
+  body.addColorStop(0, '#FFF276');
+  body.addColorStop(0.34, '#FFC928');
+  body.addColorStop(0.72, '#FF9F0A');
+  body.addColorStop(1, '#E97A00');
+  context.fillStyle = body;
   context.fill();
+  context.lineWidth = 3;
+  context.strokeStyle = '#FFE778';
+  context.stroke();
+
+  context.shadowColor = 'transparent';
+  const facets = [
+    [[x - 70, y + 4], [x - 48, y + 27], [x - 58, y + 49]],
+    [[x - 48, y + 27], [x - 34, y - 3], [x - 24, y + 49]],
+    [[x - 34, y - 3], [x - 12, y + 22], [x - 24, y + 49]],
+    [[x - 12, y + 22], [x, y - 20], [x + 5, y + 49]],
+    [[x, y - 20], [x + 15, y + 22], [x + 5, y + 49]],
+    [[x + 15, y + 22], [x + 38, y - 3], [x + 29, y + 49]],
+    [[x + 38, y - 3], [x + 50, y + 27], [x + 29, y + 49]],
+    [[x + 50, y + 27], [x + 70, y + 4], [x + 58, y + 49]],
+  ];
+  facets.forEach((points, index) => {
+    context.beginPath();
+    context.moveTo(...points[0]);
+    context.lineTo(...points[1]);
+    context.lineTo(...points[2]);
+    context.closePath();
+    context.fillStyle = index % 2 === 0
+      ? 'rgba(255, 246, 125, 0.48)'
+      : 'rgba(222, 112, 0, 0.25)';
+    context.fill();
+  });
+
+  const band = context.createLinearGradient(x, y + 36, x, y + 59);
+  band.addColorStop(0, '#FFE95B');
+  band.addColorStop(0.55, '#FFB800');
+  band.addColorStop(1, '#D87800');
+  context.beginPath();
+  context.moveTo(x - 60, y + 38);
+  context.quadraticCurveTo(x, y + 48, x + 60, y + 38);
+  context.lineTo(x + 55, y + 57);
+  context.quadraticCurveTo(x, y + 68, x - 55, y + 57);
+  context.closePath();
+  context.fillStyle = band;
+  context.fill();
+  context.lineWidth = 2;
+  context.strokeStyle = '#FFE778';
+  context.stroke();
+
+  for (const [gemX, gemY, radius] of [
+    [x - 70, y + 4, 6],
+    [x - 34, y - 3, 6],
+    [x, y - 20, 8],
+    [x + 38, y - 3, 6],
+    [x + 70, y + 4, 6],
+  ]) {
+    const gem = context.createRadialGradient(gemX - 2, gemY - 3, 1, gemX, gemY, radius);
+    gem.addColorStop(0, '#FFFBD0');
+    gem.addColorStop(0.45, '#FFD64A');
+    gem.addColorStop(1, '#D87500');
+    context.beginPath();
+    context.arc(gemX, gemY, radius, 0, Math.PI * 2);
+    context.fillStyle = gem;
+    context.fill();
+    context.lineWidth = 1.5;
+    context.strokeStyle = '#FFF1A3';
+    context.stroke();
+  }
+
+  const jewelY = y + 51;
+  context.beginPath();
+  context.moveTo(x, jewelY - 7);
+  context.lineTo(x + 8, jewelY);
+  context.lineTo(x, jewelY + 7);
+  context.lineTo(x - 8, jewelY);
+  context.closePath();
+  context.fillStyle = '#F48608';
+  context.fill();
+  context.restore();
 }
 
 function drawBackground(context) {
@@ -216,7 +303,7 @@ export async function renderVoiceLeaderboardCard({ entries }) {
   ];
   const avatarPromises = entries.slice(0, 3).map((entry) => loadAvatar(entry.member));
   const avatars = await Promise.all(avatarPromises);
-  if (entries[0]) drawCrown(context, 600, 178, '#FFC928');
+  if (entries[0]) drawCrown(context, 600, 137);
 
   for (let index = 0; index < Math.min(entries.length, 3); index += 1) {
     const rank = index + 1;
