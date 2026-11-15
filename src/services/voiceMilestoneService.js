@@ -308,7 +308,7 @@ async function postMilestoneAnnouncement(
     const embed = new EmbedBuilder()
       .setColor(role?.color || 0xD6B15E)
       .setDescription(
-        `${isTest ? 'Preview:' : 'Selamat!'} Kamu mencapai **${role?.name || milestone.label}** setelah ` +
+        `${isTest ? 'Preview:' : 'Selamat!'} Kamu <@${userId}> mencapai **${role?.name || milestone.label}** setelah ` +
         `**${formatAnnouncementDuration(totalMs)}** di voice channel.`,
       )
       .addFields(
@@ -341,7 +341,7 @@ async function postMilestoneAnnouncement(
     }
 
     const payload = {
-      content: isTest ? '🧪 Ini preview pengumuman; role dan progres tidak diubah.' : `<@${userId}>`,
+      content: isTest ? '🧪 Ini preview pengumuman; role dan progres tidak diubah.' : null,
       embeds: [embed],
       allowedMentions: { users: isTest ? [] : [userId] },
     };
