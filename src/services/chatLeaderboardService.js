@@ -153,7 +153,7 @@ async function buildChatLeaderboardPayload(client, guild) {
   ]);
   const listEmbed = new EmbedBuilder()
     .setColor(0xA753D2)
-    .setTitle('💬 TOP 10 ALL TIME CHAT')
+    .setTitle('<a:speechbubble:1571443989175996566> TOP 10 ALL TIME CHAT')
     .setDescription([
       '═════════════════════',
       rankingLines.length ? rankingLines.join('\n') : 'Belum ada pesan yang tercatat.',
