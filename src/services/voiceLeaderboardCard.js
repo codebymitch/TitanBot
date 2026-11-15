@@ -94,6 +94,9 @@ function drawAvatar(context, avatar, member, x, y, radius, accent) {
 
 function drawCrown(context, x, y) {
   context.save();
+  context.translate(x, y);
+  context.scale(0.88, 0.88);
+  context.translate(-x, -y);
   context.shadowColor = 'rgba(255, 184, 24, 0.6)';
   context.shadowBlur = 18;
   context.shadowOffsetY = 4;
