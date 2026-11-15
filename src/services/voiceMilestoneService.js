@@ -560,7 +560,7 @@ async function getVoiceLeaderboard(client, guild) {
 }
 
 async function buildVoiceLeaderboardPayload(client, guild) {
-  const { entries } = await getVoiceLeaderboard(client, guild);
+  const { entries, participantCount, totalVoiceMs } = await getVoiceLeaderboard(client, guild);
   const podium = entries.slice(0, 3);
   const image = podium.length
     ? await renderVoiceLeaderboardCard({ guild, entries: podium })
@@ -571,13 +571,20 @@ async function buildVoiceLeaderboardPayload(client, guild) {
 
   const listEmbed = new EmbedBuilder()
     .setColor(0xA753D2)
-    .setTitle('🏆 TOP 10 VOICE')
+    .setTitle('🏆 PERINGKAT ALL-TIME')
     .setDescription(
       entries.length
-        ? entries.map((entry) => `**#${entry.rank}** <@${entry.userId}>`).join('\n')
+        ? entries.map((entry) => {
+          const rank = ['🥇', '🥈', '🥉'][entry.rank - 1] || `**${entry.rank}.**`;
+          return `${rank} <@${entry.userId}>\n» ⏳ **${formatLeaderboardDuration(entry.totalMs)}**`;
+        }).join('\n\n')
         : 'Belum ada waktu voice yang tercatat.',
     )
-    .setFooter({ text: 'Akumulasi sepanjang waktu · Refresh otomatis tiap 5 menit' })
+    .addFields({
+      name: 'Statistik Voice',
+      value: `👥 **${participantCount} peserta** · ⏱️ **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
+    })
+    .setFooter({ text: 'Update otomatis tiap 5 menit · Tanpa reset mingguan' })
     .setTimestamp();
 
   const embeds = [];
