@@ -560,34 +560,35 @@ async function getVoiceLeaderboard(client, guild) {
 }
 
 async function buildVoiceLeaderboardPayload(client, guild) {
-  const { entries, participantCount, totalVoiceMs } = await getVoiceLeaderboard(client, guild);
+  const { entries } = await getVoiceLeaderboard(client, guild);
   const podium = entries.slice(0, 3);
   const image = podium.length
     ? await renderVoiceLeaderboardCard({ guild, entries: podium })
     : null;
-  const lines = entries.map((entry) => {
-    const name = entry.displayName.replace(/[*_~`|]/g, '');
-    return `**#${entry.rank} · ${name}** (<@${entry.userId}>) · **${formatLeaderboardDuration(entry.totalMs)}**`;
-  });
-
-  const embed = new EmbedBuilder()
+  const cardEmbed = new EmbedBuilder()
     .setColor(0xD6B15E)
-    .setTitle('🎙️ Top Voice')
+    .setTitle('🎙️ TOP VOICE · ALL-TIME');
+
+  const listEmbed = new EmbedBuilder()
+    .setColor(0xA753D2)
+    .setTitle('🏆 TOP 10 VOICE')
     .setDescription(
-      `**Leaderboard total voice · bukan mingguan**\n` +
-      `🏆 Podium menampilkan nama dan total waktu anggota teratas.\n\n` +
-      (lines.length ? lines.join('\n') : 'Belum ada waktu voice yang tercatat.'),
+      entries.length
+        ? entries.map((entry) => `**#${entry.rank}** <@${entry.userId}>`).join('\n')
+        : 'Belum ada waktu voice yang tercatat.',
     )
-    .addFields({
-      name: 'Statistik Voice',
-      value: `👥 **${participantCount}** peserta · ⏱️ **${formatLeaderboardDuration(totalVoiceMs)}** total voice`,
-    })
-    .setFooter({ text: 'Update otomatis tiap 5 menit · Akumulasi sepanjang waktu · Tidak ada reset mingguan' })
+    .setFooter({ text: 'Akumulasi sepanjang waktu · Refresh otomatis tiap 5 menit' })
     .setTimestamp();
 
-  if (image) embed.setImage('attachment://voice-leaderboard.png');
+  const embeds = [];
+  if (image) {
+    cardEmbed.setImage('attachment://voice-leaderboard.png');
+    embeds.push(cardEmbed);
+  }
+  embeds.push(listEmbed);
+
   return {
-    embeds: [embed],
+    embeds,
     files: image ? [new AttachmentBuilder(image, { name: 'voice-leaderboard.png' })] : [],
     attachments: [],
     allowedMentions: { parse: [] },
