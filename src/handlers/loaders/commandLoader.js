@@ -280,6 +280,26 @@ async function registerGuildCommands(client, clientId, guildId, commands) {
     return true;
 }
 
+async function removeGuildCommandDuplicates(client, clientId, commandName, keepGuildId = null) {
+    const guilds = Array.from(client.guilds?.cache?.keys?.() || []);
+
+    for (const guildId of guilds) {
+        if (guildId === keepGuildId) {
+            continue;
+        }
+
+        const route = `/applications/${clientId}/guilds/${guildId}/commands`;
+        const existingCommands = await client.rest.get(route);
+        if (!Array.isArray(existingCommands) || !existingCommands.some(command => command.name === commandName)) {
+            continue;
+        }
+
+        const filteredCommands = existingCommands.filter(command => command.name !== commandName);
+        await client.rest.put(route, { body: filteredCommands });
+        logger.info(`Removed stale guild command /${commandName} from guild ${guildId}`);
+    }
+}
+
 export async function registerCommands(client, options = {}) {
     const { clientId = null } = options;
 
@@ -301,19 +321,19 @@ export async function registerCommands(client, options = {}) {
 
             validateCommands(commands);
 
-            const existingGlobal = await client.rest
-                .get(`/applications/${clientId}/commands`)
-                .catch(() => []);
+            const existingGlobal = await client.rest.get(`/applications/${clientId}/commands`);
             if (Array.isArray(existingGlobal) && existingGlobal.length > 0) {
                 logger.info(`Clearing ${existingGlobal.length} global commands to avoid duplicates`);
                 await client.rest.put(`/applications/${clientId}/commands`, { body: [] });
             }
 
+            await removeGuildCommandDuplicates(client, clientId, 'voicemilestone', instantGuildId);
             await registerGuildCommands(client, clientId, instantGuildId, commands);
             logger.info(`Command registration: guild-only for ${instantGuildId} (no global duplicates)`);
             return;
         }
 
+        await removeGuildCommandDuplicates(client, clientId, 'voicemilestone');
         await registerGlobalCommands(client, clientId, commands, totalSubcommands);
     } catch (error) {
         logger.error('Error registering commands:', error);
