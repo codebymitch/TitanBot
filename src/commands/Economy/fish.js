@@ -174,9 +174,9 @@ export const FISH_PRICES = {
     legendary: [3750, 7500],
     mythic: [15000, 25000],
     secret: [30000, 50000],
-    divine: [62500, 175000],
-    transcendent: [250000, 500000],
-    celestial: [10000000, 20000000]
+    divine: [62500, 150000],
+    transcendent: [250000, 450000],
+    celestial: [7500000, 12000000]
 };
 
 export const RARITY_COLORS = {
