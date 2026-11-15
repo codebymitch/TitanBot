@@ -602,6 +602,7 @@ async function buildVoiceLeaderboardPayload(client, guild) {
     .setColor(0xA753D2)
     .setTitle('<:mic:1571422963146825799> TOP 10 ALL-TIME')
     .setDescription([
+      '═════════════════════',
       rankingLines.length ? rankingLines.join('\n') : 'Belum ada waktu voice yang tercatat.',
       '═════════════════════',
       `<:users:1571422486841528463> **${participantCount} peserta** · <a:clock:1571422433427324938> **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
