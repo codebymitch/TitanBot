@@ -600,7 +600,7 @@ async function buildVoiceLeaderboardPayload(client, guild) {
   });
   const listEmbed = new EmbedBuilder()
     .setColor(0xA753D2)
-    .setTitle('<:mic:1571422963146825799> TOP 10 ALL-TIME')
+    .setTitle('<:mic:1571422963146825799> TOP 10 ALL TIME')
     .setDescription([
       '═════════════════════',
       rankingLines.length ? rankingLines.join('\n') : 'Belum ada waktu voice yang tercatat.',
