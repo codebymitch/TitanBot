@@ -5,7 +5,7 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getItemById } from '../../config/shop/items.js';
 import { getGuildConfig } from '../../services/config/guildConfig.js';
-import { pickFish, resolveActivePotions, rollRarityWithPotion, applyRarityUpgrade, RARITY_COLORS, RARITY_ORDER } from './fish.js';
+import { pickFish, resolveActivePotions, rollRarityWithPotion, applyRarityUpgrade, rollExclusiveCatch, RARITY_COLORS, RARITY_ORDER, EXCLUSIVE_COLOR, EXCLUSIVE_CATCH_CHANCE } from './fish.js';
 
 const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
 const PREMIUM_PLUS_EFFECT = getItemById('premium_role_plus')?.effect ?? {};
@@ -135,6 +135,18 @@ export default {
                 if (rarityIndex > bestRarityIndex) bestRarityIndex = rarityIndex;
             }
 
+            // Bonus eksklusif: pemilik Premium Role+ berpeluang mendapat satu
+            // ikan eksklusif tambahan di jaring.
+            let exclusiveFish = null;
+            if (hasPremiumPlusRole && Math.random() < EXCLUSIVE_CATCH_CHANCE) {
+                const roll = rollExclusiveCatch();
+                const earned = Math.floor(roll.baseEarned * fishingMultiplier);
+                exclusiveFish = { ...roll.fish, earned };
+                totalEarned += earned;
+                caughtLines.push(`• exclusive - ${roll.fish.name} - $${earned.toLocaleString()}`);
+                collectionGains[roll.fish.name] = (collectionGains[roll.fish.name] || 0) + 1;
+            }
+
             userData.wallet += totalEarned;
             userData.fishCollection = userData.fishCollection || {};
             for (const [name, count] of Object.entries(collectionGains)) {
@@ -151,12 +163,15 @@ export default {
             const bestCatchMessage = bestCatch
                 ? `\n\n**• highest net catch :**\n  **${bestCatch.line}**`
                 : "";
+            const exclusiveMessage = exclusiveFish
+                ? `\n\n🌟 **EXCLUSIVE CATCH!** Your net also snagged a **${exclusiveFish.emoji} ${exclusiveFish.name}** worth **$${exclusiveFish.earned.toLocaleString()}**!`
+                : "";
             const bestRarity = bestRarityIndex >= 0 ? RARITY_ORDER[bestRarityIndex] : null;
 
             const embed = createEmbed({
                 title: '🕸️ Netting Success!',
-                description: `You cast your **${bestNet.name}** and hauled in **${catchCount} fish**!\n\n${caughtLines.join('\n')}${bestCatchMessage}${multiplierMessage}${luckMessage}`,
-                color: bestRarity ? RARITY_COLORS[bestRarity] : 'primary'
+                description: `You cast your **${bestNet.name}** and hauled in **${catchCount} fish**!\n\n${caughtLines.join('\n')}${bestCatchMessage}${exclusiveMessage}${multiplierMessage}${luckMessage}`,
+                color: exclusiveFish ? EXCLUSIVE_COLOR : (bestRarity ? RARITY_COLORS[bestRarity] : 'primary')
             })
                 .addFields(
                     {

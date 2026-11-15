@@ -30,6 +30,29 @@ export function applyRarityUpgrade(rarity, chance) {
     return RARITY_ORDER[index + 1];
 }
 
+// ===== Exclusive Catch: ikan langka khusus pemilik Premium Role+ =====
+// Ikan-ikan ini tidak muncul di pool normal dan hanya bisa ditangkap lewat
+// peluang bonus milik role Premium Role+.
+export const EXCLUSIVE_FISH = [
+    { name: 'Aurora Piranha', emoji: '🌈' },
+    { name: 'Chrono Sturgeon', emoji: '⏰' },
+    { name: 'Prism Barracuda', emoji: '🔮' },
+    { name: 'Abyssal Phoenix', emoji: '🔥' },
+    { name: 'Quantum Manta', emoji: '⚛️' },
+    { name: 'Mythril Anglerfish', emoji: '💠' },
+];
+export const EXCLUSIVE_COLOR = '#F1C40F';
+const EXCLUSIVE_PRICE_MIN = 250000;
+const EXCLUSIVE_PRICE_MAX = 1000000;
+export const EXCLUSIVE_CATCH_CHANCE = 0.15;
+
+// Roll a bonus exclusive catch (nilai jauh di atas ikan biasa).
+export function rollExclusiveCatch() {
+    const fish = EXCLUSIVE_FISH[Math.floor(Math.random() * EXCLUSIVE_FISH.length)];
+    const baseEarned = Math.floor(Math.random() * (EXCLUSIVE_PRICE_MAX - EXCLUSIVE_PRICE_MIN + 1)) + EXCLUSIVE_PRICE_MIN;
+    return { fish, baseEarned };
+}
+
 // Helper: find the highest-tier fishing rod the user owns
 function getBestFishingRod(inventory) {
     for (let tier = 5; tier >= 1; tier--) {
@@ -360,13 +383,30 @@ export default {
                 ? `\n${bonusMessages.join('\n')}`
                 : "";
 
+            // Bonus eksklusif: pemilik Premium Role+ berpeluang menangkap ikan
+            // eksklusif tambahan yang tidak ada di pool normal.
+            let exclusiveFish = null;
+            let exclusiveEarned = 0;
+            if (hasPremiumPlusRole && Math.random() < EXCLUSIVE_CATCH_CHANCE) {
+                const roll = rollExclusiveCatch();
+                exclusiveFish = roll.fish;
+                exclusiveEarned = Math.floor(roll.baseEarned * fishingMultiplier);
+            }
+            const exclusiveMessage = exclusiveFish
+                ? `\n\n🌟 **EXCLUSIVE CATCH!** You also hooked a **${exclusiveFish.emoji} ${exclusiveFish.name}** worth **$${exclusiveEarned.toLocaleString()}**!`
+                : "";
+
             const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];
 
-            userData.wallet += finalEarned;
+            userData.wallet += finalEarned + exclusiveEarned;
             userData.lastFish = now;
             userData.fishCollection = userData.fishCollection || {};
             userData.fishCollection[fishCaught.name] =
                 (Number(userData.fishCollection[fishCaught.name]) || 0) + 1;
+            if (exclusiveFish) {
+                userData.fishCollection[exclusiveFish.name] =
+                    (Number(userData.fishCollection[exclusiveFish.name]) || 0) + 1;
+            }
             userData.inventory = inventory;
             userData.luckPotionExpiresAt = potionExpiries;
 
@@ -374,8 +414,8 @@ export default {
 
             const embed = createEmbed({
                 title: 'Fishing Success!',
-                description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}${luckMessage}`,
-                color: RARITY_COLORS[fishCaught.rarity]
+                description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${exclusiveMessage}${multiplierMessage}${luckMessage}`,
+                color: exclusiveFish ? EXCLUSIVE_COLOR : RARITY_COLORS[fishCaught.rarity]
             })
                 .addFields(
                     {
