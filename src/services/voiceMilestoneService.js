@@ -585,17 +585,18 @@ async function buildVoiceLeaderboardPayload(client, guild) {
     cardEmbed.setDescription('Belum ada waktu voice yang tercatat.');
   }
 
-  const rankingLines = entries.map((entry) => {
-    const rank = ['🥇', '🥈', '🥉'][entry.rank - 1] || `**${entry.rank}.**`;
-    return `${rank} <@${entry.userId}> · **${formatLeaderboardDuration(entry.totalMs)}**`;
-  });
-  const listContent = [
-    '**🏆 TOP 10 ALL-TIME**',
-    rankingLines.length ? rankingLines.join('\n') : 'Belum ada waktu voice yang tercatat.',
-    '━━━━━━━━━━━━━━━━━━━━',
-    `👥 **${participantCount} peserta** · ⏱️ **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
-    '🔄 Refresh tiap 5 menit · Akumulasi sepanjang waktu',
-  ].join('\n');
+  const rankingLines = entries.map((entry) =>
+    `**${entry.rank}.** <@${entry.userId}> · **${formatLeaderboardDuration(entry.totalMs)}**`);
+  const listEmbed = new EmbedBuilder()
+    .setColor(0xA753D2)
+    .setTitle('🏆 TOP 10 ALL-TIME')
+    .setDescription([
+      rankingLines.length ? rankingLines.join('\n') : 'Belum ada waktu voice yang tercatat.',
+      '━━━━━━━━━━━━━━━━━━━━',
+      `👥 **${participantCount} peserta** · ⏱️ **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
+      '🔄 Refresh tiap 5 menit · Akumulasi sepanjang waktu',
+    ].join('\n'))
+    .setTimestamp();
 
   return {
     card: {
@@ -605,7 +606,8 @@ async function buildVoiceLeaderboardPayload(client, guild) {
       attachments: [],
     },
     list: {
-      content: listContent,
+      content: '',
+      embeds: [listEmbed],
       allowedMentions: { parse: [] },
     },
   };
