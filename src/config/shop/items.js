@@ -124,7 +124,7 @@ roleId: null,
         durability: 300,
         effect: {
             type: 'fishing_yield',
-            multiplier: 20000000,
+            multiplier: 2.2,
             tier: 5
         }
     },
