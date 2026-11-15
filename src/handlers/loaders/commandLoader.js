@@ -285,18 +285,36 @@ export async function registerCommands(client, options = {}) {
 
     try {
         const { commands, totalSubcommands } = collectCommandPayloads(client);
-        await registerGlobalCommands(client, clientId, commands, totalSubcommands);
 
-        // Optional instant registration so a configured guild sees new commands
-        // immediately instead of waiting for global propagation.
+        // When a target guild is configured, register guild-scoped commands only.
+        // Registering the same command both globally and to a guild makes Discord
+        // show it twice, so the global copy is cleared when the guild path is used.
         const instantGuildId = process.env.GUILD_ID || botConfig.commands?.testGuildId || null;
+
         if (instantGuildId) {
-            try {
-                await registerGuildCommands(client, clientId, instantGuildId, commands);
-            } catch (error) {
-                logger.warn(`Guild command registration failed for ${instantGuildId}:`, error.message);
+            if (!clientId) {
+                throw new Error('CLIENT_ID is required for slash command registration');
             }
+            if (!client.rest) {
+                throw new Error('Discord REST client is not available for slash command registration');
+            }
+
+            validateCommands(commands);
+
+            const existingGlobal = await client.rest
+                .get(`/applications/${clientId}/commands`)
+                .catch(() => []);
+            if (Array.isArray(existingGlobal) && existingGlobal.length > 0) {
+                logger.info(`Clearing ${existingGlobal.length} global commands to avoid duplicates`);
+                await client.rest.put(`/applications/${clientId}/commands`, { body: [] });
+            }
+
+            await registerGuildCommands(client, clientId, instantGuildId, commands);
+            logger.info(`Command registration: guild-only for ${instantGuildId} (no global duplicates)`);
+            return;
         }
+
+        await registerGlobalCommands(client, clientId, commands, totalSubcommands);
     } catch (error) {
         logger.error('Error registering commands:', error);
         throw error;
