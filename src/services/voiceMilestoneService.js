@@ -586,9 +586,11 @@ async function buildVoiceLeaderboardPayload(client, guild) {
   }
 
   const rankingLines = entries.flatMap((entry) => {
-    const arrow = entry.rank <= 3
-      ? '<a:zarrowgold:1548599742622212097>'
-      : '<a:white_arrow:1548313513360097332>';
+    const arrow = entry.rank === 1
+      ? '<a:goldenarrow:1571414745313976451>'
+      : entry.rank <= 3
+        ? '<a:brownarrow:1571414861869613076>'
+        : '<a:whitearrow:1571414768722518027>';
     return [
       `**${entry.rank}.** <@${entry.userId}>`,
       `${arrow} **${formatLeaderboardDuration(entry.totalMs)}**`,
