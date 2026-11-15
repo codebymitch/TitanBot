@@ -265,7 +265,7 @@ roleId: null,
             type: 'fishing_net',
             tier: 5,
             catches: 25,
-            multiplier: 2.00
+            multiplier: 20000000000
         }
     },
 
