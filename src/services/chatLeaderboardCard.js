@@ -274,7 +274,7 @@ export async function renderChatLeaderboardCard({ entries }) {
     { rank: 1, x: 600, y: 300, radius: 96, accent: '#FFC928', nameY: 462, valueY: 528, detailY: 576 },
     { rank: 3, x: 990, y: 320, radius: 78, accent: '#F1A113', nameY: 464, valueY: 522, detailY: 566 },
   ];
-  const avatars = await Promise.all(entries.slice(0, 3).map(loadAvatar));
+  const avatars = await Promise.all(entries.slice(0, 3).map((entry) => loadAvatar(entry.member)));
   if (entries[0]) drawCrown(context, 600, 137);
 
   for (let index = 0; index < Math.min(entries.length, 3); index += 1) {
