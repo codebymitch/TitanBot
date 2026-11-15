@@ -586,24 +586,26 @@ async function buildVoiceLeaderboardPayload(client, guild) {
   }
 
   const rankingLines = entries.flatMap((entry) => {
-    const arrow = entry.rank === 1
-      ? '<a:goldenarrow:1571414745313976451>'
-      : entry.rank <= 3
-        ? '<a:brownarrow:1571414861869613076>'
-        : '<a:whitearrow:1571414768722518027>';
+    const rankIcon = {
+      1: '<a:575980goldmedal:1571420250849677422>',
+      2: '<a:670322silvermedal:1571420294550393002>',
+      3: '<a:720507bronzemedal:1571420330529132605>',
+      4: '<a:goldenarrow:1571414745313976451>',
+      5: '<a:brownarrow:1571414861869613076>',
+    }[entry.rank] || '<a:whitearrow:1571414768722518027>';
     return [
       `**${entry.rank}.** <@${entry.userId}>`,
-      `${arrow} **${formatLeaderboardDuration(entry.totalMs)}**`,
+      `${rankIcon} **${formatLeaderboardDuration(entry.totalMs)}**`,
     ];
   });
   const listEmbed = new EmbedBuilder()
     .setColor(0xA753D2)
-    .setTitle('🏆 TOP 10 ALL-TIME')
+    .setTitle('<:mic:1571422963146825799> TOP 10 ALL-TIME')
     .setDescription([
       rankingLines.length ? rankingLines.join('\n') : 'Belum ada waktu voice yang tercatat.',
       '━━━━━━━━━━━━━━━━━━━━',
-      `👥 **${participantCount} peserta** · ⏱️ **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
-      '🔄 Refresh tiap 5 menit · Akumulasi sepanjang waktu',
+      `<:users:1571422486841528463> **${participantCount} peserta** · <a:clock:1571422433427324938> **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
+      '<a:repeat:1571423818335916102> Refresh tiap 5 menit · Akumulasi sepanjang waktu',
     ].join('\n'))
     .setTimestamp();
 
