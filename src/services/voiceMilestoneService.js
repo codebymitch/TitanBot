@@ -578,8 +578,7 @@ async function buildVoiceLeaderboardPayload(client, guild) {
     ? await renderVoiceLeaderboardCard({ guild, entries: podium })
     : null;
   const cardEmbed = new EmbedBuilder()
-    .setColor(0xD6B15E)
-    .setTitle('🎙️ TOP VOICE · ALL-TIME');
+    .setColor(0xD6B15E);
   if (image) {
     cardEmbed.setImage('attachment://voice-leaderboard.png');
   } else {
