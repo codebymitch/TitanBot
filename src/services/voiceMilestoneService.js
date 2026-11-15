@@ -89,7 +89,12 @@ export function normalizeMilestones(list) {
 
 export async function getVoiceMilestoneConfig(client, guildId) {
   if (!client?.db) {
-    return { enabled: false, announcementChannelId: null, milestones: [], leaderboard: { channelId: null, messageId: null } };
+    return {
+      enabled: false,
+      announcementChannelId: null,
+      milestones: [],
+      leaderboard: { channelId: null, messageId: null, listMessageId: null },
+    };
   }
 
   try {
@@ -102,11 +107,17 @@ export async function getVoiceMilestoneConfig(client, guildId) {
       leaderboard: {
         channelId: base.leaderboard?.channelId ? String(base.leaderboard.channelId) : null,
         messageId: base.leaderboard?.messageId ? String(base.leaderboard.messageId) : null,
+        listMessageId: base.leaderboard?.listMessageId ? String(base.leaderboard.listMessageId) : null,
       },
     };
   } catch (error) {
     logger.error(`Error reading voice milestone config for guild ${guildId}:`, error);
-    return { enabled: false, announcementChannelId: null, milestones: [], leaderboard: { channelId: null, messageId: null } };
+    return {
+      enabled: false,
+      announcementChannelId: null,
+      milestones: [],
+      leaderboard: { channelId: null, messageId: null, listMessageId: null },
+    };
   }
 }
 
@@ -118,6 +129,7 @@ export async function saveVoiceMilestoneConfig(client, guildId, config) {
     leaderboard: {
       channelId: config?.leaderboard?.channelId ? String(config.leaderboard.channelId) : null,
       messageId: config?.leaderboard?.messageId ? String(config.leaderboard.messageId) : null,
+      listMessageId: config?.leaderboard?.listMessageId ? String(config.leaderboard.listMessageId) : null,
     },
   };
 
@@ -568,37 +580,35 @@ async function buildVoiceLeaderboardPayload(client, guild) {
   const cardEmbed = new EmbedBuilder()
     .setColor(0xD6B15E)
     .setTitle('🎙️ TOP VOICE · ALL-TIME');
-
-  const listEmbed = new EmbedBuilder()
-    .setColor(0xA753D2)
-    .setTitle('🏆 PERINGKAT ALL-TIME')
-    .setDescription(
-      entries.length
-        ? entries.map((entry) => {
-          const rank = ['🥇', '🥈', '🥉'][entry.rank - 1] || `**${entry.rank}.**`;
-          return `${rank} <@${entry.userId}>\n» ⏳ **${formatLeaderboardDuration(entry.totalMs)}**`;
-        }).join('\n\n')
-        : 'Belum ada waktu voice yang tercatat.',
-    )
-    .addFields({
-      name: 'Statistik Voice',
-      value: `👥 **${participantCount} peserta** · ⏱️ **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
-    })
-    .setFooter({ text: 'Update otomatis tiap 5 menit · Tanpa reset mingguan' })
-    .setTimestamp();
-
-  const embeds = [];
   if (image) {
     cardEmbed.setImage('attachment://voice-leaderboard.png');
-    embeds.push(cardEmbed);
+  } else {
+    cardEmbed.setDescription('Belum ada waktu voice yang tercatat.');
   }
-  embeds.push(listEmbed);
+
+  const rankingLines = entries.map((entry) => {
+    const rank = ['🥇', '🥈', '🥉'][entry.rank - 1] || `**${entry.rank}.**`;
+    return `${rank} <@${entry.userId}> · **${formatLeaderboardDuration(entry.totalMs)}**`;
+  });
+  const listContent = [
+    '**🏆 TOP 10 ALL-TIME**',
+    rankingLines.length ? rankingLines.join('\n') : 'Belum ada waktu voice yang tercatat.',
+    '━━━━━━━━━━━━━━━━━━━━',
+    `👥 **${participantCount} peserta** · ⏱️ **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
+    '🔄 Refresh tiap 5 menit · Akumulasi sepanjang waktu',
+  ].join('\n');
 
   return {
-    embeds,
-    files: image ? [new AttachmentBuilder(image, { name: 'voice-leaderboard.png' })] : [],
-    attachments: [],
-    allowedMentions: { parse: [] },
+    card: {
+      content: '',
+      embeds: [cardEmbed],
+      files: image ? [new AttachmentBuilder(image, { name: 'voice-leaderboard.png' })] : [],
+      attachments: [],
+    },
+    list: {
+      content: listContent,
+      allowedMentions: { parse: [] },
+    },
   };
 }
 
@@ -606,20 +616,26 @@ export async function configureVoiceLeaderboard(client, guild, channel = null) {
   const config = await getVoiceMilestoneConfig(client, guild.id);
   const previous = config.leaderboard;
   let oldMessage = null;
+  let oldListMessage = null;
+  let oldChannel = null;
 
-  if (previous.channelId && previous.messageId) {
-    const oldChannel = guild.channels.cache.get(previous.channelId)
+  if (previous.channelId) {
+    oldChannel = guild.channels.cache.get(previous.channelId)
       || await guild.channels.fetch(previous.channelId).catch(() => null);
-    oldMessage = oldChannel?.messages
+    oldMessage = previous.messageId && oldChannel?.messages
       ? await oldChannel.messages.fetch(previous.messageId).catch(() => null)
+      : null;
+    oldListMessage = previous.listMessageId && oldChannel?.messages
+      ? await oldChannel.messages.fetch(previous.listMessageId).catch(() => null)
       : null;
   }
 
   if (!channel) {
     if (oldMessage) await oldMessage.delete().catch(() => {});
+    if (oldListMessage) await oldListMessage.delete().catch(() => {});
     await saveVoiceMilestoneConfig(client, guild.id, {
       ...config,
-      leaderboard: { channelId: null, messageId: null },
+      leaderboard: { channelId: null, messageId: null, listMessageId: null },
     });
     return { enabled: false };
   }
@@ -628,40 +644,62 @@ export async function configureVoiceLeaderboard(client, guild, channel = null) {
     throw new Error('Leaderboard channel must be a text channel.');
   }
 
-  const message = oldMessage && oldMessage.channelId === channel.id
-    ? oldMessage
-    : await channel.send(await buildVoiceLeaderboardPayload(client, guild));
+  const payload = await buildVoiceLeaderboardPayload(client, guild);
+  const reuseOldMessages = oldChannel?.id === channel.id;
+  const message = reuseOldMessages && oldMessage
+    ? await oldMessage.edit(payload.card)
+    : await channel.send(payload.card);
+  const listMessage = reuseOldMessages && oldListMessage
+    ? await oldListMessage.edit(payload.list)
+    : await channel.send(payload.list);
 
-  if (oldMessage && oldMessage.id !== message.id) {
-    await oldMessage.delete().catch(() => {});
-  }
-
-  if (oldMessage?.id === message.id) {
-    await message.edit(await buildVoiceLeaderboardPayload(client, guild));
+  if (!reuseOldMessages) {
+    if (oldMessage) await oldMessage.delete().catch(() => {});
+    if (oldListMessage) await oldListMessage.delete().catch(() => {});
   }
 
   await saveVoiceMilestoneConfig(client, guild.id, {
     ...config,
-    leaderboard: { channelId: channel.id, messageId: message.id },
+    leaderboard: { channelId: channel.id, messageId: message.id, listMessageId: listMessage.id },
   });
-  return { enabled: true, channelId: channel.id, messageId: message.id };
+  return { enabled: true, channelId: channel.id, messageId: message.id, listMessageId: listMessage.id };
 }
 
 export async function updateVoiceMilestoneLeaderboards(client) {
   for (const guild of client.guilds.cache.values()) {
     try {
       const config = await getVoiceMilestoneConfig(client, guild.id);
-      const { channelId, messageId } = config.leaderboard;
+      const { channelId, messageId, listMessageId } = config.leaderboard;
       if (!channelId || !messageId) continue;
 
       const channel = guild.channels.cache.get(channelId)
         || await guild.channels.fetch(channelId).catch(() => null);
-      const message = channel?.messages
+      if (!channel?.messages) continue;
+      const message = channel.messages
         ? await channel.messages.fetch(messageId).catch(() => null)
         : null;
-      if (!message) continue;
+      const listMessage = listMessageId
+        ? await channel.messages.fetch(listMessageId).catch(() => null)
+        : null;
+      const payload = await buildVoiceLeaderboardPayload(client, guild);
 
-      await message.edit(await buildVoiceLeaderboardPayload(client, guild));
+      const updatedCard = message
+        ? await message.edit(payload.card)
+        : await channel.send(payload.card);
+      const updatedList = listMessage
+        ? await listMessage.edit(payload.list)
+        : await channel.send(payload.list);
+
+      if (!message || !listMessageId || updatedCard.id !== message.id || updatedList.id !== listMessage?.id) {
+        await saveVoiceMilestoneConfig(client, guild.id, {
+          ...config,
+          leaderboard: {
+            channelId,
+            messageId: updatedCard.id,
+            listMessageId: updatedList.id,
+          },
+        });
+      }
     } catch (error) {
       logger.warn(`Voice leaderboard update failed for guild ${guild.id}:`, error);
     }
