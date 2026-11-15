@@ -116,6 +116,18 @@ export function getVoiceMilestoneUsersPrefix(guildId) {
     return `guild:${guildId}:voicemilestone:users:`;
 }
 
+export function getChatLeaderboardConfigKey(guildId) {
+    return `guild:${guildId}:chatleaderboard:config`;
+}
+
+export function getChatLeaderboardUserKey(guildId, userId) {
+    return `guild:${guildId}:chatleaderboard:users:${userId}`;
+}
+
+export function getChatLeaderboardUsersPrefix(guildId) {
+    return `guild:${guildId}:chatleaderboard:users:`;
+}
+
 export function getGiveawayEntryKey(userId, giveawayId) {
     return `giveaway:${userId}:${giveawayId}`;
 }

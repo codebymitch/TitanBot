@@ -18,6 +18,7 @@ import {
 import { handleStickyMessage } from '../services/stickyService.js';
 import { handleAutoReaction } from '../services/autoReactionService.js';
 import StreakService from '../services/streakService.js';
+import { trackChatMessage } from '../services/chatLeaderboardService.js';
 
 export default {
   name: Events.MessageCreate,
@@ -26,6 +27,7 @@ export default {
       if (message.author.bot || !message.guild) return;
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
+      trackChatMessage(message);
 
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {

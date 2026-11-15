@@ -9,6 +9,11 @@ import {
   startVoiceMilestoneLeaderboardUpdater,
   updateVoiceMilestoneLeaderboards,
 } from "../services/voiceMilestoneService.js";
+import {
+  initializeChatLeaderboards,
+  startChatLeaderboardUpdater,
+  updateChatLeaderboards,
+} from "../services/chatLeaderboardService.js";
 
 export default {
   name: Events.ClientReady,
@@ -47,6 +52,9 @@ export default {
       await initializeVoiceMilestoneSessions(client);
       await updateVoiceMilestoneLeaderboards(client);
       startVoiceMilestoneLeaderboardUpdater(client);
+      await initializeChatLeaderboards(client);
+      await updateChatLeaderboards(client);
+      startChatLeaderboardUpdater(client);
 
     } catch (error) {
       logger.error("Error in ready event:", error);

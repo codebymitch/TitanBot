@@ -9,6 +9,7 @@ import { initializeDatabase } from './utils/database.js';
 import { getGuildConfig } from './services/config/guildConfig.js';
 import { getServerCounters, saveServerCounters, updateCounter } from './services/serverstatsService.js';
 import { flushVoiceSessions } from './services/voiceMilestoneService.js';
+import { stopChatLeaderboardUpdater } from './services/chatLeaderboardService.js';
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
@@ -345,6 +346,7 @@ class TitanBot extends Client {
         clearInterval(this.voiceMilestoneLeaderboardTimer);
         this.voiceMilestoneLeaderboardTimer = null;
       }
+      await stopChatLeaderboardUpdater(this);
       logger.info('✅ Cron jobs stopped');
 
       if (this.webServer) {
