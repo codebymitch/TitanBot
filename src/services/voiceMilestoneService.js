@@ -307,7 +307,6 @@ async function postMilestoneAnnouncement(
     const next = config.milestones.find((entry) => entry.hours > milestone.hours);
     const embed = new EmbedBuilder()
       .setColor(role?.color || 0xD6B15E)
-      .setTitle(isTest ? '🧪 TEST · VOICE MILESTONE' : '🎙️ VOICE MILESTONE')
       .setDescription(
         `${isTest ? 'Preview:' : 'Selamat!'} Kamu mencapai **${role?.name || milestone.label}** setelah ` +
         `**${formatAnnouncementDuration(totalMs)}** di voice channel.`,
