@@ -230,7 +230,7 @@ function drawPodiumEntry(context, entry, avatar, slot) {
   context.fillText(name, x, nameY);
 
   const messageCount = Number(entry.totalMessages || 0).toLocaleString('id-ID');
-  let countSize = rank === 1 ? 78 : 70;
+  let countSize = rank === 1 ? 62 : 56;
   const countMaxWidth = rank === 1 ? 420 : 330;
   context.font = `bold ${countSize}px "${FONT_DISPLAY}"`;
   while (context.measureText(messageCount).width > countMaxWidth && countSize > 42) {
@@ -250,7 +250,7 @@ function drawPodiumEntry(context, entry, avatar, slot) {
   context.fillText(messageCount, x, valueY);
   context.restore();
   context.fillStyle = '#E9DDF1';
-  context.font = `bold 20px "${FONT_BOLD}"`;
+  context.font = `bold 27px "${FONT_BOLD}"`;
   context.fillText('PESAN', x, detailY);
   context.textAlign = 'start';
 }
