@@ -509,6 +509,7 @@ function formatLeaderboardDuration(ms) {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   if (hours) return `${hours}j ${minutes}m`;
+  if (Number(ms) > 0 && minutes === 0) return '<1m';
   return `${minutes}m`;
 }
 
@@ -565,8 +566,8 @@ async function buildVoiceLeaderboardPayload(client, guild) {
     ? await renderVoiceLeaderboardCard({ guild, entries: podium })
     : null;
   const lines = entries.map((entry) => {
-    const rank = ['🥇', '🥈', '🥉'][entry.rank - 1] || `**${entry.rank}.**`;
-    return `${rank} <@${entry.userId}> · **${formatLeaderboardDuration(entry.totalMs)}**`;
+    const name = entry.displayName.replace(/[*_~`|]/g, '');
+    return `**#${entry.rank} · ${name}** (<@${entry.userId}>) · **${formatLeaderboardDuration(entry.totalMs)}**`;
   });
 
   const embed = new EmbedBuilder()

@@ -1,11 +1,27 @@
-import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const WIDTH = 1200;
 const HEIGHT = 540;
 const BACKGROUND_PATH = fileURLToPath(new URL('../assets/voice-milestone-background.jpg', import.meta.url));
+const FONT_REGULAR_PATH = fileURLToPath(new URL('../assets/fonts/DejaVuSans.ttf', import.meta.url));
+const FONT_BOLD_PATH = fileURLToPath(new URL('../assets/fonts/DejaVuSans-Bold.ttf', import.meta.url));
+const FONT_FAMILY = 'Manay Sans';
+const FONT_BOLD_FAMILY = 'Manay Sans Bold';
 let backgroundPromise;
+let fontsRegistered = false;
+
+function ensureFonts() {
+  if (fontsRegistered) return;
+  GlobalFonts.registerFromPath(FONT_REGULAR_PATH, FONT_FAMILY);
+  GlobalFonts.registerFromPath(FONT_BOLD_PATH, FONT_BOLD_FAMILY);
+  fontsRegistered = true;
+}
+
+function fontString(size, bold = true) {
+  return `${size}px "${bold ? FONT_BOLD_FAMILY : FONT_FAMILY}"`;
+}
 
 async function loadAvatar(member) {
   const url = member?.user?.displayAvatarURL?.({ extension: 'png', size: 256 });
@@ -25,6 +41,7 @@ function formatDuration(ms) {
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
   if (hours) return `${hours}j ${remainder}m`;
+  if (ms > 0 && remainder === 0) return '<1m';
   return `${remainder}m`;
 }
 
@@ -35,10 +52,10 @@ function roundRect(context, x, y, width, height, radius) {
 
 function fitCenteredText(context, text, x, y, maxWidth, size, minSize = 16) {
   let fontSize = size;
-  context.font = `bold ${fontSize}px sans-serif`;
+  context.font = fontString(fontSize);
   while (context.measureText(text).width > maxWidth && fontSize > minSize) {
     fontSize -= 2;
-    context.font = `bold ${fontSize}px sans-serif`;
+    context.font = fontString(fontSize);
   }
   context.fillText(text, x, y);
 }
@@ -59,7 +76,7 @@ function drawAvatar(context, avatar, member, x, y, radius, accent) {
     context.fillStyle = '#33413D';
     context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
     context.fillStyle = '#FFFFFF';
-    context.font = 'bold 54px sans-serif';
+    context.font = fontString(54);
     context.textAlign = 'center';
     context.fillText((member.displayName || '?').slice(0, 1).toUpperCase(), x, y + 18);
     context.textAlign = 'start';
@@ -84,6 +101,7 @@ function drawCrown(context, x, y, color) {
 export async function renderVoiceLeaderboardCard({ entries }) {
   const canvas = createCanvas(WIDTH, HEIGHT);
   const context = canvas.getContext('2d');
+  ensureFonts();
   backgroundPromise ??= readFile(BACKGROUND_PATH).then(loadImage);
   const background = await backgroundPromise;
   const scale = Math.max(WIDTH / background.width, HEIGHT / background.height);
@@ -106,19 +124,19 @@ export async function renderVoiceLeaderboardCard({ entries }) {
   titleGradient.addColorStop(0, '#D58BFF');
   titleGradient.addColorStop(1, '#F5C842');
   context.fillStyle = titleGradient;
-  context.font = 'bold 54px sans-serif';
+  context.font = fontString(54);
   context.letterSpacing = '3px';
   context.fillText('TOP VOICE', 48, 76);
   context.letterSpacing = '0px';
   context.fillStyle = '#F2EAF8';
-  context.font = 'bold 20px sans-serif';
+  context.font = fontString(20);
   context.fillText('LEADERBOARD TOTAL SEPANJANG WAKTU', 52, 110);
   context.textAlign = 'right';
   context.fillStyle = '#E9D5FF';
-  context.font = 'bold 19px sans-serif';
+  context.font = fontString(19);
   context.fillText('UPDATE OTOMATIS · 5 MENIT', WIDTH - 48, 66);
   context.fillStyle = '#C7B4D8';
-  context.font = '16px sans-serif';
+  context.font = fontString(16, false);
   context.fillText('TIDAK ADA RESET MINGGUAN', WIDTH - 48, 95);
   context.textAlign = 'start';
 
@@ -154,7 +172,7 @@ export async function renderVoiceLeaderboardCard({ entries }) {
     context.fill();
     context.textAlign = 'center';
     context.fillStyle = '#101416';
-    context.font = 'bold 23px sans-serif';
+    context.font = fontString(23);
     context.fillText(String(entry.rank), badgeX, badgeY + 8);
 
     context.fillStyle = '#FFFFFF';
@@ -162,10 +180,10 @@ export async function renderVoiceLeaderboardCard({ entries }) {
     fitCenteredText(context, name, slot.x, cardY + (index === 0 ? 270 : 238), slot.width - 28, 27, 17);
 
     context.fillStyle = '#D28AFF';
-    context.font = `bold ${index === 0 ? 35 : 31}px sans-serif`;
+    context.font = fontString(index === 0 ? 35 : 31);
     context.fillText(formatDuration(entry.totalMs), slot.x, cardY + (index === 0 ? 320 : 280));
     context.fillStyle = '#E7DDF0';
-    context.font = 'bold 17px sans-serif';
+    context.font = fontString(17);
     context.fillText('TOTAL VOICE', slot.x, cardY + (index === 0 ? 347 : 302));
     context.textAlign = 'start';
   }
