@@ -11,6 +11,24 @@ const BASE_MIN_REWARD = 300;
 const BASE_MAX_REWARD = 900;
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
+const PREMIUM_PLUS_EFFECT = getItemById('premium_role_plus')?.effect ?? {};
+const PREMIUM_PLUS_LUCK_MULTIPLIER = PREMIUM_PLUS_EFFECT.luckMultiplier ?? 1;
+const PREMIUM_PLUS_INCOME_MULTIPLIER = PREMIUM_PLUS_EFFECT.incomeMultiplier ?? 1;
+const PREMIUM_PLUS_RARITY_UP_CHANCE = PREMIUM_PLUS_EFFECT.rarityUpChance ?? 0;
+
+// Rarity tiers ordered from lowest to highest (used for rarity-upgrade perks).
+export const RARITY_ORDER = [
+    'common', 'uncommon', 'rare', 'epic', 'legendary',
+    'mythic', 'secret', 'divine', 'transcendent', 'celestial'
+];
+
+// Roll a random upgrade on a caught rarity (e.g. the Premium Role+ perk).
+export function applyRarityUpgrade(rarity, chance) {
+    if (!chance || Math.random() >= chance) return rarity;
+    const index = RARITY_ORDER.indexOf(rarity);
+    if (index < 0 || index >= RARITY_ORDER.length - 1) return rarity;
+    return RARITY_ORDER[index + 1];
+}
 
 // Helper: find the highest-tier fishing rod the user owns
 function getBestFishingRod(inventory) {
@@ -211,16 +229,20 @@ export function resolveActivePotions(inventory, userData, now) {
 }
 
 // Roll a rarity from a random value biased by the given potion's luck.
+// extraLuckMultiplier applies additional luck (e.g. from the Premium Role+).
 // Admin potions also get a flat chance at the top tier (celestial/Kitsune).
-export function rollRarityWithPotion(activePotion) {
+export function rollRarityWithPotion(activePotion, extraLuckMultiplier = 1) {
     const adminChances = activePotion?.effect?.chances || null;
     if (adminChances && Math.random() < (adminChances.celestial || 0)) {
         return 'celestial';
     }
 
     let rand = Math.random();
+    let luckMultiplier = Number(extraLuckMultiplier) || 1;
     if (activePotion) {
-        const luckMultiplier = activePotion.effect.multiplier || 1;
+        luckMultiplier *= activePotion.effect.multiplier || 1;
+    }
+    if (luckMultiplier > 1) {
         rand = 1 - Math.pow(1 - rand, luckMultiplier);
         if (rand > 0.9998) rand = 0.9998;
     }
@@ -263,9 +285,14 @@ export default {
 
             const guildConfig = await getGuildConfig(client, guildId);
             const premiumRoleId = guildConfig.premiumRoleId;
+            const premiumPlusRoleId = guildConfig.premiumPlusRoleId;
             const hasPremiumRole = Boolean(
                 premiumRoleId && interaction.member?.roles?.cache?.has(premiumRoleId)
             );
+            const hasPremiumPlusRole = Boolean(
+                premiumPlusRoleId && interaction.member?.roles?.cache?.has(premiumPlusRoleId)
+            );
+            const roleLuckMultiplier = hasPremiumPlusRole ? PREMIUM_PLUS_LUCK_MULTIPLIER : 1;
 
             if (now < lastFish + FISH_COOLDOWN) {
                 const remaining = lastFish + FISH_COOLDOWN - now;
@@ -301,7 +328,10 @@ export default {
                 }
             }
 
-            const selectedRarity = rollRarityWithPotion(activePotion);
+            let selectedRarity = rollRarityWithPotion(activePotion, roleLuckMultiplier);
+            if (hasPremiumPlusRole) {
+                selectedRarity = applyRarityUpgrade(selectedRarity, PREMIUM_PLUS_RARITY_UP_CHANCE);
+            }
 
             const { fish: fishCaught, baseEarned } = pickFish(selectedRarity);
 
@@ -317,6 +347,13 @@ export default {
                 fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
                 const boostPct = Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100);
                 bonusMessages.push(`✨ **Premium Role Bonus: +${boostPct}%**`);
+            }
+            if (hasPremiumPlusRole) {
+                fishingMultiplier *= PREMIUM_PLUS_INCOME_MULTIPLIER;
+                const incomePct = Math.round((PREMIUM_PLUS_INCOME_MULTIPLIER - 1) * 100);
+                const luckPct = Math.round((PREMIUM_PLUS_LUCK_MULTIPLIER - 1) * 100);
+                const rarityUpPct = Math.round(PREMIUM_PLUS_RARITY_UP_CHANCE * 100);
+                bonusMessages.push(`👑 **Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
             }
             const finalEarned = Math.floor(baseEarned * fishingMultiplier);
             const multiplierMessage = bonusMessages.length

@@ -50,6 +50,20 @@ roleId: null,
         }
     },
     {
+        id: 'premium_role_plus',
+        name: 'Premium Server Role+',
+        price: 100000000,
+        description: 'An elite role with exclusive fishing perks: Fishing Luck +45%, Fishing Income +50%, 20% chance to upgrade your catch rarity, and access to exclusive fishing.',
+        type: 'role',
+        roleId: null,
+        effect: {
+            type: 'role_perk',
+            luckMultiplier: 1.45,
+            incomeMultiplier: 1.5,
+            rarityUpChance: 0.2
+        }
+    },
+    {
         id: 'lucky_clover',
         name: 'Lucky Clover',
         price: 100000,

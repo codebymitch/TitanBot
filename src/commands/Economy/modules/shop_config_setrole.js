@@ -6,7 +6,11 @@ import { logger } from '../../../utils/logger.js';
 
 import { replyUserError, ErrorTypes } from '../../../utils/errorHandler.js';
 export default {
-    async execute(interaction, config, client) {
+    async execute(interaction, config, client, {
+        configKey = 'premiumRoleId',
+        label = 'Premium Shop Role',
+        itemName = 'Premium Role',
+    } = {}) {
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
             return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need **Manage Server** permissions to set the premium role.' });
         }
@@ -16,11 +20,11 @@ export default {
 
         try {
             const currentConfig = await getGuildConfig(client, guildId);
-            currentConfig.premiumRoleId = role.id;
+            currentConfig[configKey] = role.id;
             await setGuildConfig(client, guildId, currentConfig);
 
             return InteractionHelper.safeReply(interaction, {
-                embeds: [successEmbed('Premium Role Set', `The **Premium Shop Role** has been set to ${role.toString()}. Members who purchase the Premium Role item will be granted this role.`)],
+                embeds: [successEmbed('Premium Role Set', `The **${label}** has been set to ${role.toString()}. Members who purchase the ${itemName} item will be granted this role.`)],
                 ephemeral: true,
             });
         } catch (error) {

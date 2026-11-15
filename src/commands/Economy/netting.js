@@ -5,14 +5,13 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getItemById } from '../../config/shop/items.js';
 import { getGuildConfig } from '../../services/config/guildConfig.js';
-import { pickFish, resolveActivePotions, rollRarityWithPotion, RARITY_COLORS } from './fish.js';
+import { pickFish, resolveActivePotions, rollRarityWithPotion, applyRarityUpgrade, RARITY_COLORS, RARITY_ORDER } from './fish.js';
 
 const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
-
-const RARITY_ORDER = [
-    'common', 'uncommon', 'rare', 'epic', 'legendary',
-    'mythic', 'secret', 'divine', 'transcendent', 'celestial'
-];
+const PREMIUM_PLUS_EFFECT = getItemById('premium_role_plus')?.effect ?? {};
+const PREMIUM_PLUS_LUCK_MULTIPLIER = PREMIUM_PLUS_EFFECT.luckMultiplier ?? 1;
+const PREMIUM_PLUS_INCOME_MULTIPLIER = PREMIUM_PLUS_EFFECT.incomeMultiplier ?? 1;
+const PREMIUM_PLUS_RARITY_UP_CHANCE = PREMIUM_PLUS_EFFECT.rarityUpChance ?? 0;
 
 // Highest-tier net the user owns (falls back to any net found).
 function getBestFishingNet(inventory) {
@@ -75,12 +74,17 @@ export default {
                 }
             }
 
-            // Netting bonuses: net + premium role only (Fishing Rod does NOT apply here).
+            // Netting bonuses: net + premium roles only (Fishing Rod does NOT apply here).
             const guildConfig = await getGuildConfig(client, guildId);
             const premiumRoleId = guildConfig.premiumRoleId;
+            const premiumPlusRoleId = guildConfig.premiumPlusRoleId;
             const hasPremiumRole = Boolean(
                 premiumRoleId && interaction.member?.roles?.cache?.has(premiumRoleId)
             );
+            const hasPremiumPlusRole = Boolean(
+                premiumPlusRoleId && interaction.member?.roles?.cache?.has(premiumPlusRoleId)
+            );
+            const roleLuckMultiplier = hasPremiumPlusRole ? PREMIUM_PLUS_LUCK_MULTIPLIER : 1;
 
             let fishingMultiplier = 1;
             const bonusMessages = [];
@@ -94,6 +98,13 @@ export default {
                 fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
                 bonusMessages.push(`✨ **Premium Role Bonus: +${Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100)}%**`);
             }
+            if (hasPremiumPlusRole) {
+                fishingMultiplier *= PREMIUM_PLUS_INCOME_MULTIPLIER;
+                const incomePct = Math.round((PREMIUM_PLUS_INCOME_MULTIPLIER - 1) * 100);
+                const luckPct = Math.round((PREMIUM_PLUS_LUCK_MULTIPLIER - 1) * 100);
+                const rarityUpPct = Math.round(PREMIUM_PLUS_RARITY_UP_CHANCE * 100);
+                bonusMessages.push(`👑 **Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
+            }
 
             // Tiap ikan di-roll rarity-nya sendiri secara acak (tergantung luck +
             // efek potion), jadi satu netting bisa berisi campuran rarity.
@@ -104,7 +115,11 @@ export default {
             const collectionGains = {};
 
             for (let i = 0; i < catchCount; i++) {
-                const { fish, baseEarned } = pickFish(rollRarityWithPotion(activePotion));
+                let rarity = rollRarityWithPotion(activePotion, roleLuckMultiplier);
+                if (hasPremiumPlusRole) {
+                    rarity = applyRarityUpgrade(rarity, PREMIUM_PLUS_RARITY_UP_CHANCE);
+                }
+                const { fish, baseEarned } = pickFish(rarity);
                 const earned = Math.floor(baseEarned * fishingMultiplier);
                 totalEarned += earned;
                 const catchLine = `${fish.rarity} - ${fish.name} - $${earned.toLocaleString()}`;

@@ -8,6 +8,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
 const ADMIN_POTION_ID = 'admin_potion';
+// Map shop role items to the guild config key that stores the role to grant.
+const ROLE_ITEM_CONFIG_KEYS = {
+    premium_role: 'premiumRoleId',
+    premium_role_plus: 'premiumPlusRoleId',
+};
 // Potion ini langsung aktif saat dibeli. Admin potion TIDAK termasuk di sini:
 // admin potion disimpan ke inventory dulu supaya bisa dipakai (/use) atau dikirim (/give).
 const LUCK_POTION_IDS = new Set([
@@ -79,7 +84,8 @@ export default {
             const totalCost = item.price * quantity;
 
             const guildConfig = await getGuildConfig(client, guildId);
-            const PREMIUM_ROLE_ID = guildConfig.premiumRoleId;
+            const ROLE_CONFIG_KEY = ROLE_ITEM_CONFIG_KEYS[itemId];
+            const ROLE_ITEM_ID = ROLE_CONFIG_KEY ? guildConfig[ROLE_CONFIG_KEY] : null;
 
             const userData = await getEconomyData(client, guildId, userId);
 
@@ -92,21 +98,21 @@ export default {
                 );
             }
 
-            if (item.type === "role" && itemId === "premium_role") {
-                if (!PREMIUM_ROLE_ID) {
+            if (item.type === "role" && ROLE_CONFIG_KEY) {
+                if (!ROLE_ITEM_ID) {
                     throw createError(
                         "Premium role not configured",
                         ErrorTypes.CONFIGURATION,
-                        "The **Premium Shop Role** has not been configured by a server administrator yet.",
+                        `The **${item.name}** has not been configured by a server administrator yet.`,
                         { itemId }
                     );
                 }
-                if (interaction.member.roles.cache.has(PREMIUM_ROLE_ID)) {
+                if (interaction.member.roles.cache.has(ROLE_ITEM_ID)) {
                     throw createError(
                         "Role already owned",
                         ErrorTypes.VALIDATION,
                         `You already have the **${item.name}** role.`,
-                        { itemId, roleId: PREMIUM_ROLE_ID }
+                        { itemId, roleId: ROLE_ITEM_ID }
                     );
                 }
                 if (quantity > 1) {
@@ -123,17 +129,17 @@ export default {
 
             let successDescription = `You successfully purchased ${quantity}x **${item.name}** for **$${totalCost.toLocaleString()}**!`;
 
-            if (item.type === "role" && itemId === "premium_role") {
+            if (item.type === "role" && ROLE_CONFIG_KEY) {
                 const member = interaction.member;
 
-                const role = interaction.guild.roles.cache.get(PREMIUM_ROLE_ID);
+                const role = interaction.guild.roles.cache.get(ROLE_ITEM_ID);
 
                 if (!role) {
                     throw createError(
                         "Role not found",
                         ErrorTypes.CONFIGURATION,
                         "The configured premium role no longer exists in this guild.",
-                        { roleId: PREMIUM_ROLE_ID }
+                        { roleId: ROLE_ITEM_ID }
                     );
                 }
 
@@ -150,7 +156,7 @@ export default {
                         "Role assignment failed",
                         ErrorTypes.DISCORD_API,
                         "Successfully deducted money, but failed to grant the role. Your cash has been refunded.",
-                        { roleId: PREMIUM_ROLE_ID, originalError: roleError.message }
+                        { roleId: ROLE_ITEM_ID, originalError: roleError.message }
                     );
                 }
             } else if (item.type === "upgrade") {
