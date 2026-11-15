@@ -506,10 +506,8 @@ export async function recheckAllMembers(client, guildId) {
 
 function formatLeaderboardDuration(ms) {
   const totalMinutes = Math.floor(Math.max(0, Number(ms) || 0) / 60000);
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (days) return `${days}h ${hours}j ${minutes}m`;
   if (hours) return `${hours}j ${minutes}m`;
   return `${minutes}m`;
 }
@@ -534,10 +532,11 @@ async function getVoiceLeaderboard(client, guild) {
     totals.set(userId, (totals.get(userId) || 0) + Math.max(0, now - startedAt));
   }
 
-  const sorted = [...totals.entries()]
+  const eligibleTotals = [...totals.entries()]
     .filter(([, totalMs]) => totalMs > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
+    .sort((a, b) => b[1] - a[1]);
+  const totalVoiceMs = eligibleTotals.reduce((sum, [, totalMs]) => sum + totalMs, 0);
+  const sorted = eligibleTotals.slice(0, 10);
 
   const entries = await Promise.all(sorted.map(async ([userId, totalMs], index) => {
     const member = guild.members.cache.get(userId)
@@ -552,26 +551,37 @@ async function getVoiceLeaderboard(client, guild) {
     };
   }));
 
-  return entries.filter(Boolean).map((entry, index) => ({ ...entry, rank: index + 1 }));
+  return {
+    entries: entries.filter(Boolean).map((entry, index) => ({ ...entry, rank: index + 1 })),
+    participantCount: eligibleTotals.length,
+    totalVoiceMs,
+  };
 }
 
 async function buildVoiceLeaderboardPayload(client, guild) {
-  const entries = await getVoiceLeaderboard(client, guild);
+  const { entries, participantCount, totalVoiceMs } = await getVoiceLeaderboard(client, guild);
   const podium = entries.slice(0, 3);
-  const image = podium.length ? await renderVoiceLeaderboardCard({ guild, entries: podium }) : null;
+  const image = podium.length
+    ? await renderVoiceLeaderboardCard({ guild, entries: podium })
+    : null;
   const lines = entries.map((entry) => {
-    const name = entry.displayName.replace(/[*_~`|]/g, '');
-    return `**#${entry.rank} | ${name}** (<@${entry.userId}>) · Total voice: **${formatLeaderboardDuration(entry.totalMs)}**`;
+    const rank = ['🥇', '🥈', '🥉'][entry.rank - 1] || `**${entry.rank}.**`;
+    return `${rank} <@${entry.userId}> · **${formatLeaderboardDuration(entry.totalMs)}**`;
   });
 
   const embed = new EmbedBuilder()
     .setColor(0xD6B15E)
     .setTitle('🎙️ Top Voice')
     .setDescription(
-      `**Anggota dengan total waktu voice terlama**\n\n` +
+      `**Leaderboard total voice · bukan mingguan**\n` +
+      `🏆 Podium menampilkan nama dan total waktu anggota teratas.\n\n` +
       (lines.length ? lines.join('\n') : 'Belum ada waktu voice yang tercatat.'),
     )
-    .setFooter({ text: 'Diperbarui otomatis setiap 5 menit · Waktu sesi aktif ikut dihitung' })
+    .addFields({
+      name: 'Statistik Voice',
+      value: `👥 **${participantCount}** peserta · ⏱️ **${formatLeaderboardDuration(totalVoiceMs)}** total voice`,
+    })
+    .setFooter({ text: 'Update otomatis tiap 5 menit · Akumulasi sepanjang waktu · Tidak ada reset mingguan' })
     .setTimestamp();
 
   if (image) embed.setImage('attachment://voice-leaderboard.png');
