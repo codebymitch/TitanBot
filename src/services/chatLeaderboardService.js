@@ -155,8 +155,9 @@ async function buildChatLeaderboardPayload(client, guild) {
     .setColor(0xA753D2)
     .setTitle('💬 TOP 10 ALL-TIME CHAT')
     .setDescription([
+      '═════════════════════',
       rankingLines.length ? rankingLines.join('\n') : 'Belum ada pesan yang tercatat.',
-      '━━━━━━━━━━━━━━━━━━━━',
+      '═════════════════════',
       `👥 **${participantCount} peserta** · 💬 **${formatCount(totalMessages)} total pesan**`,
       '🔄 Refresh tiap 5 menit · Akumulasi sepanjang waktu',
     ].join('\n'))
