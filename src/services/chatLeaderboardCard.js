@@ -229,11 +229,28 @@ function drawPodiumEntry(context, entry, avatar, slot) {
   context.fillStyle = '#FFFFFF';
   context.fillText(name, x, nameY);
 
-  context.fillStyle = '#D487FF';
-  context.font = `53px "${FONT_DISPLAY}"`;
-  context.fillText(Number(entry.totalMessages || 0).toLocaleString('id-ID'), x, valueY);
+  const messageCount = Number(entry.totalMessages || 0).toLocaleString('id-ID');
+  let countSize = rank === 1 ? 78 : 70;
+  const countMaxWidth = rank === 1 ? 420 : 330;
+  context.font = `bold ${countSize}px "${FONT_DISPLAY}"`;
+  while (context.measureText(messageCount).width > countMaxWidth && countSize > 42) {
+    countSize -= 2;
+    context.font = `bold ${countSize}px "${FONT_DISPLAY}"`;
+  }
+  context.save();
+  context.shadowColor = 'rgba(186, 91, 255, 0.5)';
+  context.shadowBlur = 14;
+  const countGradient = context.createLinearGradient(x - 100, valueY - 58, x + 100, valueY);
+  countGradient.addColorStop(0, '#E8A2FF');
+  countGradient.addColorStop(0.5, '#C875FF');
+  countGradient.addColorStop(1, '#F06ACB');
+  context.fillStyle = countGradient;
+  context.font = `bold ${countSize}px "${FONT_DISPLAY}"`;
+  context.textAlign = 'center';
+  context.fillText(messageCount, x, valueY);
+  context.restore();
   context.fillStyle = '#E9DDF1';
-  context.font = `20px "${FONT_BOLD}"`;
+  context.font = `bold 20px "${FONT_BOLD}"`;
   context.fillText('PESAN', x, detailY);
   context.textAlign = 'start';
 }
