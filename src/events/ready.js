@@ -15,13 +15,41 @@ import {
   updateChatLeaderboards,
 } from "../services/chatLeaderboardService.js";
 
+/**
+ * Set the bot presence. When `presence.rotateIntervalMs` > 0 and more than one
+ * activity is configured, the bot cycles through them in order.
+ */
+function startPresenceRotation(client) {
+  const presence = config.bot?.presence;
+  const activities = Array.isArray(presence?.activities) ? presence.activities.filter(Boolean) : [];
+  if (activities.length === 0) return;
+
+  let index = 0;
+  const applyNext = () => {
+    client.user.setPresence({
+      status: presence.status || "online",
+      activities: [activities[index]],
+    });
+    index = (index + 1) % activities.length;
+  };
+
+  applyNext();
+
+  const intervalMs = Number(presence.rotateIntervalMs) || 0;
+  if (activities.length > 1 && intervalMs > 0) {
+    if (client.presenceRotationTimer) clearInterval(client.presenceRotationTimer);
+    client.presenceRotationTimer = setInterval(applyNext, intervalMs);
+    startupLog(`Presence rotation enabled (${activities.length} activities, every ${intervalMs / 1000}s)`);
+  }
+}
+
 export default {
   name: Events.ClientReady,
   once: true,
 
   async execute(client) {
     try {
-      client.user.setPresence(config.bot.presence);
+      startPresenceRotation(client);
 
       startupLog(`Ready! Logged in as ${client.user.tag}`);
       startupLog(`Serving ${client.guilds.cache.size} guild(s)`);

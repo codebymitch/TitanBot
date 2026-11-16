@@ -13,7 +13,13 @@ export const botConfig = {
     // Current online state shown on Discord.
     status: "online",
 
-    // Activity lines shown under the bot name.
+    // How long each activity is shown before switching to the next one (ms).
+    // Set to 0 to disable rotation (only the first activity is used).
+    // Keep this >= 15000 to stay well clear of Discord's presence rate limits.
+    rotateIntervalMs: 30000,
+
+    // Activity lines shown under the bot name. When `rotateIntervalMs` > 0 and
+    // there is more than one entry, the bot cycles through them in order.
     // `type` number mapping from Discord:
     // 0 = Playing
     // 1 = Streaming
@@ -26,6 +32,16 @@ export const botConfig = {
         name: "Custom Status", // required by Discord API, not shown in the client
         state: "hari hari mau eek",     // this is what people actually see
         type: 4,               // Custom
+      },
+      {
+        name: "Custom Status",
+        state: "selalu ada buat kamu",
+        type: 4,
+      },
+      {
+        name: "Custom Status",
+        state: "jangan lupa istirahat",
+        type: 4,
       },
     ],
   },
