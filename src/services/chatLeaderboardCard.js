@@ -275,9 +275,6 @@ export async function renderChatLeaderboardCard({ entries }) {
   context.fillText('TOP CHAT', 48, 102);
   context.letterSpacing = '0px';
   context.textAlign = 'right';
-  context.fillStyle = '#E9D5FF';
-  context.font = `42px "${FONT_DISPLAY}"`;
-  context.fillText('ALL-TIME CHAT', WIDTH - 48, 72);
   context.fillStyle = '#C7B4D8';
   context.font = `19px "${FONT}"`;
   context.fillText('UPDATE OTOMATIS TIAP 5 MENIT', WIDTH - 48, 106);
