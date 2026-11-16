@@ -30,7 +30,11 @@ export default {
       }
 
       // Role changes (skipped when the old member isn't cached, since we can't diff roles)
-      if (!oldMember.partial) {
+      if (oldMember.partial) {
+        logger.warn(
+          `guildMemberUpdate: old member ${newMember.user?.id} not cached in guild ${newMember.guild.id}; role change cannot be detected`
+        );
+      } else {
         const guildId = newMember.guild.id;
         const changes = [
           {
