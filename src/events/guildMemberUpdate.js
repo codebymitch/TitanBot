@@ -27,8 +27,31 @@ export default {
             userId: newMember.user.id,
           }
         });
+      }
 
-        return;
+      // Role additions (skipped when the old member isn't cached, since we can't diff roles)
+      if (!oldMember.partial) {
+        const addedRoles = newMember.roles.cache.filter(
+          (role) => !oldMember.roles.cache.has(role.id) && role.id !== newMember.guild.id
+        );
+
+        for (const role of addedRoles.values()) {
+          await logEvent({
+            client: newMember.client,
+            guildId: newMember.guild.id,
+            eventType: EVENT_TYPES.MEMBER_ROLE_ADD,
+            data: {
+              title: 'Role received',
+              lines: [
+                `**User:** ${newMember.user.toString()} (${newMember.user.tag})`,
+                `**ID:** \`${newMember.user.id}\``,
+                `**Role:** ${role.toString()} (${role.name})`,
+              ],
+              thumbnail: newMember.user.displayAvatarURL({ dynamic: true }),
+              userId: newMember.user.id,
+            }
+          });
+        }
       }
 
     } catch (error) {
