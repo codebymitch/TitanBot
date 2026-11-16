@@ -51,7 +51,7 @@ export default {
 
         for (const { eventType, title, roles } of changes) {
           for (const role of roles.values()) {
-            await logEvent({
+            const sent = await logEvent({
               client: newMember.client,
               guildId,
               eventType,
@@ -66,6 +66,14 @@ export default {
                 userId: newMember.user.id,
               }
             });
+
+            if (!sent) {
+              logger.warn(
+                `Role alert (${eventType}) for ${newMember.user.id} in guild ${guildId} was not sent. ` +
+                'Check /logging dashboard: audit log must be enabled, an audit channel set, the Members category on, ' +
+                'and the bot needs Send Messages + Embed Links in that channel.'
+              );
+            }
           }
         }
       }
