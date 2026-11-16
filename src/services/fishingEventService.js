@@ -3,7 +3,8 @@
 // (key non-guild), lalu dibaca oleh /fish dan /netting sehingga boost luck
 // otomatis berlaku di semua server tanpa menulis inventory siapa pun.
 
-import { getFromDb, setInDb, deleteFromDb } from '../utils/database.js';
+import { getFromDb, setInDb, deleteFromDb, getFishingEventChannelKey } from '../utils/database.js';
+import { createEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 
 const EVENT_KEY = 'fishing_event:global';
@@ -68,4 +69,88 @@ export async function getActiveFishingLuckMultiplier() {
 
     const multiplier = Number(event.multiplier) || 1;
     return multiplier > 1 ? multiplier : 1;
+}
+
+// ===== Channel pengumuman per-server =====
+// Tiap server set channel-nya sendiri lewat /fishevent setchannel.
+
+export async function setFishingEventChannel(guildId, channelId) {
+    await setInDb(getFishingEventChannelKey(guildId), {
+        announcementChannelId: String(channelId),
+    });
+    logger.info('[EVENT] Announcement channel set', { guildId, channelId });
+}
+
+export async function clearFishingEventChannel(guildId) {
+    await deleteFromDb(getFishingEventChannelKey(guildId));
+    logger.info('[EVENT] Announcement channel cleared', { guildId });
+}
+
+export async function getFishingEventChannel(guildId) {
+    const config = await getFromDb(getFishingEventChannelKey(guildId), null);
+    return config?.announcementChannelId || null;
+}
+
+function formatRemaining(endsAt) {
+    if (!endsAt) {
+        return 'sampai dihentikan manual';
+    }
+
+    const remainingMs = Math.max(0, endsAt - Date.now());
+    const totalMinutes = Math.ceil(remainingMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+// Kirim pengumuman event ke channel yang sudah di-set di tiap server.
+// Server yang belum set channel / tanpa izin akan dilewati, bukan bikin gagal semua.
+export async function broadcastFishingEvent(client, event, { action = 'start' } = {}) {
+    const result = { sent: 0, skipped: 0, failed: 0 };
+
+    if (!client?.guilds?.cache) {
+        return result;
+    }
+
+    const embed = action === 'stop'
+        ? createEmbed({
+            title: 'Fishing Event Ended',
+            description: `The global **x${event.multiplier}** luck boost has ended.`,
+            color: '#ED4245',
+        })
+        : createEmbed({
+            title: 'Fishing Event Started',
+            description:
+                `Global fishing luck boost **x${event.multiplier}** is now active in every server!\n` +
+                `Duration: **${formatRemaining(event.endsAt)}**.`,
+            color: '#F1C40F',
+        });
+
+    for (const guild of client.guilds.cache.values()) {
+        try {
+            const channelId = await getFishingEventChannel(guild.id);
+            if (!channelId) {
+                result.skipped++;
+                continue;
+            }
+
+            const channel = guild.channels.cache.get(channelId)
+                || await guild.channels.fetch(channelId).catch(() => null);
+
+            if (!channel?.isTextBased?.()) {
+                result.skipped++;
+                continue;
+            }
+
+            await channel.send({ embeds: [embed] });
+            result.sent++;
+        } catch (error) {
+            result.failed++;
+            logger.warn(`[EVENT] Failed to announce in guild ${guild.id}: ${error.message}`);
+        }
+    }
+
+    logger.info('[EVENT] Broadcast finished', result);
+    return result;
 }
