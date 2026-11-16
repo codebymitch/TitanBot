@@ -42,8 +42,8 @@ export const EXCLUSIVE_FISH = [
     { name: 'Mythril Anglerfish', emoji: '💠' },
 ];
 export const EXCLUSIVE_COLOR = '#F1C40F';
-const EXCLUSIVE_PRICE_MIN = 250000;
-const EXCLUSIVE_PRICE_MAX = 1000000;
+const EXCLUSIVE_PRICE_MIN = 137500;
+const EXCLUSIVE_PRICE_MAX = 550000;
 export const EXCLUSIVE_CATCH_CHANCE = 0.15;
 
 // Roll a bonus exclusive catch (nilai jauh di atas ikan biasa).
