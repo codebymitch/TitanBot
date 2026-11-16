@@ -264,39 +264,30 @@ async function registerGlobalCommands(client, clientId, commands, totalSubcomman
 }
 
 /**
- * Register commands to a single guild for instant availability (no global
- * propagation wait). Skipped when no guild id is configured.
+ * Remove every guild-scoped command from each guild the bot is in.
+ *
+ * Commands are registered globally (see registerCommands), so any guild-scoped
+ * commands are leftovers from older deploys that registered per-guild (e.g. via
+ * GUILD_ID or TEST_GUILD_ID). If left in place they show up in Discord as
+ * duplicate entries next to the global copies, so we clear them on startup.
  */
-async function registerGuildCommands(client, clientId, guildId, commands) {
-    if (!guildId) {
-        return false;
-    }
-
-    const commandsToRegister = prepareCommandsForRegistration(commands);
-    await client.rest.put(`/applications/${clientId}/guilds/${guildId}/commands`, {
-        body: commandsToRegister,
-    });
-    logger.info(`Registered ${commandsToRegister.length} guild commands for instant availability in guild ${guildId}`);
-    return true;
-}
-
-async function removeGuildCommandDuplicates(client, clientId, commandName, keepGuildId = null) {
+async function clearGuildScopedCommands(client, clientId) {
     const guilds = Array.from(client.guilds?.cache?.keys?.() || []);
 
     for (const guildId of guilds) {
-        if (guildId === keepGuildId) {
-            continue;
-        }
-
         const route = `/applications/${clientId}/guilds/${guildId}/commands`;
-        const existingCommands = await client.rest.get(route);
-        if (!Array.isArray(existingCommands) || !existingCommands.some(command => command.name === commandName)) {
-            continue;
-        }
 
-        const filteredCommands = existingCommands.filter(command => command.name !== commandName);
-        await client.rest.put(route, { body: filteredCommands });
-        logger.info(`Removed stale guild command /${commandName} from guild ${guildId}`);
+        try {
+            const existingCommands = await client.rest.get(route);
+            if (!Array.isArray(existingCommands) || existingCommands.length === 0) {
+                continue;
+            }
+
+            await client.rest.put(route, { body: [] });
+            logger.info(`Cleared ${existingCommands.length} stale guild-scoped command(s) from guild ${guildId}`);
+        } catch (error) {
+            logger.warn(`Failed to clear guild-scoped commands for guild ${guildId}: ${error.message}`);
+        }
     }
 }
 
@@ -316,18 +307,11 @@ export async function registerCommands(client, options = {}) {
         validateCommands(commands);
 
         // Always register globally so the bot works in every server it is invited to.
-        // GUILD_ID is intentionally NOT used here: guild-scoped registration would
-        // hide the commands from all other servers.
-        await removeGuildCommandDuplicates(client, clientId, 'voicemilestone');
+        // GUILD_ID / TEST_GUILD_ID are intentionally NOT used: guild-scoped
+        // registration would duplicate the global commands in that one guild and
+        // hide them from every other server.
+        await clearGuildScopedCommands(client, clientId);
         await registerGlobalCommands(client, clientId, commands, totalSubcommands);
-
-        // In development, also register to the test guild for instant availability
-        // without waiting for global propagation. Guild commands override the global
-        // copy with the same name, so no duplicate entries are shown.
-        const instantGuildId = botConfig.commands?.testGuildId || null;
-        if (instantGuildId && process.env.NODE_ENV !== 'production') {
-            await registerGuildCommands(client, clientId, instantGuildId, commands);
-        }
     } catch (error) {
         logger.error('Error registering commands:', error);
         throw error;
