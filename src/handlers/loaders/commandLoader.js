@@ -306,35 +306,28 @@ export async function registerCommands(client, options = {}) {
     try {
         const { commands, totalSubcommands } = collectCommandPayloads(client);
 
-        // When a target guild is configured, register guild-scoped commands only.
-        // Registering the same command both globally and to a guild makes Discord
-        // show it twice, so the global copy is cleared when the guild path is used.
-        const instantGuildId = process.env.GUILD_ID || botConfig.commands?.testGuildId || null;
-
-        if (instantGuildId) {
-            if (!clientId) {
-                throw new Error('CLIENT_ID is required for slash command registration');
-            }
-            if (!client.rest) {
-                throw new Error('Discord REST client is not available for slash command registration');
-            }
-
-            validateCommands(commands);
-
-            const existingGlobal = await client.rest.get(`/applications/${clientId}/commands`);
-            if (Array.isArray(existingGlobal) && existingGlobal.length > 0) {
-                logger.info(`Clearing ${existingGlobal.length} global commands to avoid duplicates`);
-                await client.rest.put(`/applications/${clientId}/commands`, { body: [] });
-            }
-
-            await removeGuildCommandDuplicates(client, clientId, 'voicemilestone', instantGuildId);
-            await registerGuildCommands(client, clientId, instantGuildId, commands);
-            logger.info(`Command registration: guild-only for ${instantGuildId} (no global duplicates)`);
-            return;
+        if (!clientId) {
+            throw new Error('CLIENT_ID is required for slash command registration');
+        }
+        if (!client.rest) {
+            throw new Error('Discord REST client is not available for slash command registration');
         }
 
+        validateCommands(commands);
+
+        // Always register globally so the bot works in every server it is invited to.
+        // GUILD_ID is intentionally NOT used here: guild-scoped registration would
+        // hide the commands from all other servers.
         await removeGuildCommandDuplicates(client, clientId, 'voicemilestone');
         await registerGlobalCommands(client, clientId, commands, totalSubcommands);
+
+        // In development, also register to the test guild for instant availability
+        // without waiting for global propagation. Guild commands override the global
+        // copy with the same name, so no duplicate entries are shown.
+        const instantGuildId = botConfig.commands?.testGuildId || null;
+        if (instantGuildId && process.env.NODE_ENV !== 'production') {
+            await registerGuildCommands(client, clientId, instantGuildId, commands);
+        }
     } catch (error) {
         logger.error('Error registering commands:', error);
         throw error;
