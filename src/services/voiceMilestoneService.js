@@ -571,17 +571,8 @@ async function getVoiceLeaderboard(client, guild) {
   };
 }
 
-function resolveMilestoneRank(guild, milestone) {
-  if (!milestone) return null;
-  const role = milestone.roleId ? guild.roles.cache.get(milestone.roleId) : null;
-  return role?.name || milestone.label;
-}
-
 async function buildVoiceLeaderboardPayload(client, guild) {
-  const [{ entries, participantCount, totalVoiceMs }, config] = await Promise.all([
-    getVoiceLeaderboard(client, guild),
-    getVoiceMilestoneConfig(client, guild.id),
-  ]);
+  const { entries, participantCount, totalVoiceMs } = await getVoiceLeaderboard(client, guild);
   const podium = entries.slice(0, 3);
   const image = podium.length
     ? await renderVoiceLeaderboardCard({ guild, entries: podium })
@@ -602,11 +593,9 @@ async function buildVoiceLeaderboardPayload(client, guild) {
       4: '<a:goldenarrow:1571414745313976451>',
       5: '<a:brownarrow:1571414861869613076>',
     }[entry.rank] || '<a:whitearrow:1571414768722518027>';
-    const { current } = getMilestoneProgress(entry.totalMs, config.milestones);
-    const rankName = resolveMilestoneRank(guild, current) || 'Belum ada rank';
     return [
       `**${entry.rank}.** <@${entry.userId}>`,
-      `${rankIcon} **${formatLeaderboardDuration(entry.totalMs)}** – ${rankName}`,
+      `${rankIcon} total voice **${formatLeaderboardDuration(entry.totalMs)}**`,
     ];
   });
   const listEmbed = new EmbedBuilder()
