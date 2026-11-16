@@ -7,6 +7,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+import { isBotOwner } from '../../config/bot.js';
 import {
   disableCategory,
   enableCategory,
@@ -25,8 +26,8 @@ import {
 
 const DASHBOARD_TIMEOUT_MS = 10 * 60 * 1000;
 
-function buildCategoryChoices(client) {
-  const registry = buildCommandRegistry(client);
+function buildCategoryChoices(client, includeOwner = true) {
+  const registry = buildCommandRegistry(client, { includeOwner });
   return [...registry.values()]
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
     .slice(0, 25)
@@ -111,20 +112,21 @@ export default {
 
     const scope = interaction.options.getString('scope');
     const query = focused.value.toLowerCase();
+    const includeOwner = isBotOwner(interaction.user.id);
 
     if (scope === 'category') {
-      const choices = buildCategoryChoices(interaction.client)
+      const choices = buildCategoryChoices(interaction.client, includeOwner)
         .filter((choice) => choice.name.toLowerCase().includes(query) || choice.value.includes(query))
         .slice(0, 25);
       return interaction.respond(choices);
     }
 
     // For command scope, get all commands including subcommands
-    const registry = buildCommandRegistry(interaction.client);
+    const registry = buildCommandRegistry(interaction.client, { includeOwner });
     const allCommands = [];
     
     // Check if the query matches a category name - if so, show commands from that category
-    const matchedCategory = resolveCategoryChoice(interaction.client, query);
+    const matchedCategory = resolveCategoryChoice(interaction.client, query, { includeOwner });
     
     if (matchedCategory) {
       // Show commands from the matched category
@@ -159,6 +161,7 @@ export default {
     }
 
     const subcommand = interaction.options.getSubcommand();
+    const isOwner = isBotOwner(interaction.user.id);
 
     if (subcommand === 'dashboard') {
       const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
@@ -166,7 +169,7 @@ export default {
         return;
       }
 
-      const view = await buildDashboardView(client, interaction.guildId, interaction.guild, 'overview');
+      const view = await buildDashboardView(client, interaction.guildId, interaction.guild, 'overview', null, isOwner);
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [view.embed],
         components: view.components,
@@ -202,7 +205,7 @@ export default {
       });
 
       collector.on('end', async () => {
-        const finalView = await buildDashboardView(client, interaction.guildId, interaction.guild, 'overview');
+        const finalView = await buildDashboardView(client, interaction.guildId, interaction.guild, 'overview', null, isOwner);
         const disabledComponents = finalView.components.map((row) => {
           const newRow = row.toJSON();
           newRow.components = newRow.components.map((component) => ({ ...component, disabled: true }));
@@ -225,7 +228,7 @@ export default {
     }
 
     if (scope === 'category') {
-      const category = resolveCategoryChoice(client, target);
+      const category = resolveCategoryChoice(client, target, { includeOwner: isOwner });
       if (!category) {
         return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: `No category matched \`${target}\`. Use \`/commands dashboard\` to browse categories.` });
       }
