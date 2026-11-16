@@ -6,6 +6,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getItemById } from '../../config/shop/items.js';
 import { getGuildConfig } from '../../services/config/guildConfig.js';
 import { pickFish, resolveActivePotions, rollRarityWithPotion, applyRarityUpgrade, rollExclusiveCatch, RARITY_COLORS, RARITY_ORDER, EXCLUSIVE_COLOR, EXCLUSIVE_CATCH_CHANCE } from './fish.js';
+import { getActiveFishingLuckMultiplier } from '../../services/fishingEventService.js';
 
 const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
 const PREMIUM_PLUS_EFFECT = getItemById('premium_role_plus')?.effect ?? {};
@@ -86,8 +87,15 @@ export default {
             );
             const roleLuckMultiplier = hasPremiumPlusRole ? PREMIUM_PLUS_LUCK_MULTIPLIER : 1;
 
+            // Event mancing global (lintas server) menambah luck untuk semua orang.
+            const eventLuckMultiplier = await getActiveFishingLuckMultiplier();
+            const totalLuckMultiplier = roleLuckMultiplier * eventLuckMultiplier;
+
             let fishingMultiplier = 1;
             const bonusMessages = [];
+            if (eventLuckMultiplier > 1) {
+                bonusMessages.push(`🌊 **Server Event Active: x${eventLuckMultiplier} luck**`);
+            }
 
             const netMultiplier = Number(bestNet.effect?.multiplier) || 1;
             if (netMultiplier > 1) {
@@ -115,7 +123,7 @@ export default {
             const collectionGains = {};
 
             for (let i = 0; i < catchCount; i++) {
-                let rarity = rollRarityWithPotion(activePotion, roleLuckMultiplier);
+                let rarity = rollRarityWithPotion(activePotion, totalLuckMultiplier);
                 if (hasPremiumPlusRole) {
                     rarity = applyRarityUpgrade(rarity, PREMIUM_PLUS_RARITY_UP_CHANCE);
                 }
