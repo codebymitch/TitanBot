@@ -12,6 +12,8 @@ import {
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import { isBotOwner } from "../../config/bot.js";
+import { OWNER_CATEGORIES } from "../../config/commands/commandCategories.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +42,7 @@ const CATEGORY_ICONS = {
     Birthday: "🎂",
     "Join To Create": "🔌",
     Verification: "✅",
+    Owner: "👑",
 };
 
 function formatCategoryName(rawCategory) {
@@ -49,13 +52,15 @@ function formatCategoryName(rawCategory) {
         .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export async function createInitialHelpMenu(client) {
+export async function createInitialHelpMenu(client, viewerId = null) {
     const commandsPath = path.join(__dirname, "../../commands");
     const categoryDirs = (
         await fs.readdir(commandsPath, { withFileTypes: true })
     )
         .filter((dirent) => dirent.isDirectory())
         .map((dirent) => dirent.name)
+        // Kategori khusus owner cuma kelihatan buat bot owner.
+        .filter((name) => !OWNER_CATEGORIES.has(name.toLowerCase()) || isBotOwner(viewerId))
         .sort();
 
     const options = [
@@ -150,7 +155,7 @@ export default {
         const { MessageFlags } = await import('discord.js');
         await InteractionHelper.safeDefer(interaction);
         
-        const { embeds, components } = await createInitialHelpMenu(client);
+        const { embeds, components } = await createInitialHelpMenu(client, interaction.user.id);
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds,

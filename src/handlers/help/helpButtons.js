@@ -16,7 +16,7 @@ export const helpBackButton = {
                 await interaction.deferUpdate();
             }
 
-            const { embeds, components } = await createInitialHelpMenu(client);
+            const { embeds, components } = await createInitialHelpMenu(client, interaction.user.id);
             await interaction.editReply({
                 embeds,
                 components,
@@ -120,7 +120,7 @@ export const helpPaginationButton = {
                     break;
             }
 
-            const { embeds, components } = await createAllCommandsMenu(nextPage, client);
+            const { embeds, components } = await createAllCommandsMenu(nextPage, client, interaction.user.id);
             await interaction.editReply({ embeds, components });
         } catch (error) {
             if (error?.code === 40060 || error?.code === 10062) {

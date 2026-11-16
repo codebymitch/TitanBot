@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 import { Collection, ActionRowBuilder, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { isBotOwner } from '../../config/bot.js';
+import { OWNER_CATEGORIES } from '../../config/commands/commandCategories.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +40,7 @@ const CATEGORY_ICONS = {
     "Join To Create": "🔌",
     Verification: "✅",
     Config: "⚙️",
+    Owner: "👑",
 };
 
 function formatCategoryName(rawCategory) {
@@ -120,7 +123,26 @@ function normalizeCommandData(command) {
     };
 }
 
-async function createCategoryCommandsMenu(category, client) {
+async function createCategoryCommandsMenu(category, client, viewerId = null) {
+    // Kategori khusus owner: jangan tampilkan ke non-owner.
+    if (OWNER_CATEGORIES.has(category.toLowerCase()) && !isBotOwner(viewerId)) {
+        const backButton = createButton(
+            BACK_BUTTON_ID,
+            "Back",
+            "primary",
+            "⬅️",
+            false,
+        );
+
+        return {
+            embeds: [createEmbed({
+                title: "🔒 Owner Commands",
+                description: "This category is only available to the bot owner.",
+            })],
+            components: [new ActionRowBuilder().addComponents(backButton)],
+        };
+    }
+
     const categoryName = formatCategoryName(category);
     const icon = CATEGORY_ICONS[categoryName] || "🔍";
 
@@ -238,7 +260,7 @@ async function createCategoryCommandsMenu(category, client) {
     };
 }
 
-export async function createAllCommandsMenu(page = 1, client) {
+export async function createAllCommandsMenu(page = 1, client, viewerId = null) {
     const commandsPerPage = 45;
     const allCommands = [];
 
@@ -251,6 +273,11 @@ export async function createAllCommandsMenu(page = 1, client) {
         .sort();
 
     for (const category of categoryDirs) {
+        // Kategori khusus owner disembunyikan dari daftar all-commands non-owner.
+        if (OWNER_CATEGORIES.has(category.toLowerCase()) && !isBotOwner(viewerId)) {
+            continue;
+        }
+
         try {
             const categoryPath = path.join(
                 __dirname,
@@ -382,13 +409,13 @@ export const helpCategorySelectMenu = {
             const selectedCategory = interaction.values[0];
 
             if (selectedCategory === ALL_COMMANDS_ID) {
-                const { embeds, components } = await createAllCommandsMenu(1, client);
+                const { embeds, components } = await createAllCommandsMenu(1, client, interaction.user.id);
                 await interaction.editReply({
                     embeds,
                     components,
                 });
             } else {
-                const { embeds, components } = await createCategoryCommandsMenu(selectedCategory, client);
+                const { embeds, components } = await createCategoryCommandsMenu(selectedCategory, client, interaction.user.id);
                 await interaction.editReply({
                     embeds,
                     components,

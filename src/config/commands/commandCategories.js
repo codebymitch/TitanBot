@@ -13,6 +13,7 @@ export const CATEGORY_ICONS = {
   JoinToCreate: '🔌',
   Logging: '📝',
   Moderation: '🛡️',
+  Owner: '👑',
   Reaction_roles: '🎭',
   Search: '🔍',
   ServerStats: '📈',
@@ -27,7 +28,10 @@ export const CATEGORY_ICONS = {
 };
 
 /** Commands that always stay available so admins can recover access. */
-export const PROTECTED_COMMANDS = new Set(['commands', 'configwizard']);
+export const PROTECTED_COMMANDS = new Set(['commands', 'configwizard', 'fishevent']);
+
+/** Categories only visible to bot owners (hidden from everyone else). */
+export const OWNER_CATEGORIES = new Set(['owner']);
 
 export function normalizeCategoryKey(category) {
   return String(category || '')
