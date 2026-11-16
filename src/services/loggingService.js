@@ -42,6 +42,7 @@ const EVENT_TYPES = {
   MEMBER_LEAVE: 'member.leave',
   MEMBER_NAME_CHANGE: 'member.namechange',
   MEMBER_ROLE_ADD: 'member.roleadd',
+  MEMBER_ROLE_REMOVE: 'member.roleremove',
 
   REACTION_ROLE_ADD: 'reactionrole.add',
   REACTION_ROLE_REMOVE: 'reactionrole.remove',
@@ -88,6 +89,7 @@ const EVENT_COLORS = {
   'member.leave': 0xe74c3c,
   'member.namechange': 0x3498db,
   'member.roleadd': 0x2ecc71,
+  'member.roleremove': 0xe74c3c,
   'reactionrole.add': 0x2ecc71,
   'reactionrole.remove': 0xe74c3c,
   'reactionrole.create': 0x3498db,
@@ -129,6 +131,7 @@ const EVENT_ICONS = {
   'member.leave': '👋',
   'member.namechange': '🏷️',
   'member.roleadd': '🎖️',
+  'member.roleremove': '🚫',
   'reactionrole.add': '✅',
   'reactionrole.remove': '❌',
   'reactionrole.create': '🎭',

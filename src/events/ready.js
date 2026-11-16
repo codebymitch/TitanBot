@@ -18,6 +18,15 @@ export default {
       startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
       startupLog(`Loaded ${client.commands.size} commands`);
 
+      // Cache members so guildMemberUpdate receives a full "old" member (needed to detect role changes)
+      for (const guild of client.guilds.cache.values()) {
+        try {
+          await guild.members.fetch();
+        } catch (error) {
+          logger.warn(`Could not cache members for guild ${guild.id}: ${error.message}`);
+        }
+      }
+
       if (client.config?.features?.music) {
         initRiffyAfterReady(client);
       }
