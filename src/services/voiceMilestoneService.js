@@ -595,7 +595,7 @@ async function buildVoiceLeaderboardPayload(client, guild) {
     }[entry.rank] || '<a:whitearrow:1571414768722518027>';
     return [
       `**${entry.rank}.** <@${entry.userId}>`,
-      `${rankIcon} total voice **${formatLeaderboardDuration(entry.totalMs)}**`,
+      `${rankIcon} **total voice** **${formatLeaderboardDuration(entry.totalMs)}**`,
     ];
   });
   const listEmbed = new EmbedBuilder()
