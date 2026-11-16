@@ -27,8 +27,43 @@ export default {
             userId: newMember.user.id,
           }
         });
+      }
 
-        return;
+      // Role changes (skipped when the old member isn't cached, since we can't diff roles)
+      if (!oldMember.partial) {
+        const guildId = newMember.guild.id;
+        const changes = [
+          {
+            eventType: EVENT_TYPES.MEMBER_ROLE_ADD,
+            title: 'Role received',
+            roles: newMember.roles.cache.filter((r) => !oldMember.roles.cache.has(r.id) && r.id !== guildId),
+          },
+          {
+            eventType: EVENT_TYPES.MEMBER_ROLE_REMOVE,
+            title: 'Role removed',
+            roles: oldMember.roles.cache.filter((r) => !newMember.roles.cache.has(r.id) && r.id !== guildId),
+          },
+        ];
+
+        for (const { eventType, title, roles } of changes) {
+          for (const role of roles.values()) {
+            await logEvent({
+              client: newMember.client,
+              guildId,
+              eventType,
+              data: {
+                title,
+                lines: [
+                  `**User:** ${newMember.user.toString()} (${newMember.user.tag})`,
+                  `**ID:** \`${newMember.user.id}\``,
+                  `**Role:** ${role.toString()} (${role.name})`,
+                ],
+                thumbnail: newMember.user.displayAvatarURL({ dynamic: true }),
+                userId: newMember.user.id,
+              }
+            });
+          }
+        }
       }
 
     } catch (error) {
