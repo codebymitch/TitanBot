@@ -63,6 +63,13 @@ export default {
                 .setDescription('Destination server to move your balance to')
                 .setRequired(true)
                 .setAutocomplete(true)
+        )
+        .addIntegerOption((option) =>
+            option
+                .setName('amount')
+                .setDescription('Amount to move (leave empty to move your whole balance)')
+                .setRequired(false)
+                .setMinValue(1)
         ),
 
     async autocomplete(interaction, client) {
@@ -140,7 +147,13 @@ export default {
             );
         }
 
-        const result = await EconomyService.transferServerBalance(client, sourceGuildId, destGuildId, userId);
+        const result = await EconomyService.transferServerBalance(
+            client,
+            sourceGuildId,
+            destGuildId,
+            userId,
+            interaction.options.getInteger('amount')
+        );
         const movedTotal = result.walletMoved + result.bankMoved;
 
         const embed = successEmbed(

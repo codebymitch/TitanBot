@@ -226,7 +226,7 @@ class EconomyService {
     }
   }
 
-  static async transferServerBalance(client, sourceGuildId, destGuildId, userId) {
+  static async transferServerBalance(client, sourceGuildId, destGuildId, userId, amount = null) {
     logger.debug(`[ECONOMY_SERVICE] transferServerBalance requested`, {
       userId,
       sourceGuildId,
@@ -261,10 +261,11 @@ class EconomyService {
       );
     }
 
-    const walletMoved = sourceData.wallet || 0;
-    const bankMoved = sourceData.bank || 0;
+    const walletAvailable = sourceData.wallet || 0;
+    const bankAvailable = sourceData.bank || 0;
+    const totalAvailable = walletAvailable + bankAvailable;
 
-    if (walletMoved <= 0 && bankMoved <= 0) {
+    if (totalAvailable <= 0) {
       throw createError(
         "Nothing to transfer",
         ErrorTypes.VALIDATION,
@@ -273,8 +274,30 @@ class EconomyService {
       );
     }
 
-    const sourceWalletBefore = walletMoved;
-    const sourceBankBefore = bankMoved;
+    let walletMoved;
+    let bankMoved;
+
+    if (amount == null) {
+      walletMoved = walletAvailable;
+      bankMoved = bankAvailable;
+    } else {
+      this.validateAmount(amount, { operation: 'transferServer', userId, sourceGuildId, destGuildId });
+
+      if (amount > totalAvailable) {
+        throw createError(
+          "Insufficient balance",
+          ErrorTypes.VALIDATION,
+          `You only have **$${totalAvailable.toLocaleString()}** in total on this server.`,
+          { required: amount, available: totalAvailable, userId, sourceGuildId }
+        );
+      }
+
+      walletMoved = Math.min(amount, walletAvailable);
+      bankMoved = amount - walletMoved;
+    }
+
+    const sourceWalletBefore = walletAvailable;
+    const sourceBankBefore = bankAvailable;
 
     const destWalletBefore = destData.wallet || 0;
     const destBankBefore = destData.bank || 0;
@@ -293,8 +316,8 @@ class EconomyService {
     this.assertSafeBalance(destWalletAfter, { operation: 'transferServer.wallet', userId, destGuildId });
     this.assertSafeBalance(destBankAfter, { operation: 'transferServer.bank', userId, destGuildId });
 
-    sourceData.wallet = 0;
-    sourceData.bank = 0;
+    sourceData.wallet = sourceWalletBefore - walletMoved;
+    sourceData.bank = sourceBankBefore - bankMoved;
     destData.wallet = destWalletAfter;
     destData.bank = destBankAfter;
 
