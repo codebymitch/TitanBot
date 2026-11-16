@@ -274,9 +274,6 @@ export async function renderChatLeaderboardCard({ entries }) {
   context.letterSpacing = '2px';
   context.fillText('TOP CHAT', 48, 102);
   context.letterSpacing = '0px';
-  context.fillStyle = '#F2EAF8';
-  context.font = `23px "${FONT_BOLD}"`;
-  context.fillText('LEADERBOARD SEPANJANG WAKTU', 52, 139);
   context.textAlign = 'right';
   context.fillStyle = '#E9D5FF';
   context.font = `42px "${FONT_DISPLAY}"`;
