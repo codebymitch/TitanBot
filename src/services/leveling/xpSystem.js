@@ -48,10 +48,6 @@ export const addXp = wrapServiceBoundary(async function addXp(client, guild, mem
     }
 
     if (didLevelUp) {
-      if (config.announceLevelUp) {
-        await sendLevelUpAnnouncement(guild, member, levelData, config);
-      }
-
       try {
         await logEvent({
           client,
@@ -106,35 +102,5 @@ async function awardRoleReward(guild, member, roleId, level) {
     logger.info(`✅ Awarded role ${role.name} to ${member.user.tag} for reaching level ${level}`);
   } catch (error) {
     logger.error(`Failed to award role reward to ${member.user.id}:`, error);
-  }
-}
-
-async function sendLevelUpAnnouncement(guild, member, levelData, config) {
-  try {
-    const levelUpChannel = config.levelUpChannel
-      ? guild.channels.cache.get(config.levelUpChannel)
-      : guild.systemChannel;
-
-    if (!levelUpChannel || !levelUpChannel.isTextBased()) {
-      return;
-    }
-
-    const permissions = levelUpChannel.permissionsFor(guild.members.me);
-    if (!permissions || !permissions.has(['SendMessages', 'EmbedLinks'])) {
-      logger.warn(`Missing permissions to send levelup message in ${levelUpChannel.id}`);
-      return;
-    }
-
-    const message = config.levelUpMessage
-      .replace(/{user}/g, member.toString())
-      .replace(/{level}/g, levelData.level)
-      .replace(/{xp}/g, levelData.xp)
-      .replace(/{xpNeeded}/g, getXpForLevel(levelData.level + 1));
-
-    await levelUpChannel.send(message).catch(error => {
-      logger.error(`Failed to send level up message in channel ${levelUpChannel.id}:`, error);
-    });
-  } catch (error) {
-    logger.error('Error sending level up announcement:', error);
   }
 }
