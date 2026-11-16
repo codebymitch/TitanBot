@@ -1,4 +1,4 @@
-import { Events } from 'discord.js';
+import { Events, PermissionsBitField } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling/leveling.js';
 import { addXp } from '../services/leveling/xpSystem.js';
@@ -19,6 +19,9 @@ import {
   recordCorrectCount,
 } from '../services/countingGameService.js';
 
+const EVERYONE_PING_WARNING_COOLDOWN_MS = 30000;
+const everyonePingWarnings = new Map();
+
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
 
@@ -29,6 +32,8 @@ export default {
       if (message.author.bot || !message.guild) return;
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
+
+      await handleEveryonePing(message);
 
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
@@ -43,6 +48,37 @@ export default {
     }
   }
 };
+
+async function handleEveryonePing(message) {
+  try {
+    if (!/@(everyone|here)\b/i.test(message.content || '')) return;
+
+    // Staff are allowed to ping everyone
+    const perms = message.member?.permissions;
+    if (perms?.has(PermissionsBitField.Flags.Administrator) || perms?.has(PermissionsBitField.Flags.ManageMessages)) {
+      return;
+    }
+
+    const key = `${message.guild.id}:${message.author.id}`;
+    const now = Date.now();
+    if (now - (everyonePingWarnings.get(key) || 0) < EVERYONE_PING_WARNING_COOLDOWN_MS) return;
+    everyonePingWarnings.set(key, now);
+
+    // Keep the map from growing forever
+    if (everyonePingWarnings.size > 1000) {
+      for (const [k, t] of everyonePingWarnings) {
+        if (now - t > EVERYONE_PING_WARNING_COOLDOWN_MS) everyonePingWarnings.delete(k);
+      }
+    }
+
+    await message.channel.send({
+      content: `${message.author}, stop pinging everyone or you will be quarantined.`,
+      allowedMentions: { users: [message.author.id] },
+    });
+  } catch (error) {
+    logger.warn('Failed to send everyone-ping warning:', error);
+  }
+}
 
 async function handlePrefixCommand(message, client) {
   try {
