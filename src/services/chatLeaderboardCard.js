@@ -277,7 +277,7 @@ export async function renderChatLeaderboardCard({ entries }) {
   context.textAlign = 'right';
   context.fillStyle = '#C7B4D8';
   context.font = `19px "${FONT}"`;
-  context.fillText('UPDATE OTOMATIS TIAP 5 MENIT', WIDTH - 48, 106);
+  context.fillText('UPDATE OTOMATIS TIAP 5 MENIT', WIDTH - 48, 52);
   context.textAlign = 'start';
 
   const podium = [

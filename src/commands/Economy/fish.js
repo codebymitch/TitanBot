@@ -380,7 +380,7 @@ export default {
             }
             const finalEarned = Math.floor(baseEarned * fishingMultiplier);
             const multiplierMessage = bonusMessages.length
-                ? `\n${bonusMessages.join('\n')}`
+                ? `\n\n${bonusMessages.join('\n')}`
                 : "";
 
             // Bonus eksklusif: pemilik Premium Role+ berpeluang menangkap ikan
