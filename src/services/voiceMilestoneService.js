@@ -305,19 +305,21 @@ async function postMilestoneAnnouncement(
     if (!member) return { ok: false, reason: 'member_unavailable' };
     const role = milestone.roleId ? guild.roles.cache.get(milestone.roleId) : null;
     const next = config.milestones.find((entry) => entry.hours > milestone.hours);
+    const rank = await getVoiceMilestoneRank(client, guild.id, userId, totalMs).catch(() => null);
+    const nextMilestoneText = next
+      ? `${next.label} (${next.hours} jam)`
+      : '🏆 Tier tertinggi tercapai!';
     const embed = new EmbedBuilder()
       .setColor(role?.color || 0xD6B15E)
       .setDescription(
-        `${isTest ? 'Preview:' : 'Selamat!'} Kamu <@${userId}> mencapai **${role?.name || milestone.label}** setelah ` +
-        `**${formatAnnouncementDuration(totalMs)}** di voice channel.`,
-      )
-      .addFields(
-        { name: 'Total Voice', value: formatAnnouncementDuration(totalMs), inline: true },
-        {
-          name: 'Target Berikutnya',
-          value: next ? `**${next.label}** (${next.hours} jam)` : '🏆 Tier tertinggi tercapai!',
-          inline: true,
-        },
+        `<a:tada:1571992051933773976> **MILESTONE ACHIEVED**\n\n` +
+        `selamat buat <@${userId}> yang berhasil mencapai **${role?.name || milestone.label}** di **Manay Society**\n\n` +
+        `Makasih udah sering nemenin dan ngeramein voice channel. terus aktif, makin akrab sama member lain, dan nikmatin keseruannya bareng-bareng!\n\n` +
+        `<:stats:1571992208058617867> **VOICE STATISTICS**\n` +
+        `<a:clock:1571422433427324938> Total Voice: ${formatAnnouncementDuration(totalMs)}\n` +
+        `<:trophy:1571992156976193536> Global Rank: #${rank ?? '-'}\n` +
+        `<:dart:1571992186751287549> Next Milestone: ${nextMilestoneText}\n\n` +
+        `Perjalanan masih panjang, jangan berhenti sampai di sini. Sampai ketemu di milestone berikutnya`,
       )
       .setFooter({
         text: isTest ? 'Manay Society · Test preview, role dan progres tidak berubah' : 'Manay Society',
@@ -325,7 +327,6 @@ async function postMilestoneAnnouncement(
 
     let cardBuffer = null;
     try {
-      const rank = await getVoiceMilestoneRank(client, guild.id, userId, totalMs);
       cardBuffer = await renderVoiceMilestoneCard({
         member,
         milestone,
