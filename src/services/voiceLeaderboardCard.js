@@ -288,12 +288,9 @@ export async function renderVoiceLeaderboardCard({ entries }) {
   context.fillText('TOP VOICE', 48, 102);
   context.letterSpacing = '0px';
   context.textAlign = 'right';
-  context.fillStyle = '#E9D5FF';
-  context.font = displayFontString(42);
-  context.fillText('ALL-TIME VOICE', WIDTH - 48, 52);
   context.fillStyle = '#C7B4D8';
   context.font = fontString(19, false);
-  context.fillText('UPDATE OTOMATIS TIAP 5 MENIT', WIDTH - 48, 86);
+  context.fillText('UPDATE OTOMATIS TIAP 5 MENIT', WIDTH - 48, 52);
   context.textAlign = 'start';
 
   const podium = [
