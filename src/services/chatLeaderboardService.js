@@ -149,7 +149,7 @@ async function buildChatLeaderboardPayload(client, guild) {
   };
   const rankingLines = entries.flatMap((entry) => [
     `**${entry.rank}.** <@${entry.userId}>`,
-    `${rankIcons[entry.rank] || '<a:whitearrow:1571414768722518027>'} **${formatCount(entry.totalMessages)} pesan**`,
+    `${rankIcons[entry.rank] || '<a:whitearrow:1571414768722518027>'} **total ${formatCount(entry.totalMessages)} pesan**`,
   ]);
   const listEmbed = new EmbedBuilder()
     .setColor(0xA753D2)
