@@ -11,7 +11,7 @@ import {
   splitComparisonFields,
 } from '../utils/logging/logEmbeds.js';
 
-const LOG_DESTINATIONS = ['audit', 'applications', 'reports'];
+const LOG_DESTINATIONS = ['audit', 'applications', 'reports', 'messages'];
 
 const EVENT_TYPES = {
   MODERATION_BAN: 'moderation.ban',
@@ -151,6 +151,7 @@ const EVENT_ICONS = {
 const CATEGORY_DESTINATION = {
   application: 'applications',
   report: 'reports',
+  message: 'messages',
 };
 
 export function resolveLogChannel(config, destination) {
@@ -198,7 +199,14 @@ function getLogChannelForEvent(config, eventType, overrideChannelId = null) {
 
   const category = eventType?.split('.')[0];
   const destination = CATEGORY_DESTINATION[category] || 'audit';
-  return resolveLogChannel(config, destination);
+  const channelId = resolveLogChannel(config, destination);
+
+  // Message logs fall back to the audit channel until a messages channel is set
+  if (!channelId && destination === 'messages') {
+    return resolveLogChannel(config, 'audit');
+  }
+
+  return channelId;
 }
 
 export async function logEvent({
@@ -361,7 +369,7 @@ export async function getLoggingStatus(client, guildId) {
 
   return {
     enabled: logging.enabled || false,
-    channels: logging.channels || { audit: null, applications: null, reports: null },
+    channels: logging.channels || { audit: null, applications: null, reports: null, messages: null },
     channelId: logging.channels?.audit ?? null,
     ignore: getIgnoreList(config),
     enabledEvents: logging.enabledEvents || {},
