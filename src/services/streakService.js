@@ -9,6 +9,7 @@ import { logger } from '../utils/logger.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { wrapServiceClassMethods } from '../utils/serviceErrorBoundary.js';
 import { validateDiscordId } from '../utils/validation.js';
+import { createEmbed } from '../utils/embeds.js';
 
 const STREAK_KEY_PREFIX = 'guild:';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -83,6 +84,7 @@ class StreakService {
       best: asPositiveInt(base.best),
       totalDays: asPositiveInt(base.totalDays),
       lastDay: typeof base.lastDay === 'string' ? base.lastDay : null,
+      breakNotified: base.breakNotified === true,
       createdAt: Number(base.createdAt) || null,
       updatedAt: Number(base.updatedAt) || null,
     };
@@ -172,6 +174,7 @@ class StreakService {
       incremented = true;
     }
 
+    streak.breakNotified = false;
     streak.updatedAt = timestamp;
 
     await client.db.set(key, streak);
@@ -233,6 +236,92 @@ class StreakService {
 
     entries.sort((a, b) => b.currentCount - a.currentCount || b.best - a.best);
     return entries.slice(0, limit);
+  }
+
+  /**
+   * Scan every guild for streaks that broke overnight (user had no activity
+   * yesterday). The current run is reset to 0 and the user is DMed once.
+   */
+  static async checkBrokenStreaks(client) {
+    if (!client?.guilds?.cache) return;
+
+    const today = StreakService.toDayKey(Date.now());
+
+    for (const guild of client.guilds.cache.values()) {
+      let keys;
+      try {
+        keys = await client.db.list(StreakService.buildPrefix(guild.id));
+      } catch (error) {
+        logger.warn(`[STREAK] Failed to list streak keys for guild ${guild.id}:`, error.message);
+        continue;
+      }
+
+      for (const key of keys) {
+        const userId = StreakService.parseUserIdFromKey(key, guild.id);
+        if (!userId) continue;
+
+        const raw = await client.db.get(key, null);
+        if (!raw) continue;
+
+        const streak = StreakService.normalizeStreak(raw, guild.id, userId);
+
+        // Streak is still alive while the last active day is today or yesterday.
+        const alive = streak.lastDay && StreakService.daysBetween(streak.lastDay, today) <= 1;
+        if (alive || streak.count <= 0 || streak.breakNotified) {
+          continue;
+        }
+
+        const previousBest = streak.best;
+        streak.count = 0;
+        streak.breakNotified = true;
+        streak.updatedAt = Date.now();
+        await client.db.set(key, streak);
+
+        logger.info('[STREAK] Streak broke', {
+          guildId: guild.id,
+          userId,
+          previousBest,
+        });
+
+        try {
+          const user = await client.users.fetch(userId).catch(() => null);
+          if (user) {
+            const embed = createEmbed({
+              description: `yahh api streak kamu padam 😢 streak terakhirmu **${previousBest} hari** nih, yuk nyalain lagi dari awal!`,
+              color: 'error',
+            });
+            await user.send({ embeds: [embed] }).catch(() => null);
+          }
+        } catch (error) {
+          logger.warn(`[STREAK] Failed to notify ${userId} about broken streak:`, error.message);
+        }
+      }
+    }
+  }
+}
+
+export function startStreakBreakChecker(client) {
+  if (client.streakBreakCheckerTimer) return;
+
+  // Check every minute; the actual break only fires once per user per break.
+  client.streakBreakCheckerTimer = setInterval(() => {
+    StreakService.checkBrokenStreaks(client).catch((error) => {
+      logger.error('Streak break checker task failed:', error);
+    });
+  }, 60 * 1000);
+
+  // Run once shortly after startup too.
+  setTimeout(() => {
+    StreakService.checkBrokenStreaks(client).catch((error) => {
+      logger.error('Streak break checker (startup) failed:', error);
+    });
+  }, 10 * 1000);
+}
+
+export function stopStreakBreakChecker(client) {
+  if (client.streakBreakCheckerTimer) {
+    clearInterval(client.streakBreakCheckerTimer);
+    client.streakBreakCheckerTimer = null;
   }
 }
 

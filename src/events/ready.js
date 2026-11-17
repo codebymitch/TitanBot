@@ -14,6 +14,7 @@ import {
   startChatLeaderboardUpdater,
   updateChatLeaderboards,
 } from "../services/chatLeaderboardService.js";
+import { startStreakBreakChecker } from "../services/streakService.js";
 
 /**
  * Set the bot presence. When `presence.rotateIntervalMs` > 0 and more than one
@@ -83,6 +84,7 @@ export default {
       await initializeChatLeaderboards(client);
       await updateChatLeaderboards(client);
       startChatLeaderboardUpdater(client);
+      startStreakBreakChecker(client);
 
     } catch (error) {
       logger.error("Error in ready event:", error);
