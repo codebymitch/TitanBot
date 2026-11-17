@@ -606,7 +606,7 @@ async function buildVoiceLeaderboardPayload(client, guild) {
       rankingLines.length ? rankingLines.join('\n') : 'Belum ada waktu voice yang tercatat.',
       '═════════════════════',
       `<:users:1571422486841528463> **${participantCount} peserta** · <a:clock:1571422433427324938> **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
-      '<:ManaySocietyV2:1571439027381604363> Manay Society · <a:repeat:1571423818335916102> Refresh tiap 5 menit',
+      '<a:repeat:1571423818335916102> Refresh tiap 5 menit',
     ].join('\n'))
     .setTimestamp();
 
