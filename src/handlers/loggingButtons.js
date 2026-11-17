@@ -39,6 +39,7 @@ const DESTINATION_LABELS = {
   reports: 'Reports',
   messages: 'Messages',
   roles: 'Roles',
+  joins: 'Joins',
 };
 
 export default {
