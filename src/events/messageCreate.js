@@ -38,7 +38,7 @@ export default {
 
       await handleAutoReaction(message, client);
 
-      await handleStreakInteraction(message, client);
+      await handleStreakActivity(message, client);
 
       await handlePrefixCommand(message, client);
     } catch (error) {
@@ -179,41 +179,16 @@ async function handleCountingGame(message, client) {
   }
 }
 
-async function handleStreakInteraction(message, client) {
+async function handleStreakActivity(message, client) {
   try {
-    const mentionedUsers = message.mentions?.users;
-    const repliedUser = message.mentions?.repliedUser;
-
-    if ((!mentionedUsers || mentionedUsers.size === 0) && !repliedUser) {
+    if (!message.author || message.author.bot || !message.guild) {
       return;
     }
 
-    const targetIds = new Set();
-
-    if (repliedUser?.id) {
-      targetIds.add(repliedUser.id);
-    }
-    if (mentionedUsers) {
-      for (const user of mentionedUsers.values()) {
-        targetIds.add(user.id);
-      }
-    }
-
-    targetIds.delete(message.author.id);
-
-    for (const targetId of targetIds) {
-      const target = mentionedUsers?.get(targetId)
-        || await client.users.fetch(targetId).catch(() => null);
-
-      if (!target || target.bot) {
-        continue;
-      }
-
-      await StreakService.recordInteraction(client, message.guild.id, message.author.id, targetId, {
-        timestamp: message.createdTimestamp,
-      });
-    }
+    await StreakService.recordActivity(client, message.guild.id, message.author.id, {
+      timestamp: message.createdTimestamp,
+    });
   } catch (error) {
-    logger.error('Error handling streak interaction:', error);
+    logger.error('Error handling streak activity:', error);
   }
 }

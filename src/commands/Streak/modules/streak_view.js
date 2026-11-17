@@ -7,40 +7,25 @@ export default {
     async execute(interaction, config, client) {
         await InteractionHelper.safeDefer(interaction);
 
-        const target = interaction.options.getUser('user');
-        const userId = interaction.user.id;
+        const target = interaction.options.getUser('user') || interaction.user;
         const guildId = interaction.guildId;
-
-        if (target.id === userId) {
-            return await replyUserError(interaction, {
-                type: ErrorTypes.USER_INPUT,
-                message: 'Pick another member to view a streak with.'
-            });
-        }
 
         if (target.bot) {
             return await replyUserError(interaction, {
                 type: ErrorTypes.USER_INPUT,
-                message: 'Bots cannot keep streaks.'
+                message: 'Bot tidak punya streak.'
             });
         }
 
-        const streak = await StreakService.getStreak(client, guildId, userId, target.id);
+        const streak = await StreakService.getUserStreak(client, guildId, target.id);
 
-        if (!streak || !streak.accepted) {
-            const incoming = await StreakService.getStreakRequest(client, guildId, target.id, userId);
-            const outgoing = incoming ? null : await StreakService.getStreakRequest(client, guildId, userId, target.id);
-
-            let body;
-            if (incoming) {
-                body = `${target} sent you a streak request. Accept it with the buttons on the request message.`;
-            } else if (outgoing) {
-                body = `You have a pending streak request to ${target}. Waiting for them to accept.`;
-            } else {
-                body = `You and ${target} do not have a streak yet. Start one with \`/streak request\`.`;
-            }
-
-            const embed = infoEmbed('No Streak Yet', body);
+        if (!streak || streak.currentCount === 0) {
+            const embed = infoEmbed(
+                'Belum Ada Streak',
+                target.id === interaction.user.id
+                    ? 'Kamu belum punya streak aktif. Kirim pesan hari ini untuk mulai streak!'
+                    : `${target} belum punya streak aktif.`
+            );
             return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
         }
 
@@ -48,12 +33,13 @@ export default {
         const best = streak.best;
 
         const embed = createEmbed({
-            title: 'Streak',
-            description: `${interaction.user} & ${target}`,
+            title: `Streak ${target.displayName || target.username}`,
+            description: streak.active ? 'Streak masih berjalan 🔥' : 'Streak terputus 💔',
             color: streak.active ? 'success' : 'warning',
             fields: [
-                { name: 'Current', value: `${current} day${current === 1 ? '' : 's'}`, inline: true },
-                { name: 'Best', value: `${best} day${best === 1 ? '' : 's'}`, inline: true },
+                { name: 'Current', value: `${current} hari`, inline: true },
+                { name: 'Best', value: `${best} hari`, inline: true },
+                { name: 'Total Hari Aktif', value: `${streak.totalDays} hari`, inline: true },
                 { name: 'Status', value: streak.active ? 'Active' : 'Broken', inline: true }
             ]
         });

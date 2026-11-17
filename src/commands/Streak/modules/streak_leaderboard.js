@@ -10,13 +10,12 @@ export default {
         const entries = await StreakService.getGuildLeaderboard(client, guildId, { limit: 10 });
 
         if (entries.length === 0) {
-            const embed = infoEmbed('No Active Streaks', 'This server has no active streaks yet.');
+            const embed = infoEmbed('Belum Ada Streak Aktif', 'Server ini belum punya streak aktif.');
             return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
         }
 
         const lines = entries.map((streak, index) => {
-            const [first, second] = streak.users;
-            return `**${index + 1}.** <@${first}> & <@${second}> — **${streak.currentCount} day${streak.currentCount === 1 ? '' : 's'}**`;
+            return `**${index + 1}.** <@${streak.userId}> — **${streak.currentCount} hari** (best: ${streak.best})`;
         });
 
         const embed = createEmbed({

@@ -1,6 +1,6 @@
 // streakRoutes.js
 //
-// HTTP surface for TikTok-style pairwise streaks. Mounted by the bot's web
+// HTTP surface for individual (per-user) streaks. Mounted by the bot's web
 // server (src/app.js) under /api/streaks.
 //
 // Optional auth: set STREAK_API_KEY to require an x-api-key header (or
@@ -42,28 +42,14 @@ function sendError(res, error, fallbackMessage) {
 function serializeStreak(streak) {
   return {
     guildId: streak.guildId,
-    users: streak.users,
-    accepted: streak.accepted,
-    acceptedAt: streak.acceptedAt,
+    userId: streak.userId,
     current: streak.currentCount,
     count: streak.count,
     best: streak.best,
+    totalDays: streak.totalDays,
     active: streak.active,
-    lastBothDay: streak.lastBothDay,
-    lastInteraction: streak.lastInteraction,
-    totalInteractions: streak.totalInteractions,
+    lastDay: streak.lastDay,
     updatedAt: streak.updatedAt,
-  };
-}
-
-function serializeRequest(request) {
-  return {
-    guildId: request.guildId,
-    from: request.from,
-    to: request.to,
-    status: request.status,
-    createdAt: request.createdAt,
-    respondedAt: request.respondedAt,
   };
 }
 
@@ -108,40 +94,21 @@ export function registerStreakApi(app, client) {
 
   router.get('/:guildId/user/:userId', async (req, res) => {
     try {
-      const activeOnly = req.query.active !== 'false';
-      const streaks = await StreakService.getUserStreaks(client, req.params.guildId, req.params.userId, { activeOnly });
+      const streak = await StreakService.getUserStreak(client, req.params.guildId, req.params.userId);
       res.json({
         guildId: req.params.guildId,
         userId: req.params.userId,
-        streaks: streaks.map(serializeStreak),
+        streak: streak ? serializeStreak(streak) : null,
       });
     } catch (error) {
-      sendError(res, error, 'Failed to load streaks for user.');
+      sendError(res, error, 'Failed to load streak for user.');
     }
   });
 
-  router.get('/:guildId/pair/:userA/:userB', async (req, res) => {
+  router.post('/:guildId/activity', async (req, res) => {
     try {
-      const { guildId, userA, userB } = req.params;
-      const streak = await StreakService.getStreak(client, guildId, userA, userB);
-      res.json({ guildId, users: StreakService.sortUserIds(userA, userB), streak: streak ? serializeStreak(streak) : null });
-    } catch (error) {
-      sendError(res, error, 'Failed to load streak for pair.');
-    }
-  });
-
-  router.post('/:guildId/interactions', async (req, res) => {
-    try {
-      const { fromUserId, toUserId, timestamp } = req.body || {};
-      const result = await StreakService.recordInteraction(client, req.params.guildId, fromUserId, toUserId, { timestamp });
-
-      if (!result.recorded) {
-        return res.status(409).json({
-          recorded: false,
-          reason: result.reason,
-          message: 'There is no accepted streak for this pair. Send and accept a streak request first.',
-        });
-      }
+      const { userId, timestamp } = req.body || {};
+      const result = await StreakService.recordActivity(client, req.params.guildId, userId, { timestamp });
 
       res.status(201).json({
         recorded: true,
@@ -150,53 +117,7 @@ export function registerStreakApi(app, client) {
         streak: serializeStreak(result.streak),
       });
     } catch (error) {
-      sendError(res, error, 'Failed to record streak interaction.');
-    }
-  });
-
-  router.post('/:guildId/requests', async (req, res) => {
-    try {
-      const { fromUserId, toUserId, channelId } = req.body || {};
-      const request = await StreakService.sendStreakRequest(client, req.params.guildId, fromUserId, toUserId, { channelId });
-      res.status(201).json({ request: serializeRequest(request) });
-    } catch (error) {
-      sendError(res, error, 'Failed to send streak request.');
-    }
-  });
-
-  router.get('/:guildId/requests/:userId', async (req, res) => {
-    try {
-      const direction = ['incoming', 'outgoing'].includes(req.query.direction) ? req.query.direction : 'all';
-      const requests = await StreakService.getPendingRequests(client, req.params.guildId, req.params.userId, { direction });
-      res.json({
-        guildId: req.params.guildId,
-        userId: req.params.userId,
-        direction,
-        requests: requests.map(serializeRequest),
-      });
-    } catch (error) {
-      sendError(res, error, 'Failed to load streak requests.');
-    }
-  });
-
-  router.post('/:guildId/requests/:fromUserId/:toUserId/respond', async (req, res) => {
-    try {
-      const { fromUserId, toUserId } = req.params;
-      const { action } = req.body || {};
-
-      if (action === 'accept') {
-        const { streak } = await StreakService.acceptStreakRequest(client, req.params.guildId, fromUserId, toUserId);
-        return res.json({ status: 'accepted', streak: serializeStreak(streak) });
-      }
-
-      if (action === 'decline') {
-        await StreakService.declineStreakRequest(client, req.params.guildId, fromUserId, toUserId);
-        return res.json({ status: 'declined' });
-      }
-
-      return res.status(400).json({ error: 'validation', message: "action must be either 'accept' or 'decline'." });
-    } catch (error) {
-      sendError(res, error, 'Failed to respond to streak request.');
+      sendError(res, error, 'Failed to record streak activity.');
     }
   });
 
