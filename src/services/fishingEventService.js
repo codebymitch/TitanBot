@@ -1,9 +1,10 @@
 // fishingEventService.js
-// Event mancing global (lintas server). Disimpan sebagai satu flag di DB
-// (key non-guild), lalu dibaca oleh /fish dan /netting sehingga boost luck
-// otomatis berlaku di semua server tanpa menulis inventory siapa pun.
+// Event mancing global (lintas server) + pengumuman lintas server.
+// Event disimpan sebagai satu flag di DB (key non-guild), lalu dibaca oleh
+// /fish dan /netting sehingga boost luck otomatis berlaku di semua server
+// tanpa menulis inventory siapa pun. Channel pengumuman disimpan per-server.
 
-import { getFromDb, setInDb, deleteFromDb, getFishingEventChannelKey } from '../utils/database.js';
+import { getFromDb, setInDb, deleteFromDb, getAnnouncementChannelKey } from '../utils/database.js';
 import { createEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 
@@ -72,26 +73,27 @@ export async function getActiveFishingLuckMultiplier() {
 }
 
 // ===== Channel pengumuman per-server =====
-// Tiap server set channel-nya sendiri lewat /fishevent setchannel.
+// Tiap server set channel-nya sendiri lewat /owner pengumuman setchannel.
+// Channel ini dipakai untuk pengumuman event mancing maupun pengumuman bebas.
 
-export async function setFishingEventChannel(guildId, channelId) {
-    await setInDb(getFishingEventChannelKey(guildId), {
+export async function setAnnouncementChannel(guildId, channelId) {
+    await setInDb(getAnnouncementChannelKey(guildId), {
         announcementChannelId: String(channelId),
     });
-    logger.info('[EVENT] Announcement channel set', { guildId, channelId });
+    logger.info('[ANNOUNCE] Announcement channel set', { guildId, channelId });
 }
 
-export async function clearFishingEventChannel(guildId) {
-    await deleteFromDb(getFishingEventChannelKey(guildId));
-    logger.info('[EVENT] Announcement channel cleared', { guildId });
+export async function clearAnnouncementChannel(guildId) {
+    await deleteFromDb(getAnnouncementChannelKey(guildId));
+    logger.info('[ANNOUNCE] Announcement channel cleared', { guildId });
 }
 
-export async function getFishingEventChannel(guildId) {
-    const config = await getFromDb(getFishingEventChannelKey(guildId), null);
+export async function getAnnouncementChannel(guildId) {
+    const config = await getFromDb(getAnnouncementChannelKey(guildId), null);
     return config?.announcementChannelId || null;
 }
 
-function formatRemaining(endsAt) {
+export function formatEventRemaining(endsAt) {
     if (!endsAt) {
         return 'sampai dihentikan manual';
     }
@@ -104,32 +106,18 @@ function formatRemaining(endsAt) {
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
-// Kirim pengumuman event ke channel yang sudah di-set di tiap server.
+// Kirim embed ke channel pengumuman yang sudah di-set di tiap server.
 // Server yang belum set channel / tanpa izin akan dilewati, bukan bikin gagal semua.
-export async function broadcastFishingEvent(client, event, { action = 'start' } = {}) {
+async function sendToAnnouncementChannels(client, embed, tag) {
     const result = { sent: 0, skipped: 0, failed: 0 };
 
     if (!client?.guilds?.cache) {
         return result;
     }
 
-    const embed = action === 'stop'
-        ? createEmbed({
-            title: 'Fishing Event Ended',
-            description: `The global **x${event.multiplier}** luck boost has ended.`,
-            color: '#ED4245',
-        })
-        : createEmbed({
-            title: 'Fishing Event Started',
-            description:
-                `Global fishing luck boost **x${event.multiplier}** is now active in every server!\n` +
-                `Duration: **${formatRemaining(event.endsAt)}**.`,
-            color: '#F1C40F',
-        });
-
     for (const guild of client.guilds.cache.values()) {
         try {
-            const channelId = await getFishingEventChannel(guild.id);
+            const channelId = await getAnnouncementChannel(guild.id);
             if (!channelId) {
                 result.skipped++;
                 continue;
@@ -147,10 +135,34 @@ export async function broadcastFishingEvent(client, event, { action = 'start' } 
             result.sent++;
         } catch (error) {
             result.failed++;
-            logger.warn(`[EVENT] Failed to announce in guild ${guild.id}: ${error.message}`);
+            logger.warn(`[${tag}] Failed to announce in guild ${guild.id}: ${error.message}`);
         }
     }
 
-    logger.info('[EVENT] Broadcast finished', result);
+    logger.info(`[${tag}] Broadcast finished`, result);
     return result;
+}
+
+// Pengumuman mulai/berhenti event mancing ke semua server.
+export async function broadcastFishingEvent(client, event, { action = 'start' } = {}) {
+    const embed = action === 'stop'
+        ? createEmbed({
+            title: 'Fishing Event Ended',
+            description: `The global **x${event.multiplier}** luck boost has ended.`,
+            color: '#ED4245',
+        })
+        : createEmbed({
+            title: 'Fishing Event Started',
+            description:
+                `Global fishing luck boost **x${event.multiplier}** is now active in every server!\n` +
+                `Duration: **${formatEventRemaining(event.endsAt)}**.`,
+            color: '#F1C40F',
+        });
+
+    return sendToAnnouncementChannels(client, embed, 'EVENT');
+}
+
+// Pengumuman bebas (owner) ke channel pengumuman semua server.
+export async function broadcastAnnouncement(client, embed) {
+    return sendToAnnouncementChannels(client, embed, 'ANNOUNCE');
 }

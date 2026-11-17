@@ -120,8 +120,8 @@ export function getChatLeaderboardConfigKey(guildId) {
     return `guild:${guildId}:chatleaderboard:config`;
 }
 
-export function getFishingEventChannelKey(guildId) {
-    return `guild:${guildId}:fishingevent:config`;
+export function getAnnouncementChannelKey(guildId) {
+    return `guild:${guildId}:announcement:config`;
 }
 
 export function getChatLeaderboardUserKey(guildId, userId) {

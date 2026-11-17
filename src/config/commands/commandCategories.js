@@ -28,7 +28,7 @@ export const CATEGORY_ICONS = {
 };
 
 /** Commands that always stay available so admins can recover access. */
-export const PROTECTED_COMMANDS = new Set(['commands', 'configwizard', 'fishevent']);
+export const PROTECTED_COMMANDS = new Set(['commands', 'configwizard', 'owner']);
 
 /** Categories only visible to bot owners (hidden from everyone else). */
 export const OWNER_CATEGORIES = new Set(['owner']);

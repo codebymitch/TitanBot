@@ -46,7 +46,7 @@ export {
     getVoiceMilestoneUsersPrefix,
     getGiveawayEntryKey,
     getGiveawayLockKey,
-    getFishingEventChannelKey,
+    getAnnouncementChannelKey,
     canonicalizeKey,
     getLegacyVariantsForCanonical,
 } from './database/keys.js';
