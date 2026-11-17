@@ -185,9 +185,22 @@ async function handleStreakActivity(message, client) {
       return;
     }
 
-    await StreakService.recordActivity(client, message.guild.id, message.author.id, {
+    const result = await StreakService.recordActivity(client, message.guild.id, message.author.id, {
       timestamp: message.createdTimestamp,
     });
+
+    if (!result?.incremented) {
+      return;
+    }
+
+    const count = result.streak.currentCount;
+    const embed = createEmbed({
+      description: `🔥 Wihh ${message.author} streak api kamu udah nyampe **${count} hari** nih! jangan sampai putus yaa, terus nyalain apinya! ❤️‍🔥`,
+      color: 'success',
+      thumbnail: message.author.displayAvatarURL({ dynamic: true, size: 128 }),
+    });
+
+    await message.reply({ embeds: [embed], allowedMentions: { repliedUser: true } }).catch(() => null);
   } catch (error) {
     logger.error('Error handling streak activity:', error);
   }
