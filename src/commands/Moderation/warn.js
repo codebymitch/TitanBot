@@ -96,11 +96,27 @@ export default {
             }
         });
 
+        // Let the warned user know by DM (fails quietly if their DMs are closed)
+        let dmSent = true;
+        try {
+            await target.send({
+                embeds: [
+                    warningEmbed(
+                        `⚠️ You were warned in ${interaction.guild.name}`,
+                        `**Reason:** ${reason}\n**Total Warnings:** ${totalCount}\n\nPlease follow the server rules to avoid further action.`,
+                    ),
+                ],
+            });
+        } catch (error) {
+            dmSent = false;
+            logger.debug(`Could not DM warned user ${target.id}: ${error.message}`);
+        }
+
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
                     `⚠️ **Warned** ${target.tag}`,
-                    `**Reason:** ${reason}\n**Total Warns:** ${totalCount}`,
+                    `**Reason:** ${reason}\n**Total Warns:** ${totalCount}${dmSent ? '' : '\n\n_Could not DM the user (their DMs are closed)._'}`,
                 ),
             ],
         });
