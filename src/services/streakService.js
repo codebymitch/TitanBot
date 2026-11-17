@@ -239,8 +239,21 @@ class StreakService {
   }
 
   /**
+   * Find the dedicated streak channel in a guild: the first text-based channel
+   * whose name contains "streak" (case-insensitive). Returns null if none.
+   */
+  static findStreakChannel(guild) {
+    if (!guild?.channels?.cache) return null;
+    return guild.channels.cache.find((ch) => {
+      if (!ch.isTextBased() || ch.isVoiceBased()) return false;
+      return typeof ch.name === 'string' && ch.name.toLowerCase().includes('streak');
+    }) || null;
+  }
+
+  /**
    * Scan every guild for streaks that broke overnight (user had no activity
-   * yesterday). The current run is reset to 0 and the user is DMed once.
+   * yesterday). The current run is reset to 0 and a notification is posted in
+   * the guild's dedicated streak channel once.
    */
   static async checkBrokenStreaks(client) {
     if (!client?.guilds?.cache) return;
@@ -255,6 +268,8 @@ class StreakService {
         logger.warn(`[STREAK] Failed to list streak keys for guild ${guild.id}:`, error.message);
         continue;
       }
+
+      const streakChannel = StreakService.findStreakChannel(guild);
 
       for (const key of keys) {
         const userId = StreakService.parseUserIdFromKey(key, guild.id);
@@ -283,15 +298,14 @@ class StreakService {
           previousBest,
         });
 
+        if (!streakChannel) continue;
+
         try {
-          const user = await client.users.fetch(userId).catch(() => null);
-          if (user) {
-            const embed = createEmbed({
-              description: `yahh api streak kamu padam 😢 streak terakhirmu **${previousBest} hari** nih, yuk nyalain lagi dari awal!`,
-              color: 'error',
-            });
-            await user.send({ embeds: [embed] }).catch(() => null);
-          }
+          const embed = createEmbed({
+            description: `yahh <@${userId}> api streak kamu padam 😢 streak terakhirmu **${previousBest} hari** nih, yuk nyalain lagi dari awal!`,
+            color: 'error',
+          });
+          await streakChannel.send({ embeds: [embed], allowedMentions: { users: [userId] } }).catch(() => null);
         } catch (error) {
           logger.warn(`[STREAK] Failed to notify ${userId} about broken streak:`, error.message);
         }
