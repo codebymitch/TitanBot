@@ -72,7 +72,7 @@ async function handleEveryonePing(message) {
     }
 
     await message.channel.send({
-      content: `${message.author}, stop pinging everyone or you will be quarantined.`,
+      content: `${message.author}, the result of mass pinging will result in quarantine.`,
       allowedMentions: { users: [message.author.id] },
     });
   } catch (error) {
