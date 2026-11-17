@@ -11,7 +11,7 @@ import {
   splitComparisonFields,
 } from '../utils/logging/logEmbeds.js';
 
-const LOG_DESTINATIONS = ['audit', 'applications', 'reports'];
+const LOG_DESTINATIONS = ['audit', 'applications', 'reports', 'messages', 'roles'];
 
 const EVENT_TYPES = {
   MODERATION_BAN: 'moderation.ban',
@@ -41,6 +41,8 @@ const EVENT_TYPES = {
   MEMBER_JOIN: 'member.join',
   MEMBER_LEAVE: 'member.leave',
   MEMBER_NAME_CHANGE: 'member.namechange',
+  MEMBER_ROLE_ADD: 'member.roleadd',
+  MEMBER_ROLE_REMOVE: 'member.roleremove',
 
   REACTION_ROLE_ADD: 'reactionrole.add',
   REACTION_ROLE_REMOVE: 'reactionrole.remove',
@@ -86,6 +88,8 @@ const EVENT_COLORS = {
   'member.join': 0x2ecc71,
   'member.leave': 0xe74c3c,
   'member.namechange': 0x3498db,
+  'member.roleadd': 0x2ecc71,
+  'member.roleremove': 0xe74c3c,
   'reactionrole.add': 0x2ecc71,
   'reactionrole.remove': 0xe74c3c,
   'reactionrole.create': 0x3498db,
@@ -126,6 +130,8 @@ const EVENT_ICONS = {
   'member.join': '👋',
   'member.leave': '👋',
   'member.namechange': '🏷️',
+  'member.roleadd': '🎖️',
+  'member.roleremove': '🚫',
   'reactionrole.add': '✅',
   'reactionrole.remove': '❌',
   'reactionrole.create': '🎭',
@@ -145,6 +151,13 @@ const EVENT_ICONS = {
 const CATEGORY_DESTINATION = {
   application: 'applications',
   report: 'reports',
+  message: 'messages',
+};
+
+// Specific events that go to their own destination, overriding the category
+const EVENT_DESTINATION = {
+  'member.roleadd': 'roles',
+  'member.roleremove': 'roles',
 };
 
 export function resolveLogChannel(config, destination) {
@@ -191,8 +204,15 @@ function getLogChannelForEvent(config, eventType, overrideChannelId = null) {
   }
 
   const category = eventType?.split('.')[0];
-  const destination = CATEGORY_DESTINATION[category] || 'audit';
-  return resolveLogChannel(config, destination);
+  const destination = EVENT_DESTINATION[eventType] || CATEGORY_DESTINATION[category] || 'audit';
+  const channelId = resolveLogChannel(config, destination);
+
+  // Message and role logs fall back to the audit channel until their own channel is set
+  if (!channelId && (destination === 'messages' || destination === 'roles')) {
+    return resolveLogChannel(config, 'audit');
+  }
+
+  return channelId;
 }
 
 export async function logEvent({
@@ -355,7 +375,7 @@ export async function getLoggingStatus(client, guildId) {
 
   return {
     enabled: logging.enabled || false,
-    channels: logging.channels || { audit: null, applications: null, reports: null },
+    channels: logging.channels || { audit: null, applications: null, reports: null, messages: null, roles: null },
     channelId: logging.channels?.audit ?? null,
     ignore: getIgnoreList(config),
     enabledEvents: logging.enabledEvents || {},

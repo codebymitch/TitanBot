@@ -30,6 +30,8 @@ export default {
                             { name: 'Audit (moderation, messages, members…)', value: 'audit' },
                             { name: 'Applications', value: 'applications' },
                             { name: 'Reports', value: 'reports' },
+                            { name: 'Messages (deleted / edited)', value: 'messages' },
+                            { name: 'Roles (given / removed)', value: 'roles' },
                         ),
                 )
                 .addChannelOption((option) =>

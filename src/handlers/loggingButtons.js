@@ -37,6 +37,8 @@ const DESTINATION_LABELS = {
   audit: 'Audit Log',
   applications: 'Applications',
   reports: 'Reports',
+  messages: 'Messages',
+  roles: 'Roles',
 };
 
 export default {
