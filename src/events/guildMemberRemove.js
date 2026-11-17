@@ -2,7 +2,6 @@ import { Events, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
 import { getColor, botConfig } from '../config/bot.js';
 import { getWelcomeConfig, getUserApplications, deleteApplication } from '../utils/database.js';
 import { formatWelcomeMessage } from '../utils/welcome.js';
-import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { getServerCounters, updateCounter } from '../services/serverstatsService.js';
 import { getGuildBirthdays, deleteBirthday } from '../utils/database.js';
 import { deleteUserLevelData } from '../services/leveling/leveling.js';
@@ -76,28 +75,6 @@ export default {
                     });
                 }
             }
-        }
-
-        try {
-            await logEvent({
-                client: member.client,
-                guildId: guild.id,
-                eventType: EVENT_TYPES.MEMBER_LEAVE,
-                data: {
-                    title: 'User left',
-                    lines: [
-                        `**User:** ${user.toString()} (${user.tag})`,
-                        `**ID:** \`${user.id}\``,
-                        `**Joined:** <t:${Math.floor((member.joinedTimestamp || Date.now()) / 1000)}:R>`,
-                        `**Members:** ${guild.memberCount}`,
-                    ],
-                    quoted: false,
-                    thumbnail: user.displayAvatarURL({ dynamic: true }),
-                    userId: user.id,
-                }
-            });
-        } catch (error) {
-            logger.debug('Error logging member leave:', error);
         }
 
         try {
