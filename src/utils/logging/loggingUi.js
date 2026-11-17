@@ -110,6 +110,11 @@ export function createLoggingMainMenuSelect() {
           .setValue('set:reports')
           .setEmoji('🚨'),
         new StringSelectMenuOptionBuilder()
+          .setLabel('Set Messages Channel')
+          .setDescription('Deleted, edited and bulk-deleted messages')
+          .setValue('set:messages')
+          .setEmoji('💬'),
+        new StringSelectMenuOptionBuilder()
           .setLabel('Clear Audit Channel')
           .setValue('clear:audit')
           .setEmoji('🗑️'),
@@ -120,6 +125,10 @@ export function createLoggingMainMenuSelect() {
         new StringSelectMenuOptionBuilder()
           .setLabel('Clear Reports Channel')
           .setValue('clear:reports')
+          .setEmoji('🗑️'),
+        new StringSelectMenuOptionBuilder()
+          .setLabel('Clear Messages Channel')
+          .setValue('clear:messages')
           .setEmoji('🗑️'),
         new StringSelectMenuOptionBuilder()
           .setLabel('Event Categories')
