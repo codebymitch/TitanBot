@@ -195,7 +195,8 @@ async function handleStreakActivity(message, client) {
 
     const count = result.streak.currentCount;
     const embed = createEmbed({
-      description: `🔥 Wihh ${message.author} streak api kamu udah nyampe **${count} hari** nih! jangan sampai putus yaa, terus nyalain apinya! ❤️‍🔥`,
+      title: '<a:Firee:1572339013346402384> STREAK UPDATED',
+      description: `Wihh ${message.author} streak api kamu udah nyampe **${count} hari** nih! jangan sampai putus yaa, terus nyalain apinya 🔥`,
       color: 'success',
       thumbnail: message.author.displayAvatarURL({ dynamic: true, size: 128 }),
     });

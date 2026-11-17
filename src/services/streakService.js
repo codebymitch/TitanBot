@@ -302,6 +302,7 @@ class StreakService {
 
         try {
           const embed = createEmbed({
+            title: '<a:NoFire:1572338994908373052> STREAK OUTAGES',
             description: `yahh <@${userId}> api streak kamu padam 😢 streak terakhirmu **${previousBest} hari** nih, yuk nyalain lagi dari awal!`,
             color: 'error',
           });
