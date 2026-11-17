@@ -548,15 +548,12 @@ async function getVoiceLeaderboard(client, guild) {
   const eligibleTotals = [...totals.entries()]
     .filter(([, totalMs]) => totalMs > 0)
     .sort((a, b) => b[1] - a[1]);
-  const totalVoiceMs = eligibleTotals.reduce((sum, [, totalMs]) => sum + totalMs, 0);
-  const sorted = eligibleTotals.slice(0, 10);
 
-  const entries = await Promise.all(sorted.map(async ([userId, totalMs], index) => {
+  const resolved = await Promise.all(eligibleTotals.map(async ([userId, totalMs]) => {
     const member = guild.members.cache.get(userId)
       || await guild.members.fetch(userId).catch(() => null);
     if (!member || member.user.bot) return null;
     return {
-      rank: index + 1,
       userId,
       totalMs,
       member,
@@ -564,9 +561,12 @@ async function getVoiceLeaderboard(client, guild) {
     };
   }));
 
+  const valid = resolved.filter(Boolean);
+  const totalVoiceMs = valid.reduce((sum, entry) => sum + entry.totalMs, 0);
+
   return {
-    entries: entries.filter(Boolean).map((entry, index) => ({ ...entry, rank: index + 1 })),
-    participantCount: eligibleTotals.length,
+    entries: valid.slice(0, 10).map((entry, index) => ({ ...entry, rank: index + 1 })),
+    participantCount: valid.length,
     totalVoiceMs,
   };
 }

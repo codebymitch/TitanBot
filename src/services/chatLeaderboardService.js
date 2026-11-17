@@ -107,9 +107,9 @@ async function getChatLeaderboard(client, guild) {
   }
 
   const sorted = [...totals.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 10);
-  const entries = await Promise.all(sorted.map(async ([userId, totalMessages]) => {
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+  const resolved = await Promise.all(sorted.map(async ([userId, totalMessages]) => {
     const member = guild.members.cache.get(userId)
       || await guild.members.fetch(userId).catch(() => null);
     if (!member || member.user.bot) return null;
@@ -121,10 +121,12 @@ async function getChatLeaderboard(client, guild) {
     };
   }));
 
+  const valid = resolved.filter(Boolean);
+
   return {
-    entries: entries.filter(Boolean).map((entry, index) => ({ ...entry, rank: index + 1 })),
-    participantCount: totals.size,
-    totalMessages: [...totals.values()].reduce((sum, count) => sum + count, 0),
+    entries: valid.slice(0, 10).map((entry, index) => ({ ...entry, rank: index + 1 })),
+    participantCount: valid.length,
+    totalMessages: valid.reduce((sum, entry) => sum + entry.totalMessages, 0),
   };
 }
 
