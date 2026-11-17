@@ -48,6 +48,7 @@ export async function buildLoggingDashboardView(interaction, client) {
   const reportsChannel = await formatChannelMention(interaction.guild, channels.reports);
   const messagesChannel = await formatChannelMention(interaction.guild, channels.messages);
   const rolesChannel = await formatChannelMention(interaction.guild, channels.roles);
+  const joinsChannel = await formatChannelMention(interaction.guild, channels.joins);
   const lifecycleChannel = await formatChannelMention(interaction.guild, guildConfig.ticketLogsChannelId);
   const transcriptChannel = await formatChannelMention(interaction.guild, guildConfig.ticketTranscriptChannelId);
 
@@ -82,6 +83,7 @@ export async function buildLoggingDashboardView(interaction, client) {
           `**Reports:** ${reportsChannel}`,
           `**Messages:** ${messagesChannel}`,
           `**Roles:** ${rolesChannel}`,
+          `**Joins:** ${joinsChannel}`,
         ].join('\n'),
         inline: false,
       },

@@ -11,7 +11,7 @@ import {
   splitComparisonFields,
 } from '../utils/logging/logEmbeds.js';
 
-const LOG_DESTINATIONS = ['audit', 'applications', 'reports', 'messages', 'roles'];
+const LOG_DESTINATIONS = ['audit', 'applications', 'reports', 'messages', 'roles', 'joins'];
 
 const EVENT_TYPES = {
   MODERATION_BAN: 'moderation.ban',
@@ -158,6 +158,7 @@ const CATEGORY_DESTINATION = {
 const EVENT_DESTINATION = {
   'member.roleadd': 'roles',
   'member.roleremove': 'roles',
+  'member.join': 'joins',
 };
 
 export function resolveLogChannel(config, destination) {
@@ -208,7 +209,7 @@ function getLogChannelForEvent(config, eventType, overrideChannelId = null) {
   const channelId = resolveLogChannel(config, destination);
 
   // Message and role logs fall back to the audit channel until their own channel is set
-  if (!channelId && (destination === 'messages' || destination === 'roles')) {
+  if (!channelId && (destination === 'messages' || destination === 'roles' || destination === 'joins')) {
     return resolveLogChannel(config, 'audit');
   }
 
@@ -375,7 +376,7 @@ export async function getLoggingStatus(client, guildId) {
 
   return {
     enabled: logging.enabled || false,
-    channels: logging.channels || { audit: null, applications: null, reports: null, messages: null, roles: null },
+    channels: logging.channels || { audit: null, applications: null, reports: null, messages: null, roles: null, joins: null },
     channelId: logging.channels?.audit ?? null,
     ignore: getIgnoreList(config),
     enabledEvents: logging.enabledEvents || {},
