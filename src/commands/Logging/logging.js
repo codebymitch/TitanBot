@@ -31,6 +31,7 @@ export default {
                             { name: 'Applications', value: 'applications' },
                             { name: 'Reports', value: 'reports' },
                             { name: 'Messages (deleted / edited)', value: 'messages' },
+                            { name: 'Roles (given / removed)', value: 'roles' },
                         ),
                 )
                 .addChannelOption((option) =>

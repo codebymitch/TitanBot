@@ -115,6 +115,11 @@ export function createLoggingMainMenuSelect() {
           .setValue('set:messages')
           .setEmoji('💬'),
         new StringSelectMenuOptionBuilder()
+          .setLabel('Set Roles Channel')
+          .setDescription('Roles given to or removed from members')
+          .setValue('set:roles')
+          .setEmoji('🎖️'),
+        new StringSelectMenuOptionBuilder()
           .setLabel('Clear Audit Channel')
           .setValue('clear:audit')
           .setEmoji('🗑️'),
@@ -129,6 +134,10 @@ export function createLoggingMainMenuSelect() {
         new StringSelectMenuOptionBuilder()
           .setLabel('Clear Messages Channel')
           .setValue('clear:messages')
+          .setEmoji('🗑️'),
+        new StringSelectMenuOptionBuilder()
+          .setLabel('Clear Roles Channel')
+          .setValue('clear:roles')
           .setEmoji('🗑️'),
         new StringSelectMenuOptionBuilder()
           .setLabel('Event Categories')
