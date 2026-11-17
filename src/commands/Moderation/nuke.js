@@ -34,5 +34,5 @@ module.exports = {
         }).catch(err => {
             message.reply("Your Time is over...")
         })
-    }
-}
+    };
+};
