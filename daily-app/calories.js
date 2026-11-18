@@ -61,15 +61,17 @@ window.CaloriesModule = function (ctx) {
 
   // ---------- render entry ----------
   function render(sub) {
-    const tabs = [['', '📒 יומן'], ['foods', '🥗 מאגר'], ['stats', '📊 מעקב'], ['goals', '🎯 יעדים']];
+    const tabs = [['', '📒 יומן'], ['foods', '🥗 מאגר'], ['stats', '📊 מעקב']];
     const nav = `<nav class="subtabs">${tabs.map(([k, l]) => `<a href="#/calories${k ? '/' + k : ''}" class="${(sub || '') === k ? 'active' : ''}">${l}</a>`).join('')}</nav>`;
-    const body = sub === 'foods' ? renderFoods() : sub === 'stats' ? renderStats() : sub === 'goals' ? renderGoals() : renderDiary();
+    const body = sub === 'foods' ? renderFoods() : sub === 'stats' ? renderStats() : renderDiary();
     view.innerHTML = nav + body;
     if (sub === 'foods') bindFoods();
     if (sub === 'stats') bindStats();
-    if (sub === 'goals') bindGoals();
+    if (sub === 'goals') { history.replaceState(null, '', '#/calories'); openSheet({ mode: 'settings' }); }
   }
   const rerender = () => ctx.render();
+  // מרענן גם את המסך וגם את חלון ההגדרות אם הוא פתוח
+  const refresh = () => { rerender(); if (sheet && sheet.mode === 'settings') drawSheet(); };
 
   // ---------- Diary ----------
   function bar(label, val, goal, cls, unit = 'ג׳', limit = false) {
@@ -128,12 +130,15 @@ window.CaloriesModule = function (ctx) {
 
       <div class="card">
         <div class="summary">
-          <svg class="ring ${left < 0 ? 'over' : ''}" viewBox="0 0 120 120" role="img" aria-label="${Math.round(t.kcal)} מתוך ${g.kcal} קלוריות">
+          <button class="ring-btn" data-cact="open-settings" aria-label="הגדרות קלוריות — ${Math.round(t.kcal)} מתוך ${g.kcal} קלוריות">
+          <svg class="ring ${left < 0 ? 'over' : ''}" viewBox="0 0 120 120" aria-hidden="true">
             <circle class="track" cx="60" cy="60" r="50"/>
             <circle class="bar" cx="60" cy="60" r="50" transform="rotate(-90 60 60)" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/>
             <text x="60" y="58">${Math.abs(Math.round(left)).toLocaleString('he-IL')}</text>
             <text class="lbl" x="60" y="76">${left >= 0 ? 'נשארו' : 'חריגה'}</text>
           </svg>
+          <span class="ring-hint">⚙️ הגדרות</span>
+          </button>
           <div class="stats">
             <div><span class="muted">🎯 יעד</span><strong>${g.kcal.toLocaleString('he-IL')}</strong></div>
             <div><span class="muted">🍽️ נאכל</span><strong>${Math.round(t.kcal).toLocaleString('he-IL')}</strong></div>
@@ -329,26 +334,6 @@ window.CaloriesModule = function (ctx) {
     const res = tdee(p);
     return `
       <div class="card">
-        <h3>🧮 מחשבון יעד אישי</h3>
-        <form id="profileForm" class="grid2">
-          <label class="field"><span>מין</span><select name="sex"><option value="m" ${p.sex === 'm' ? 'selected' : ''}>זכר</option><option value="f" ${p.sex === 'f' ? 'selected' : ''}>נקבה</option></select></label>
-          <label class="field"><span>גיל</span><input name="age" type="number" min="12" max="100" value="${p.age}" inputmode="numeric" required></label>
-          <label class="field"><span>גובה (ס״מ)</span><input name="height" type="number" min="100" max="250" value="${p.height}" inputmode="numeric" required></label>
-          <label class="field"><span>משקל (ק״ג)</span><input name="weight" type="number" step="0.1" min="30" max="400" value="${p.weight}" inputmode="decimal" required></label>
-          <label class="field span2"><span>רמת פעילות</span><select name="activity">${ACTIVITY.map(([v, l]) => `<option value="${v}" ${+p.activity === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-          <label class="field span2"><span>מטרה</span><select name="target">${TARGETS.map(([v, l]) => `<option value="${v}" ${+p.target === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-          <button class="btn ghost span2">חישוב</button>
-        </form>
-        ${res ? `<div class="calc-out">
-          <div><span>חילוף חומרים במנוחה (BMR)</span><strong>${res.bmr.toLocaleString('he-IL')}</strong></div>
-          <div><span>הוצאה יומית משוערת (TDEE)</span><strong>${res.tdee.toLocaleString('he-IL')}</strong></div>
-          <div class="rec"><span>יעד מומלץ</span><strong>${res.rec.toLocaleString('he-IL')} קק״ל</strong></div>
-          ${res.floored ? '<p class="muted tiny">היעד הועלה למינימום בטוח. לירידה מהירה יותר כדאי להתייעץ עם דיאטנ/ית.</p>' : ''}
-          <button class="btn" data-cact="apply-rec" data-v="${res.rec}" style="width:100%;margin-top:8px">הגדרה כיעד היומי</button>
-        </div>` : '<p class="muted tiny">מלאו את הפרטים כדי לקבל המלצה לפי נוסחת Mifflin-St Jeor.</p>'}
-      </div>
-
-      <div class="card">
         <h3>🎯 היעדים היומיים שלי</h3>
         <form id="goalsForm">
           <label class="field"><span>קלוריות ליום</span><input name="kcal" type="number" min="800" max="6000" step="10" value="${G.kcal}" inputmode="numeric" required></label>
@@ -369,6 +354,26 @@ window.CaloriesModule = function (ctx) {
           <button class="btn" style="width:100%;margin-top:12px">שמירת יעדים</button>
         </form>
         <p class="muted tiny">כרגע: חלבון ${g.p} ג׳ · פחמימות ${g.c} ג׳ · שומן ${g.f} ג׳ ביום.</p>
+      </div>
+
+      <div class="card">
+        <h3>🧮 מחשבון יעד אישי</h3>
+        <form id="profileForm" class="grid2">
+          <label class="field"><span>מין</span><select name="sex"><option value="m" ${p.sex === 'm' ? 'selected' : ''}>זכר</option><option value="f" ${p.sex === 'f' ? 'selected' : ''}>נקבה</option></select></label>
+          <label class="field"><span>גיל</span><input name="age" type="number" min="12" max="100" value="${p.age}" inputmode="numeric" required></label>
+          <label class="field"><span>גובה (ס״מ)</span><input name="height" type="number" min="100" max="250" value="${p.height}" inputmode="numeric" required></label>
+          <label class="field"><span>משקל (ק״ג)</span><input name="weight" type="number" step="0.1" min="30" max="400" value="${p.weight}" inputmode="decimal" required></label>
+          <label class="field span2"><span>רמת פעילות</span><select name="activity">${ACTIVITY.map(([v, l]) => `<option value="${v}" ${+p.activity === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <label class="field span2"><span>מטרה</span><select name="target">${TARGETS.map(([v, l]) => `<option value="${v}" ${+p.target === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <button class="btn ghost span2">חישוב</button>
+        </form>
+        ${res ? `<div class="calc-out">
+          <div><span>חילוף חומרים במנוחה (BMR)</span><strong>${res.bmr.toLocaleString('he-IL')}</strong></div>
+          <div><span>הוצאה יומית משוערת (TDEE)</span><strong>${res.tdee.toLocaleString('he-IL')}</strong></div>
+          <div class="rec"><span>יעד מומלץ</span><strong>${res.rec.toLocaleString('he-IL')} קק״ל</strong></div>
+          ${res.floored ? '<p class="muted tiny">היעד הועלה למינימום בטוח. לירידה מהירה יותר כדאי להתייעץ עם דיאטנ/ית.</p>' : ''}
+          <button class="btn" data-cact="apply-rec" data-v="${res.rec}" style="width:100%;margin-top:8px">הגדרה כיעד היומי</button>
+        </div>` : '<p class="muted tiny">מלאו את הפרטים כדי לקבל המלצה לפי נוסחת Mifflin-St Jeor.</p>'}
       </div>`;
   }
   function bindGoals() {
@@ -377,7 +382,7 @@ window.CaloriesModule = function (ctx) {
       e.preventDefault();
       const f = e.target;
       S().goals.profile = { sex: f.sex.value, age: +f.age.value, height: +f.height.value, weight: +f.weight.value, activity: +f.activity.value, target: +f.target.value };
-      save(); rerender();
+      save(); refresh();
     });
     const gf = $('#goalsForm');
     const info = () => {
@@ -394,7 +399,7 @@ window.CaloriesModule = function (ctx) {
       const a = +f.pPct.value, b = +f.cPct.value, c = +f.fPct.value;
       if (a + b + c !== 100) { toast('סכום האחוזים צריך להיות 100%'); return; }
       Object.assign(S().goals, { kcal: +f.kcal.value, pPct: a, cPct: b, fPct: c, fib: +f.fib.value, sug: +f.sug.value, na: +f.na.value });
-      save(); rerender(); toast('היעדים נשמרו 🎯');
+      save(); refresh(); toast('היעדים נשמרו 🎯');
     });
   }
 
@@ -444,6 +449,14 @@ window.CaloriesModule = function (ctx) {
       const inp = $('#sheetSearch');
       inp.addEventListener('input', (e) => { sheet.q = e.target.value; $('#sheetResults').innerHTML = sheetResults(); });
       if (!sheet.noFocus && window.matchMedia('(pointer:fine)').matches) inp.focus();
+    } else if (sheet.mode === 'settings') {
+      const body = box.querySelector('.sheet-body');
+      const top = body ? body.scrollTop : 0;
+      box.innerHTML = `
+        <div class="sheet-head"><strong>⚙️ הגדרות קלוריות</strong><button class="icon-btn" data-cact="close-sheet" aria-label="סגירה">✕</button></div>
+        <div class="sheet-body settings">${renderGoals()}</div>`;
+      bindGoals();
+      box.querySelector('.sheet-body').scrollTop = top;
     } else if (sheet.mode === 'food') {
       drawFood(box);
     } else if (sheet.mode === 'custom') {
@@ -679,7 +692,8 @@ window.CaloriesModule = function (ctx) {
         break;
       case 'quick-add': openSheet({ mode: 'quick', meal: sheet.meal, q: sheet.q, cat: sheet.cat }); break;
       case 'del-weight': delete st.weights[b.dataset.d]; save(); rerender(); break;
-      case 'apply-rec': st.goals.kcal = +b.dataset.v; save(); rerender(); toast(`היעד היומי עודכן ל־${(+b.dataset.v).toLocaleString('he-IL')} קק״ל`); break;
+      case 'open-settings': openSheet({ mode: 'settings' }); break;
+      case 'apply-rec': st.goals.kcal = +b.dataset.v; save(); refresh(); toast(`היעד היומי עודכן ל־${(+b.dataset.v).toLocaleString('he-IL')} קק״ל`); break;
       case 'preset': {
         const f = $('#goalsForm');
         f.pPct.value = b.dataset.p; f.cPct.value = b.dataset.c; f.fPct.value = b.dataset.f;

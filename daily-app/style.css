@@ -395,3 +395,14 @@ input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: 1
 .calc-out { margin-top: 12px; background: var(--bg); border-radius: 14px; padding: 12px; display: grid; gap: 6px; }
 .calc-out > div { display: flex; justify-content: space-between; font-size: .92rem; }
 .calc-out .rec { font-size: 1.05rem; color: var(--primary); }
+
+/* ring opens calorie settings */
+.ring-btn {
+  border: 0; background: none; padding: 0; cursor: pointer; flex: none; position: relative;
+  display: grid; justify-items: center; gap: 2px; border-radius: 50%; color: var(--muted);
+}
+.ring-btn:hover .ring .track, .ring-btn:focus-visible .ring .track { stroke: var(--primary-soft); }
+.ring-btn:active { transform: scale(.97); }
+.ring-hint { font-size: .72rem; }
+.sheet-body.settings .card { box-shadow: none; }
+.sheet-body.settings .card:last-child { margin-bottom: 0; }
