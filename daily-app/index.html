@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4f46e5">
+  <title>היום שלי</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <button id="backBtn" class="icon-btn" aria-label="חזרה" hidden>→</button>
+    <h1 id="pageTitle">היום שלי</h1>
+    <span class="spacer"></span>
+  </header>
+
+  <main id="view"></main>
+
+  <nav class="tabbar" id="tabbar">
+    <a href="#/" data-route="">🏠<span>ראשי</span></a>
+    <a href="#/calories" data-route="calories">🔥<span>קלוריות</span></a>
+    <a href="#/habits" data-route="habits">✅<span>הרגלים</span></a>
+    <a href="#/reminders" data-route="reminders">⏰<span>תזכורות</span></a>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
