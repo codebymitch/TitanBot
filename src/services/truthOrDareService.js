@@ -103,6 +103,20 @@ export const TRUTH_PROMPTS = [
   'Pernah nge-nyerah di tengah game karena terlalu susah?',
   'Apa game yang paling bikin kamu emosi tapi tetep dimainin?',
   'Apa game yang paling berkesan buat kamu sejauh ini?',
+  'Apa hal paling spontan yang pernah kamu lakukan tanpa mikir dulu?',
+  'Siapa orang yang paling pengen kamu minta maaf tapi belum kesampaian?',
+  'Apa yang kamu lakuin kalau lagi kesepian banget?',
+  'Pernah nge-fake ketawa biar gak ngecewain orang? Kapan?',
+  'Apa hal yang paling kamu takut kalau orang lain sampai tau tentang kamu?',
+  'Apa kebohongan kecil yang paling sering kamu bilang?',
+  'Siapa orang yang paling sering bikin kamu overthinking?',
+  'Apa hal yang pengen kamu bilang tapi selalu kamu tahan?',
+  'Pernah ngerasa jadi orang ketiga dalam suatu masalah? Cerita!',
+  'Apa hal yang paling kamu syukuri dari keluarga kamu?',
+  'Apa yang paling sering bikin kamu nangis sendirian?',
+  'Pernah bikin janji yang gak pernah kamu tepatin? Ke siapa?',
+  'Apa yang kamu lakuin kalau lagi BT tanpa alasan jelas?',
+  'Apa hal paling aneh yang masih kamu simpan sampai sekarang?',
 ];
 
 // Kumpulan tantangan Dare — aman, lucu, dan tidak berbahaya.
@@ -179,6 +193,20 @@ export const DARE_PROMPTS = [
   'Ceritain lelucon tentang programmer (atau apapun) sampai ada yang ketawa.',
   'Kirim foto kamu lagi pose paling random sekarang.',
   'Balas 3 pesan berikutnya dengan pake bahasa gaul jaman old.',
+  'Kirim voice note kamu lagi ketawa selama 10 detik tanpa alasan jelas.',
+  'Ganti status custom Discord kamu jadi "aku lagi gabut" selama 20 menit.',
+  'Kirim pesan ke temen: "ada sayur nyangkut di gigi kamu" terus bilang ini dare.',
+  'Ceritain satu kejadian memalukan yang pernah kamu alamin ke channel ini.',
+  'Buat caption meme singkat lalu kirim ke channel umum.',
+  'Panggil salah satu member dengan sebutan "yang mulia" selama 5 menit.',
+  'Kirim voice note kamu ngomong pake logat robot selama 15 detik.',
+  'Balas 3 pesan berikutnya dengan huruf kapital semua.',
+  'Ganti foto profil kamu jadi meme favorit kamu selama 15 menit.',
+  'Kirim pesan ke temen: "kamu lagi di mana? aku nyariin kamu" terus bilang ini dare.',
+  'Nyanyi satu baris lagu anak-anak dengan super serius (kalau di vc).',
+  'Kirim foto barang berwarna biru yang ada di sekitar kamu sekarang.',
+  'Tulis 3 kata pujian buat member pertama yang balas pesan kamu.',
+  'Ceritain lelucon paling garing yang kamu tau tanpa ketawa sendiri.',
 ];
 
 function pickRandom(list) {
