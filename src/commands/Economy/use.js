@@ -107,7 +107,7 @@ export default {
                 parts.push(`Luck: ${Math.round(item.effect.multiplier * 100)}%`);
             }
             if (item.effect.incomeMultiplier) {
-                parts.push(`Income: ${Math.round(item.effect.incomeMultiplier * 100)}%`);
+                parts.push(`Income: +${Math.round((item.effect.incomeMultiplier - 1) * 100)}%`);
             }
             if (item.effect.chances?.celestial) {
                 parts.push(`Kitsune: ${Math.round(item.effect.chances.celestial * 100)}%`);
