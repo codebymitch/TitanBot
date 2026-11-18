@@ -16,6 +16,13 @@ export default {
                 .setName('item_id')
                 .setDescription('ID of the item to use')
                 .setRequired(true)
+        )
+        .addIntegerOption(option =>
+            option
+                .setName('amount')
+                .setDescription('Number of items to use at once (optional, defaults to 1)')
+                .setRequired(false)
+                .setMinValue(1)
         ),
 
     execute: withErrorHandling(async (interaction, config, client) => {
@@ -25,6 +32,7 @@ export default {
         const userId = interaction.user.id;
         const guildId = interaction.guildId;
         const itemId = interaction.options.getString("item_id").toLowerCase();
+        const requestedAmount = interaction.options.getInteger("amount") || 1;
 
         const item = getItemById(itemId);
         if (!item) {
@@ -48,6 +56,15 @@ export default {
             );
         }
 
+        if (requestedAmount > held) {
+            throw createError(
+                "Not enough items",
+                ErrorTypes.VALIDATION,
+                `You only have **${held}** × **${item.name}**. You can't use ${requestedAmount}.`,
+                { itemId, requestedAmount, held }
+            );
+        }
+
         if (item.effect?.type !== 'fishing_luck') {
             throw createError(
                 "Item not usable",
@@ -62,10 +79,10 @@ export default {
 
         const duration = Number(item.effect?.duration) || DEFAULT_LUCK_POTION_DURATION_MS;
         const currentExpiry = Math.max(now, Number(potionExpiries[itemId]) || 0);
-        potionExpiries[itemId] = currentExpiry + duration;
+        potionExpiries[itemId] = currentExpiry + (duration * requestedAmount);
         userData.luckPotionExpiresAt = potionExpiries;
 
-        const remaining = held - 1;
+        const remaining = held - requestedAmount;
         if (remaining > 0) {
             userData.inventory[itemId] = remaining;
         } else {
@@ -75,7 +92,10 @@ export default {
         await setEconomyData(client, guildId, userId, userData);
 
         const activeSeconds = Math.ceil((potionExpiries[itemId] - now) / 1000);
-        let description = `You used **${item.name}**! It is now active for **${activeSeconds}s**.`;
+        const usedText = requestedAmount > 1
+            ? `You used **${requestedAmount} × ${item.name}**!`
+            : `You used **${item.name}**!`;
+        let description = `${usedText} It is now active for **${activeSeconds}s**.`;
         if (item.effect?.admin) {
             const parts = [`Luck: ${Math.round((item.effect.multiplier || 1) * 100)}%`];
             if (item.effect.incomeMultiplier) {
