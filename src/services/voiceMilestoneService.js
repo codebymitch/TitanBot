@@ -21,8 +21,8 @@ const MAX_LABEL_LENGTH = 100;
 const MAX_LEADERBOARD_ENTRIES = 10;
 
 /**
- * Ready-made milestone ladder for the Manay Society server. Role IDs are left
- * empty and filled in by an administrator through `/voicemilestone setrole`.
+ * Ready-made milestone ladder. Role IDs start empty and are assigned through
+ * `/voicemilestone setrole` or `/voicemilestone createroles`.
  */
 export const VOICE_MILESTONE_PRESET = Object.freeze([
   { hours: 5, label: 'New Face' },

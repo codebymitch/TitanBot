@@ -3,6 +3,7 @@ import { getColor } from '../../config/bot.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+import { Mutex } from '../../utils/mutex.js';
 import {
     VOICE_MILESTONE_PRESET,
     getVoiceMilestoneConfig,
@@ -29,6 +30,24 @@ function roleIsAssignable(guild, role) {
     const me = guild.members.me;
     if (!me) return false;
     return role.position < me.roles.highest.position;
+}
+
+const MILESTONE_ROLE_STYLES = {
+    5: { emoji: '👤', color: 0x81C6A5 },
+    10: { emoji: '☕', color: 0x56B6A4 },
+    25: { emoji: '🛋️', color: 0x4AB4CE },
+    50: { emoji: '🥂', color: 0x5A82D6 },
+    100: { emoji: '🔑', color: 0x9C6BCB },
+    200: { emoji: '💎', color: 0xC773A7 },
+    350: { emoji: '🏛️', color: 0xE98978 },
+    500: { emoji: '✨', color: 0xEBB34F },
+    750: { emoji: '👑', color: 0xF2CA45 },
+    1000: { emoji: '🏆', color: 0xF1C75B },
+};
+
+function getMilestoneRoleName(milestone) {
+    const emoji = MILESTONE_ROLE_STYLES[milestone.hours]?.emoji || '🏅';
+    return `${emoji} ${milestone.label} (${milestone.hours} hours)`;
 }
 
 function buildProgressBar(currentMs, targetHours, size = 12) {
@@ -83,7 +102,7 @@ async function handleSetup(interaction, client) {
             `Loaded the **Manay Society** ladder (${saved.milestones.length} tiers). ` +
             'Tracking is now enabled.\n\n' +
             (missing > 0
-                ? `Assign each tier's role with \`/voicemilestone setrole\` — ${missing} tier(s) still need a role.`
+                ? `Run \`/voicemilestone createroles\` to create missing roles automatically, or assign them with \`/voicemilestone setrole\` — ${missing} tier(s) still need a role.`
                 : 'Every tier has a role assigned.') +
             '\nSet the public announcement channel with `/voicemilestone setchannel`.' +
             '\nPreview an announcement with `/voicemilestone test`.',
@@ -97,6 +116,104 @@ async function handleSetup(interaction, client) {
             },
         );
 
+    await replyEmbed(interaction, embed);
+}
+
+async function handleCreateRoles(interaction, client) {
+    const guild = interaction.guild;
+    const botMember = guild.members.me || await guild.members.fetchMe().catch(() => null);
+
+    if (!botMember?.permissions.has(PermissionFlagsBits.ManageRoles)) {
+        await replyUserError(interaction, {
+            type: ErrorTypes.PERMISSION,
+            message: 'The bot needs **Manage Roles** permission to create milestone roles.',
+        });
+        return;
+    }
+
+    const result = await Mutex.runExclusive(`voice-milestone-roles:${guild.id}`, async () => {
+        const config = await getVoiceMilestoneConfig(client, guild.id);
+        if (config.milestones.length === 0) {
+            return { error: 'Run `/voicemilestone setup` first to load the milestone tiers.' };
+        }
+
+        let created = 0;
+        let linked = 0;
+        let alreadyConfigured = 0;
+        const failures = [];
+
+        for (const milestone of config.milestones) {
+            let role = milestone.roleId
+                ? guild.roles.cache.get(milestone.roleId)
+                    || await guild.roles.fetch(milestone.roleId).catch(() => null)
+                : null;
+
+            if (role) {
+                alreadyConfigured += 1;
+                if (!roleIsAssignable(guild, role)) {
+                    failures.push(`${role.name}: move it below the bot's highest role.`);
+                }
+                continue;
+            }
+
+            const roleName = getMilestoneRoleName(milestone);
+            role = guild.roles.cache.find((candidate) =>
+                candidate.name === roleName && candidate.id !== guild.id && !candidate.managed
+            );
+
+            if (role) {
+                linked += 1;
+            } else {
+                const style = MILESTONE_ROLE_STYLES[milestone.hours] || { color: 0xA753D2 };
+                try {
+                    role = await guild.roles.create({
+                        name: roleName,
+                        color: style.color,
+                        hoist: false,
+                        mentionable: false,
+                        reason: `Voice milestone role for ${milestone.hours} hours`,
+                    });
+                    created += 1;
+                } catch (error) {
+                    failures.push(`${roleName}: ${error.message}`);
+                    continue;
+                }
+            }
+
+            milestone.roleId = role.id;
+            await saveVoiceMilestoneConfig(client, guild.id, config);
+            if (!roleIsAssignable(guild, role)) {
+                failures.push(`${role.name}: move it below the bot's highest role.`);
+            }
+        }
+
+        const recheck = await recheckAllMembers(client, guild.id).catch((error) => {
+            logger.warn(`Failed to recheck voice milestone roles in guild ${guild.id}:`, error);
+            return { checked: 0 };
+        });
+
+        return { created, linked, alreadyConfigured, failures, checked: recheck.checked };
+    });
+
+    if (result.error) {
+        await replyUserError(interaction, {
+            type: ErrorTypes.CONFIGURATION,
+            message: result.error,
+        });
+        return;
+    }
+
+    const lines = [
+        `Created **${result.created}** role(s); linked existing **${result.linked}** role(s); **${result.alreadyConfigured}** already configured.`,
+        `Rechecked **${result.checked}** member(s) for earned milestones.`,
+    ];
+    if (result.failures.length > 0) {
+        lines.push(`⚠️ **${result.failures.length}** issue(s): ${result.failures.slice(0, 5).join('\n')}`);
+    }
+
+    const config = await getVoiceMilestoneConfig(client, guild.id);
+    const embed = baseEmbed('Milestone Roles', config)
+        .setDescription(lines.join('\n'));
     await replyEmbed(interaction, embed);
 }
 
@@ -334,6 +451,10 @@ export default {
                 .setDescription('Load the Manay Society milestone ladder and enable tracking'))
         .addSubcommand((subcommand) =>
             subcommand
+                .setName('createroles')
+                .setDescription('Automatically create and assign roles for every milestone tier'))
+        .addSubcommand((subcommand) =>
+            subcommand
                 .setName('setrole')
                 .setDescription('Assign a role to a voice milestone tier')
                 .addIntegerOption((option) =>
@@ -460,6 +581,9 @@ export default {
             switch (subcommand) {
                 case 'setup':
                     await handleSetup(interaction, client);
+                    break;
+                case 'createroles':
+                    await handleCreateRoles(interaction, client);
                     break;
                 case 'setrole':
                     await handleSetRole(interaction, client);
