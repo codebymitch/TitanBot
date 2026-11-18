@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#4f46e5">
   <title>היום שלי</title>
+  <meta name="description" content="מעקב יומי אחרי קלוריות ותזונה, הרגלים, שתיית מים ותזכורות — בעברית, בחינם.">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -13,7 +16,7 @@
     <button id="backBtn" class="icon-btn" aria-label="חזרה" hidden>→</button>
     <h1 id="pageTitle">היום שלי</h1>
     <span class="spacer"></span>
-    <span id="accountChip" class="chip-status">📱 מקומי</span>
+    <a id="accountChip" class="chip-status" href="#/account">…</a>
     <button id="menuBtn" class="icon-btn" aria-label="תפריט" aria-expanded="false" aria-controls="drawer">☰</button>
   </header>
 
@@ -34,6 +37,7 @@
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="firebase-config.js"></script>
   <script src="foods-db.js"></script>
   <script src="calories.js"></script>
   <script src="habits.js"></script>

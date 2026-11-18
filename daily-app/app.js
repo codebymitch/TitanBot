@@ -1,9 +1,9 @@
-/* היום שלי — קלוריות, הרגלים, מים ותזכורות. כל הנתונים נשמרים במכשיר (localStorage). */
+/* היום שלי — קלוריות, הרגלים, מים ותזכורות. נשמר בדפדפן, ועם חשבון (Firebase) — גם בענן. */
 (function () {
   'use strict';
 
   // ---------- Storage ----------
-  // נשמר מקומית בדפדפן, ואם המשתמש מחובר — גם בחשבון שלו (claude.ai) ומסונכרן בין מכשירים.
+  // נשמר מקומית בדפדפן, ואם המשתמש מחובר — גם בחשבון שלו (Firebase) ומסונכרן בין מכשירים.
   const BASE_KEY = 'daily-app-v1';
   const defaults = () => ({
     foods: [], habits: [], reminders: [], customFoods: [], favorites: [], weights: {},
@@ -36,32 +36,35 @@
     queueCloudSave();
   }
 
-  // ---------- Account / cloud sync ----------
-  const account = { status: 'loading', me: null, db: null, ref: null, lastSync: 0, error: '' };
+  // ---------- Account / cloud sync (Firebase) ----------
+  // ההגדרות נמצאות ב־firebase-config.js. בלי הגדרות — האתר עובד במצב מקומי (localStorage).
+  const FB_VER = '10.14.1';
+  const account = { status: 'loading', user: null, fb: null, docRef: null, unsub: null, lastSync: 0, error: '' };
   let cloudTimer = null, cloudWriting = false, cloudDirty = false, lastCloudJson = '';
+  let authTab = 'login', authBusy = false, authEmail = '', authName = '';
 
   function queueCloudSave() {
-    if (!account.ref) return;
+    if (!account.docRef) return;
     cloudDirty = true;
     clearTimeout(cloudTimer);
     cloudTimer = setTimeout(flushCloud, 800);
   }
   async function flushCloud() {
-    if (!account.ref || cloudWriting || !cloudDirty) return;
+    if (!account.docRef || cloudWriting || !cloudDirty) return;
     cloudWriting = true;
     cloudDirty = false;
     const json = JSON.stringify(state);
+    const ref = account.docRef;
     try {
       if (json !== lastCloudJson) {
-        await account.ref.set({ json, updatedAt: Date.now() });
+        await account.fb.fs.setDoc(ref, { json, updatedAt: Date.now() });
         lastCloudJson = json;
         account.lastSync = Date.now();
         account.error = '';
       }
     } catch (e) {
-      account.error = e && e.code === 'quota_exceeded' ? 'נגמר המקום בחשבון' : 'השמירה בחשבון נכשלה, ננסה שוב';
-      cloudDirty = true;
-      setTimeout(flushCloud, 5000);
+      account.error = 'השמירה בחשבון נכשלה — ננסה שוב (הנתונים שמורים בדפדפן)';
+      if (account.docRef === ref) { cloudDirty = true; setTimeout(flushCloud, 5000); }
     } finally {
       cloudWriting = false;
       if (cloudDirty) queueCloudSave();
@@ -70,40 +73,62 @@
   }
 
   async function initAccount() {
-    // window.claude מוזרק ע״י claude.ai אחרי הטעינה — מחכים לו עד 10 שניות
-    let c = window.claude;
-    for (let i = 0; i < 40 && !(c && typeof c.use === 'function'); i++) {
-      await new Promise((r) => setTimeout(r, 250));
-      c = window.claude;
-    }
-    if (!c || typeof c.use !== 'function') { account.status = 'offline'; refreshAccountUI(); return; }
-    const [user, db] = await Promise.all([c.use('user').catch(() => null), c.use('db').catch(() => null)]);
-    const me = user ? await user.me() : null;
-    account.me = me;
-    if (!db || !me || !me.id) { account.status = 'guest'; refreshAccountUI(); return; }
-    account.db = db;
-    account.ref = db.doc('data/users/' + me.id + '/state');
-    localKey = BASE_KEY + ':' + me.id;
-
-    let loaded = false;
-    const timeout = setTimeout(() => { if (!loaded) { account.status = 'error'; account.error = 'החיבור לחשבון איטי — העבודה נשמרת מקומית'; refreshAccountUI(); } }, 10000);
+    const cfg = window.FIREBASE_CONFIG;
+    if (!cfg || !cfg.apiKey) { account.status = 'unconfigured'; refreshAccountUI(); return; }
     try {
-      const snap = await account.ref.get();
-      loaded = true;
-      clearTimeout(timeout);
-      const remote = snap.exists ? snap.data() : null;
+      const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+      const [appM, authM, fs] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')]);
+      const app = appM.initializeApp(cfg);
+      const auth = authM.getAuth(app);
+      auth.languageCode = 'he';
+      account.fb = { auth, authM, fs, db: fs.getFirestore(app) };
+      authM.getRedirectResult(auth).catch((e) => { account.error = authError(e); refreshAccountUI(); });
+      authM.onAuthStateChanged(auth, onUser);
+    } catch (e) {
+      account.status = 'error';
+      account.error = 'לא הצלחנו לטעון את מערכת החשבונות — העבודה נשמרת מקומית';
+      refreshAccountUI();
+    }
+  }
+
+  async function onUser(u) {
+    if (account.unsub) { account.unsub(); account.unsub = null; }
+    if (cloudDirty && account.docRef) { clearTimeout(cloudTimer); await flushCloud(); }
+    account.user = u;
+    lastCloudJson = '';
+    authTab = 'login';
+    if (!u) {
+      account.docRef = null;
+      account.status = 'guest';
+      localKey = BASE_KEY;
+      state = load();
+      render();
+      return;
+    }
+    const { fs, db } = account.fb;
+    const browserState = state;
+    account.docRef = fs.doc(db, 'users', u.uid);
+    localKey = BASE_KEY + ':' + u.uid;
+    account.status = 'loading';
+    refreshAccountUI();
+    try {
+      const snap = await fs.getDoc(account.docRef);
+      const remote = snap.exists() ? snap.data() : null;
       if (remote && remote.json) {
         lastCloudJson = remote.json;
         state = normalize(JSON.parse(remote.json));
         try { localStorage.setItem(localKey, remote.json); } catch (e) { /* ignore */ }
       } else {
-        save(); // משתמש חדש: מעלים את מה שכבר נשמר בדפדפן
+        state = browserState; // חשבון חדש: מעבירים אליו את מה שכבר נשמר בדפדפן
+        save();
       }
       account.status = 'connected';
       account.lastSync = Date.now();
-      account.ref.onSnapshot((s) => {
-        const d = s.exists ? s.data() : null;
-        if (!d || !d.json || d.json === lastCloudJson || cloudDirty || cloudWriting) return;
+      account.error = '';
+      const ref = account.docRef;
+      account.unsub = fs.onSnapshot(ref, (s) => {
+        const d = s.exists() ? s.data() : null;
+        if (account.docRef !== ref || !d || !d.json || d.json === lastCloudJson || cloudDirty || cloudWriting) return;
         lastCloudJson = d.json;
         state = normalize(JSON.parse(d.json));
         try { localStorage.setItem(localKey, d.json); } catch (e) { /* ignore */ }
@@ -111,17 +136,37 @@
         render();
       }, () => {});
     } catch (e) {
-      loaded = true;
-      clearTimeout(timeout);
       account.status = 'error';
-      account.error = 'לא הצלחנו להתחבר לחשבון — העבודה נשמרת מקומית';
+      account.error = 'לא הצלחנו לטעון את הנתונים מהחשבון — העבודה נשמרת בדפדפן';
+      state = load();
     }
     render();
   }
 
+  const AUTH_ERRORS = {
+    'auth/invalid-email': 'כתובת המייל לא תקינה',
+    'auth/missing-email': 'נא להזין מייל',
+    'auth/missing-password': 'נא להזין סיסמה',
+    'auth/weak-password': 'הסיסמה צריכה להכיל לפחות 6 תווים',
+    'auth/email-already-in-use': 'כבר יש חשבון עם המייל הזה — נסו להתחבר',
+    'auth/invalid-credential': 'המייל או הסיסמה שגויים',
+    'auth/invalid-login-credentials': 'המייל או הסיסמה שגויים',
+    'auth/wrong-password': 'המייל או הסיסמה שגויים',
+    'auth/user-not-found': 'לא נמצא חשבון עם המייל הזה',
+    'auth/too-many-requests': 'יותר מדי ניסיונות. נסו שוב בעוד כמה דקות',
+    'auth/popup-closed-by-user': 'חלון ההתחברות נסגר',
+    'auth/cancelled-popup-request': 'חלון ההתחברות נסגר',
+    'auth/network-request-failed': 'אין חיבור לאינטרנט',
+    'auth/operation-not-allowed': 'שיטת ההתחברות הזו לא הופעלה ב־Firebase',
+    'auth/unauthorized-domain': 'הכתובת של האתר לא מאושרת ב־Firebase (Authentication → Settings → Authorized domains)',
+    'auth/requires-recent-login': 'מטעמי אבטחה צריך להתחבר מחדש ואז לנסות שוב',
+  };
+  const authError = (e) => AUTH_ERRORS[e && e.code] || 'משהו השתבש, נסו שוב';
+
   function updateChip() {
     const chip = $('#accountChip');
-    if (chip) chip.textContent = account.status === 'connected' ? '☁️ מסונכרן' : account.status === 'loading' ? '…' : '📱 מקומי';
+    if (!chip) return;
+    chip.textContent = account.status === 'connected' ? '☁️ מסונכרן' : account.status === 'loading' ? '…' : account.status === 'guest' ? '🔑 התחברות' : '📱 מקומי';
   }
   function refreshAccountUI() {
     updateChip();
@@ -371,42 +416,71 @@
     notify('💧 זמן לשתות מים', `שתית ${waterToday()} מתוך ${state.water.goal} כוסות היום`, 'water');
   }
 
-  // ---------- Account ----------
+  // ---------- Account page ----------
   function renderAccount() {
-    const me = account.me;
-    const name = (me && me.name) || '';
+    const u = account.user;
     let body;
     if (account.status === 'loading') {
       body = '<p class="empty">מתחבר לחשבון…</p>';
-    } else if (account.status === 'connected') {
+    } else if (account.status === 'connected' && u) {
+      const name = u.displayName || (u.email || '').split('@')[0];
       body = `
         <div class="profile">
-          <img alt="" class="avatar" id="accAvatar">
+          ${u.photoURL ? '<img alt="" class="avatar" id="accAvatar" referrerpolicy="no-referrer">' : `<div class="avatar placeholder">${esc((name || '?').charAt(0).toUpperCase())}</div>`}
           <div>
             <div class="title" id="accName"></div>
-            <div class="sub ok">☁️ מחובר/ת — הכל נשמר בחשבון שלך</div>
+            <div class="sub" id="accEmail" dir="ltr" style="text-align:right"></div>
+            <div class="sub ok">☁️ מחובר/ת — הכל נשמר בחשבון</div>
           </div>
         </div>
         <ul class="facts">
-          <li>הקלוריות, ההרגלים, המים והתזכורות נשמרים בחשבון שלך ומסונכרנים בין כל המכשירים.</li>
+          <li>הקלוריות, ההרגלים, המים והתזכורות נשמרים בחשבון ומסונכרנים בין כל המכשירים.</li>
           <li>הנתונים פרטיים — רק את/ה רואה אותם.</li>
-          <li>כל מי שפותח את האפליקציה מהחשבון שלו מקבל נתונים נפרדים משלו.</li>
         </ul>
         <div class="sync-line muted">${account.error ? `<span style="color:var(--danger)">${esc(account.error)}</span>` : `סונכרן לאחרונה: ${new Date(account.lastSync).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`}</div>
-        <button class="btn ghost" data-act="sync-now" style="margin-top:10px;width:100%">🔄 סנכרון עכשיו</button>`;
+        <div class="row" style="margin-top:10px">
+          <button class="btn ghost" data-act="sync-now">🔄 סנכרון עכשיו</button>
+          <button class="btn ghost" data-act="logout">🚪 התנתקות</button>
+        </div>
+        <details class="danger-zone"><summary>מחיקת החשבון</summary>
+          <p class="muted tiny">פעולה זו מוחקת את החשבון ואת כל הנתונים השמורים בו לצמיתות.</p>
+          <button class="btn ghost danger small" data-act="delete-account">🗑️ מחיקת החשבון לצמיתות</button>
+        </details>`;
+    } else if (account.status === 'guest') {
+      const reg = authTab === 'register';
+      body = `
+        <div class="auth-head">
+          <div class="auth-logo">✓</div>
+          <h2>${reg ? 'יצירת חשבון חדש' : 'התחברות'}</h2>
+          <p class="muted">${reg ? 'חשבון חינמי — כל הנתונים נשמרים ומסונכרנים בין המכשירים' : 'התחברו כדי לגשת לנתונים שלכם מכל מכשיר'}</p>
+        </div>
+        <div class="seg" style="margin-bottom:12px">
+          <button class="${!reg ? 'on' : ''}" data-act="auth-tab" data-t="login">התחברות</button>
+          <button class="${reg ? 'on' : ''}" data-act="auth-tab" data-t="register">הרשמה</button>
+        </div>
+        <form id="authForm" class="auth-form">
+          ${reg ? '<label class="field"><span>שם</span><input name="name" autocomplete="name" maxlength="40" placeholder="איך לקרוא לך?" value="${esc(authName)}"></label>' : ''}
+          <label class="field"><span>מייל</span><input name="email" type="email" autocomplete="email" required dir="ltr" placeholder="name@example.com" value="${esc(authEmail)}"></label>
+          <label class="field"><span>סיסמה</span><input name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" required minlength="6" dir="ltr" placeholder="${reg ? 'לפחות 6 תווים' : ''}"></label>
+          ${account.error ? `<p class="auth-error">${esc(account.error)}</p>` : ''}
+          <button class="btn" ${authBusy ? 'disabled' : ''}>${authBusy ? '…' : reg ? 'יצירת חשבון' : 'התחברות'}</button>
+          ${!reg ? '<button type="button" class="link-btn" data-act="reset-pw">שכחתי סיסמה</button>' : ''}
+        </form>
+        <div class="or"><span>או</span></div>
+        <button class="btn google-btn" data-act="google" ${authBusy ? 'disabled' : ''}><svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg> המשך עם Google</button>
+        <p class="muted tiny" style="text-align:center">בלי חשבון אפשר להמשיך להשתמש באתר — הנתונים יישמרו רק בדפדפן הזה.</p>`;
     } else {
       body = `
         <div class="profile">
-          <div class="avatar placeholder">👤</div>
+          <div class="avatar placeholder">📱</div>
           <div>
-            <div class="title">לא מחובר/ת</div>
-            <div class="sub">📱 הנתונים נשמרים רק בדפדפן הזה</div>
+            <div class="title">מצב מקומי</div>
+            <div class="sub">הנתונים נשמרים בדפדפן הזה</div>
           </div>
         </div>
-        <p>כדי שהכל יישמר בחשבון ויהיה זמין מכל מכשיר — יש להתחבר ל־<strong>claude.ai</strong> ולפתוח את האפליקציה מהקישור שלה. החיבור קורה אוטומטית, בלי סיסמה נוספת.</p>
-        <p class="muted" style="font-size:.9rem">אין לך משתמש? אפשר לפתוח חשבון חינמי ב־claude.ai, ואז לפתוח שוב את הקישור.</p>
-        ${account.error ? `<p style="color:var(--danger)">${esc(account.error)}</p>` : ''}
-        <a class="btn" style="display:block;text-align:center;text-decoration:none" href="https://claude.ai/login" target="_blank" rel="noopener">התחברות / הרשמה ל־claude.ai</a>`;
+        ${account.status === 'unconfigured'
+          ? '<p class="muted tiny">מערכת החשבונות עוד לא הוגדרה באתר הזה. למנהל/ת האתר: יש למלא את הקובץ <code>firebase-config.js</code> (ההוראות ב־README).</p>'
+          : `<p style="color:var(--danger)">${esc(account.error)}</p>`}`;
     }
     view.innerHTML = `<div class="card">${body}</div>
       <div class="card">
@@ -418,10 +492,34 @@
           <div><span class="muted">ימים עם מעקב מים</span><strong>${Object.keys(state.water.log).length}</strong></div>
         </div>
       </div>`;
-    const n = $('#accName');
-    if (n) n.textContent = name || 'המשתמש שלי';
-    const av = $('#accAvatar');
-    if (av && me) av.src = me.avatarUrl;
+    if (u) {
+      const n = $('#accName'); if (n) n.textContent = u.displayName || (u.email || '').split('@')[0] || 'המשתמש שלי';
+      const em = $('#accEmail'); if (em) em.textContent = u.email || '';
+      const av = $('#accAvatar'); if (av) av.src = u.photoURL;
+    }
+    const f = $('#authForm');
+    if (f) f.addEventListener('input', () => { authEmail = f.email.value; if (f.name) authName = f.name.value; });
+    if (f) f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { auth, authM } = account.fb;
+      const email = f.email.value.trim(), pw = f.password.value;
+      await authRun(async () => {
+        if (authTab === 'register') {
+          const cred = await authM.createUserWithEmailAndPassword(auth, email, pw);
+          const nm = f.name && f.name.value.trim();
+          if (nm) { await authM.updateProfile(cred.user, { displayName: nm }); await cred.user.reload(); account.user = auth.currentUser; }
+          toast('החשבון נוצר — ברוכים הבאים! 🎉');
+        } else {
+          await authM.signInWithEmailAndPassword(auth, email, pw);
+          toast('התחברת בהצלחה 👋');
+        }
+      });
+    });
+  }
+  async function authRun(fn) {
+    authBusy = true; account.error = ''; render();
+    try { await fn(); } catch (e) { account.error = authError(e); }
+    authBusy = false; render();
   }
 
   function checkAll() {
@@ -457,6 +555,51 @@
       case 'sync-now':
         cloudDirty = true; lastCloudJson = ''; await flushCloud(); toast(account.error || 'סונכרן ☁️');
         break;
+      case 'auth-tab': authTab = btn.dataset.t; account.error = ''; render(); break;
+      case 'google': {
+        const { auth, authM } = account.fb;
+        const provider = new authM.GoogleAuthProvider();
+        await authRun(async () => {
+          try { await authM.signInWithPopup(auth, provider); }
+          catch (err) {
+            if (err && (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')) await authM.signInWithRedirect(auth, provider);
+            else throw err;
+          }
+        });
+        break;
+      }
+      case 'reset-pw': {
+        const f = $('#authForm');
+        const email = f && f.email.value.trim();
+        if (!email) { account.error = 'נא להזין את המייל בשדה למעלה ואז ללחוץ שוב'; render(); break; }
+        const { auth, authM } = account.fb;
+        await authRun(() => authM.sendPasswordResetEmail(auth, email));
+        if (!account.error) toast('שלחנו מייל לאיפוס הסיסמה 📧');
+        break;
+      }
+      case 'logout':
+        await account.fb.authM.signOut(account.fb.auth);
+        toast('התנתקת. הנתונים נשארו שמורים בחשבון');
+        break;
+      case 'delete-account': {
+        if (!confirm('למחוק את החשבון ואת כל הנתונים שבו לצמיתות? אי אפשר לבטל את זה.')) break;
+        const { auth, authM, fs } = account.fb;
+        try {
+          const ref = account.docRef;
+          if (account.unsub) { account.unsub(); account.unsub = null; }
+          account.docRef = null;
+          await fs.deleteDoc(ref);
+          try { localStorage.removeItem(localKey); } catch (err) { /* ignore */ }
+          await authM.deleteUser(auth.currentUser);
+          toast('החשבון נמחק');
+        } catch (err) {
+          // המחיקה לא הושלמה (למשל צריך התחברות מחודשת) — מחזירים את הנתונים לחשבון
+          if (auth.currentUser) { account.docRef = fs.doc(account.fb.db, 'users', auth.currentUser.uid); lastCloudJson = ''; save(); }
+          account.error = authError(err);
+          render();
+        }
+        break;
+      }
     }
   });
 

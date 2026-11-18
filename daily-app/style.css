@@ -522,3 +522,19 @@ textarea {
 .email-box .field input { background: var(--card); }
 .email-actions { display: grid; gap: 6px; margin-top: 8px; }
 .email-actions .btn { text-align: center; text-decoration: none; display: block; }
+
+/* ===== auth ===== */
+a.chip-status { text-decoration: none; }
+.auth-head { text-align: center; margin-bottom: 14px; }
+.auth-head h2 { margin: 8px 0 4px; font-size: 1.3rem; }
+.auth-head p { margin: 0; font-size: .9rem; }
+.auth-logo { width: 54px; height: 54px; margin: 0 auto; border-radius: 16px; background: var(--primary); color: #fff; display: grid; place-items: center; font-size: 1.6rem; font-weight: 800; }
+.auth-form { display: grid; gap: 10px; }
+.auth-form .btn { padding: 13px; }
+.auth-error { margin: 0; color: var(--danger); font-size: .88rem; background: color-mix(in srgb, var(--danger) 10%, transparent); padding: 8px 10px; border-radius: 10px; }
+.link-btn { border: 0; background: none; color: var(--primary); cursor: pointer; font-size: .88rem; padding: 4px; justify-self: center; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .8rem; margin: 14px 0; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.google-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 12px; }
+.danger-zone { margin-top: 16px; font-size: .88rem; }
+.danger-zone summary { cursor: pointer; color: var(--muted); }

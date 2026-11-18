@@ -1,6 +1,6 @@
 // Service worker: offline cache + notification support on mobile.
-const CACHE = 'daily-app-v4';
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'calories.js', 'habits.js', 'reminders.js', 'foods-db.js', 'manifest.json', 'icon.svg'];
+const CACHE = 'daily-app-v5';
+const FILES = ['./', 'index.html', 'firebase-config.js', 'style.css', 'app.js', 'calories.js', 'habits.js', 'reminders.js', 'foods-db.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -10,6 +10,7 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== self.location.origin) return; // Firebase ושירותים חיצוניים — בלי מטמון
   e.respondWith(
     fetch(e.request).then((res) => {
       const copy = res.clone();
