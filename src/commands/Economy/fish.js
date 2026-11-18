@@ -5,7 +5,6 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getItemById } from '../../config/shop/items.js';
 import { getGuildConfig } from '../../services/config/guildConfig.js';
-import { getActiveFishingLuckMultiplier } from '../../services/fishingEventService.js';
 
 const FISH_COOLDOWN = 0; 
 const BASE_MIN_REWARD = 300;
@@ -317,10 +316,7 @@ export default {
                 premiumPlusRoleId && interaction.member?.roles?.cache?.has(premiumPlusRoleId)
             );
             const roleLuckMultiplier = hasPremiumPlusRole ? PREMIUM_PLUS_LUCK_MULTIPLIER : 1;
-
-            // Event mancing global (lintas server) menambah luck untuk semua orang.
-            const eventLuckMultiplier = await getActiveFishingLuckMultiplier();
-            const totalLuckMultiplier = roleLuckMultiplier * eventLuckMultiplier;
+            const totalLuckMultiplier = roleLuckMultiplier;
 
             if (now < lastFish + FISH_COOLDOWN) {
                 const remaining = lastFish + FISH_COOLDOWN - now;
@@ -365,9 +361,6 @@ export default {
 
             let fishingMultiplier = 1;
             const bonusMessages = [];
-            if (eventLuckMultiplier > 1) {
-                bonusMessages.push(`🌊 **Server Event Active: x${eventLuckMultiplier} luck**`);
-            }
             if (bestRod) {
                 const rodMultiplier = bestRod.effect.multiplier || 1;
                 fishingMultiplier *= rodMultiplier;

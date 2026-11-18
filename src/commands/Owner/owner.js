@@ -1,19 +1,13 @@
 import { SlashCommandBuilder, MessageFlags, PermissionFlagsBits, ChannelType } from 'discord.js';
-import { createEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { isBotOwner, getBotMessage } from '../../config/bot.js';
 import {
-    getFishingEvent,
-    startFishingEvent,
-    stopFishingEvent,
     setAnnouncementChannel,
     clearAnnouncementChannel,
-    getAnnouncementChannel,
-    broadcastFishingEvent,
     broadcastAnnouncement,
-    formatEventRemaining,
-} from '../../services/fishingEventService.js';
+} from '../../services/announcementService.js';
 
 // Ringkas hasil broadcast (terkirim / dilewati / gagal) buat ditampilkan ke owner.
 function buildBroadcastBody(intro, broadcast) {
@@ -32,42 +26,7 @@ function buildBroadcastBody(intro, broadcast) {
 export default {
     data: new SlashCommandBuilder()
         .setName('owner')
-        .setDescription('Owner controls: global fishing events and cross-server announcements')
-        .addSubcommandGroup(group =>
-            group
-                .setName('fishevent')
-                .setDescription('Global fishing luck event')
-                .addSubcommand(subcommand =>
-                    subcommand
-                        .setName('start')
-                        .setDescription('Start a global fishing luck event for every server')
-                        .addIntegerOption(option =>
-                            option
-                                .setName('multiplier')
-                                .setDescription('Luck multiplier, e.g. 8 = 8x (applies to /fish and /netting)')
-                                .setRequired(true)
-                                .setMinValue(2)
-                                .setMaxValue(100)
-                        )
-                        .addIntegerOption(option =>
-                            option
-                                .setName('minutes')
-                                .setDescription('Duration in minutes (0 = until stopped). Default: 60')
-                                .setRequired(false)
-                                .setMinValue(0)
-                        )
-                )
-                .addSubcommand(subcommand =>
-                    subcommand
-                        .setName('stop')
-                        .setDescription('Stop the global fishing luck event')
-                )
-                .addSubcommand(subcommand =>
-                    subcommand
-                        .setName('status')
-                        .setDescription('Show the current global fishing event')
-                )
-        )
+        .setDescription('Owner controls: cross-server announcements')
         .addSubcommandGroup(group =>
             group
                 .setName('pengumuman')
@@ -150,7 +109,7 @@ export default {
             return;
         }
 
-        // Sisa subcommand mengubah event global / kirim pengumuman, jadi khusus owner bot.
+        // Subcommand send mengirim pengumuman ke semua server, jadi khusus owner bot.
         if (!isBotOwner(interaction.user.id)) {
             throw createError(
                 'Owner command used by non-owner',
@@ -158,81 +117,6 @@ export default {
                 getBotMessage('noPermission'),
                 { userId: interaction.user.id }
             );
-        }
-
-        if (group === 'fishevent') {
-            if (subcommand === 'start') {
-                const multiplier = interaction.options.getInteger('multiplier');
-                const minutes = interaction.options.getInteger('minutes');
-
-                const event = await startFishingEvent({
-                    multiplier,
-                    durationMinutes: minutes ?? 60,
-                    startedBy: interaction.user.id,
-                });
-                const broadcast = await broadcastFishingEvent(client, event, { action: 'start' });
-
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed(
-                        'Fishing Event Started',
-                        buildBroadcastBody(
-                            `Global luck boost **x${event.multiplier}** is now active for **every server**.\n` +
-                            `Duration: **${formatEventRemaining(event.endsAt)}**.`,
-                            broadcast
-                        )
-                    )],
-                });
-                return;
-            }
-
-            if (subcommand === 'stop') {
-                const existing = await getFishingEvent();
-                await stopFishingEvent();
-
-                if (!existing) {
-                    await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [warningEmbed('Fishing Event', 'There is no active fishing event to stop.')],
-                    });
-                    return;
-                }
-
-                const broadcast = await broadcastFishingEvent(client, existing, { action: 'stop' });
-
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed(
-                        'Fishing Event Stopped',
-                        buildBroadcastBody(
-                            `The **x${existing.multiplier}** global luck boost has ended.`,
-                            broadcast
-                        )
-                    )],
-                });
-                return;
-            }
-
-            // status
-            const event = await getFishingEvent();
-            const channelId = interaction.guildId ? await getAnnouncementChannel(interaction.guildId) : null;
-
-            const embed = event
-                ? createEmbed({
-                    title: 'Fishing Event Status',
-                    description:
-                        `**Active:** yes\n` +
-                        `**Multiplier:** x${event.multiplier}\n` +
-                        `**Remaining:** ${formatEventRemaining(event.endsAt)}\n` +
-                        `**This server's announcement channel:** ${channelId ? `<#${channelId}>` : '`not set`'}`,
-                    color: '#F1C40F',
-                })
-                : createEmbed({
-                    title: 'Fishing Event Status',
-                    description:
-                        'No fishing event is currently active.\n' +
-                        `**This server's announcement channel:** ${channelId ? `<#${channelId}>` : '`not set`'}`,
-                });
-
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-            return;
         }
 
         // pengumuman send

@@ -83,7 +83,6 @@ export const commandAliases = {
     'calc': 'calculate',
     'math': 'calculate',
     'weather': 'weather',
-    'todo': 'todo',
     'report': 'report',
     'userinfo': 'userinfo',
     'whois': 'userinfo',
