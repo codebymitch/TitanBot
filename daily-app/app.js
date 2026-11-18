@@ -1,4 +1,4 @@
-/* היום שלי — קלוריות, הרגלים ותזכורות. כל הנתונים נשמרים במכשיר (localStorage). */
+/* היום שלי — קלוריות, הרגלים, מים ותזכורות. כל הנתונים נשמרים במכשיר (localStorage). */
 (function () {
   'use strict';
 
@@ -6,7 +6,8 @@
   // נשמר מקומית בדפדפן, ואם המשתמש מחובר — גם בחשבון שלו (claude.ai) ומסונכרן בין מכשירים.
   const BASE_KEY = 'daily-app-v1';
   const defaults = () => ({
-    calorieGoal: 2000, foods: [], habits: [], reminders: [],
+    foods: [], habits: [], reminders: [], customFoods: [], favorites: [], weights: {},
+    goals: { kcal: 2000, pPct: 25, cPct: 45, fPct: 30, fib: 28, sug: 50, na: 2300, profile: null },
     water: { goal: 8, cupMl: 250, log: {}, remind: { on: false, every: 60, from: '08:00', to: '22:00', last: 0 } },
   });
   let localKey = BASE_KEY;
@@ -15,6 +16,9 @@
   function normalize(s) {
     const d = defaults();
     const out = Object.assign(d, s || {});
+    out.goals = Object.assign(defaults().goals, out.goals || {});
+    if (s && s.calorieGoal && !(s.goals && s.goals.kcal)) out.goals.kcal = s.calorieGoal; // מעבר מגרסה קודמת
+    delete out.calorieGoal;
     out.water = Object.assign(defaults().water, out.water || {});
     out.water.remind = Object.assign(defaults().water.remind, out.water.remind || {});
     return out;
@@ -155,20 +159,27 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
   }
 
+  // ---------- Calories module (calories.js) ----------
+  const cal = window.CaloriesModule({
+    $, esc, uid, dayKey, addDays, parseDay, fmtDay, DAYS, toast, view: $('#view'),
+    state: () => state, save: () => save(), render: () => render(),
+  });
+
   // ---------- Router ----------
   const view = $('#view');
   const routes = {
     '': { title: 'היום שלי', render: renderHome },
-    calories: { title: '🔥 קלוריות', render: renderCalories },
+    calories: { title: '🔥 קלוריות ותזונה', render: () => cal.render(subRoute()) },
     habits: { title: '✅ הרגלים', render: renderHabits },
     water: { title: '💧 שתיית מים', render: renderWater },
     reminders: { title: '⏰ תזכורות', render: renderReminders },
     account: { title: '👤 חשבון', render: renderAccount },
   };
   function currentRoute() {
-    const r = location.hash.replace(/^#\/?/, '');
+    const r = location.hash.replace(/^#\/?/, '').split('/')[0];
     return routes[r] ? r : '';
   }
+  const subRoute = () => location.hash.replace(/^#\/?/, '').split('/')[1] || '';
   function render() {
     const r = currentRoute();
     $('#pageTitle').textContent = routes[r].title;
@@ -178,7 +189,7 @@
     closeDrawer();
     updateChip();
   }
-  window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', () => { cal.close(); render(); window.scrollTo(0, 0); });
   $('#backBtn').addEventListener('click', () => { location.hash = '#/'; });
 
   // ---------- Side menu (☰) ----------
@@ -192,7 +203,6 @@
   // ---------- Home ----------
   function renderHome() {
     const today = dayKey();
-    const eaten = state.foods.filter((f) => f.day === today).reduce((s, f) => s + f.kcal, 0);
     const doneHabits = state.habits.filter((h) => h.done.includes(today)).length;
     const pending = state.reminders.filter((r) => !r.done);
     const sorted = pending.slice().sort((a, b) => a.at - b.at);
@@ -205,7 +215,7 @@
       <div class="menu">
         <a class="menu-card c-cal" href="#/calories">
           <div class="emoji">🔥</div>
-          <div><h2>קלוריות</h2><p>${eaten} מתוך ${state.calorieGoal} קק״ל היום</p></div>
+          <div><h2>קלוריות</h2><p>${cal.homeSummary()}</p></div>
           <span class="arrow">‹</span>
         </a>
         <a class="menu-card c-hab" href="#/habits">
@@ -224,103 +234,6 @@
           <span class="arrow">‹</span>
         </a>
       </div>`;
-  }
-
-  // ---------- Calories ----------
-  let calDay = dayKey();
-  const MEALS = ['בוקר', 'צהריים', 'ערב', 'נשנוש'];
-  const QUICK = [['תפוח', 80], ['בננה', 105], ['ביצה', 75], ['פרוסת לחם', 80], ['יוגורט', 120], ['קפה עם חלב', 60]];
-
-  function guessMeal() {
-    const h = new Date().getHours();
-    return h < 11 ? 'בוקר' : h < 16 ? 'צהריים' : h < 21 ? 'ערב' : 'נשנוש';
-  }
-
-  function renderCalories() {
-    const items = state.foods.filter((f) => f.day === calDay);
-    const total = items.reduce((s, f) => s + f.kcal, 0);
-    const goal = state.calorieGoal || 1;
-    const left = state.calorieGoal - total;
-    const C = 2 * Math.PI * 50;
-    const pct = Math.min(total / goal, 1);
-    const byMeal = MEALS.map((m) => [m, items.filter((f) => f.meal === m)]).filter(([, l]) => l.length);
-
-    view.innerHTML = `
-      <div class="date-nav">
-        <button class="icon-btn" data-act="next-day" aria-label="יום הבא">›</button>
-        <strong>${fmtDay(calDay)}</strong>
-        <button class="icon-btn" data-act="prev-day" aria-label="יום קודם">‹</button>
-      </div>
-
-      <div class="card">
-        <div class="summary">
-          <svg class="ring ${left < 0 ? 'over' : ''}" viewBox="0 0 120 120">
-            <circle class="track" cx="60" cy="60" r="50"/>
-            <circle class="bar" cx="60" cy="60" r="50" transform="rotate(-90 60 60)"
-              stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/>
-            <text x="60" y="62">${total}</text>
-            <text class="lbl" x="60" y="80">קק״ל</text>
-          </svg>
-          <div class="stats">
-            <div><span class="muted">יעד</span><strong>${state.calorieGoal}</strong></div>
-            <div><span class="muted">נאכל</span><strong>${total}</strong></div>
-            <div><span class="muted">${left >= 0 ? 'נשאר' : 'חריגה'}</span><strong style="color:${left >= 0 ? 'var(--hab)' : 'var(--danger)'}">${Math.abs(left)}</strong></div>
-          </div>
-        </div>
-        <form class="goal-edit" id="goalForm">
-          <span class="muted">יעד יומי:</span>
-          <input type="number" name="goal" min="500" max="10000" value="${state.calorieGoal}" inputmode="numeric">
-          <button class="btn ghost small">עדכון</button>
-        </form>
-      </div>
-
-      <div class="card">
-        <h3>הוספת מאכל</h3>
-        <form id="foodForm">
-          <div class="row">
-            <input name="name" placeholder="מה אכלת?" required maxlength="60">
-            <input name="kcal" type="number" placeholder="קלוריות" min="0" max="5000" required inputmode="numeric">
-          </div>
-          <div class="row" style="margin-top:8px">
-            <select name="meal">${MEALS.map((m) => `<option ${m === guessMeal() ? 'selected' : ''}>${m}</option>`).join('')}</select>
-            <button class="btn">+ הוספה</button>
-          </div>
-        </form>
-        <div class="quick">${QUICK.map(([n, k]) => `<button class="chip" data-act="quick" data-name="${n}" data-kcal="${k}">${n} · ${k}</button>`).join('')}</div>
-      </div>
-
-      <div class="card">
-        <h3>מה אכלתי</h3>
-        ${items.length ? byMeal.map(([meal, list]) => `
-          <div class="section-label">${meal} · ${list.reduce((s, f) => s + f.kcal, 0)} קק״ל</div>
-          <ul class="list">${list.map((f) => `
-            <li>
-              <span class="meal-tag">${f.meal}</span>
-              <span class="grow title">${esc(f.name)}</span>
-              <span class="kcal">${f.kcal}</span>
-              <button class="del" data-act="del-food" data-id="${f.id}" aria-label="מחיקה">✕</button>
-            </li>`).join('')}
-          </ul>`).join('') : '<p class="empty">עוד לא נרשם כלום ליום הזה 🍽️</p>'}
-      </div>`;
-
-    $('#goalForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const v = parseInt(e.target.goal.value, 10);
-      if (v > 0) { state.calorieGoal = v; save(); renderCalories(); toast('היעד עודכן'); }
-    });
-    $('#foodForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const f = e.target;
-      addFood(f.name.value.trim(), parseInt(f.kcal.value, 10), f.meal.value);
-    });
-  }
-
-  function addFood(name, kcal, meal) {
-    if (!name || !(kcal >= 0)) return;
-    state.foods.push({ id: uid(), day: calDay, name, kcal, meal: meal || guessMeal() });
-    save();
-    renderCalories();
-    toast(`נוסף: ${name} (${kcal} קק״ל)`);
   }
 
   // ---------- Habits ----------
@@ -656,11 +569,6 @@
     if (!btn) return;
     const id = btn.dataset.id;
     switch (btn.dataset.act) {
-      case 'prev-day': calDay = addDays(calDay, -1); renderCalories(); break;
-      case 'next-day': calDay = addDays(calDay, 1); renderCalories(); break;
-      case 'quick': addFood(btn.dataset.name, parseInt(btn.dataset.kcal, 10)); break;
-      case 'del-food':
-        state.foods = state.foods.filter((f) => f.id !== id); save(); renderCalories(); break;
       case 'toggle-habit': {
         const h = state.habits.find((x) => x.id === id);
         const t = dayKey();
