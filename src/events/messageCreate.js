@@ -24,7 +24,15 @@ export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
-      if (message.author.bot || !message.guild) return;
+      if (!message.guild) return;
+
+      // Sticky harus di-repost ke bawah untuk SEMUA pesan (termasuk bot lain),
+      // tapi skip pesan dari bot kita sendiri supaya tidak loop.
+      if (message.author.id !== client.user?.id) {
+        await handleStickyMessage(message, client);
+      }
+
+      if (message.author.bot) return;
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
       trackChatMessage(message);
@@ -33,8 +41,6 @@ export default {
       if (countingProcessed) {
         return;
       }
-
-      await handleStickyMessage(message, client);
 
       await handleAutoReaction(message, client);
 
