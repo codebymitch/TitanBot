@@ -19,20 +19,19 @@ export const DEFAULT_ROUND_SECONDS = 60;
 export const MIN_ROUND_SECONDS = 15;
 export const MAX_ROUND_SECONDS = 180;
 
-// Mode permainan: gambar utuh (klasik) atau potongan bertahap (zoom puzzle).
+// Mode permainan: gambar utuh (klasik) atau potongan detail yang di-zoom bertahap.
 export const MODE_CLASSIC = 'classic';
-export const MODE_PUZZLE = 'puzzle';
+export const MODE_ZOOM = 'zoom';
 
 const BASE_POINTS = { Mudah: 10, Sedang: 15, Sulit: 20 };
 const HINT_PENALTY = 3;
 const MIN_POINTS = 5;
 
-// Konfigurasi gambar potongan (zoom puzzle).
-const PUZZLE_SIZE = 640; // ukuran kanvas persegi (px)
-const PUZZLE_GRID = 4; // 4x4 = 16 potongan
-const PUZZLE_TILES = PUZZLE_GRID * PUZZLE_GRID;
-const PUZZLE_START_TILES = { Mudah: 4, Sedang: 2, Sulit: 1 };
-const PUZZLE_ATTACHMENT_NAME = 'tebak-gambar-potongan.png';
+// Konfigurasi potongan kecil (crop detail yang di-zoom).
+const ZOOM_SIZE = 640; // ukuran kanvas persegi (px)
+// Bagian gambar yang terlihat di awal ronde (makin kecil makin sulit).
+const ZOOM_START_SCALE = { Mudah: 0.6, Sedang: 0.45, Sulit: 0.3 };
+const ZOOM_ATTACHMENT_NAME = 'tebak-gambar-potongan.png';
 const IMAGE_USER_AGENT = 'TitanBot/2.1 (Discord bot; fitur tebak gambar)';
 const IMAGE_CACHE_MAX = 40;
 
@@ -56,7 +55,7 @@ export function getDifficultyChoices() {
 export function getModeChoices() {
   return [
     { name: 'Klasik (gambar utuh)', value: MODE_CLASSIC },
-    { name: 'Potongan (zoom puzzle)', value: MODE_PUZZLE },
+    { name: 'Potongan (detail kecil)', value: MODE_ZOOM },
   ];
 }
 
@@ -75,7 +74,7 @@ function resolveDifficulty(value) {
 }
 
 function resolveMode(value) {
-  return String(value || '').toLowerCase() === MODE_PUZZLE ? MODE_PUZZLE : MODE_CLASSIC;
+  return String(value || '').toLowerCase() === MODE_ZOOM ? MODE_ZOOM : MODE_CLASSIC;
 }
 
 function normalizeText(text) {
@@ -179,63 +178,42 @@ async function getSourceImage(url) {
   return buffer;
 }
 
-async function renderPuzzleImage(sourceBuffer, revealedTiles) {
+// Ambil potongan kecil dari gambar asli pada posisi tertentu, lalu perbesar
+// supaya detailnya terlihat jelas. `scale` = bagian gambar yang terlihat (0-1),
+// `center` = titik fokus potongan dalam koordinat 0-1 dari gambar.
+async function renderZoomImage(sourceBuffer, scale, center) {
   const image = await loadImage(sourceBuffer);
-  const canvas = createCanvas(PUZZLE_SIZE, PUZZLE_SIZE);
+  const canvas = createCanvas(ZOOM_SIZE, ZOOM_SIZE);
   const ctx = canvas.getContext('2d');
 
-  // Isi penuh kanvas (cover) supaya potongan tajam dan tidak gepeng.
-  const scale = Math.max(PUZZLE_SIZE / image.width, PUZZLE_SIZE / image.height);
-  const drawWidth = image.width * scale;
-  const drawHeight = image.height * scale;
-  ctx.drawImage(image, (PUZZLE_SIZE - drawWidth) / 2, (PUZZLE_SIZE - drawHeight) / 2, drawWidth, drawHeight);
+  const cropWidth = Math.max(1, image.width * scale);
+  const cropHeight = Math.max(1, image.height * scale);
+  const cropX = Math.min(Math.max(center.x * image.width - cropWidth / 2, 0), image.width - cropWidth);
+  const cropY = Math.min(Math.max(center.y * image.height - cropHeight / 2, 0), image.height - cropHeight);
 
-  const tile = PUZZLE_SIZE / PUZZLE_GRID;
-  for (let row = 0; row < PUZZLE_GRID; row += 1) {
-    for (let col = 0; col < PUZZLE_GRID; col += 1) {
-      const index = row * PUZZLE_GRID + col;
-      if (revealedTiles.has(index)) continue;
+  // Isi penuh kanvas persegi (cover) tanpa membuat gambar gepeng.
+  const drawScale = Math.max(ZOOM_SIZE / cropWidth, ZOOM_SIZE / cropHeight);
+  const drawWidth = cropWidth * drawScale;
+  const drawHeight = cropHeight * drawScale;
 
-      ctx.fillStyle = '#1f2124';
-      ctx.fillRect(col * tile, row * tile, tile, tile);
-      ctx.strokeStyle = '#34363b';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(col * tile + 1.5, row * tile + 1.5, tile - 3, tile - 3);
-    }
-  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(
+    image,
+    cropX, cropY, cropWidth, cropHeight,
+    (ZOOM_SIZE - drawWidth) / 2, (ZOOM_SIZE - drawHeight) / 2, drawWidth, drawHeight,
+  );
 
   return canvas.toBuffer('image/png');
 }
 
-function revealRandomTiles(session, target) {
-  const remaining = [];
-  for (let i = 0; i < PUZZLE_TILES; i += 1) {
-    if (!session.revealedTiles.has(i)) {
-      remaining.push(i);
-    }
-  }
-
-  for (let i = remaining.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
-  }
-
-  let need = target - session.revealedTiles.size;
-  for (const tile of remaining) {
-    if (need <= 0) break;
-    session.revealedTiles.add(tile);
-    need -= 1;
-  }
-}
-
-function puzzleRevealTargets(session) {
-  const start = session.startTiles;
-  const remaining = PUZZLE_TILES - start;
+// Tahap pelebaran potongan: mulai dari potongan kecil lalu melebar sampai penuh.
+function zoomRevealTargets(startScale) {
+  const remaining = 1 - startScale;
   return [
-    Math.min(PUZZLE_TILES, start + Math.round(remaining * 0.25)),
-    Math.min(PUZZLE_TILES, start + Math.round(remaining * 0.6)),
-    // Tahap terakhir membuka seluruh gambar supaya objek terlihat penuh saat waktu hampir habis.
-    PUZZLE_TILES,
+    Math.min(1, startScale + remaining * 0.33),
+    Math.min(1, startScale + remaining * 0.66),
+    1,
   ];
 }
 
@@ -272,10 +250,10 @@ function buildClassicPayload(session) {
   };
 }
 
-async function buildPuzzlePayload(session) {
+async function buildZoomPayload(session) {
   const entry = session.currentEntry;
   const source = await getSourceImage(entry.imageUrl);
-  const png = await renderPuzzleImage(source, session.revealedTiles);
+  const png = await renderZoomImage(source, session.zoomScale, session.zoomCenter);
 
   return {
     embeds: [
@@ -284,23 +262,23 @@ async function buildPuzzlePayload(session) {
         description: [
           'Objek apakah ini? Ketik jawabanmu langsung di chat.',
           '',
-          `**Petunjuk**\nPotongan terbuka: **${session.revealedTiles.size}/${PUZZLE_TILES}**`,
+          `**Petunjuk**\nBagian terlihat: **${Math.round(session.zoomScale * 100)}%**`,
         ].join('\n'),
         color: 'blurple',
-        image: `attachment://${PUZZLE_ATTACHMENT_NAME}`,
+        image: `attachment://${ZOOM_ATTACHMENT_NAME}`,
         fields: buildRoundFields(session),
       }),
     ],
-    files: [new AttachmentBuilder(png, { name: PUZZLE_ATTACHMENT_NAME })],
+    files: [new AttachmentBuilder(png, { name: ZOOM_ATTACHMENT_NAME })],
   };
 }
 
 async function buildRoundPayload(session) {
-  if (session.mode === MODE_PUZZLE) {
+  if (session.mode === MODE_ZOOM) {
     try {
-      return await buildPuzzlePayload(session);
+      return await buildZoomPayload(session);
     } catch (error) {
-      logger.error('Gagal membuat gambar potongan, memakai gambar utuh:', error);
+      logger.error('Gagal membuat potongan gambar, memakai gambar utuh:', error);
     }
   }
   return buildClassicPayload(session);
@@ -309,12 +287,12 @@ async function buildRoundPayload(session) {
 function buildRevealEmbed(session, { winnerId = null, points = 0 }) {
   const entry = session.currentEntry;
   const won = Boolean(winnerId);
-  const puzzle = session.mode === MODE_PUZZLE;
+  const zoom = session.mode === MODE_ZOOM;
 
   return createEmbed({
     title: won
-      ? `Tebak Gambar${puzzle ? ' Potongan' : ''} — Ronde ${session.round} Selesai`
-      : `Tebak Gambar${puzzle ? ' Potongan' : ''} — Ronde ${session.round} Waktu Habis`,
+      ? `Tebak Gambar${zoom ? ' Potongan' : ''} — Ronde ${session.round} Selesai`
+      : `Tebak Gambar${zoom ? ' Potongan' : ''} — Ronde ${session.round} Waktu Habis`,
     description: [
       won
         ? `<@${winnerId}> berhasil menebak dan mendapat **${points}** poin!`
@@ -362,8 +340,8 @@ function scheduleHints(session) {
       if (session.hintsShown >= index + 1) return;
 
       session.hintsShown = index + 1;
-      if (session.mode === MODE_PUZZLE) {
-        revealRandomTiles(session, session.revealTargets[index]);
+      if (session.mode === MODE_ZOOM) {
+        session.zoomScale = session.zoomTargets[index];
       }
 
       const payload = await buildRoundPayload(session);
@@ -403,13 +381,10 @@ async function startRound(session, client) {
   session.solved = false;
   session.hintsShown = 0;
   session.hintLines = buildHints(entry);
-  session.revealedTiles = new Set();
-  // Potongan awal & target pembukaan berbeda tiap ronde.
-  session.startTiles = PUZZLE_START_TILES[entry.difficulty] || 1;
-  session.revealTargets = puzzleRevealTargets(session);
-  if (session.mode === MODE_PUZZLE) {
-    revealRandomTiles(session, session.startTiles);
-  }
+  // Potongan awal & titik fokus berbeda tiap ronde, lalu melebar bertahap.
+  session.zoomScale = ZOOM_START_SCALE[entry.difficulty] || 0.3;
+  session.zoomCenter = { x: Math.random(), y: Math.random() };
+  session.zoomTargets = zoomRevealTargets(session.zoomScale);
   session.roundStartedAt = Date.now();
   session.roundEndsAt = session.roundStartedAt + session.durationSec * 1000;
   session.roundMessage = null;
@@ -447,7 +422,7 @@ async function finishRound(session, client, { winnerId, points = 0 }) {
   const revealEmbed = buildRevealEmbed(session, { winnerId, points });
 
   if (session.roundMessage) {
-    const editPayload = session.mode === MODE_PUZZLE
+    const editPayload = session.mode === MODE_ZOOM
       ? { embeds: [revealEmbed], attachments: [] }
       : { embeds: [revealEmbed] };
     await session.roundMessage.edit(editPayload).catch(() => {});
@@ -519,9 +494,9 @@ export async function startGame(client, {
     solved: false,
     hintsShown: 0,
     hintLines: [],
-    revealedTiles: new Set(),
-    startTiles: 1,
-    revealTargets: [],
+    zoomScale: 1,
+    zoomCenter: { x: 0.5, y: 0.5 },
+    zoomTargets: [],
     roundStartedAt: 0,
     roundEndsAt: 0,
     roundMessage: null,

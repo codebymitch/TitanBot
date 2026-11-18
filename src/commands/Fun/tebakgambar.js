@@ -63,7 +63,7 @@ export default {
     .addStringOption((option) =>
       option
         .setName('mode')
-        .setDescription('Cara gambar ditampilkan: utuh (klasik) atau potongan (zoom puzzle)')
+        .setDescription('Cara gambar ditampilkan: utuh (klasik) atau potongan detail kecil')
         .setRequired(false)
         .addChoices(...getModeChoices()),
     )
