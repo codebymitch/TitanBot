@@ -109,7 +109,21 @@ export async function postSticky(guildId, channel, content, existing = null) {
   });
 }
 
-function scheduleStickyRepost(client, message, guildId, channelId) {
+async function resolveChannel(client, channelId) {
+  if (!client?.channels) return null;
+
+  const cached = client.channels.cache.get(channelId);
+  if (cached) return cached;
+
+  try {
+    return await client.channels.fetch(channelId);
+  } catch (error) {
+    logger.warn(`Failed to fetch channel ${channelId} for sticky repost:`, error.message);
+    return null;
+  }
+}
+
+function scheduleStickyRepost(client, guildId, channelId) {
   const existingTimer = pendingReposts.get(channelId);
   if (existingTimer) {
     clearTimeout(existingTimer);
@@ -123,8 +137,14 @@ function scheduleStickyRepost(client, message, guildId, channelId) {
         return;
       }
 
-      await deleteStickyMessage(message.channel, sticky.lastMessageId);
-      const sent = await message.channel.send({ content: sticky.content });
+      const channel = await resolveChannel(client, channelId);
+      if (!channel || typeof channel.send !== 'function') {
+        logger.warn(`Sticky repost skipped: channel ${channelId} unavailable or not sendable`);
+        return;
+      }
+
+      await deleteStickyMessage(channel, sticky.lastMessageId);
+      const sent = await channel.send({ content: sticky.content });
       await saveSticky(guildId, channelId, {
         content: sticky.content,
         enabled: true,
@@ -143,10 +163,21 @@ function scheduleStickyRepost(client, message, guildId, channelId) {
 }
 
 export async function handleStickyMessage(message, client) {
+  // Skip messages from our own bot to avoid repost loops.
+  if (client?.user?.id && message.author?.id === client.user.id) {
+    return;
+  }
+
   const sticky = await getSticky(client, message.guild.id, message.channel.id);
   if (!sticky?.enabled || !sticky.content) {
     return;
   }
 
-  scheduleStickyRepost(client, message, message.guild.id, message.channel.id);
+  // Skip if this message IS the sticky itself (e.g. our own repost that
+  // slipped through before client.user was ready).
+  if (sticky.lastMessageId && message.id === sticky.lastMessageId) {
+    return;
+  }
+
+  scheduleStickyRepost(client, message.guild.id, message.channel.id);
 }

@@ -28,11 +28,12 @@ export default {
 
       // Sticky harus di-repost ke bawah untuk SEMUA pesan (termasuk bot lain),
       // tapi skip pesan dari bot kita sendiri supaya tidak loop.
-      if (message.author.id !== client.user?.id) {
+      // handleStickyMessage juga punya guard internal untuk memastikan tidak loop.
+      if (message.author?.id && message.author.id !== client.user?.id) {
         await handleStickyMessage(message, client);
       }
 
-      if (message.author.bot) return;
+      if (message.author?.bot) return;
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
       trackChatMessage(message);
