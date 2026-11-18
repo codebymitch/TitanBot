@@ -15,6 +15,7 @@ import {
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
+import { handleGuess as handleTebakGambarGuess } from '../services/tebakGambarService.js';
 import { handleStickyMessage } from '../services/stickyService.js';
 import { handleAutoReaction } from '../services/autoReactionService.js';
 import StreakService from '../services/streakService.js';
@@ -40,6 +41,13 @@ export default {
 
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
+        return;
+      }
+
+      // Tebak gambar: pesan chat di channel permainan dipakai sebagai jawaban.
+      // Kalau tebakannya benar, ronde ditutup dan pesan tidak diproses lebih lanjut.
+      const tebakGambarProcessed = await handleTebakGambarGuess(message, client);
+      if (tebakGambarProcessed) {
         return;
       }
 
