@@ -117,6 +117,7 @@ function formatHours(ms) {
 }
 
 export async function renderVoiceMilestoneCard({
+  guildName = 'Manay Society',
   member,
   milestone,
   next,
@@ -195,7 +196,15 @@ export async function renderVoiceMilestoneCard({
   context.fillStyle = accent;
   context.font = fontString(17);
   context.letterSpacing = '4px';
-  context.fillText(isTest ? 'MANAY SOCIETY  ·  TEST PREVIEW' : 'MANAY SOCIETY  ·  VOICE MILESTONE', contentX, 76);
+  const serverLabel = String(guildName || 'Server').toUpperCase();
+  fitText(
+    isTest ? `${serverLabel}  ·  TEST PREVIEW` : `${serverLabel}  ·  VOICE MILESTONE`,
+    contentX,
+    76,
+    850,
+    17,
+    12,
+  );
   context.letterSpacing = '0px';
 
   context.fillStyle = '#F5F6F6';
