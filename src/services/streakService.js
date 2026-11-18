@@ -85,6 +85,7 @@ class StreakService {
       best: asPositiveInt(base.best),
       totalDays: asPositiveInt(base.totalDays),
       lastDay: typeof base.lastDay === 'string' ? base.lastDay : null,
+      alreadyOnDay: typeof base.alreadyOnDay === 'string' ? base.alreadyOnDay : null,
       breakNotified: base.breakNotified === true,
       createdAt: Number(base.createdAt) || null,
       updatedAt: Number(base.updatedAt) || null,
@@ -144,6 +145,7 @@ class StreakService {
     }
 
     let incremented = false;
+    let alreadyOn = false;
 
     if (!streak.lastDay) {
       // First ever activity.
@@ -153,8 +155,12 @@ class StreakService {
       streak.lastDay = day;
       incremented = true;
     } else if (streak.lastDay === day) {
-      // Already counted today — nothing changes.
+      // Already counted today — nudge the user once per day.
       incremented = false;
+      if (streak.alreadyOnDay !== day) {
+        streak.alreadyOnDay = day;
+        alreadyOn = true;
+      }
     } else if (StreakService.daysBetween(streak.lastDay, day) === 1) {
       // Consecutive day — advance.
       streak.count += 1;
@@ -173,6 +179,11 @@ class StreakService {
         streak.best = streak.count;
       }
       incremented = true;
+    }
+
+    // A new day's activity resets the "already on" reminder.
+    if (incremented) {
+      streak.alreadyOnDay = null;
     }
 
     streak.breakNotified = false;
@@ -194,6 +205,7 @@ class StreakService {
       recorded: true,
       streak: StreakService.withStatus(streak, timestamp),
       incremented,
+      alreadyOn,
       day,
     };
   }
