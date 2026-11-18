@@ -122,11 +122,12 @@ async function getChatLeaderboard(client, guild) {
   }));
 
   const valid = resolved.filter(Boolean);
+  const topTen = valid.slice(0, 10);
 
   return {
-    entries: valid.slice(0, 10).map((entry, index) => ({ ...entry, rank: index + 1 })),
-    participantCount: valid.length,
-    totalMessages: valid.reduce((sum, entry) => sum + entry.totalMessages, 0),
+    entries: topTen.map((entry, index) => ({ ...entry, rank: index + 1 })),
+    participantCount: topTen.length,
+    totalMessages: topTen.reduce((sum, entry) => sum + entry.totalMessages, 0),
   };
 }
 
