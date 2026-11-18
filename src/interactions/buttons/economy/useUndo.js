@@ -3,9 +3,8 @@ import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { getItemById } from '../../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../../utils/economy.js';
 import { safeDeferInteraction } from '../../../utils/interactionValidator.js';
+import { undoPotionUse } from '../../../utils/potionUndo.js';
 import { logger } from '../../../utils/logger.js';
-
-const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
 const economyUseUndoHandler = {
     name: 'use_undo',
@@ -39,7 +38,7 @@ const economyUseUndoHandler = {
 
         if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) {
             await interaction.editReply({
-                embeds: [warningEmbed('Undo Window Closed', 'The time to undo this use has already passed.')],
+                embeds: [warningEmbed('Undo Window Closed', 'The quick undo window has passed. Ask an admin to run /undo instead.')],
                 components: []
             });
             return;
@@ -47,40 +46,31 @@ const economyUseUndoHandler = {
 
         const guildId = interaction.guildId;
         const userData = await getEconomyData(client, guildId, userId);
+        const result = undoPotionUse(userData, itemId, amount, Date.now());
 
-        const inventory = userData.inventory || {};
-        inventory[itemId] = (Number(inventory[itemId]) || 0) + amount;
-        userData.inventory = inventory;
-
-        const now = Date.now();
-        const durationPerUse = Number(item.effect?.duration) || DEFAULT_LUCK_POTION_DURATION_MS;
-        const removedMs = durationPerUse * amount;
-        const potionExpiries = userData.luckPotionExpiresAt || {};
-        const currentExpiry = Number(potionExpiries[itemId]) || 0;
-        const newExpiry = currentExpiry - removedMs;
-
-        if (newExpiry > now) {
-            potionExpiries[itemId] = newExpiry;
-        } else {
-            delete potionExpiries[itemId];
+        if (!result.ok) {
+            await interaction.editReply({
+                embeds: [warningEmbed('Nothing to Undo', 'This use was already undone.')],
+                components: []
+            });
+            return;
         }
-        userData.luckPotionExpiresAt = potionExpiries;
 
         await setEconomyData(client, guildId, userId, userData);
 
-        const removedSeconds = Math.max(0, Math.round(removedMs / 1000));
+        const removedSeconds = Math.max(0, Math.round(result.removedMs / 1000));
         const embed = successEmbed(
             '↩️ Use Undone',
-            `Returned **${amount} × ${item.name}** to your inventory and removed **${removedSeconds}s** of its effect.`
+            `Returned **${result.refunded} × ${item.name}** to your inventory and removed **${removedSeconds}s** of its effect.`
         );
 
         await interaction.editReply({ embeds: [embed], components: [] });
 
-        logger.info(`[ECONOMY] Use undone`, {
+        logger.info(`[ECONOMY] Use undone via button`, {
             userId,
             guildId,
             itemId,
-            amount,
+            amount: result.refunded,
             removedSeconds
         });
     }

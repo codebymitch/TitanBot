@@ -4,8 +4,8 @@ import { getItemById } from '../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { recordPotionUse, DEFAULT_LUCK_POTION_DURATION_MS } from '../../utils/potionUndo.js';
 
-const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 const UNDO_WINDOW_MS = 5 * 60 * 1000;
 
 export default {
@@ -89,6 +89,8 @@ export default {
         } else {
             delete userData.inventory[itemId];
         }
+
+        recordPotionUse(userData, itemId, requestedAmount, now);
 
         await setEconomyData(client, guildId, userId, userData);
 
