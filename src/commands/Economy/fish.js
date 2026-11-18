@@ -238,17 +238,22 @@ export function resolveActivePotions(inventory, userData, now) {
 
     const bestPotion = getBestActiveLuckPotion(potionExpiries, now);
     let adminPotion = null;
+    let activeIncomeMultiplier = 1;
     for (const [potionId, expiry] of Object.entries(potionExpiries)) {
         if (Number(expiry) > now) {
             const potionItem = getItemById(potionId);
-            if (potionItem?.effect?.admin) {
+            if (!potionItem) continue;
+            if (potionItem.effect?.admin && !adminPotion) {
                 adminPotion = potionItem;
-                break;
+            }
+            const potionIncome = Number(potionItem.effect?.incomeMultiplier) || 1;
+            if (potionIncome > 1) {
+                activeIncomeMultiplier *= potionIncome;
             }
         }
     }
 
-    return { potionExpiries, bestPotion, adminPotion };
+    return { potionExpiries, bestPotion, adminPotion, activeIncomeMultiplier };
 }
 
 // Roll a rarity from a random value biased by the given potion's luck.
@@ -302,7 +307,7 @@ export default {
             const lastFish = userData.lastFish || 0;
             const inventory = userData.inventory || {};
             const bestRod = getBestFishingRod(inventory);
-            const { potionExpiries, bestPotion, adminPotion: activeAdminPotion } =
+            const { potionExpiries, bestPotion, adminPotion: activeAdminPotion, activeIncomeMultiplier } =
                 resolveActivePotions(inventory, userData, now);
             userData.luckPotionExpiresAt = potionExpiries;
 
@@ -341,14 +346,20 @@ export default {
                 const minutesLeft = Math.ceil(
                     (Number(potionExpiries[activePotion.id]) - now) / 60000
                 );
-                if (adminChances) {
-                    // Admin potion: luck sangat besar (mis. 1000% = x10) plus peluang Kitsune tetap.
-                    const adminLuckMultiplier = activePotion.effect.multiplier || 1;
-                    const kitsuneChance = Math.round((adminChances.celestial || 0) * 100);
-                    luckMessage = `\n👑 **${activePotion.name} Active: ${Math.round(adminLuckMultiplier * 100)}% luck & Kitsune ${kitsuneChance}% (${minutesLeft}m left)**`;
-                } else {
-                    const luckMultiplier = activePotion.effect.multiplier || 1;
-                    luckMessage = `\n🧪 **${activePotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
+                const effect = activePotion.effect || {};
+                const bits = [];
+                if (effect.multiplier && effect.multiplier > 1) {
+                    bits.push(`${Math.round(effect.multiplier * 100)}% luck`);
+                }
+                if (effect.incomeMultiplier && effect.incomeMultiplier > 1) {
+                    bits.push(`+${Math.round((effect.incomeMultiplier - 1) * 100)}% income`);
+                }
+                if (adminChances?.celestial) {
+                    bits.push(`Kitsune ${Math.round(adminChances.celestial * 100)}%`);
+                }
+                if (bits.length) {
+                    const prefix = effect.admin ? '👑' : '🧪';
+                    luckMessage = `\n${prefix} **${activePotion.name} Active: ${bits.join(' / ')} (${minutesLeft}m left)**`;
                 }
             }
 
@@ -378,6 +389,11 @@ export default {
                 const luckPct = Math.round((PREMIUM_PLUS_LUCK_MULTIPLIER - 1) * 100);
                 const rarityUpPct = Math.round(PREMIUM_PLUS_RARITY_UP_CHANCE * 100);
                 bonusMessages.push(`👑 **Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
+            }
+            if (activeIncomeMultiplier > 1) {
+                fishingMultiplier *= activeIncomeMultiplier;
+                const incomePct = Math.round((activeIncomeMultiplier - 1) * 100);
+                bonusMessages.push(`👑 **Admin Income Potion: +${incomePct}% income**`);
             }
             const finalEarned = Math.floor(baseEarned * fishingMultiplier);
             const multiplierMessage = bonusMessages.length

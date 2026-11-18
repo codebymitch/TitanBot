@@ -97,12 +97,19 @@ export default {
             : `You used **${item.name}**!`;
         let description = `${usedText} It is now active for **${activeSeconds}s**.`;
         if (item.effect?.admin) {
-            const parts = [`Luck: ${Math.round((item.effect.multiplier || 1) * 100)}%`];
+            const parts = [];
+            if (item.effect.multiplier) {
+                parts.push(`Luck: ${Math.round(item.effect.multiplier * 100)}%`);
+            }
             if (item.effect.incomeMultiplier) {
                 parts.push(`Income: ${Math.round(item.effect.incomeMultiplier * 100)}%`);
             }
-            parts.push(`Kitsune: ${Math.round((item.effect.chances?.celestial || 0) * 100)}%`);
-            description += `\n\n👑 **${parts.join(' / ')}**`;
+            if (item.effect.chances?.celestial) {
+                parts.push(`Kitsune: ${Math.round(item.effect.chances.celestial * 100)}%`);
+            }
+            if (parts.length) {
+                description += `\n\n👑 **${parts.join(' / ')}**`;
+            }
         }
 
         const embed = successEmbed("✨ Item Used", description);

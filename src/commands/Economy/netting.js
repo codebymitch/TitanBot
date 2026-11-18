@@ -54,7 +54,7 @@ export default {
 
             // Potion luck applies per fish, same rule as /fish.
             const now = Date.now();
-            const { potionExpiries, bestPotion, adminPotion } =
+            const { potionExpiries, bestPotion, adminPotion, activeIncomeMultiplier } =
                 resolveActivePotions(inventory, userData, now);
             const activePotion = adminPotion || bestPotion;
             const adminChances = adminPotion?.effect?.chances || null;
@@ -64,13 +64,20 @@ export default {
                 const minutesLeft = Math.ceil(
                     (Number(potionExpiries[activePotion.id]) - now) / 60000
                 );
-                if (adminChances) {
-                    const adminLuckMultiplier = activePotion.effect.multiplier || 1;
-                    const kitsuneChance = Math.round((adminChances.celestial || 0) * 100);
-                    luckMessage = `\n👑 **${activePotion.name} Active: ${Math.round(adminLuckMultiplier * 100)}% luck & Kitsune ${kitsuneChance}% (${minutesLeft}m left)**`;
-                } else {
-                    const luckMultiplier = activePotion.effect.multiplier || 1;
-                    luckMessage = `\n🧪 **${activePotion.name} Active: x${luckMultiplier} luck (${minutesLeft}m left)**`;
+                const effect = activePotion.effect || {};
+                const bits = [];
+                if (effect.multiplier && effect.multiplier > 1) {
+                    bits.push(`${Math.round(effect.multiplier * 100)}% luck`);
+                }
+                if (effect.incomeMultiplier && effect.incomeMultiplier > 1) {
+                    bits.push(`+${Math.round((effect.incomeMultiplier - 1) * 100)}% income`);
+                }
+                if (adminChances?.celestial) {
+                    bits.push(`Kitsune ${Math.round(adminChances.celestial * 100)}%`);
+                }
+                if (bits.length) {
+                    const prefix = effect.admin ? '👑' : '🧪';
+                    luckMessage = `\n${prefix} **${activePotion.name} Active: ${bits.join(' / ')} (${minutesLeft}m left)**`;
                 }
             }
 
@@ -105,6 +112,11 @@ export default {
                 const luckPct = Math.round((PREMIUM_PLUS_LUCK_MULTIPLIER - 1) * 100);
                 const rarityUpPct = Math.round(PREMIUM_PLUS_RARITY_UP_CHANCE * 100);
                 bonusMessages.push(`👑 **Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
+            }
+            if (activeIncomeMultiplier > 1) {
+                fishingMultiplier *= activeIncomeMultiplier;
+                const incomePct = Math.round((activeIncomeMultiplier - 1) * 100);
+                bonusMessages.push(`👑 **Admin Income Potion: +${incomePct}% income**`);
             }
 
             // Tiap ikan di-roll rarity-nya sendiri secara acak (tergantung luck +

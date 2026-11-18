@@ -301,6 +301,20 @@ roleId: null,
             duration: 300000
         }
     },
+    {
+        id: 'admin_potion_income',
+        name: '👑 Admin Potion Income',
+        price: 10,
+        description: 'Admin income potion. Activate with `/use` for 5 minutes of +100000% fishing income. Can be gifted with `/give`.',
+        type: 'consumable',
+        requiredRoleId: '1569773580185764026',
+        effect: {
+            type: 'fishing_luck',
+            admin: true,
+            incomeMultiplier: 1000,
+            duration: 300000
+        }
+    },
 
     {
         id: 'pickaxe',
