@@ -239,21 +239,27 @@ export function resolveActivePotions(inventory, userData, now) {
     const bestPotion = getBestActiveLuckPotion(potionExpiries, now);
     let adminPotion = null;
     let activeIncomeMultiplier = 1;
+    let activeIncomeExpiresAt = 0;
     for (const [potionId, expiry] of Object.entries(potionExpiries)) {
         if (Number(expiry) > now) {
             const potionItem = getItemById(potionId);
             if (!potionItem) continue;
-            if (potionItem.effect?.admin && !adminPotion) {
+            if (
+                potionItem.effect?.admin &&
+                !adminPotion &&
+                (potionItem.effect.multiplier || potionItem.effect.chances)
+            ) {
                 adminPotion = potionItem;
             }
             const potionIncome = Number(potionItem.effect?.incomeMultiplier) || 1;
             if (potionIncome > 1) {
                 activeIncomeMultiplier *= potionIncome;
+                activeIncomeExpiresAt = Math.max(activeIncomeExpiresAt, Number(expiry) || 0);
             }
         }
     }
 
-    return { potionExpiries, bestPotion, adminPotion, activeIncomeMultiplier };
+    return { potionExpiries, bestPotion, adminPotion, activeIncomeMultiplier, activeIncomeExpiresAt };
 }
 
 // Roll a rarity from a random value biased by the given potion's luck.
@@ -307,7 +313,13 @@ export default {
             const lastFish = userData.lastFish || 0;
             const inventory = userData.inventory || {};
             const bestRod = getBestFishingRod(inventory);
-            const { potionExpiries, bestPotion, adminPotion: activeAdminPotion, activeIncomeMultiplier } =
+            const {
+                potionExpiries,
+                bestPotion,
+                adminPotion: activeAdminPotion,
+                activeIncomeMultiplier,
+                activeIncomeExpiresAt,
+            } =
                 resolveActivePotions(inventory, userData, now);
             userData.luckPotionExpiresAt = potionExpiries;
 
@@ -349,7 +361,7 @@ export default {
                 const effect = activePotion.effect || {};
                 const bits = [];
                 if (effect.multiplier && effect.multiplier > 1) {
-                    bits.push(`${Math.round(effect.multiplier * 100)}% luck`);
+                    bits.push(`+${Math.round(effect.multiplier * 100)}% luck`);
                 }
                 if (effect.incomeMultiplier && effect.incomeMultiplier > 1) {
                     bits.push(`+${Math.round((effect.incomeMultiplier - 1) * 100)}% income`);
@@ -358,8 +370,10 @@ export default {
                     bits.push(`Kitsune ${Math.round(adminChances.celestial * 100)}%`);
                 }
                 if (bits.length) {
-                    const prefix = effect.admin ? '👑' : '🧪';
-                    luckMessage = `\n${prefix} **${activePotion.name} Active: ${bits.join(' / ')} (${minutesLeft}m left)**`;
+                    const potionLabel = activePotion.id === 'admin_potion'
+                        ? 'Admin Potion'
+                        : activePotion.name;
+                    luckMessage = `\n**${potionLabel} Active: ${bits.join(', ')} (${minutesLeft}m left)**`;
                 }
             }
 
@@ -376,24 +390,28 @@ export default {
                 const rodMultiplier = bestRod.effect.multiplier || 1;
                 fishingMultiplier *= rodMultiplier;
                 const boostPct = Math.round((rodMultiplier - 1) * 100);
-                bonusMessages.push(`🎣 **${bestRod.name} Bonus: +${boostPct}%**`);
+                const rodName = bestRod.name.replace(/^🎣\s*/, '');
+                bonusMessages.push(`**${rodName} Bonus: +${boostPct}%**`);
             }
             if (hasPremiumRole) {
                 fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
                 const boostPct = Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100);
-                bonusMessages.push(`✨ **Premium Role Bonus: +${boostPct}%**`);
+                bonusMessages.push(`**Premium Role Bonus: +${boostPct}%**`);
             }
             if (hasPremiumPlusRole) {
                 fishingMultiplier *= PREMIUM_PLUS_INCOME_MULTIPLIER;
                 const incomePct = Math.round((PREMIUM_PLUS_INCOME_MULTIPLIER - 1) * 100);
                 const luckPct = Math.round((PREMIUM_PLUS_LUCK_MULTIPLIER - 1) * 100);
                 const rarityUpPct = Math.round(PREMIUM_PLUS_RARITY_UP_CHANCE * 100);
-                bonusMessages.push(`👑 **Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
+                bonusMessages.push(`**Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
             }
             if (activeIncomeMultiplier > 1) {
                 fishingMultiplier *= activeIncomeMultiplier;
                 const incomePct = Math.round((activeIncomeMultiplier - 1) * 100);
-                bonusMessages.push(`👑 **Admin Income Potion: +${incomePct}% income**`);
+                const minutesLeft = activeIncomeExpiresAt > now
+                    ? ` (${Math.ceil((activeIncomeExpiresAt - now) / 60000)}m left)`
+                    : '';
+                bonusMessages.push(`**Admin Income Potion: +${incomePct}% income${minutesLeft}**`);
             }
             const finalEarned = Math.floor(baseEarned * fishingMultiplier);
             const multiplierMessage = bonusMessages.length
