@@ -18,6 +18,7 @@ import {
 const HOUR_MS = 60 * 60 * 1000;
 const MAX_MILESTONES = 25;
 const MAX_LABEL_LENGTH = 100;
+const MAX_LEADERBOARD_ENTRIES = 10;
 
 /**
  * Ready-made milestone ladder for the Manay Society server. Role IDs are left
@@ -562,11 +563,16 @@ async function getVoiceLeaderboard(client, guild) {
   }));
 
   const valid = resolved.filter(Boolean);
-  const totalVoiceMs = valid.reduce((sum, entry) => sum + entry.totalMs, 0);
+
+  const entries = valid
+    .slice(0, MAX_LEADERBOARD_ENTRIES)
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+
+  const totalVoiceMs = entries.reduce((sum, entry) => sum + entry.totalMs, 0);
 
   return {
-    entries: valid.slice(0, 10).map((entry, index) => ({ ...entry, rank: index + 1 })),
-    participantCount: valid.length,
+    entries,
+    participantCount: entries.length,
     totalVoiceMs,
   };
 }
