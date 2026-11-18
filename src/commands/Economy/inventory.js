@@ -56,8 +56,8 @@ export default {
                 .map(([itemId, expiresAt]) => {
                     const item = getShopItem(itemId);
                     if (!item) return null;
-                    const minutesLeft = Math.ceil((Number(expiresAt) - Date.now()) / 60000);
-                    return `🧪 **${item.name}:** Active (${minutesLeft}m left)`;
+                    const expiryTimestamp = Math.floor(Number(expiresAt) / 1000);
+                    return `🧪 **${item.name}:** Active — expires <t:${expiryTimestamp}:F> (<t:${expiryTimestamp}:R>)`;
                 })
                 .filter(Boolean);
             const inventoryDescription = [...inventoryLines, ...potionLines].join("\n")

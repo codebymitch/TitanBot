@@ -95,10 +95,11 @@ export default {
         await setEconomyData(client, guildId, userId, userData);
 
         const activeSeconds = Math.ceil((potionExpiries[itemId] - now) / 1000);
+        const expiryTimestamp = Math.floor(potionExpiries[itemId] / 1000);
         const usedText = requestedAmount > 1
             ? `You used **${requestedAmount} × ${item.name}**!`
             : `You used **${item.name}**!`;
-        let description = `${usedText} It is now active for **${activeSeconds}s**.\n\n*Used too many by mistake? Press the button below within ` +
+        let description = `${usedText} It is now active for **${activeSeconds}s** and expires <t:${expiryTimestamp}:F> (<t:${expiryTimestamp}:R>).\n\n*Used too many by mistake? Press the button below within ` +
             `${Math.round(UNDO_WINDOW_MS / 60000)} minutes to return them.*`;
         if (item.effect?.admin) {
             const parts = [];
