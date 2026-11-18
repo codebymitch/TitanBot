@@ -1,5 +1,5 @@
 // Service worker: offline cache + notification support on mobile.
-const CACHE = 'daily-app-v1';
+const CACHE = 'daily-app-v2';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', (e) => {

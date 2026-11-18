@@ -3,20 +3,125 @@
   'use strict';
 
   // ---------- Storage ----------
-  const KEY = 'daily-app-v1';
-  const defaults = { calorieGoal: 2000, foods: [], habits: [], reminders: [] };
+  // נשמר מקומית בדפדפן, ואם המשתמש מחובר — גם בחשבון שלו (claude.ai) ומסונכרן בין מכשירים.
+  const BASE_KEY = 'daily-app-v1';
+  const defaults = () => ({
+    calorieGoal: 2000, foods: [], habits: [], reminders: [],
+    water: { goal: 8, cupMl: 250, log: {}, remind: { on: false, every: 60, from: '08:00', to: '22:00', last: 0 } },
+  });
+  let localKey = BASE_KEY;
   let state = load();
 
+  function normalize(s) {
+    const d = defaults();
+    const out = Object.assign(d, s || {});
+    out.water = Object.assign(defaults().water, out.water || {});
+    out.water.remind = Object.assign(defaults().water.remind, out.water.remind || {});
+    return out;
+  }
   function load() {
     try {
-      const raw = localStorage.getItem(KEY);
-      return raw ? Object.assign({}, defaults, JSON.parse(raw)) : structuredClone(defaults);
+      const raw = localStorage.getItem(localKey) || (localKey !== BASE_KEY ? localStorage.getItem(BASE_KEY) : null);
+      return normalize(raw ? JSON.parse(raw) : null);
     } catch (e) {
-      return structuredClone(defaults);
+      return normalize(null);
     }
   }
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+    try { localStorage.setItem(localKey, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
+    queueCloudSave();
+  }
+
+  // ---------- Account / cloud sync ----------
+  const account = { status: 'loading', me: null, db: null, ref: null, lastSync: 0, error: '' };
+  let cloudTimer = null, cloudWriting = false, cloudDirty = false, lastCloudJson = '';
+
+  function queueCloudSave() {
+    if (!account.ref) return;
+    cloudDirty = true;
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(flushCloud, 800);
+  }
+  async function flushCloud() {
+    if (!account.ref || cloudWriting || !cloudDirty) return;
+    cloudWriting = true;
+    cloudDirty = false;
+    const json = JSON.stringify(state);
+    try {
+      if (json !== lastCloudJson) {
+        await account.ref.set({ json, updatedAt: Date.now() });
+        lastCloudJson = json;
+        account.lastSync = Date.now();
+        account.error = '';
+      }
+    } catch (e) {
+      account.error = e && e.code === 'quota_exceeded' ? 'נגמר המקום בחשבון' : 'השמירה בחשבון נכשלה, ננסה שוב';
+      cloudDirty = true;
+      setTimeout(flushCloud, 5000);
+    } finally {
+      cloudWriting = false;
+      if (cloudDirty) queueCloudSave();
+      if (currentRoute() === 'account') render();
+    }
+  }
+
+  async function initAccount() {
+    // window.claude מוזרק ע״י claude.ai אחרי הטעינה — מחכים לו עד 10 שניות
+    let c = window.claude;
+    for (let i = 0; i < 40 && !(c && typeof c.use === 'function'); i++) {
+      await new Promise((r) => setTimeout(r, 250));
+      c = window.claude;
+    }
+    if (!c || typeof c.use !== 'function') { account.status = 'offline'; refreshAccountUI(); return; }
+    const [user, db] = await Promise.all([c.use('user').catch(() => null), c.use('db').catch(() => null)]);
+    const me = user ? await user.me() : null;
+    account.me = me;
+    if (!db || !me || !me.id) { account.status = 'guest'; refreshAccountUI(); return; }
+    account.db = db;
+    account.ref = db.doc('data/users/' + me.id + '/state');
+    localKey = BASE_KEY + ':' + me.id;
+
+    let loaded = false;
+    const timeout = setTimeout(() => { if (!loaded) { account.status = 'error'; account.error = 'החיבור לחשבון איטי — העבודה נשמרת מקומית'; refreshAccountUI(); } }, 10000);
+    try {
+      const snap = await account.ref.get();
+      loaded = true;
+      clearTimeout(timeout);
+      const remote = snap.exists ? snap.data() : null;
+      if (remote && remote.json) {
+        lastCloudJson = remote.json;
+        state = normalize(JSON.parse(remote.json));
+        try { localStorage.setItem(localKey, remote.json); } catch (e) { /* ignore */ }
+      } else {
+        save(); // משתמש חדש: מעלים את מה שכבר נשמר בדפדפן
+      }
+      account.status = 'connected';
+      account.lastSync = Date.now();
+      account.ref.onSnapshot((s) => {
+        const d = s.exists ? s.data() : null;
+        if (!d || !d.json || d.json === lastCloudJson || cloudDirty || cloudWriting) return;
+        lastCloudJson = d.json;
+        state = normalize(JSON.parse(d.json));
+        try { localStorage.setItem(localKey, d.json); } catch (e) { /* ignore */ }
+        account.lastSync = Date.now();
+        render();
+      }, () => {});
+    } catch (e) {
+      loaded = true;
+      clearTimeout(timeout);
+      account.status = 'error';
+      account.error = 'לא הצלחנו להתחבר לחשבון — העבודה נשמרת מקומית';
+    }
+    render();
+  }
+
+  function updateChip() {
+    const chip = $('#accountChip');
+    if (chip) chip.textContent = account.status === 'connected' ? '☁️ מסונכרן' : account.status === 'loading' ? '…' : '📱 מקומי';
+  }
+  function refreshAccountUI() {
+    updateChip();
+    if (currentRoute() === 'account') render();
   }
 
   // ---------- Helpers ----------
@@ -56,7 +161,9 @@
     '': { title: 'היום שלי', render: renderHome },
     calories: { title: '🔥 קלוריות', render: renderCalories },
     habits: { title: '✅ הרגלים', render: renderHabits },
+    water: { title: '💧 שתיית מים', render: renderWater },
     reminders: { title: '⏰ תזכורות', render: renderReminders },
+    account: { title: '👤 חשבון', render: renderAccount },
   };
   function currentRoute() {
     const r = location.hash.replace(/^#\/?/, '');
@@ -68,9 +175,19 @@
     $('#backBtn').hidden = r === '';
     document.querySelectorAll('#tabbar a').forEach((a) => a.classList.toggle('active', a.dataset.route === r));
     routes[r].render();
+    closeDrawer();
+    updateChip();
   }
   window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
   $('#backBtn').addEventListener('click', () => { location.hash = '#/'; });
+
+  // ---------- Side menu (☰) ----------
+  function openDrawer() { $('#drawer').classList.add('open'); $('#scrim').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); }
+  function closeDrawer() { $('#drawer').classList.remove('open'); $('#scrim').hidden = true; $('#menuBtn').setAttribute('aria-expanded', 'false'); }
+  $('#menuBtn').addEventListener('click', () => ($('#drawer').classList.contains('open') ? closeDrawer() : openDrawer()));
+  $('#scrim').addEventListener('click', closeDrawer);
+  $('#drawer').addEventListener('click', (e) => { if (e.target.closest('a')) closeDrawer(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
 
   // ---------- Home ----------
   function renderHome() {
@@ -94,6 +211,11 @@
         <a class="menu-card c-hab" href="#/habits">
           <div class="emoji">✅</div>
           <div><h2>הרגלים</h2><p>${state.habits.length ? `${doneHabits} מתוך ${state.habits.length} הושלמו היום` : 'עוד לא הוספת הרגלים'}</p></div>
+          <span class="arrow">‹</span>
+        </a>
+        <a class="menu-card c-wat" href="#/water">
+          <div class="emoji">💧</div>
+          <div><h2>שתיית מים</h2><p>${waterToday()} מתוך ${state.water.goal} כוסות היום${state.water.remind.on ? ' · 🔔 תזכורת פעילה' : ''}</p></div>
           <span class="arrow">‹</span>
         </a>
         <a class="menu-card c-rem" href="#/reminders">
@@ -269,6 +391,157 @@
     });
   }
 
+  // ---------- Water ----------
+  const waterToday = () => state.water.log[dayKey()] || 0;
+  const toMin = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + (m || 0); };
+
+  function renderWater() {
+    const w = state.water;
+    const today = dayKey();
+    const n = waterToday();
+    const pct = Math.min(n / (w.goal || 1), 1);
+    const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
+    const max = Math.max(w.goal, ...week.map((d) => w.log[d] || 0), 1);
+    const canNotify = 'Notification' in window;
+
+    view.innerHTML = `
+      <div class="card water-hero">
+        <div class="glass" aria-hidden="true"><div class="fill" style="height:${pct * 100}%"></div><span>${Math.round(pct * 100)}%</span></div>
+        <div class="water-info">
+          <div class="big">${n} <small>/ ${w.goal} כוסות</small></div>
+          <div class="muted">${((n * w.cupMl) / 1000).toFixed(2).replace(/\.?0+$/, '')} ליטר מתוך ${((w.goal * w.cupMl) / 1000).toFixed(2).replace(/\.?0+$/, '')}</div>
+          ${n >= w.goal ? '<div class="good">הגעת ליעד היום! 🎉</div>' : `<div class="muted">נשארו ${w.goal - n} כוסות</div>`}
+          <div class="row" style="margin-top:12px">
+            <button class="btn water-btn" data-act="water-add">+ כוס מים</button>
+            <button class="btn ghost" data-act="water-sub" style="flex:0 0 52px" aria-label="הורדת כוס" ${n ? '' : 'disabled'}>−</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🔔 תזכורת לשתות</h3>
+        <label class="switch-row">
+          <span>תזכורת פעילה</span>
+          <input type="checkbox" id="wRemOn" ${w.remind.on ? 'checked' : ''}>
+        </label>
+        <div class="row" style="margin-top:10px">
+          <label class="field"><span>כל</span>
+            <select id="wEvery">${[30, 45, 60, 90, 120, 180].map((m) => `<option value="${m}" ${w.remind.every === m ? 'selected' : ''}>${m < 60 ? m + ' דקות' : m === 60 ? 'שעה' : m / 60 + ' שעות'}</option>`).join('')}</select>
+          </label>
+          <label class="field"><span>משעה</span><input type="time" id="wFrom" value="${w.remind.from}"></label>
+          <label class="field"><span>עד שעה</span><input type="time" id="wTo" value="${w.remind.to}"></label>
+        </div>
+        <p class="muted" style="margin:10px 0 0;font-size:.85rem">התזכורת קופצת כשהאפליקציה פתוחה, ונעצרת כשמגיעים ליעד היומי. כל כוס שמוסיפים מאפסת את הטיימר.</p>
+        ${canNotify && Notification.permission === 'default' ? '<button class="btn ghost small" style="margin-top:10px" data-act="ask-notify">🔔 לאפשר התראות</button>' : ''}
+      </div>
+
+      <div class="card">
+        <h3>השבוע</h3>
+        <div class="bars">${week.map((d) => {
+          const v = w.log[d] || 0;
+          return `<div class="bar-col"><span class="v">${v || ''}</span><div class="bar ${v >= w.goal ? 'hit' : ''}" style="height:${(v / max) * 100}%"></div><span class="d">${DAYS[parseDay(d).getDay()]}</span></div>`;
+        }).join('')}</div>
+      </div>
+
+      <div class="card">
+        <h3>הגדרות</h3>
+        <form id="waterForm" class="row">
+          <label class="field"><span>יעד יומי (כוסות)</span><input type="number" name="goal" min="1" max="30" value="${w.goal}" inputmode="numeric"></label>
+          <label class="field"><span>גודל כוס (מ״ל)</span><input type="number" name="cup" min="50" max="1000" step="50" value="${w.cupMl}" inputmode="numeric"></label>
+          <button class="btn ghost" style="align-self:end">שמירה</button>
+        </form>
+      </div>`;
+
+    const r = w.remind;
+    $('#wRemOn').addEventListener('change', async (e) => {
+      r.on = e.target.checked;
+      r.last = Date.now();
+      save();
+      if (r.on && 'Notification' in window && Notification.permission === 'default') {
+        try { await Notification.requestPermission(); } catch (err) { /* ignore */ }
+      }
+      toast(r.on ? `תזכורת מים כל ${$('#wEvery').selectedOptions[0].text}` : 'תזכורת המים כובתה');
+      renderWater();
+    });
+    $('#wEvery').addEventListener('change', (e) => { r.every = parseInt(e.target.value, 10); r.last = Date.now(); save(); });
+    $('#wFrom').addEventListener('change', (e) => { if (e.target.value) { r.from = e.target.value; save(); } });
+    $('#wTo').addEventListener('change', (e) => { if (e.target.value) { r.to = e.target.value; save(); } });
+    $('#waterForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const g = parseInt(e.target.goal.value, 10), c = parseInt(e.target.cup.value, 10);
+      if (g > 0) w.goal = g;
+      if (c > 0) w.cupMl = c;
+      save(); renderWater(); toast('ההגדרות נשמרו');
+    });
+  }
+
+  function checkWater() {
+    const r = state.water.remind;
+    if (!r.on) return;
+    const now = new Date();
+    const mins = now.getHours() * 60 + now.getMinutes();
+    const from = toMin(r.from), to = toMin(r.to);
+    const inWindow = from <= to ? mins >= from && mins <= to : mins >= from || mins <= to;
+    if (!inWindow || waterToday() >= state.water.goal) return;
+    if (Date.now() - (r.last || 0) < r.every * 60000) return;
+    r.last = Date.now();
+    save();
+    notify('💧 זמן לשתות מים', `שתית ${waterToday()} מתוך ${state.water.goal} כוסות היום`, 'water');
+  }
+
+  // ---------- Account ----------
+  function renderAccount() {
+    const me = account.me;
+    const name = (me && me.name) || '';
+    let body;
+    if (account.status === 'loading') {
+      body = '<p class="empty">מתחבר לחשבון…</p>';
+    } else if (account.status === 'connected') {
+      body = `
+        <div class="profile">
+          <img alt="" class="avatar" id="accAvatar">
+          <div>
+            <div class="title" id="accName"></div>
+            <div class="sub ok">☁️ מחובר/ת — הכל נשמר בחשבון שלך</div>
+          </div>
+        </div>
+        <ul class="facts">
+          <li>הקלוריות, ההרגלים, המים והתזכורות נשמרים בחשבון שלך ומסונכרנים בין כל המכשירים.</li>
+          <li>הנתונים פרטיים — רק את/ה רואה אותם.</li>
+          <li>כל מי שפותח את האפליקציה מהחשבון שלו מקבל נתונים נפרדים משלו.</li>
+        </ul>
+        <div class="sync-line muted">${account.error ? `<span style="color:var(--danger)">${esc(account.error)}</span>` : `סונכרן לאחרונה: ${new Date(account.lastSync).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`}</div>
+        <button class="btn ghost" data-act="sync-now" style="margin-top:10px;width:100%">🔄 סנכרון עכשיו</button>`;
+    } else {
+      body = `
+        <div class="profile">
+          <div class="avatar placeholder">👤</div>
+          <div>
+            <div class="title">לא מחובר/ת</div>
+            <div class="sub">📱 הנתונים נשמרים רק בדפדפן הזה</div>
+          </div>
+        </div>
+        <p>כדי שהכל יישמר בחשבון ויהיה זמין מכל מכשיר — יש להתחבר ל־<strong>claude.ai</strong> ולפתוח את האפליקציה מהקישור שלה. החיבור קורה אוטומטית, בלי סיסמה נוספת.</p>
+        <p class="muted" style="font-size:.9rem">אין לך משתמש? אפשר לפתוח חשבון חינמי ב־claude.ai, ואז לפתוח שוב את הקישור.</p>
+        ${account.error ? `<p style="color:var(--danger)">${esc(account.error)}</p>` : ''}
+        <a class="btn" style="display:block;text-align:center;text-decoration:none" href="https://claude.ai/login" target="_blank" rel="noopener">התחברות / הרשמה ל־claude.ai</a>`;
+    }
+    view.innerHTML = `<div class="card">${body}</div>
+      <div class="card">
+        <h3>הנתונים שלי</h3>
+        <div class="stats">
+          <div><span class="muted">מאכלים שנרשמו</span><strong>${state.foods.length}</strong></div>
+          <div><span class="muted">הרגלים</span><strong>${state.habits.length}</strong></div>
+          <div><span class="muted">תזכורות</span><strong>${state.reminders.length}</strong></div>
+          <div><span class="muted">ימים עם מעקב מים</span><strong>${Object.keys(state.water.log).length}</strong></div>
+        </div>
+      </div>`;
+    const n = $('#accName');
+    if (n) n.textContent = name || 'המשתמש שלי';
+    const av = $('#accAvatar');
+    if (av && me) av.src = me.avatarUrl;
+  }
+
   // ---------- Reminders ----------
   const REPEAT = { none: 'חד פעמי', daily: 'כל יום', weekly: 'כל שבוע' };
 
@@ -345,18 +618,22 @@
     return at;
   }
 
-  function fireReminder(r) {
-    const body = fmtDateTime(r.at);
+  function notify(title, body, tag) {
     let shown = false;
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try { new Notification('⏰ ' + r.title, { body, icon: 'icon.svg', tag: r.id }); shown = true; } catch (e) { /* mobile requires SW */ }
-      if (!shown && navigator.serviceWorker) {
-        navigator.serviceWorker.ready.then((reg) => reg.showNotification('⏰ ' + r.title, { body, icon: 'icon.svg', tag: r.id })).catch(() => {});
-        shown = true;
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification(title, { body, icon: 'icon.svg', tag }); shown = true; } catch (e) { /* mobile requires SW */ }
+        if (!shown && navigator.serviceWorker) {
+          navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, { body, icon: 'icon.svg', tag })).catch(() => {});
+        }
       }
-    }
-    toast('⏰ ' + r.title);
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    } catch (e) { /* notifications unavailable */ }
+    toast(title);
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) { /* ignore */ }
+  }
+
+  function fireReminder(r) {
+    notify('⏰ ' + r.title, fmtDateTime(r.at), r.id);
   }
 
   function checkReminders() {
@@ -370,6 +647,7 @@
       changed = true;
     });
     if (changed) { save(); if (currentRoute() === 'reminders' || currentRoute() === '') render(); }
+    checkWater();
   }
 
   // ---------- Global click actions ----------
@@ -406,7 +684,24 @@
         state.reminders = state.reminders.filter((r) => !r.done); save(); renderReminders(); break;
       case 'ask-notify':
         try { await Notification.requestPermission(); } catch (err) { /* ignore */ }
-        renderReminders();
+        render();
+        break;
+      case 'water-add': {
+        const t = dayKey();
+        state.water.log[t] = (state.water.log[t] || 0) + 1;
+        state.water.remind.last = Date.now();
+        save(); renderWater();
+        toast(state.water.log[t] === state.water.goal ? 'הגעת ליעד המים! 🎉' : '💧 +1 כוס');
+        break;
+      }
+      case 'water-sub': {
+        const t = dayKey();
+        state.water.log[t] = Math.max(0, (state.water.log[t] || 0) - 1);
+        save(); renderWater();
+        break;
+      }
+      case 'sync-now':
+        cloudDirty = true; lastCloudJson = ''; await flushCloud(); toast(account.error || 'סונכרן ☁️');
         break;
     }
   });
@@ -416,6 +711,7 @@
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
   render();
+  initAccount();
   checkReminders();
   setInterval(checkReminders, 20000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkReminders(); render(); } });

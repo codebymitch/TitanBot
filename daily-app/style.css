@@ -205,3 +205,57 @@ input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: 1
   transition: .25s; max-width: calc(100% - 32px); text-align: center; z-index: 20;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Menu (☰) + drawer */
+.chip-status { font-size: .75rem; color: var(--muted); background: var(--card); border: 1px solid var(--border); padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+.scrim { position: fixed; inset: 0; background: rgba(10, 12, 30, .35); z-index: 30; }
+.drawer {
+  position: fixed; top: 0; bottom: 0; left: 0; width: min(280px, 80vw); z-index: 31;
+  background: var(--card); border-right: 1px solid var(--border);
+  transform: translateX(-100%); transition: transform .22s ease;
+  padding: 18px 12px; display: flex; flex-direction: column; gap: 4px;
+}
+.drawer.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0, 0, 0, .18); }
+.drawer-head { font-weight: 700; font-size: 1.1rem; padding: 4px 10px 14px; }
+.drawer-item {
+  display: flex; align-items: center; gap: 10px; padding: 12px 10px; border-radius: 12px;
+  text-decoration: none; color: var(--text); font-size: 1.05rem;
+}
+.drawer-item:hover, .drawer-item:focus-visible { background: var(--primary-soft); }
+
+/* Water */
+:root { --wat: #0284c7; --wat-soft: #e0f2fe; }
+@media (prefers-color-scheme: dark) { :root { --wat: #38bdf8; --wat-soft: #0f2f42; } }
+.c-wat .emoji { background: var(--wat-soft); }
+.water-hero { display: flex; gap: 18px; align-items: center; }
+.glass {
+  width: 84px; height: 130px; flex: none; position: relative; overflow: hidden;
+  border: 3px solid var(--wat); border-top-width: 0; border-radius: 6px 6px 22px 22px;
+  background: var(--bg); display: grid; place-items: center;
+}
+.glass .fill { position: absolute; bottom: 0; left: 0; right: 0; background: var(--wat); opacity: .8; transition: height .4s; }
+.glass span { position: relative; font-weight: 700; }
+.water-info { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.water-info .big { font-size: 2rem; font-weight: 800; color: var(--wat); }
+.water-info .big small { font-size: .95rem; color: var(--muted); font-weight: 500; }
+.good { color: var(--hab); font-weight: 600; }
+.water-btn { background: var(--wat); }
+.btn:disabled { opacity: .45; cursor: default; }
+.switch-row { display: flex; align-items: center; justify-content: space-between; font-weight: 600; }
+.switch-row input { width: 22px; height: 22px; accent-color: var(--wat); }
+.field { display: grid; gap: 4px; font-size: .82rem; color: var(--muted); }
+.bars { display: flex; gap: 8px; align-items: flex-end; height: 130px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.bar-col .bar { width: 100%; max-width: 28px; min-height: 3px; border-radius: 6px 6px 3px 3px; background: var(--wat-soft); }
+.bar-col .bar.hit { background: var(--wat); }
+.bar-col .v, .bar-col .d { font-size: .72rem; color: var(--muted); }
+
+/* Account */
+.profile { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; }
+.avatar.placeholder { display: grid; place-items: center; background: var(--primary-soft); font-size: 1.6rem; }
+.profile .title { font-weight: 700; font-size: 1.1rem; }
+.profile .sub { color: var(--muted); font-size: .88rem; }
+.profile .sub.ok { color: var(--hab); }
+.facts { margin: 0 0 10px; padding-inline-start: 18px; display: grid; gap: 6px; font-size: .92rem; }
+.tabbar a { padding: 4px 8px; }

@@ -13,7 +13,15 @@
     <button id="backBtn" class="icon-btn" aria-label="חזרה" hidden>→</button>
     <h1 id="pageTitle">היום שלי</h1>
     <span class="spacer"></span>
+    <span id="accountChip" class="chip-status">📱 מקומי</span>
+    <button id="menuBtn" class="icon-btn" aria-label="תפריט" aria-expanded="false" aria-controls="drawer">☰</button>
   </header>
+
+  <div id="scrim" class="scrim" hidden></div>
+  <aside id="drawer" class="drawer" aria-label="תפריט">
+    <div class="drawer-head">תפריט</div>
+    <a href="#/account" class="drawer-item">👤 <span>חשבון</span></a>
+  </aside>
 
   <main id="view"></main>
 
@@ -21,6 +29,7 @@
     <a href="#/" data-route="">🏠<span>ראשי</span></a>
     <a href="#/calories" data-route="calories">🔥<span>קלוריות</span></a>
     <a href="#/habits" data-route="habits">✅<span>הרגלים</span></a>
+    <a href="#/water" data-route="water">💧<span>מים</span></a>
     <a href="#/reminders" data-route="reminders">⏰<span>תזכורות</span></a>
   </nav>
 
