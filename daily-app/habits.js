@@ -414,5 +414,20 @@ window.HabitsModule = function (ctx) {
   }
   view.addEventListener('click', onAction);
 
-  return { render, homeSummary, check, close: () => sheet.close() };
+  // ---------- API ללוח השנה ----------
+  function dueOn(d) {
+    return all().filter((h) => !h.archived && d >= h.createdAt && (h.schedule.kind === 'weekly' ? isDone(h, d) || weekCount(h, d) < h.schedule.perWeek : scheduledOn(h, d)));
+  }
+  function dayStatus(d) {
+    const list = dueOn(d);
+    return { total: list.length, done: list.filter((h) => isDone(h, d)).length };
+  }
+  function toggleOn(id, d) {
+    const h = find(id);
+    if (!h || d > dayKey()) return;
+    setVal(h, d, isDone(h, d) ? 0 : h.target);
+    if (d < h.createdAt) h.createdAt = d;
+    save();
+  }
+  return { render, homeSummary, check, close: () => sheet.close(), dueOn, dayStatus, toggleOn, isDone, val, open: openDetail };
 };

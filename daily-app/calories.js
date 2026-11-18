@@ -706,5 +706,6 @@ window.CaloriesModule = function (ctx) {
   }
   view.addEventListener('click', onAction);
 
-  return { render, homeSummary, close: closeSheet };
+  const dayTotal = (d) => sum(entriesOf(d)).kcal;
+  return { render, homeSummary, close: closeSheet, dayTotal, goal: () => goals().kcal };
 };

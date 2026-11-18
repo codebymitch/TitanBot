@@ -439,5 +439,39 @@ window.RemindersModule = function (ctx) {
   }
   view.addEventListener('click', onAction);
 
-  return { render, homeSummary, check, close: () => sheet.close() };
+  // ---------- API ללוח השנה ----------
+  // כל המופעים בטווח: מופעים עתידיים של תזכורות חוזרות, תזכורות שבוצעו וביצועים קודמים מההיסטוריה
+  function occurrences(from, to) {
+    const out = [];
+    all().forEach((r) => {
+      r.history.forEach((ts) => { if (ts >= from && ts < to && r.repeat !== 'none') out.push({ r, ts, done: true, past: true }); });
+      if (r.done) {
+        const ts = r.repeat === 'none' ? r.at : (r.completedAt || r.at);
+        if (ts >= from && ts < to && r.repeat === 'none') out.push({ r, ts, done: true });
+        return;
+      }
+      let t = due(r), first = true, guard = 0;
+      while (t && t < to && guard++ < 1000) {
+        if (r.endDate && dayKey(new Date(t)) > r.endDate) break;
+        if (t >= from) out.push({ r, ts: t, done: false, next: first, over: first && t <= Date.now() });
+        first = false;
+        t = nextAfter(r, t === due(r) ? r.at : t);
+        if (r.repeat === 'none') break;
+      }
+    });
+    return out.sort((a, b) => a.ts - b.ts);
+  }
+  function openNew(date, time) {
+    sh = { id: null, draft: Object.assign(draftFrom(null), date ? { date } : {}, time ? { time } : {}) };
+    sheet.open();
+    drawEdit();
+  }
+  function toggle(id) {
+    const r = S().reminders.find((x) => x.id === id);
+    if (!r) return;
+    if (r.done) { r.done = false; r.completedAt = null; r.notified = due(r) <= Date.now(); } else complete(r);
+    save();
+  }
+
+  return { render, homeSummary, check, close: () => sheet.close(), occurrences, openEdit, openNew, toggle, LISTS, repeatText, timeOf };
 };

@@ -250,6 +250,8 @@
   const cal = window.CaloriesModule(modCtx);
   const habitsMod = window.HabitsModule(modCtx);
   const remMod = window.RemindersModule(modCtx);
+  Object.assign(modCtx, { rem: remMod, habits: habitsMod, cal });
+  const calendarMod = window.CalendarModule(modCtx);
 
   // ---------- Router ----------
   const view = $('#view');
@@ -259,6 +261,7 @@
     habits: { title: '✅ הרגלים', render: () => habitsMod.render() },
     water: { title: '💧 שתיית מים', render: renderWater },
     reminders: { title: '⏰ תזכורות', render: () => remMod.render() },
+    calendar: { title: '📅 לוח שנה', render: () => calendarMod.render() },
     account: { title: '👤 חשבון', render: renderAccount },
   };
   function currentRoute() {
@@ -308,6 +311,11 @@
         <a class="menu-card c-wat" href="#/water">
           <div class="emoji">💧</div>
           <div><h2>שתיית מים</h2><p>${waterToday()} מתוך ${state.water.goal} כוסות היום${state.water.remind.on ? ' · 🔔 תזכורת פעילה' : ''}</p></div>
+          <span class="arrow">‹</span>
+        </a>
+        <a class="menu-card c-calnd" href="#/calendar">
+          <div class="emoji">📅</div>
+          <div><h2>לוח שנה</h2><p>${calendarMod.homeSummary()}</p></div>
           <span class="arrow">‹</span>
         </a>
         <a class="menu-card c-rem" href="#/reminders">
