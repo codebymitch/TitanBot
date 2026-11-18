@@ -26,6 +26,7 @@ export const GLOBAL_BLOCKED_SUBCOMMAND_GROUPS = new Set([
 export const COMMAND_BLOCKED_SUBCOMMANDS = {
   birthday: new Set(['setchannel']),
   report: new Set(['setchannel']),
+  welcome: new Set(['goodbye']),
 };
 
 function collectSubcommandNames(commandJson) {
