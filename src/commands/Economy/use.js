@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { getItemById } from '../../config/shop/items.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
@@ -6,6 +6,7 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
+const UNDO_WINDOW_MS = 5 * 60 * 1000;
 
 export default {
     data: new SlashCommandBuilder()
@@ -95,7 +96,8 @@ export default {
         const usedText = requestedAmount > 1
             ? `You used **${requestedAmount} × ${item.name}**!`
             : `You used **${item.name}**!`;
-        let description = `${usedText} It is now active for **${activeSeconds}s**.`;
+        let description = `${usedText} It is now active for **${activeSeconds}s**.\n\n*Used too many by mistake? Press the button below within ` +
+            `${Math.round(UNDO_WINDOW_MS / 60000)} minutes to return them.*`;
         if (item.effect?.admin) {
             const parts = [];
             if (item.effect.multiplier) {
@@ -114,6 +116,19 @@ export default {
 
         const embed = successEmbed("✨ Item Used", description);
 
-        await InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: [MessageFlags.Ephemeral] });
+        const undoExpiresAt = now + UNDO_WINDOW_MS;
+        const undoRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`use_undo:${userId}:${itemId}:${requestedAmount}:${undoExpiresAt}`)
+                .setLabel('Undo Use')
+                .setEmoji('↩️')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [embed],
+            components: [undoRow],
+            flags: [MessageFlags.Ephemeral]
+        });
     }, { command: 'use' })
 };
