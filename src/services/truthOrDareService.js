@@ -1,4 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { createEmbed } from '../utils/embeds.js';
 
 // Kumpulan pertanyaan Truth (pertanyaan jujur) — aman & cocok untuk komunitas umum.
 export const TRUTH_PROMPTS = [

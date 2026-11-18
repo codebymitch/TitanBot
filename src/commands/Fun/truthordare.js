@@ -26,24 +26,23 @@ export default {
   abuseProtection: { maxAttempts: 20, windowMs: 60_000 },
 
   async execute(interaction) {
-    const type = (interaction.options.getString('type') || 'random').toLowerCase();
+    try {
+      const type = (interaction.options.getString('type') || 'random').toLowerCase();
 
-    const { category, prompt } = pickTruthOrDare(type);
+      const { category, prompt } = pickTruthOrDare(type);
 
-    const embed = buildTruthOrDareEmbed({ category, prompt, requestedBy: interaction.user });
-    const components = buildTruthOrDareComponents();
+      const embed = buildTruthOrDareEmbed({ category, prompt, requestedBy: interaction.user });
+      const components = buildTruthOrDareComponents();
 
-    const replyOptions = { embeds: [embed], components };
+      await InteractionHelper.safeDefer(interaction);
+      await InteractionHelper.safeEditReply(interaction, { embeds: [embed], components });
 
-    const deferred = await InteractionHelper.safeDefer(interaction);
-    if (deferred) {
-      await InteractionHelper.safeEditReply(interaction, replyOptions);
-    } else {
-      await InteractionHelper.safeReply(interaction, replyOptions);
+      logger.debug(
+        `Truth or Dare executed by user ${interaction.user.id} in guild ${interaction.guildId} (type=${type})`,
+      );
+    } catch (error) {
+      logger.error('Truth or Dare command error:', error);
+      throw error;
     }
-
-    logger.debug(
-      `Truth or Dare executed by user ${interaction.user.id} in guild ${interaction.guildId} (type=${type})`,
-    );
   },
 };
