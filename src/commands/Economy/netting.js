@@ -54,7 +54,13 @@ export default {
 
             // Potion luck applies per fish, same rule as /fish.
             const now = Date.now();
-            const { potionExpiries, bestPotion, adminPotion, activeIncomeMultiplier } =
+            const {
+                potionExpiries,
+                bestPotion,
+                adminPotion,
+                activeIncomeMultiplier,
+                activeIncomeExpiresAt,
+            } =
                 resolveActivePotions(inventory, userData, now);
             const activePotion = adminPotion || bestPotion;
             const adminChances = adminPotion?.effect?.chances || null;
@@ -67,7 +73,7 @@ export default {
                 const effect = activePotion.effect || {};
                 const bits = [];
                 if (effect.multiplier && effect.multiplier > 1) {
-                    bits.push(`${Math.round(effect.multiplier * 100)}% luck`);
+                    bits.push(`+${Math.round(effect.multiplier * 100)}% luck`);
                 }
                 if (effect.incomeMultiplier && effect.incomeMultiplier > 1) {
                     bits.push(`+${Math.round((effect.incomeMultiplier - 1) * 100)}% income`);
@@ -76,8 +82,10 @@ export default {
                     bits.push(`Kitsune ${Math.round(adminChances.celestial * 100)}%`);
                 }
                 if (bits.length) {
-                    const prefix = effect.admin ? '👑' : '🧪';
-                    luckMessage = `\n${prefix} **${activePotion.name} Active: ${bits.join(' / ')} (${minutesLeft}m left)**`;
+                    const potionLabel = activePotion.id === 'admin_potion'
+                        ? 'Admin Potion'
+                        : activePotion.name.replace(/^🧪\s*/, '');
+                    luckMessage = `\n**${potionLabel} Active: ${bits.join(', ')} (${minutesLeft}m left)**`;
                 }
             }
 
@@ -100,23 +108,27 @@ export default {
             const netMultiplier = Number(bestNet.effect?.multiplier) || 1;
             if (netMultiplier > 1) {
                 fishingMultiplier *= netMultiplier;
-                bonusMessages.push(`🕸️ **${bestNet.name} Bonus: +${Math.round((netMultiplier - 1) * 100)}%**`);
+                const netName = bestNet.name.replace(/^🕸️\s*/, '');
+                bonusMessages.push(`**${netName} Bonus: +${Math.round((netMultiplier - 1) * 100)}%**`);
             }
             if (hasPremiumRole) {
                 fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
-                bonusMessages.push(`✨ **Premium Role Bonus: +${Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100)}%**`);
+                bonusMessages.push(`**Premium Role Bonus: +${Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100)}%**`);
             }
             if (hasPremiumPlusRole) {
                 fishingMultiplier *= PREMIUM_PLUS_INCOME_MULTIPLIER;
                 const incomePct = Math.round((PREMIUM_PLUS_INCOME_MULTIPLIER - 1) * 100);
                 const luckPct = Math.round((PREMIUM_PLUS_LUCK_MULTIPLIER - 1) * 100);
                 const rarityUpPct = Math.round(PREMIUM_PLUS_RARITY_UP_CHANCE * 100);
-                bonusMessages.push(`👑 **Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
+                bonusMessages.push(`**Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
             }
             if (activeIncomeMultiplier > 1) {
                 fishingMultiplier *= activeIncomeMultiplier;
                 const incomePct = Math.round((activeIncomeMultiplier - 1) * 100);
-                bonusMessages.push(`👑 **Admin Income Potion: +${incomePct}% income**`);
+                const minutesLeft = activeIncomeExpiresAt > now
+                    ? ` (${Math.ceil((activeIncomeExpiresAt - now) / 60000)}m left)`
+                    : '';
+                bonusMessages.push(`**Admin Income Potion: +${incomePct}% income${minutesLeft}**`);
             }
 
             // Tiap ikan di-roll rarity-nya sendiri secara acak (tergantung luck +
