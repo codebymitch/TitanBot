@@ -185,6 +185,11 @@ async function handleStreakActivity(message, client) {
       return;
     }
 
+    const guildConfig = await getGuildConfig(client, message.guild.id);
+    if (guildConfig?.streak?.enabled !== true) {
+      return;
+    }
+
     const result = await StreakService.recordActivity(client, message.guild.id, message.author.id, {
       timestamp: message.createdTimestamp,
     });
@@ -201,7 +206,18 @@ async function handleStreakActivity(message, client) {
       thumbnail: message.author.displayAvatarURL({ dynamic: true, size: 128 }),
     });
 
-    await message.reply({ embeds: [embed], allowedMentions: { repliedUser: true } }).catch(() => null);
+    const streakChannelId = guildConfig.streak.channelId;
+    const streakChannel = streakChannelId
+      ? message.guild.channels.cache.get(streakChannelId)
+      : null;
+
+    if (streakChannel && streakChannel.isTextBased()) {
+      await streakChannel
+        .send({ embeds: [embed], allowedMentions: { users: [message.author.id] } })
+        .catch(() => null);
+    } else {
+      await message.reply({ embeds: [embed], allowedMentions: { repliedUser: true } }).catch(() => null);
+    }
   } catch (error) {
     logger.error('Error handling streak activity:', error);
   }

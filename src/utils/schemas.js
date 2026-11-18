@@ -57,6 +57,13 @@ const VerificationConfigSchema = z
   })
   .optional();
 
+const StreakConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    channelId: z.string().nullable().optional(),
+  })
+  .default({ enabled: false, channelId: null });
+
 export const GuildConfigSchema = z
   .object({
     prefix: z.string().optional(),
@@ -77,7 +84,8 @@ export const GuildConfigSchema = z
     logging: LoggingConfigSchema.optional(),
     ticketLogging: TicketLoggingSchema.optional(),
     enableLogging: z.boolean().optional(),
-    verification: VerificationConfigSchema
+    verification: VerificationConfigSchema,
+    streak: StreakConfigSchema
   })
   .passthrough();
 

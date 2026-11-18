@@ -41,6 +41,10 @@ export const DEFAULT_GUILD_CONFIG = {
     verification: {
         enabled: false
     },
+    streak: {
+        enabled: false,
+        channelId: null
+    },
     musicStatus: {
         groups: [],
         live: { channelId: null, messageId: null }

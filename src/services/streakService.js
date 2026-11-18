@@ -10,6 +10,7 @@ import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { wrapServiceClassMethods } from '../utils/serviceErrorBoundary.js';
 import { validateDiscordId } from '../utils/validation.js';
 import { createEmbed } from '../utils/embeds.js';
+import { getGuildConfig } from './config/guildConfig.js';
 
 const STREAK_KEY_PREFIX = 'guild:';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -261,6 +262,19 @@ class StreakService {
     const today = StreakService.toDayKey(Date.now());
 
     for (const guild of client.guilds.cache.values()) {
+      let guildConfig;
+      try {
+        guildConfig = await getGuildConfig(client, guild.id);
+      } catch (error) {
+        logger.warn(`[STREAK] Failed to load config for guild ${guild.id}:`, error.message);
+        continue;
+      }
+
+      // Streaks are opt-in: skip guilds where the feature is disabled.
+      if (guildConfig?.streak?.enabled !== true) {
+        continue;
+      }
+
       let keys;
       try {
         keys = await client.db.list(StreakService.buildPrefix(guild.id));
@@ -269,7 +283,11 @@ class StreakService {
         continue;
       }
 
-      const streakChannel = StreakService.findStreakChannel(guild);
+      // Prefer the configured streak channel; fall back to name-based detection.
+      const configuredChannelId = guildConfig.streak.channelId;
+      const streakChannel = configuredChannelId
+        ? guild.channels.cache.get(configuredChannelId) || null
+        : StreakService.findStreakChannel(guild);
 
       for (const key of keys) {
         const userId = StreakService.parseUserIdFromKey(key, guild.id);
