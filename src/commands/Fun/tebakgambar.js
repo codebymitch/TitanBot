@@ -11,6 +11,7 @@ import {
   getLeaderboard,
   getCategoryChoices,
   getDifficultyChoices,
+  getModeChoices,
   isKnownCategory,
   DEFAULT_ROUND_SECONDS,
   MIN_ROUND_SECONDS,
@@ -59,6 +60,13 @@ export default {
         .setRequired(false)
         .addChoices(...getDifficultyChoices()),
     )
+    .addStringOption((option) =>
+      option
+        .setName('mode')
+        .setDescription('Cara gambar ditampilkan: utuh (klasik) atau potongan (zoom puzzle)')
+        .setRequired(false)
+        .addChoices(...getModeChoices()),
+    )
     .addIntegerOption((option) =>
       option
         .setName('durasi')
@@ -84,6 +92,7 @@ export default {
     let category = interaction.options.getString('kategori');
     let difficulty = interaction.options.getString('kesulitan');
     let duration = interaction.options.getInteger('durasi');
+    const mode = interaction.options.getString('mode');
 
     // Dukungan prefix: argumen pertama bisa berupa kategori, kesulitan, atau angka durasi.
     const rawAction = interaction.options.getString('aksi');
@@ -102,6 +111,7 @@ export default {
 
     try {
       if (action === 'start') {
+        await InteractionHelper.safeDefer(interaction);
         const result = await startGame(client, {
           guildId: interaction.guildId,
           channelId: interaction.channelId,
@@ -109,6 +119,7 @@ export default {
           category: category || 'Campuran',
           difficulty: difficulty || null,
           durationSec: duration || DEFAULT_ROUND_SECONDS,
+          mode: mode || undefined,
           deliverFirstRound: async (payload) => {
             await InteractionHelper.safeReply(interaction, payload);
             return interaction.fetchReply();

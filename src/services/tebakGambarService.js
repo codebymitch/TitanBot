@@ -1,3 +1,6 @@
+import { AttachmentBuilder } from 'discord.js';
+import axios from 'axios';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { logger } from '../utils/logger.js';
 import { createEmbed } from '../utils/embeds.js';
 import {
@@ -16,12 +19,27 @@ export const DEFAULT_ROUND_SECONDS = 60;
 export const MIN_ROUND_SECONDS = 15;
 export const MAX_ROUND_SECONDS = 180;
 
+// Mode permainan: gambar utuh (klasik) atau potongan bertahap (zoom puzzle).
+export const MODE_CLASSIC = 'classic';
+export const MODE_PUZZLE = 'puzzle';
+
 const BASE_POINTS = { Mudah: 10, Sedang: 15, Sulit: 20 };
 const HINT_PENALTY = 3;
 const MIN_POINTS = 5;
 
+// Konfigurasi gambar potongan (zoom puzzle).
+const PUZZLE_SIZE = 640; // ukuran kanvas persegi (px)
+const PUZZLE_GRID = 4; // 4x4 = 16 potongan
+const PUZZLE_TILES = PUZZLE_GRID * PUZZLE_GRID;
+const PUZZLE_START_TILES = { Mudah: 4, Sedang: 2, Sulit: 1 };
+const PUZZLE_ATTACHMENT_NAME = 'tebak-gambar-potongan.png';
+const IMAGE_USER_AGENT = 'TitanBot/2.1 (Discord bot; fitur tebak gambar)';
+const IMAGE_CACHE_MAX = 40;
+
 // guildId -> session
 const sessions = new Map();
+// url gambar -> Buffer (supaya tidak unduh ulang tiap buka potongan)
+const imageCache = new Map();
 
 export function getPlayableImages() {
   return TEBAK_GAMBAR_IMAGES.filter((entry) => entry.imageUrl);
@@ -33,6 +51,13 @@ export function getCategoryChoices() {
 
 export function getDifficultyChoices() {
   return TEBAK_GAMBAR_DIFFICULTIES.map((name) => ({ name, value: name }));
+}
+
+export function getModeChoices() {
+  return [
+    { name: 'Klasik (gambar utuh)', value: MODE_CLASSIC },
+    { name: 'Potongan (zoom puzzle)', value: MODE_PUZZLE },
+  ];
 }
 
 export function isKnownCategory(value) {
@@ -47,6 +72,10 @@ function resolveCategory(value) {
 function resolveDifficulty(value) {
   const match = TEBAK_GAMBAR_DIFFICULTIES.find((name) => name.toLowerCase() === String(value || '').toLowerCase());
   return match || null;
+}
+
+function resolveMode(value) {
+  return String(value || '').toLowerCase() === MODE_PUZZLE ? MODE_PUZZLE : MODE_CLASSIC;
 }
 
 function normalizeText(text) {
@@ -127,35 +156,165 @@ function buildHints(entry) {
   ];
 }
 
-function buildRoundEmbed(session) {
+// ---------------- Render gambar potongan ----------------
+
+async function getSourceImage(url) {
+  const cached = imageCache.get(url);
+  if (cached) {
+    return cached;
+  }
+
+  const response = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 30000,
+    headers: { 'User-Agent': IMAGE_USER_AGENT },
+  });
+  const buffer = Buffer.from(response.data);
+
+  if (imageCache.size >= IMAGE_CACHE_MAX) {
+    const oldestKey = imageCache.keys().next().value;
+    imageCache.delete(oldestKey);
+  }
+  imageCache.set(url, buffer);
+  return buffer;
+}
+
+async function renderPuzzleImage(sourceBuffer, revealedTiles) {
+  const image = await loadImage(sourceBuffer);
+  const canvas = createCanvas(PUZZLE_SIZE, PUZZLE_SIZE);
+  const ctx = canvas.getContext('2d');
+
+  // Isi penuh kanvas (cover) supaya potongan tajam dan tidak gepeng.
+  const scale = Math.max(PUZZLE_SIZE / image.width, PUZZLE_SIZE / image.height);
+  const drawWidth = image.width * scale;
+  const drawHeight = image.height * scale;
+  ctx.drawImage(image, (PUZZLE_SIZE - drawWidth) / 2, (PUZZLE_SIZE - drawHeight) / 2, drawWidth, drawHeight);
+
+  const tile = PUZZLE_SIZE / PUZZLE_GRID;
+  for (let row = 0; row < PUZZLE_GRID; row += 1) {
+    for (let col = 0; col < PUZZLE_GRID; col += 1) {
+      const index = row * PUZZLE_GRID + col;
+      if (revealedTiles.has(index)) continue;
+
+      ctx.fillStyle = '#1f2124';
+      ctx.fillRect(col * tile, row * tile, tile, tile);
+      ctx.strokeStyle = '#34363b';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(col * tile + 1.5, row * tile + 1.5, tile - 3, tile - 3);
+    }
+  }
+
+  return canvas.toBuffer('image/png');
+}
+
+function revealRandomTiles(session, target) {
+  const remaining = [];
+  for (let i = 0; i < PUZZLE_TILES; i += 1) {
+    if (!session.revealedTiles.has(i)) {
+      remaining.push(i);
+    }
+  }
+
+  for (let i = remaining.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+  }
+
+  let need = target - session.revealedTiles.size;
+  for (const tile of remaining) {
+    if (need <= 0) break;
+    session.revealedTiles.add(tile);
+    need -= 1;
+  }
+}
+
+function puzzleRevealTargets(session) {
+  const start = session.startTiles;
+  const remaining = PUZZLE_TILES - start;
+  return [
+    Math.min(PUZZLE_TILES, start + Math.round(remaining * 0.25)),
+    Math.min(PUZZLE_TILES, start + Math.round(remaining * 0.6)),
+    // Tahap terakhir membuka seluruh gambar supaya objek terlihat penuh saat waktu hampir habis.
+    PUZZLE_TILES,
+  ];
+}
+
+// ---------------- Embed & payload ----------------
+
+function buildRoundFields(session) {
   const entry = session.currentEntry;
-  const endsAt = session.roundEndsAt;
+  return [
+    { name: 'Kategori', value: entry.category, inline: true },
+    { name: 'Kesulitan', value: entry.difficulty, inline: true },
+    { name: 'Poin', value: `${computePoints(entry, session.hintsShown)}`, inline: true },
+    { name: 'Waktu tersisa', value: `<t:${Math.floor(session.roundEndsAt / 1000)}:R>`, inline: false },
+  ];
+}
+
+function buildClassicPayload(session) {
+  const entry = session.currentEntry;
   const hints = session.hintsShown > 0 ? session.hintLines.join('\n') : 'Belum ada petunjuk.';
 
-  return createEmbed({
-    title: `Tebak Gambar — Ronde ${session.round}`,
-    description: [
-      'Gambar apakah ini? Ketik jawabanmu langsung di chat.',
-      '',
-      `**Petunjuk**\n${hints}`,
-    ].join('\n'),
-    color: 'blurple',
-    image: entry.imageUrl,
-    fields: [
-      { name: 'Kategori', value: entry.category, inline: true },
-      { name: 'Kesulitan', value: entry.difficulty, inline: true },
-      { name: 'Poin', value: `${computePoints(entry, session.hintsShown)}`, inline: true },
-      { name: 'Waktu tersisa', value: `<t:${Math.floor(endsAt / 1000)}:R>`, inline: false },
+  return {
+    embeds: [
+      createEmbed({
+        title: `Tebak Gambar — Ronde ${session.round}`,
+        description: [
+          'Gambar apakah ini? Ketik jawabanmu langsung di chat.',
+          '',
+          `**Petunjuk**\n${hints}`,
+        ].join('\n'),
+        color: 'blurple',
+        image: entry.imageUrl,
+        fields: buildRoundFields(session),
+      }),
     ],
-  });
+  };
+}
+
+async function buildPuzzlePayload(session) {
+  const entry = session.currentEntry;
+  const source = await getSourceImage(entry.imageUrl);
+  const png = await renderPuzzleImage(source, session.revealedTiles);
+
+  return {
+    embeds: [
+      createEmbed({
+        title: `Tebak Gambar Potongan — Ronde ${session.round}`,
+        description: [
+          'Objek apakah ini? Ketik jawabanmu langsung di chat.',
+          '',
+          `**Petunjuk**\nPotongan terbuka: **${session.revealedTiles.size}/${PUZZLE_TILES}**`,
+        ].join('\n'),
+        color: 'blurple',
+        image: `attachment://${PUZZLE_ATTACHMENT_NAME}`,
+        fields: buildRoundFields(session),
+      }),
+    ],
+    files: [new AttachmentBuilder(png, { name: PUZZLE_ATTACHMENT_NAME })],
+  };
+}
+
+async function buildRoundPayload(session) {
+  if (session.mode === MODE_PUZZLE) {
+    try {
+      return await buildPuzzlePayload(session);
+    } catch (error) {
+      logger.error('Gagal membuat gambar potongan, memakai gambar utuh:', error);
+    }
+  }
+  return buildClassicPayload(session);
 }
 
 function buildRevealEmbed(session, { winnerId = null, points = 0 }) {
   const entry = session.currentEntry;
   const won = Boolean(winnerId);
+  const puzzle = session.mode === MODE_PUZZLE;
 
   return createEmbed({
-    title: won ? `Tebak Gambar — Ronde ${session.round} Selesai` : `Tebak Gambar — Ronde ${session.round} Waktu Habis`,
+    title: won
+      ? `Tebak Gambar${puzzle ? ' Potongan' : ''} — Ronde ${session.round} Selesai`
+      : `Tebak Gambar${puzzle ? ' Potongan' : ''} — Ronde ${session.round} Waktu Habis`,
     description: [
       won
         ? `<@${winnerId}> berhasil menebak dan mendapat **${points}** poin!`
@@ -185,6 +344,12 @@ function clearTimers(session) {
   session.gapTimer = null;
 }
 
+async function editRoundMessage(session, payload) {
+  if (!session.roundMessage) return;
+  const editPayload = payload.files ? { ...payload, attachments: [] } : payload;
+  await session.roundMessage.edit(editPayload).catch(() => {});
+}
+
 function scheduleHints(session) {
   const startAt = session.roundStartedAt;
   const total = session.roundEndsAt - startAt;
@@ -192,12 +357,17 @@ function scheduleHints(session) {
 
   session.hintTimers = thresholds.map((ratio, index) => {
     const delay = Math.max(1000, Math.round(total * ratio) - (Date.now() - startAt));
-    return setTimeout(() => {
+    return setTimeout(async () => {
       if (!session.active || session.solved || !session.currentEntry) return;
       if (session.hintsShown >= index + 1) return;
 
       session.hintsShown = index + 1;
-      session.roundMessage?.edit({ embeds: [buildRoundEmbed(session)] }).catch(() => {});
+      if (session.mode === MODE_PUZZLE) {
+        revealRandomTiles(session, session.revealTargets[index]);
+      }
+
+      const payload = await buildRoundPayload(session);
+      await editRoundMessage(session, payload);
     }, delay);
   });
 }
@@ -233,11 +403,18 @@ async function startRound(session, client) {
   session.solved = false;
   session.hintsShown = 0;
   session.hintLines = buildHints(entry);
+  session.revealedTiles = new Set();
+  // Potongan awal & target pembukaan berbeda tiap ronde.
+  session.startTiles = PUZZLE_START_TILES[entry.difficulty] || 1;
+  session.revealTargets = puzzleRevealTargets(session);
+  if (session.mode === MODE_PUZZLE) {
+    revealRandomTiles(session, session.startTiles);
+  }
   session.roundStartedAt = Date.now();
   session.roundEndsAt = session.roundStartedAt + session.durationSec * 1000;
   session.roundMessage = null;
 
-  const payload = { embeds: [buildRoundEmbed(session)] };
+  const payload = await buildRoundPayload(session);
 
   try {
     if (session.deliverFirstRound) {
@@ -270,7 +447,10 @@ async function finishRound(session, client, { winnerId, points = 0 }) {
   const revealEmbed = buildRevealEmbed(session, { winnerId, points });
 
   if (session.roundMessage) {
-    await session.roundMessage.edit({ embeds: [revealEmbed] }).catch(() => {});
+    const editPayload = session.mode === MODE_PUZZLE
+      ? { embeds: [revealEmbed], attachments: [] }
+      : { embeds: [revealEmbed] };
+    await session.roundMessage.edit(editPayload).catch(() => {});
   } else {
     const channel = await getChannel(client, session.channelId);
     await channel?.send({ embeds: [revealEmbed] }).catch(() => {});
@@ -309,6 +489,7 @@ export async function startGame(client, {
   category = 'Campuran',
   difficulty = null,
   durationSec = DEFAULT_ROUND_SECONDS,
+  mode = MODE_CLASSIC,
   deliverFirstRound = null,
 }) {
   const existing = sessions.get(guildId);
@@ -328,6 +509,7 @@ export async function startGame(client, {
     guildId,
     channelId,
     hostId,
+    mode: resolveMode(mode),
     category: resolvedCategory,
     difficulty: resolvedDifficulty,
     durationSec: Math.min(MAX_ROUND_SECONDS, Math.max(MIN_ROUND_SECONDS, Number(durationSec) || DEFAULT_ROUND_SECONDS)),
@@ -337,6 +519,9 @@ export async function startGame(client, {
     solved: false,
     hintsShown: 0,
     hintLines: [],
+    revealedTiles: new Set(),
+    startTiles: 1,
+    revealTargets: [],
     roundStartedAt: 0,
     roundEndsAt: 0,
     roundMessage: null,
