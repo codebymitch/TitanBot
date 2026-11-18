@@ -5,7 +5,7 @@ import { getItemById } from '../config/shop/items.js';
 
 export const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
-const HISTORY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const HISTORY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const HISTORY_MAX_ENTRIES = 200;
 
 function getHistory(userData) {

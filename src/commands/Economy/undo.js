@@ -58,7 +58,7 @@ export default {
             throw createError(
                 `Nothing to undo for ${itemId}`,
                 ErrorTypes.VALIDATION,
-                `${targetUser} has no recorded **${item.name}** use that can be refunded (or it is older than 30 days).`,
+                `${targetUser} has no recorded **${item.name}** use that can be refunded (or it is older than 3 days).`,
                 { itemId, targetUserId: targetUser.id }
             );
         }
