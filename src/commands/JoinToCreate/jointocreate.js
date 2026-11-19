@@ -1,6 +1,7 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, LabelBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder } from 'discord.js';
 import { successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createJoinToCreatePanel } from '../../utils/joinToCreatePanel.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes, replyUserError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -33,19 +34,8 @@ export default {
                 .addStringOption((option) =>
                     option
                         .setName("channel_name")
-                        .setDescription("Select a template for naming temporary voice channels.")
-                        .addChoices(
-                            { name: "{username}'s Room (Default)", value: "{username}'s Room" },
-                            { name: "{username}'s Channel", value: "{username}'s Channel" },
-                            { name: "{username}'s Lounge", value: "{username}'s Lounge" },
-                            { name: "{username}'s Space", value: "{username}'s Space" },
-                            { name: "{displayName}'s Room", value: "{displayName}'s Room" },
-                            { name: "{username}'s VC", value: "{username}'s VC" },
-                            { name: "{username}'s Music Room", value: "{username}'s Music Room" },
-                            { name: "{username}'s Gaming Room", value: "{username}'s Gaming Room" },
-                            { name: "{username}'s Chat Room", value: "{username}'s Chat Room" },
-                            { name: "{username}'s Private Room", value: "{username}'s Private Room" }
-                        )
+                        .setDescription("Custom name template. Use {username}, {displayName}, {guildName}, {channelName}.")
+                        .setMaxLength(100)
                 )
                 .addIntegerOption((option) =>
                     option
@@ -69,6 +59,11 @@ export default {
                         .setRequired(true)
                         .addChannelTypes(ChannelType.GuildVoice)
                 )
+        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("panel")
+                .setDescription("Post the temporary voice control panel in this channel.")
         ),
     category: "utility",
 
@@ -93,6 +88,9 @@ export default {
                 return;
             } else if (subcommand === "dashboard") {
                 await handleConfigSubcommand(interaction, client);
+                return;
+            } else if (subcommand === "panel") {
+                await handlePanelSubcommand(interaction, client);
                 return;
             }
 
@@ -209,6 +207,10 @@ async function handleSetupSubcommand(interaction, client) {
             `${category ?`• Category: ${category.name}`: '• Category: Root level'}`
         );
 
+        await interaction.channel.send(createJoinToCreatePanel()).catch((error) => {
+            logger.warn(`Failed to post Join to Create panel in guild ${guildId}: ${error.message}`);
+        });
+
         return await InteractionHelper.safeEditReply(interaction, { embeds: [responseEmbed] });
 
     } catch (error) {
@@ -222,6 +224,24 @@ async function handleSetupSubcommand(interaction, client) {
             'Failed to set up Join to Create system. Please check bot permissions.'
         );
     }
+}
+
+async function handlePanelSubcommand(interaction, client) {
+    const channel = interaction.channel;
+
+    if (!channel?.isTextBased() || typeof channel.send !== 'function') {
+        throw new TitanBotError(
+            'The current channel cannot receive messages',
+            ErrorTypes.VALIDATION,
+            'Run this command in a text channel where the bot can send messages.'
+        );
+    }
+
+    await channel.send(createJoinToCreatePanel());
+
+    return await InteractionHelper.safeEditReply(interaction, {
+        embeds: [successEmbed('Panel Posted', `The voice control panel was posted in ${channel}.`)]
+    });
 }
 
 async function handleConfigSubcommand(interaction, client) {
@@ -366,42 +386,25 @@ async function handleConfigSubcommand(interaction, client) {
 
 async function handleNameTemplateModal(interaction, triggerChannel, currentConfig, client) {
     try {
-        const TEMPLATE_OPTIONS = [
-            { label: "{username}'s Room (Default)", value: "{username}'s Room" },
-            { label: "{username}'s Channel",        value: "{username}'s Channel" },
-            { label: "{username}'s Lounge",         value: "{username}'s Lounge" },
-            { label: "{username}'s Space",          value: "{username}'s Space" },
-            { label: "{displayName}'s Room",        value: "{displayName}'s Room" },
-            { label: "{username}'s VC",             value: "{username}'s VC" },
-            { label: "{username}'s Music Room",  value: "{username}'s Music Room" },
-            { label: "{username}'s Gaming Room", value: "{username}'s Gaming Room" },
-            { label: "{username}'s Chat Room",   value: "{username}'s Chat Room" },
-            { label: "{username}'s Private Room",   value: "{username}'s Private Room" },
-        ];
-
         const currentTemplate = currentConfig.channelConfig?.nameTemplate
             || currentConfig.channelNameTemplate
             || "{username}'s Room";
 
-        const templateSelect = new StringSelectMenuBuilder()
-            .setCustomId('template')
-            .setPlaceholder('Pick a name template...')
-            .setOptions(
-                TEMPLATE_OPTIONS.map(o => ({
-                    label: o.label,
-                    value: o.value,
-                    default: o.value === currentTemplate,
-                })),
-            );
-
-        const templateLabel = new LabelBuilder()
-            .setLabel('Channel name template')
-            .setStringSelectMenuComponent(templateSelect);
-
         const modal = new ModalBuilder()
             .setCustomId(`jtc_name_modal_${triggerChannel.id}`)
             .setTitle('Channel Name Template')
-            .addLabelComponents(templateLabel);
+            .addComponents(
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId('name_template')
+                        .setLabel('Template ({username}, {displayName}, ...)')
+                        .setPlaceholder("{username}'s Room")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(true)
+                        .setMaxLength(100)
+                        .setValue(currentTemplate)
+                )
+            );
 
         await interaction.showModal(modal);
 
@@ -418,7 +421,7 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
             return;
         }
 
-        const [newTemplate] = modalSubmission.fields.getStringSelectValues('template');
+        const newTemplate = modalSubmission.fields.getTextInputValue('name_template').trim();
 
         await updateChannelConfig(client, interaction.guild.id, triggerChannel.id, {
             nameTemplate: newTemplate

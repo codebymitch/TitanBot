@@ -1010,9 +1010,13 @@ export function formatChannelName(template, variables) {
     const replacements = {
         '{username}': variables.username || 'User',
         '{user_tag}': variables.userTag || 'User#0000',
+        '{userTag}': variables.userTag || 'User#0000',
         '{display_name}': variables.displayName || 'User',
+        '{displayName}': variables.displayName || 'User',
         '{guild_name}': variables.guildName || 'Server',
-        '{channel_name}': variables.channelName || 'Voice Channel'
+        '{guildName}': variables.guildName || 'Server',
+        '{channel_name}': variables.channelName || 'Voice Channel',
+        '{channelName}': variables.channelName || 'Voice Channel'
     };
     
     for (const [placeholder, value] of Object.entries(replacements)) {
