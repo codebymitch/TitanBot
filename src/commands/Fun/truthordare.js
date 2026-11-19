@@ -10,11 +10,11 @@ import {
 export default {
   data: new SlashCommandBuilder()
     .setName('truthordare')
-    .setDescription('Play Truth or Dare — get a random Truth question or a Dare challenge.')
+    .setDescription('Play Truth or Dare — get a random Truth question or Dare challenge.')
     .addStringOption((option) =>
       option
         .setName('type')
-        .setDescription('Pick the question type (default: random)')
+        .setDescription('Choose the prompt type (default: random)')
         .setRequired(false)
         .addChoices(
           { name: 'Truth', value: 'truth' },

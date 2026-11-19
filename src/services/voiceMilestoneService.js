@@ -277,9 +277,9 @@ function formatAnnouncementDuration(ms) {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
-  if (hours && minutes) return `${hours} hours ${minutes} minutes`;
-  if (hours) return `${hours} hours`;
-  return `${minutes} minutes`;
+  if (hours && minutes) return `${hours} jam ${minutes} menit`;
+  if (hours) return `${hours} jam`;
+  return `${minutes} menit`;
 }
 
 async function postMilestoneAnnouncement(
@@ -308,22 +308,22 @@ async function postMilestoneAnnouncement(
     const next = config.milestones.find((entry) => entry.hours > milestone.hours);
     const rank = await getVoiceMilestoneRank(client, guild.id, userId, totalMs).catch(() => null);
     const nextMilestoneText = next
-      ? `${next.label} (${next.hours} hours)`
-      : '🏆 Highest tier reached!';
+      ? `${next.label} (${next.hours} jam)`
+      : '🏆 Tier tertinggi tercapai!';
     const embed = new EmbedBuilder()
       .setColor(role?.color || 0xD6B15E)
       .setDescription(
         `<a:tada:1571992051933773976> **MILESTONE ACHIEVED**\n\n` +
-        `Congrats to <@${userId}> for reaching **${role?.name || milestone.label}** in **${guild.name}**\n\n` +
-        `Thanks for hanging out and keeping the voice channel lively. Stay active, get closer with other members, and enjoy the fun together!\n\n` +
+        `selamat buat <@${userId}> yang berhasil mencapai **${role?.name || milestone.label}** di **${guild.name}**\n\n` +
+        `Makasih udah sering nemenin dan ngeramein voice channel. terus aktif, makin akrab sama member lain, dan nikmatin keseruannya bareng-bareng!\n\n` +
         `<:stats:1571992208058617867> **VOICE STATISTICS**\n` +
         `<a:clock:1571422433427324938> Total Voice: ${formatAnnouncementDuration(totalMs)}\n` +
         `<:trophy:1571992156976193536> Global Rank: #${rank ?? '-'}\n` +
         `<:dart:1571992186751287549> Next Milestone: ${nextMilestoneText}\n\n` +
-        `The journey is still long, so don't stop here. See you at the next milestone`,
+        `Perjalanan masih panjang, jangan berhenti sampai di sini. Sampai ketemu di milestone berikutnya`,
       )
       .setFooter({
-        text: isTest ? `${guild.name} · Test preview, roles and progress are unchanged` : guild.name,
+        text: isTest ? `${guild.name} · Test preview, role dan progres tidak berubah` : guild.name,
       });
 
     let cardBuffer = null;
@@ -344,7 +344,7 @@ async function postMilestoneAnnouncement(
     }
 
     const payload = {
-      content: isTest ? '🧪 This is an announcement preview; roles and progress are unchanged.' : null,
+      content: isTest ? '🧪 Ini preview pengumuman; role dan progres tidak diubah.' : null,
       embeds: [embed],
       allowedMentions: { users: isTest ? [] : [userId] },
     };
@@ -522,7 +522,7 @@ function formatLeaderboardDuration(ms) {
   const totalMinutes = Math.floor(Math.max(0, Number(ms) || 0) / 60000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours) return `${hours}h ${minutes}m`;
+  if (hours) return `${hours}j ${minutes}m`;
   if (Number(ms) > 0 && minutes === 0) return '<1m';
   return `${minutes}m`;
 }
@@ -589,7 +589,7 @@ async function buildVoiceLeaderboardPayload(client, guild) {
   if (image) {
     cardEmbed.setImage('attachment://voice-leaderboard.png');
   } else {
-    cardEmbed.setDescription('No voice time recorded yet.');
+    cardEmbed.setDescription('Belum ada waktu voice yang tercatat.');
   }
 
   const rankingLines = entries.flatMap((entry) => {
@@ -610,10 +610,10 @@ async function buildVoiceLeaderboardPayload(client, guild) {
     .setTitle('<:mic:1571422963146825799> TOP ALL TIME VOICE')
     .setDescription([
       '═════════════════════',
-      rankingLines.length ? rankingLines.join('\n') : 'No voice time recorded yet.',
+      rankingLines.length ? rankingLines.join('\n') : 'Belum ada waktu voice yang tercatat.',
       '═════════════════════',
-      `<:users:1571422486841528463> **${participantCount} participants** · <a:clock:1571422433427324938> **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
-      '<a:repeat:1571423818335916102> Refreshes every 5 minutes',
+      `<:users:1571422486841528463> **${participantCount} peserta** · <a:clock:1571422433427324938> **${formatLeaderboardDuration(totalVoiceMs)} total voice**`,
+      '<a:repeat:1571423818335916102> Refresh tiap 5 menit',
     ].join('\n'))
     .setTimestamp();
 

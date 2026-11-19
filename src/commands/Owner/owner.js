@@ -45,7 +45,7 @@ export default {
                         .addStringOption(option =>
                             option
                                 .setName('judul')
-                                .setDescription('Optional title. Default: Announcement')
+                                .setDescription('Optional title. Default: Pengumuman')
                                 .setRequired(false)
                                 .setMaxLength(256)
                         )
@@ -124,7 +124,7 @@ export default {
         const judul = interaction.options.getString('judul');
 
         const embed = createEmbed({
-            title: judul || 'Announcement',
+            title: judul || 'Pengumuman',
             description: pesan,
             color: '#5865F2',
         });
@@ -132,7 +132,7 @@ export default {
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [successEmbed(
-                'Announcement Sent',
+                'Pengumuman Terkirim',
                 buildBroadcastBody('Announcement broadcast to every server.', broadcast)
             )],
         });

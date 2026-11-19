@@ -140,7 +140,7 @@ async function buildChatLeaderboardPayload(client, guild) {
   if (image) {
     cardEmbed.setImage('attachment://chat-leaderboard.png');
   } else {
-    cardEmbed.setDescription('No messages recorded yet.');
+    cardEmbed.setDescription('Belum ada pesan yang tercatat.');
   }
 
   const rankIcons = {
@@ -152,17 +152,17 @@ async function buildChatLeaderboardPayload(client, guild) {
   };
   const rankingLines = entries.flatMap((entry) => [
     `**${entry.rank}.** <@${entry.userId}>`,
-    `${rankIcons[entry.rank] || '<a:whitearrow:1571414768722518027>'} **total ${formatCount(entry.totalMessages)} messages**`,
+    `${rankIcons[entry.rank] || '<a:whitearrow:1571414768722518027>'} **total ${formatCount(entry.totalMessages)} pesan**`,
   ]);
   const listEmbed = new EmbedBuilder()
     .setColor(0xA753D2)
     .setTitle('<a:speechbubble:1571443989175996566> TOP ALL TIME CHAT')
     .setDescription([
       '═════════════════════',
-      rankingLines.length ? rankingLines.join('\n') : 'No messages recorded yet.',
+      rankingLines.length ? rankingLines.join('\n') : 'Belum ada pesan yang tercatat.',
       '═════════════════════',
-      `<:users:1571422486841528463> **${participantCount} participants** · <a:typing:1571436147610095646> **${formatCount(totalMessages)} total messages**`,
-      '<a:repeat:1571423818335916102> Refresh every 5 minutes',
+      `<:users:1571422486841528463> **${participantCount} peserta** · <a:typing:1571436147610095646> **${formatCount(totalMessages)} total pesan**`,
+      '<a:repeat:1571423818335916102> Refresh tiap 5 menit',
     ].join('\n'))
     .setTimestamp();
 

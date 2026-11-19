@@ -435,8 +435,8 @@ async function handleLeaderboard(interaction, client) {
     const embed = baseEmbed('Live Voice Leaderboard', { enabled: true })
         .setDescription(
             result.enabled
-                ? `Top Voice board has been set up in <#${result.channelId}> and will auto-update every 5 minutes.`
-                : 'Live Voice Leaderboard has been disabled and the previous board message was deleted.',
+                ? `Board Top Voice sudah dipasang di <#${result.channelId}> dan akan diperbarui otomatis setiap 5 menit.`
+                : 'Live Voice Leaderboard dinonaktifkan dan pesan board sebelumnya dihapus.',
         );
     await replyEmbed(interaction, embed);
 }

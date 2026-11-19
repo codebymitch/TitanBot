@@ -216,13 +216,13 @@ async function handleStreakActivity(message, client) {
     const embed = result.incremented
       ? createEmbed({
           title: '<a:Firee:1572339013346402384> STREAK UPDATED',
-          description: `Whoa ${message.author}, your fire streak has hit **${result.streak.currentCount} days**! Don't let it break now — keep that fire burning 🔥`,
+          description: `Wihh ${message.author} streak api kamu udah nyampe **${result.streak.currentCount} hari** nih! jangan sampai putus yaa, terus nyalain apinya 🔥`,
           color: 'success',
           thumbnail: message.author.displayAvatarURL({ dynamic: true, size: 128 }),
         })
       : createEmbed({
           title: '<a:Firee:1572339013346402384> THE FIRE IS ALREADY ON',
-          description: 'Your streak is active again. Don\'t forget to drop by and chat again tomorrow!',
+          description: 'Streak kamu udah aktif lagi Besok jangan lupa mampir dan chat lagi yaa',
           color: 'success',
         });
 

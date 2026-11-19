@@ -33,43 +33,43 @@ function resolveAction(raw) {
 export default {
   data: new SlashCommandBuilder()
     .setName('tebakgambar')
-    .setDescription('Play guess the picture with other members right in this channel.')
+    .setDescription('Play a guess-the-image game with other members right in this channel.')
     .addStringOption((option) =>
       option
-        .setName('action')
-        .setDescription('Pick an action (default: start the game)')
+        .setName('aksi')
+        .setDescription('Choose an action (default: start a game)')
         .setRequired(false)
         .addChoices(
-          { name: 'Start', value: 'start' },
+          { name: 'Mulai', value: 'start' },
           { name: 'Stop', value: 'stop' },
-          { name: 'Score', value: 'skor' },
+          { name: 'Skor', value: 'skor' },
           { name: 'Leaderboard', value: 'leaderboard' },
         ),
     )
     .addStringOption((option) =>
       option
-        .setName('category')
-        .setDescription('Filter the image category (default: Mixed)')
+        .setName('kategori')
+        .setDescription('Filter image category (default: Mixed)')
         .setRequired(false)
         .addChoices(...getCategoryChoices()),
     )
     .addStringOption((option) =>
       option
-        .setName('difficulty')
-        .setDescription('Filter the difficulty level (default: all)')
+        .setName('kesulitan')
+        .setDescription('Filter difficulty level (default: all)')
         .setRequired(false)
         .addChoices(...getDifficultyChoices()),
     )
     .addStringOption((option) =>
       option
         .setName('mode')
-        .setDescription('How the image is shown: full (classic) or a small zoomed-in detail')
+        .setDescription('How images are shown: full (classic) or small detail crops')
         .setRequired(false)
         .addChoices(...getModeChoices()),
     )
     .addIntegerOption((option) =>
       option
-        .setName('duration')
+        .setName('durasi')
         .setDescription(`Time per round in seconds (${MIN_ROUND_SECONDS}-${MAX_ROUND_SECONDS}, default ${DEFAULT_ROUND_SECONDS})`)
         .setRequired(false)
         .setMinValue(MIN_ROUND_SECONDS)
@@ -84,18 +84,18 @@ export default {
     if (!interaction.guildId) {
       return replyUserError(interaction, {
         type: ErrorTypes.VALIDATION,
-        message: 'This command can only be used inside a server.',
+        message: 'Perintah ini hanya bisa dipakai di dalam server.',
       });
     }
 
-    let action = resolveAction(interaction.options.getString('action'));
-    let category = interaction.options.getString('category');
-    let difficulty = interaction.options.getString('difficulty');
-    let duration = interaction.options.getInteger('duration');
+    let action = resolveAction(interaction.options.getString('aksi'));
+    let category = interaction.options.getString('kategori');
+    let difficulty = interaction.options.getString('kesulitan');
+    let duration = interaction.options.getInteger('durasi');
     const mode = interaction.options.getString('mode');
 
     // Dukungan prefix: argumen pertama bisa berupa kategori, kesulitan, atau angka durasi.
-    const rawAction = interaction.options.getString('action');
+    const rawAction = interaction.options.getString('aksi');
     if (!action && rawAction) {
       if (isKnownCategory(rawAction)) {
         category = category || rawAction;
@@ -116,7 +116,7 @@ export default {
           guildId: interaction.guildId,
           channelId: interaction.channelId,
           hostId: interaction.user.id,
-          category: category || 'Mixed',
+          category: category || 'Campuran',
           difficulty: difficulty || null,
           durationSec: duration || DEFAULT_ROUND_SECONDS,
           mode: mode || undefined,
@@ -128,8 +128,8 @@ export default {
 
         if (!result.started) {
           const reason = result.reason === 'already_running'
-            ? `There's already a guess-the-picture game running in <#${result.channelId}>. Stop it first with \`/tebakgambar action:stop\`.`
-            : 'No images are available to play right now.';
+            ? `Sudah ada permainan tebak gambar yang berjalan di <#${result.channelId}>. Hentikan dulu dengan \`/tebakgambar aksi:stop\`.`
+            : 'Tidak ada gambar yang tersedia untuk dimainkan saat ini.';
           return replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: reason });
         }
 
@@ -145,7 +145,7 @@ export default {
         if (!session?.active) {
           await InteractionHelper.safeDefer(interaction);
           return InteractionHelper.safeEditReply(interaction, {
-            embeds: [createEmbed({ title: 'Guess the Picture', description: 'No game is currently running.', color: 'secondary' })],
+            embeds: [createEmbed({ title: 'Tebak Gambar', description: 'Tidak ada permainan yang sedang berjalan.', color: 'secondary' })],
           });
         }
 
@@ -154,14 +154,14 @@ export default {
           await InteractionHelper.safeDefer(interaction);
           return replyUserError(interaction, {
             type: ErrorTypes.PERMISSION,
-            message: 'Only the person who started the game or an admin can stop it.',
+            message: 'Hanya yang memulai permainan atau admin yang bisa menghentikannya.',
           });
         }
 
         await InteractionHelper.safeDefer(interaction);
         await stopGame(client, interaction.guildId, { userId: interaction.user.id, force: isManager });
         return InteractionHelper.safeEditReply(interaction, {
-          embeds: [createEmbed({ title: 'Guess the Picture Stopped', description: 'The guess-the-picture game has been stopped.', color: 'success' })],
+          embeds: [createEmbed({ title: 'Tebak Gambar Berhenti', description: 'Permainan tebak gambar sudah dihentikan.', color: 'success' })],
         });
       }
 
@@ -171,8 +171,8 @@ export default {
         return InteractionHelper.safeEditReply(interaction, {
           embeds: [
             createEmbed({
-              title: 'Your Guess the Picture Score',
-              description: `Points: **${score.points}**\nCorrect answers: **${score.correct}**`,
+              title: 'Skor Tebak Gambar Kamu',
+              description: `Poin: **${score.points}**\nJawaban benar: **${score.correct}**`,
               color: 'blurple',
             }),
           ],
@@ -183,19 +183,19 @@ export default {
         await InteractionHelper.safeDefer(interaction);
         const rows = await getLeaderboard(client, interaction.guildId, 10);
         const description = rows.length === 0
-          ? 'No one has scored yet. Be the first!'
+          ? 'Belum ada yang mencetak skor. Jadilah yang pertama!'
           : rows
               .map((row, index) => {
                 const member = interaction.guild?.members?.cache?.get(row.userId);
                 const name = member ? member.user.username : `<@${row.userId}>`;
-                return `**${index + 1}.** ${name} — **${row.points}** points (${row.correct} correct)`;
+                return `**${index + 1}.** ${name} — **${row.points}** poin (${row.correct} benar)`;
               })
               .join('\n');
 
         return InteractionHelper.safeEditReply(interaction, {
           embeds: [
             createEmbed({
-              title: 'Guess the Picture Leaderboard',
+              title: 'Leaderboard Tebak Gambar',
               description,
               color: 'blurple',
             }),
@@ -205,7 +205,7 @@ export default {
 
       return replyUserError(interaction, {
         type: ErrorTypes.VALIDATION,
-        message: 'Unknown action. Use one of: Start, Stop, Score, Leaderboard.',
+        message: 'Aksi tidak dikenal. Gunakan salah satu: start, stop, skor, leaderboard.',
       });
     } catch (error) {
       logger.error('Tebak gambar command error:', error);

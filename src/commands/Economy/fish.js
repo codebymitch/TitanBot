@@ -84,7 +84,7 @@ export const FISH_TYPES = [
     // Common
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
     { name: 'Salmon', emoji: '🐠', rarity: 'common' },
-    { name: 'Trout', emoji: '🐟', rarity: 'common' },
+    { name: 'forel', emoji: '🐟', rarity: 'common' },
     { name: 'Carp', emoji: '🐟', rarity: 'common' },
     { name: 'Catfish', emoji: '🐟', rarity: 'common' },
     { name: 'Perch', emoji: '🐟', rarity: 'common' },
@@ -284,16 +284,16 @@ export function rollRarityWithPotion(activePotion, extraLuckMultiplier = 1) {
 }
 
 const CATCH_MESSAGES = [
-    "You cast your line into the crystal-clear water...",
-    "You wait patiently as your fishing float bobs on the surface...",
-    "After a few minutes of waiting, you feel a tug on your line...",
-    "The water ripples as something takes your bait...",
-    "You reel in your catch with expert skill...",
-    "Your float sinks! Something seems to have struck...",
-    "The water around you begins to churn...",
-    "The pull grows stronger; this one seems quite big...",
-    "Your line thrashes wildly as your catch tries to escape...",
-    "After a long struggle, you finally land a fish...",
+    "Kamu melemparkan kailmu ke dalam air yang sangat jernih...",
+    "Kamu menunggu dengan sabar saat pelampung pancingmu mengapung...",
+    "Setelah beberapa menit menunggu, kamu merasakan tarikan pada kailmu...",
+    "Air mulai beriak saat sesuatu memakan umpanmu...",
+    "Kamu menarik hasil tangkapanmu dengan sangat ahli...",
+    "Pelampungmu tenggelam! Sepertinya ada ikan yang menyambar...",
+    "Air di sekitarmu mulai bergejolak...",
+    "Tarikan semakin kuat, sepertinya ikan ini cukup besar...",
+    "Kailmu bergerak liar, tangkapanmu berusaha melarikan diri...",
+    "Setelah perjuangan panjang, akhirnya kamu berhasil mendapatkan ikan...",
 ];
 
 export default {

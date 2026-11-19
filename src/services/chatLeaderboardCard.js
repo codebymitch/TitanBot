@@ -251,7 +251,7 @@ function drawPodiumEntry(context, entry, avatar, slot) {
   context.restore();
   context.fillStyle = '#E9DDF1';
   context.font = `bold 27px "${FONT_BOLD}"`;
-  context.fillText('MESSAGES', x, detailY);
+  context.fillText('PESAN', x, detailY);
   context.textAlign = 'start';
 }
 
@@ -277,7 +277,7 @@ export async function renderChatLeaderboardCard({ entries }) {
   context.textAlign = 'right';
   context.fillStyle = '#C7B4D8';
   context.font = `19px "${FONT}"`;
-  context.fillText('AUTO-UPDATES EVERY 5 MINUTES', WIDTH - 48, 52);
+  context.fillText('UPDATE OTOMATIS TIAP 5 MENIT', WIDTH - 48, 52);
   context.textAlign = 'start';
 
   const podium = [

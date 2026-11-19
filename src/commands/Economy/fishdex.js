@@ -61,15 +61,15 @@ function makeFishEmbeds(rarity, targetUser, fishCollection) {
 
         if (count > 0) {
             embed
-                .setDescription(`Caught **${count}x**`)
+                .setDescription(`Tertangkap **${count}x**`)
                 .setThumbnail(createImageUrl(fish));
         } else {
-            embed.setDescription('Not caught yet');
+            embed.setDescription('Belum tertangkap');
         }
 
         if (index === pageFish.length - 1) {
             embed.setFooter({
-                text: `${targetUser.username}: ${caughtSpecies}/${FISH_TYPES.length} species | ${pageFish.length} ${rarity} fish`,
+                text: `${targetUser.username}: ${caughtSpecies}/${FISH_TYPES.length} spesies | ${pageFish.length} ikan ${rarity}`,
                 iconURL: targetUser.displayAvatarURL(),
             });
         }
@@ -82,7 +82,7 @@ function makeComponents(selectedRarity, customIdPrefix, disabled = false) {
         new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
                 .setCustomId(`${customIdPrefix}_rarity`)
-                .setPlaceholder('Select a fish rarity')
+                .setPlaceholder('Pilih rarity ikan')
                 .setDisabled(disabled)
                 .addOptions(RARITIES.map(rarity => ({
                     label: rarity.charAt(0).toUpperCase() + rarity.slice(1),
@@ -96,11 +96,11 @@ function makeComponents(selectedRarity, customIdPrefix, disabled = false) {
 export default {
     data: new SlashCommandBuilder()
         .setName('fishdex')
-        .setDescription('View your fish collection or another user\'s')
+        .setDescription('View your fish index or another user\'s')
         .addUserOption(option =>
             option
                 .setName('user')
-                .setDescription('The user whose fish collection you want to view')
+                .setDescription('The user whose fish index to view')
                 .setRequired(false)
         ),
 
@@ -110,7 +110,7 @@ export default {
             throw createError(
                 'Cannot view bot fishdex',
                 ErrorTypes.VALIDATION,
-                'Bots do not have a fish collection.'
+                'Bot tidak memiliki index tangkapan ikan.'
             );
         }
 
@@ -132,7 +132,7 @@ export default {
         collector.on('collect', async selectInteraction => {
             if (selectInteraction.user.id !== interaction.user.id) {
                 await selectInteraction.reply({
-                    content: 'Only the person who opened this fishdex can select a rarity.',
+                    content: 'Hanya orang yang membuka fishdex ini yang bisa memilih rarity.',
                     flags: MessageFlags.Ephemeral,
                 });
                 return;

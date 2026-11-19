@@ -7,7 +7,7 @@ import { configureChatLeaderboard } from '../../services/chatLeaderboardService.
 export default {
   data: new SlashCommandBuilder()
     .setName('chatleaderboard')
-    .setDescription('Set up an all-time chat message leaderboard that updates automatically')
+    .setDescription('Set up an auto-updating all-time chat message leaderboard')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((subcommand) =>
       subcommand
@@ -24,7 +24,7 @@ export default {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
       await replyUserError(interaction, {
         type: ErrorTypes.PERMISSION,
-        message: 'You need the **Manage Server** permission to configure the chat leaderboard.',
+        message: 'Kamu perlu izin **Manage Server** untuk mengatur leaderboard chat.',
       });
       return;
     }
@@ -35,18 +35,18 @@ export default {
       const result = await configureChatLeaderboard(client, interaction.guild, channel);
       const embed = new EmbedBuilder()
         .setColor(result.enabled ? 0xA753D2 : 0xE0A52B)
-        .setTitle(result.enabled ? 'Live Top Chat enabled' : 'Live Top Chat disabled')
+        .setTitle(result.enabled ? 'Live Top Chat aktif' : 'Live Top Chat dimatikan')
         .setDescription(
           result.enabled
-            ? `Board set up in <#${result.channelId}>. Messages are counted from now on and the board updates every 5 minutes.`
-            : 'The live chat board and message tracking have been disabled.',
+            ? `Board dipasang di <#${result.channelId}>. Pesan dihitung mulai sekarang dan board diperbarui tiap 5 menit.`
+            : 'Board chat live dan tracking pesan sudah dimatikan.',
         );
       await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     } catch (error) {
       logger.error('chatleaderboard command error:', error);
       await replyUserError(interaction, {
         type: ErrorTypes.UNKNOWN,
-        message: 'Something went wrong while configuring the chat leaderboard.',
+        message: 'Ada masalah saat mengatur leaderboard chat.',
       });
     }
   },

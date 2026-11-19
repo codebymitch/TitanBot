@@ -7,7 +7,7 @@ import { logger } from '../../../utils/logger.js';
 export default {
     async execute(interaction, config, client) {
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-            const embed = warningEmbed('Access Denied', 'You need the **Manage Server** permission to change the streak channel.');
+            const embed = warningEmbed('Akses Ditolak', 'Kamu butuh permission **Manage Server** untuk mengubah channel streak.');
             return InteractionHelper.safeReply(interaction, {
                 embeds: [embed],
                 flags: MessageFlags.Ephemeral,
@@ -27,8 +27,8 @@ export default {
             await setGuildConfig(client, guildId, guildConfig);
 
             const embed = channel
-                ? successEmbed('Streak Channel Set', `Streak notifications will now be sent to ${channel}.`)
-                : warningEmbed('Streak Channel Removed', 'The streak channel has been removed. Notifications won\'t be sent until a new channel is set.');
+                ? successEmbed('Channel Streak Di-set', `Notifikasi streak sekarang dikirim ke ${channel}.`)
+                : warningEmbed('Channel Streak Dihapus', 'Channel streak sudah dihapus. Notifikasi tidak akan dikirim sampai channel baru di-set.');
 
             return InteractionHelper.safeReply(interaction, {
                 embeds: [embed],
@@ -36,7 +36,7 @@ export default {
             });
         } catch (error) {
             logger.error('streak_channel error:', error);
-            const embed = warningEmbed('Failed to Save', 'Couldn\'t save the streak channel. Try again later.');
+            const embed = warningEmbed('Gagal Menyimpan', 'Tidak bisa menyimpan channel streak. Coba lagi nanti.');
             return InteractionHelper.safeReply(interaction, {
                 embeds: [embed],
                 flags: MessageFlags.Ephemeral,

@@ -17,7 +17,7 @@ export default {
                 .addUserOption(option =>
                     option
                         .setName('user')
-                        .setDescription('Member whose streak you want to view (optional, defaults to yourself)')
+                        .setDescription('The member whose streak to view (optional, defaults to you)')
                         .setRequired(false)
                 )
         )
@@ -41,7 +41,7 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('toggle')
-                .setDescription('Turn the streak system on or off on this server (Manage Server)')
+                .setDescription('Enable/disable the streak system on this server (Manage Server)')
         ),
 
     async execute(interaction, config, client) {

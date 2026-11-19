@@ -362,13 +362,13 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
     const total = availableCount + inUseCount;
 
     const lines = [];
-    lines.push(`${EMOJI_AVAILABLE} **Available** · ${availableCount}`);
-    lines.push(`${EMOJI_IN_USE} **In use** · ${inUseCount}`);
+    lines.push(`${EMOJI_AVAILABLE} **Tersedia** · ${availableCount}`);
+    lines.push(`${EMOJI_IN_USE} **Sedang digunakan** · ${inUseCount}`);
     lines.push('');
 
     if (groups.length === 0) {
-        lines.push('No music bot groups are configured yet.');
-        lines.push('Use `/musicstatus group add` to create the first group.');
+        lines.push('Belum ada grup bot musik yang dikonfigurasi.');
+        lines.push('Gunakan `/musicstatus group add` untuk membuat grup pertama.');
     }
 
     for (const group of groups) {
@@ -377,14 +377,14 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
         lines.push('');
 
         if (group.bots.length === 0) {
-            lines.push('_No bots in this group yet._');
+            lines.push('_Belum ada bot di grup ini._');
             lines.push('');
             continue;
         }
 
         for (const bot of group.bots) {
             const statusEmoji = bot.inVoice ? EMOJI_IN_USE : EMOJI_AVAILABLE;
-            const statusLabel = bot.inVoice ? 'In use' : 'Available';
+            const statusLabel = bot.inVoice ? 'digunakan' : 'Tersedia';
             lines.push(`${statusEmoji} **${truncateStr(bot.displayName, 40)}** · ${statusLabel}`);
 
             if (bot.inVoice) {
@@ -393,7 +393,7 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
                     : '—';
                 lines.push(`└ ${channel}`);
             } else {
-                lines.push('└ Not connected to voice');
+                lines.push('└ Belum terhubung ke voice');
             }
 
             lines.push('');
@@ -404,12 +404,12 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
     const updatedAt = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
     return {
-        title: `MUSIC STATUS ${guildName.toUpperCase()}`,
+        title: `STATUS MUSIC ${guildName.toUpperCase()}`,
         description,
         color: 0x2B2D31,
         footer: total > 0
-            ? { text: `Total ${total} music bots · updated ${updatedAt}` }
-            : { text: `Updated ${updatedAt}` },
+            ? { text: `Total ${total} bot musik · diperbarui ${updatedAt}` }
+            : { text: `Diperbarui ${updatedAt}` },
         timestamp: new Date().toISOString(),
     };
 }
