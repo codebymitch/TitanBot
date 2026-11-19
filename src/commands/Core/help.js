@@ -20,7 +20,6 @@ const __dirname = path.dirname(__filename);
 
 const CATEGORY_SELECT_ID = "help-category-select";
 const ALL_COMMANDS_ID = "help-all-commands";
-const HELP_MENU_TIMEOUT_MS = 5 * 60 * 1000;
 
 const CATEGORY_ICONS = {
     Core: "ℹ️",
@@ -145,8 +144,6 @@ export default {
         .setDescription("Displays the help menu with all available commands"),
 
     async execute(interaction, guildConfig, client) {
-        
-        const { MessageFlags } = await import('discord.js');
         await InteractionHelper.safeDefer(interaction);
         
         const { embeds, components } = await createInitialHelpMenu(client, interaction.user.id);
@@ -155,26 +152,5 @@ export default {
             embeds,
             components,
         });
-
-        setTimeout(async () => {
-            try {
-                if (!InteractionHelper.isInteractionValid(interaction)) {
-                    return;
-                }
-
-                const closedEmbed = createEmbed({
-                    title: "Help menu closed",
-                    description: "Help menu has been closed, use /help again.",
-                    color: "secondary",
-                });
-
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [closedEmbed],
-                    components: [],
-                });
-            } catch (error) {
-                logger.debug('Help menu close edit failed (interaction may have expired):', error?.message);
-            }
-        }, HELP_MENU_TIMEOUT_MS);
     },
 };
