@@ -38,10 +38,15 @@ const PANEL_ROWS = [
  */
 export function createJoinToCreatePanel() {
     const embed = createEmbed({
-        title: '🎛️ Temporary Voice Control Panel',
-        description: 'Atur voice channel kamu di sini. Ganti nama, limit member, pindahin user, atau kunci room sesuai kebutuhan',
+        title: 'TempVoice Interface',
+        description:
+            'Antarmuka ini dapat digunakan untuk mengatur voice channel sementara kamu.\n\n' +
+            '**NAMA** · **BATAS** · **PRIVASI** · **SEMBUNYIKAN / TAMPILKAN** · **CHAT**\n' +
+            '**PERCAYAI** · **UNDANG** · **BLOKIR / BUKA BLOKIR** · **USIR**\n' +
+            '**AMBIL** · **SERAHKAN** · **BITRATE** · **INFO** · **RESET** · **HAPUS**\n\n' +
+            'Antarmuka ini dapat digunakan dengan mengklik tombol di bawah ini.',
         color: 'info',
-        footer: 'Only the owner of the temporary room can use these controls.',
+        footer: 'Kontrol pengelolaan hanya dapat digunakan oleh pemilik room sementara.',
     });
 
     const components = PANEL_ROWS.map((row) =>
