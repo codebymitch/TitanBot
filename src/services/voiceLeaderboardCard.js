@@ -264,7 +264,7 @@ function drawPodiumEntry(context, entry, avatar, config) {
   context.fillText(formatDuration(entry.totalMs), x, durationY);
   context.fillStyle = '#E9DDF1';
   context.font = fontString(20);
-  context.fillText(`${formatTotalMinutes(entry.totalMs)} MENIT`, x, minutesY);
+  context.fillText(`${formatTotalMinutes(entry.totalMs)} MINUTES`, x, minutesY);
   context.textAlign = 'start';
 }
 
@@ -290,7 +290,7 @@ export async function renderVoiceLeaderboardCard({ entries }) {
   context.textAlign = 'right';
   context.fillStyle = '#C7B4D8';
   context.font = fontString(19, false);
-  context.fillText('UPDATE OTOMATIS TIAP 5 MENIT', WIDTH - 48, 52);
+  context.fillText('AUTO-UPDATES EVERY 5 MINUTES', WIDTH - 48, 52);
   context.textAlign = 'start';
 
   const podium = [

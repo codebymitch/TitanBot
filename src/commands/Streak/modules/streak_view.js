@@ -13,7 +13,7 @@ export default {
         if (target.bot) {
             return await replyUserError(interaction, {
                 type: ErrorTypes.USER_INPUT,
-                message: 'Bot tidak punya streak.'
+                message: 'Bots don\'t have streaks.'
             });
         }
 
@@ -21,10 +21,10 @@ export default {
 
         if (!streak || streak.currentCount === 0) {
             const embed = infoEmbed(
-                'Belum Ada Streak',
+                'No Streak Yet',
                 target.id === interaction.user.id
-                    ? 'Kamu belum punya streak aktif. Kirim pesan hari ini untuk mulai streak!'
-                    : `${target} belum punya streak aktif.`
+                    ? 'You don\'t have an active streak yet. Send a message today to start your streak!'
+                    : `${target} doesn't have an active streak yet.`
             );
             return await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
         }
@@ -34,12 +34,12 @@ export default {
 
         const embed = createEmbed({
             title: `Streak ${target.displayName || target.username}`,
-            description: streak.active ? 'Streak masih berjalan 🔥' : 'Streak terputus 💔',
+            description: streak.active ? 'Your streak is still going 🔥' : 'Your streak was broken 💔',
             color: streak.active ? 'success' : 'warning',
             fields: [
-                { name: 'Current', value: `${current} hari`, inline: true },
-                { name: 'Best', value: `${best} hari`, inline: true },
-                { name: 'Total Hari Aktif', value: `${streak.totalDays} hari`, inline: true },
+                { name: 'Current', value: `${current} days`, inline: true },
+                { name: 'Best', value: `${best} days`, inline: true },
+                { name: 'Total Active Days', value: `${streak.totalDays} days`, inline: true },
                 { name: 'Status', value: streak.active ? 'Active' : 'Broken', inline: true }
             ]
         });

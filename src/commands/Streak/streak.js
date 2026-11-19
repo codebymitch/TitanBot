@@ -9,31 +9,31 @@ import streakToggle from './modules/streak_toggle.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('streak')
-        .setDescription('Lihat streak harian aktifmu di server ini')
+        .setDescription('View your active daily streak on this server')
         .addSubcommand(subcommand =>
             subcommand
                 .setName('view')
-                .setDescription('Lihat streak harianmu (atau member lain)')
+                .setDescription('View your daily streak (or another member\'s)')
                 .addUserOption(option =>
                     option
                         .setName('user')
-                        .setDescription('Member yang mau dilihat streak-nya (opsional, default: dirimu sendiri)')
+                        .setDescription('Member whose streak you want to view (optional, defaults to yourself)')
                         .setRequired(false)
                 )
         )
         .addSubcommand(subcommand =>
             subcommand
                 .setName('leaderboard')
-                .setDescription('Tampilkan leaderboard streak server')
+                .setDescription('Show the server streak leaderboard')
         )
         .addSubcommand(subcommand =>
             subcommand
                 .setName('channel')
-                .setDescription('Set channel notifikasi streak (Manage Server)')
+                .setDescription('Set the streak notification channel (Manage Server)')
                 .addChannelOption(option =>
                     option
                         .setName('channel')
-                        .setDescription('Channel text untuk notifikasi streak. Kosongkan untuk menghapus.')
+                        .setDescription('Text channel for streak notifications. Leave empty to remove.')
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(false)
                 )
@@ -41,7 +41,7 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('toggle')
-                .setDescription('Nyalain/matiin sistem streak di server ini (Manage Server)')
+                .setDescription('Turn the streak system on or off on this server (Manage Server)')
         ),
 
     async execute(interaction, config, client) {

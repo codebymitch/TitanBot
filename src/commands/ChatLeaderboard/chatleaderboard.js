@@ -7,16 +7,16 @@ import { configureChatLeaderboard } from '../../services/chatLeaderboardService.
 export default {
   data: new SlashCommandBuilder()
     .setName('chatleaderboard')
-    .setDescription('Pasang leaderboard pesan chat all-time yang diperbarui otomatis')
+    .setDescription('Set up an all-time chat message leaderboard that updates automatically')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((subcommand) =>
       subcommand
         .setName('leaderboard')
-        .setDescription('Pasang atau matikan board Top Chat live')
+        .setDescription('Set up or disable the live Top Chat board')
         .addChannelOption((option) =>
           option
             .setName('channel')
-            .setDescription('Channel untuk board; kosongkan untuk mematikannya')
+            .setDescription('Channel for the board; leave empty to disable it')
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(false))),
 
@@ -24,7 +24,7 @@ export default {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
       await replyUserError(interaction, {
         type: ErrorTypes.PERMISSION,
-        message: 'Kamu perlu izin **Manage Server** untuk mengatur leaderboard chat.',
+        message: 'You need the **Manage Server** permission to configure the chat leaderboard.',
       });
       return;
     }
@@ -35,18 +35,18 @@ export default {
       const result = await configureChatLeaderboard(client, interaction.guild, channel);
       const embed = new EmbedBuilder()
         .setColor(result.enabled ? 0xA753D2 : 0xE0A52B)
-        .setTitle(result.enabled ? 'Live Top Chat aktif' : 'Live Top Chat dimatikan')
+        .setTitle(result.enabled ? 'Live Top Chat enabled' : 'Live Top Chat disabled')
         .setDescription(
           result.enabled
-            ? `Board dipasang di <#${result.channelId}>. Pesan dihitung mulai sekarang dan board diperbarui tiap 5 menit.`
-            : 'Board chat live dan tracking pesan sudah dimatikan.',
+            ? `Board set up in <#${result.channelId}>. Messages are counted from now on and the board updates every 5 minutes.`
+            : 'The live chat board and message tracking have been disabled.',
         );
       await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     } catch (error) {
       logger.error('chatleaderboard command error:', error);
       await replyUserError(interaction, {
         type: ErrorTypes.UNKNOWN,
-        message: 'Ada masalah saat mengatur leaderboard chat.',
+        message: 'Something went wrong while configuring the chat leaderboard.',
       });
     }
   },

@@ -35,12 +35,12 @@ export const botConfig = {
       },
       {
         name: "Custom Status",
-        state: "selalu ada buat kamu",
+        state: "always here for you",
         type: 4,
       },
       {
         name: "Custom Status",
-        state: "jangan lupa istirahat",
+        state: "don't forget to take a break",
         type: 4,
       },
     ],

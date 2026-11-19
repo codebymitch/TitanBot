@@ -7,7 +7,7 @@ import { logger } from '../../../utils/logger.js';
 export default {
     async execute(interaction, config, client) {
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-            const embed = warningEmbed('Akses Ditolak', 'Kamu butuh permission **Manage Server** untuk mengubah pengaturan streak.');
+            const embed = warningEmbed('Access Denied', 'You need the **Manage Server** permission to change the streak settings.');
             return InteractionHelper.safeReply(interaction, {
                 embeds: [embed],
                 flags: MessageFlags.Ephemeral,
@@ -27,8 +27,8 @@ export default {
             await setGuildConfig(client, guildId, guildConfig);
 
             const embed = nextEnabled
-                ? successEmbed('Streak Diaktifkan', 'Sistem streak sekarang **aktif** di server ini. Pastikan channel streak sudah di-set lewat `/streak channel` supaya notifikasi bisa dikirim.')
-                : warningEmbed('Streak Dimatikan', 'Sistem streak sekarang **nonaktif** di server ini. Streak tidak akan dicatat dan notifikasi tidak akan dikirim.');
+                ? successEmbed('Streak Enabled', 'The streak system is now **active** on this server. Make sure the streak channel is set via `/streak channel` so notifications can be sent.')
+                : warningEmbed('Streak Disabled', 'The streak system is now **inactive** on this server. Streaks won\'t be tracked and notifications won\'t be sent.');
 
             return InteractionHelper.safeReply(interaction, {
                 embeds: [embed],
@@ -36,7 +36,7 @@ export default {
             });
         } catch (error) {
             logger.error('streak_toggle error:', error);
-            const embed = warningEmbed('Gagal Menyimpan', 'Tidak bisa menyimpan pengaturan streak. Coba lagi nanti.');
+            const embed = warningEmbed('Failed to Save', 'Couldn\'t save the streak settings. Try again later.');
             return InteractionHelper.safeReply(interaction, {
                 embeds: [embed],
                 flags: MessageFlags.Ephemeral,

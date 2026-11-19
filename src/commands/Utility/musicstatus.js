@@ -38,13 +38,13 @@ function buildStatusEmbed(snapshot, guildName) {
     const total = availableCount + inUseCount;
 
     const lines = [];
-    lines.push(`${EMOJI_AVAILABLE} **Tersedia** · ${availableCount}`);
-    lines.push(`${EMOJI_IN_USE} **Sedang digunakan** · ${inUseCount}`);
+    lines.push(`${EMOJI_AVAILABLE} **Available** · ${availableCount}`);
+    lines.push(`${EMOJI_IN_USE} **In use** · ${inUseCount}`);
     lines.push('');
 
     if (groups.length === 0) {
-        lines.push('Belum ada grup bot musik yang dikonfigurasi.');
-        lines.push('Gunakan `/musicstatus group add` untuk membuat grup pertama.');
+        lines.push('No music bot groups are configured yet.');
+        lines.push('Use `/musicstatus group add` to create the first group.');
     }
 
     for (const group of groups) {
@@ -53,14 +53,14 @@ function buildStatusEmbed(snapshot, guildName) {
         lines.push('');
 
         if (group.bots.length === 0) {
-            lines.push('_Belum ada bot di grup ini._');
+            lines.push('_No bots in this group yet._');
             lines.push('');
             continue;
         }
 
         for (const bot of group.bots) {
             const statusEmoji = bot.inVoice ? EMOJI_IN_USE : EMOJI_AVAILABLE;
-            const statusLabel = bot.inVoice ? 'digunakan' : 'Tersedia';
+            const statusLabel = bot.inVoice ? 'In use' : 'Available';
             lines.push(`${statusEmoji} **${truncate(bot.displayName, 40)}** · ${statusLabel}`);
 
             if (bot.inVoice) {
@@ -69,7 +69,7 @@ function buildStatusEmbed(snapshot, guildName) {
                     : '—';
                 lines.push(`└ ${channel}`);
             } else {
-                lines.push('└ Belum terhubung ke voice');
+                lines.push('└ Not connected to voice');
             }
 
             lines.push('');
@@ -79,119 +79,119 @@ function buildStatusEmbed(snapshot, guildName) {
     const description = lines.join('\n');
 
     return createEmbed({
-        title: `STATUS MUSIC ${guildName.toUpperCase()}`,
+        title: `MUSIC STATUS ${guildName.toUpperCase()}`,
         description,
         color: 'primary',
-        footer: total > 0 ? `Total ${total} bot musik` : null,
+        footer: total > 0 ? `Total ${total} music bots` : null,
     });
 }
 
 export default {
     data: new SlashCommandBuilder()
         .setName('musicstatus')
-        .setDescription('Lihat dan kelola status bot musik di server ini.')
+        .setDescription('View and manage music bot status in this server.')
         .setDMPermission(false)
         .addSubcommand(sub =>
             sub
                 .setName('view')
-                .setDescription('Tampilkan status semua bot musik yang terdaftar.'),
+                .setDescription('Show the status of all registered music bots.'),
         )
         .addSubcommand(sub =>
             sub
                 .setName('add')
-                .setDescription('Tambahkan bot musik ke dalam grup.')
+                .setDescription('Add a music bot to a group.')
                 .addUserOption(opt =>
                     opt
                         .setName('bot')
-                        .setDescription('Bot musik yang ingin didaftarkan.')
+                        .setDescription('The music bot to register.')
                         .setRequired(true),
                 )
                 .addStringOption(opt =>
                     opt
                         .setName('group')
-                        .setDescription('Nama grup (akan dibuat otomatis jika belum ada).')
+                        .setDescription('Group name (created automatically if it does not exist).')
                         .setRequired(true),
                 ),
         )
         .addSubcommand(sub =>
             sub
                 .setName('remove')
-                .setDescription('Hapus bot musik dari grup.')
+                .setDescription('Remove a music bot from a group.')
                 .addUserOption(opt =>
                     opt
                         .setName('bot')
-                        .setDescription('Bot musik yang ingin dihapus.')
+                        .setDescription('The music bot to remove.')
                         .setRequired(true),
                 )
                 .addStringOption(opt =>
                     opt
                         .setName('group')
-                        .setDescription('Nama grup tempat bot berada.')
+                        .setDescription('The group the bot is in.')
                         .setRequired(true),
                 ),
         )
         .addSubcommandGroup(group =>
             group
                 .setName('group')
-                .setDescription('Kelola grup bot musik.')
+                .setDescription('Manage music bot groups.')
                 .addSubcommand(sub =>
                     sub
                         .setName('add')
-                        .setDescription('Buat grup bot musik baru.')
+                        .setDescription('Create a new music bot group.')
                         .addStringOption(opt =>
                             opt
                                 .setName('name')
-                                .setDescription('Nama grup.')
+                                .setDescription('Group name.')
                                 .setRequired(true),
                         ),
                 )
                 .addSubcommand(sub =>
                     sub
                         .setName('remove')
-                        .setDescription('Hapus grup bot musik.')
+                        .setDescription('Delete a music bot group.')
                         .addStringOption(opt =>
                             opt
                                 .setName('name')
-                                .setDescription('Nama grup yang akan dihapus.')
+                                .setDescription('The name of the group to delete.')
                                 .setRequired(true),
                         ),
                 )
                 .addSubcommand(sub =>
                     sub
                         .setName('edit')
-                        .setDescription('Ubah nama grup bot musik.')
+                        .setDescription('Rename a music bot group.')
                         .addStringOption(opt =>
                             opt
                                 .setName('name')
-                                .setDescription('Nama grup saat ini.')
+                                .setDescription('The current group name.')
                                 .setRequired(true),
                         )
                         .addStringOption(opt =>
                             opt
                                 .setName('newname')
-                                .setDescription('Nama baru untuk grup.')
+                                .setDescription('The new name for the group.')
                                 .setRequired(true),
                         ),
                 )
                 .addSubcommand(sub =>
                     sub
                         .setName('list')
-                        .setDescription('Tampilkan daftar grup dan bot di dalamnya.'),
+                        .setDescription('Show the list of groups and their bots.'),
                 ),
         )
         .addSubcommandGroup(group =>
             group
                 .setName('live')
-                .setDescription('Kelola status bot musik live (auto-refresh).')
+                .setDescription('Manage live music bot status (auto-refresh).')
                 .addSubcommand(sub =>
                     sub
                         .setName('start')
-                        .setDescription('Kirim status bot musik yang otomatis ter-refresh ke channel ini.'),
+                        .setDescription('Send an auto-refreshing music bot status to this channel.'),
                 )
                 .addSubcommand(sub =>
                     sub
                         .setName('stop')
-                        .setDescription('Hentikan auto-refresh status bot musik.'),
+                        .setDescription('Stop auto-refreshing music bot status.'),
                 ),
         ),
 
@@ -208,7 +208,7 @@ export default {
                     throw new TitanBotError(
                         'User lacks ManageGuild permission',
                         ErrorTypes.PERMISSION,
-                        'Kamu butuh izin **Manage Server** untuk menggunakan command ini.',
+                        'You need **Manage Server** permission to use this command.',
                     );
                 }
             }
@@ -252,8 +252,8 @@ export default {
         } catch (error) {
             try {
                 const message = error instanceof TitanBotError
-                    ? (error.userMessage || 'Terjadi kesalahan.')
-                    : 'Terjadi kesalahan yang tidak terduga.';
+                    ? (error.userMessage || 'Something went wrong.')
+                    : 'An unexpected error occurred.';
 
                 if (error instanceof TitanBotError) {
                     logger.debug(`musicstatus TitanBotError [${error.type}]: ${error.message}`, error.context || {});
@@ -291,7 +291,7 @@ async function handleAdd(interaction) {
         throw new TitanBotError(
             'Not a bot',
             ErrorTypes.VALIDATION,
-            'Pengguna yang kamu pilih bukan bot. Pilih akun bot musik.',
+            'The user you selected is not a bot. Pick a music bot account.',
         );
     }
 
@@ -327,7 +327,7 @@ async function handleRemove(interaction) {
         throw new TitanBotError(
             'Group not found',
             ErrorTypes.VALIDATION,
-            `Grup **${groupName}** tidak ditemukan.`,
+            `Group **${groupName}** not found.`,
         );
     }
 
@@ -335,8 +335,8 @@ async function handleRemove(interaction) {
 
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [successEmbed(
-            'Bot Dihapus',
-            `**${botUser.username}** telah dihapus dari grup **${group.name}**.`,
+            'Bot Removed',
+            `**${botUser.username}** has been removed from group **${group.name}**.`,
         )],
     });
 }
@@ -350,8 +350,8 @@ async function handleGroupAdd(interaction) {
 
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [successEmbed(
-            'Grup Dibuat',
-            `Grup **${group.name}** berhasil dibuat. Gunakan \`/musicstatus add\` untuk menambahkan bot.`,
+            'Group Created',
+            `Group **${group.name}** was created successfully. Use \`/musicstatus add\` to add a bot.`,
         )],
     });
 }
@@ -368,7 +368,7 @@ async function handleGroupRemove(interaction) {
         throw new TitanBotError(
             'Group not found',
             ErrorTypes.VALIDATION,
-            `Grup **${name}** tidak ditemukan.`,
+            `Group **${name}** not found.`,
         );
     }
 
@@ -376,8 +376,8 @@ async function handleGroupRemove(interaction) {
 
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [successEmbed(
-            'Grup Dihapus',
-            `Grup **${group.name}** dan semua bot di dalamnya telah dihapus.`,
+            'Group Deleted',
+            `Group **${group.name}** and all bots inside it have been deleted.`,
         )],
     });
 }
@@ -395,7 +395,7 @@ async function handleGroupEdit(interaction) {
         throw new TitanBotError(
             'Group not found',
             ErrorTypes.VALIDATION,
-            `Grup **${name}** tidak ditemukan.`,
+            `Group **${name}** not found.`,
         );
     }
 
@@ -403,8 +403,8 @@ async function handleGroupEdit(interaction) {
 
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [successEmbed(
-            'Grup Diperbarui',
-            `Grup **${name}** berhasil diubah menjadi **${updated.name}**.`,
+            'Group Updated',
+            `Group **${name}** was renamed to **${updated.name}**.`,
         )],
     });
 }
@@ -418,7 +418,7 @@ async function handleGroupList(interaction) {
 
     if (config.groups.length === 0) {
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [infoEmbedWrap('Belum Ada Grup', 'Buat grup pertama dengan `/musicstatus group add`.')],
+            embeds: [infoEmbedWrap('No Groups Yet', 'Create the first group with `/musicstatus group add`.')],
         });
         return;
     }
@@ -427,12 +427,12 @@ async function handleGroupList(interaction) {
         name: `${group.name} (${group.bots.length} bot)`,
         value: group.bots.length > 0
             ? group.bots.map(b => `<@${b.id}>`).join(', ')
-            : '_Kosong_',
+            : '_Empty_',
         inline: false,
     }));
 
     const embed = createEmbed({
-        title: 'Daftar Grup Bot Musik',
+        title: 'Music Bot Group List',
         color: 'info',
         fields,
     });
@@ -454,8 +454,8 @@ async function handleLiveStart(interaction) {
     if (config.live?.channelId && config.live?.messageId) {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [infoEmbedWrap(
-                'Live Status Sudah Aktif',
-                'Live status bot musik sudah berjalan di channel lain. Gunakan `/musicstatus live stop` terlebih dahulu jika ingin pindah channel.',
+                'Live Status Already Active',
+                'Music bot live status is already running in another channel. Use `/musicstatus live stop` first if you want to move it.',
             )],
         });
         return;
@@ -472,8 +472,8 @@ async function handleLiveStart(interaction) {
 
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [successEmbed(
-            'Live Status Aktif',
-            `Status bot musik sekarang otomatis ter-refresh setiap 30 detik di channel ini.`,
+            'Live Status Active',
+            `Music bot status now auto-refreshes every 30 seconds in this channel.`,
         )],
     });
 }
@@ -488,8 +488,8 @@ async function handleLiveStop(interaction) {
     if (!config.live?.channelId || !config.live?.messageId) {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [infoEmbedWrap(
-                'Tidak Ada Live Status',
-                'Live status bot musik belum diaktifkan. Gunakan `/musicstatus live start` untuk mengaktifkannya.',
+                'No Live Status',
+                'Music bot live status is not enabled yet. Use `/musicstatus live start` to enable it.',
             )],
         });
         return;
@@ -510,8 +510,8 @@ async function handleLiveStop(interaction) {
 
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [successEmbed(
-            'Live Status Dihentikan',
-            'Auto-refresh status bot musik telah dihentikan.',
+            'Live Status Stopped',
+            'Music bot status auto-refresh has been stopped.',
         )],
     });
 }

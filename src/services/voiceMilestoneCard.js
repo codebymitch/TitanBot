@@ -213,7 +213,7 @@ export async function renderVoiceMilestoneCard({
   context.fillStyle = '#AAB3B6';
   context.font = fontString(14);
   context.letterSpacing = '3px';
-  context.fillText(isTest ? 'PREVIEW TIER' : 'TIER BARU', contentX, 166);
+  context.fillText(isTest ? 'PREVIEW TIER' : 'NEW TIER', contentX, 166);
   context.letterSpacing = '0px';
 
   context.fillStyle = accent;
@@ -242,7 +242,7 @@ export async function renderVoiceMilestoneCard({
   context.fillText(`${Math.round(progress * 100)}%`, 976, 256);
   context.textAlign = 'start';
 
-  // ---- Bottom 3 columns: TOTAL VOICE / GLOBAL RANK / BERIKUTNYA ----
+  // ---- Bottom 3 columns: TOTAL VOICE / GLOBAL RANK / NEXT ----
   const colY = 318;
   const col1X = 310;
   const col2X = 560;
@@ -253,7 +253,7 @@ export async function renderVoiceMilestoneCard({
   context.letterSpacing = '2px';
   context.fillText('TOTAL VOICE', col1X, colY);
   context.fillText('GLOBAL RANK', col2X, colY);
-  context.fillText(next ? `BERIKUTNYA  ·  ${next.hours} JAM` : 'TIER MAKSIMAL', col3X, colY);
+  context.fillText(next ? `NEXT  ·  ${next.hours} HOURS` : 'MAX TIER', col3X, colY);
   context.letterSpacing = '0px';
 
   context.fillStyle = '#F5F6F6';

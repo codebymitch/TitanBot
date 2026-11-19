@@ -435,8 +435,8 @@ async function handleLeaderboard(interaction, client) {
     const embed = baseEmbed('Live Voice Leaderboard', { enabled: true })
         .setDescription(
             result.enabled
-                ? `Board Top Voice sudah dipasang di <#${result.channelId}> dan akan diperbarui otomatis setiap 5 menit.`
-                : 'Live Voice Leaderboard dinonaktifkan dan pesan board sebelumnya dihapus.',
+                ? `Top Voice board has been set up in <#${result.channelId}> and will auto-update every 5 minutes.`
+                : 'Live Voice Leaderboard has been disabled and the previous board message was deleted.',
         );
     await replyEmbed(interaction, embed);
 }
@@ -556,11 +556,11 @@ export default {
         .addSubcommand((subcommand) =>
             subcommand
                 .setName('leaderboard')
-                .setDescription('Pasang atau matikan pesan live Top Voice')
+                .setDescription('Set up or disable the live Top Voice message')
                 .addChannelOption((option) =>
                     option
                         .setName('channel')
-                        .setDescription('Channel untuk board; kosongkan untuk mematikannya')
+                        .setDescription('Channel for the board; leave empty to disable it')
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(false))),
 

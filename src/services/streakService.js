@@ -333,7 +333,7 @@ class StreakService {
         try {
           const embed = createEmbed({
             title: '<a:NoFire:1572338994908373052> STREAK OUTAGES',
-            description: `yahh <@${userId}> api streak kamu padam 😢 streak terakhirmu **${previousBest} hari** nih, yuk nyalain lagi dari awal!`,
+            description: `aww <@${userId}> your streak fire went out 😢 your last streak was **${previousBest} days**, come on, light it up again from scratch!`,
             color: 'error',
           });
           await streakChannel.send({ embeds: [embed], allowedMentions: { users: [userId] } }).catch(() => null);
