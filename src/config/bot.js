@@ -16,7 +16,7 @@ export const botConfig = {
     // How long each activity is shown before switching to the next one (ms).
     // Set to 0 to disable rotation (only the first activity is used).
     // Keep this >= 15000 to stay well clear of Discord's presence rate limits.
-    rotateIntervalMs: 30000,
+    rotateIntervalMs: 10000,
 
     // Activity lines shown under the bot name. When `rotateIntervalMs` > 0 and
     // there is more than one entry, the bot cycles through them in order.
@@ -31,17 +31,17 @@ export const botConfig = {
       {
         name: "all commad use /help", // required by Discord API, not shown in the client
         state: "join discord manay society",     // this is what people actually see
-        type: 4,               // Custom
+        type: 0,               // Custom
       },
       {
         name: "all commad use /help",
         state: "selalu ada buat kamu",
-        type: 4,
+        type: 0,
       },
       {
         name: "all commad use /help",
         state: "tunggu apalagi sung join",
-        type: 4,
+        type: 0,
       },
     ],
   },
