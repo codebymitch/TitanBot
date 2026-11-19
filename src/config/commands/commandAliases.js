@@ -28,6 +28,8 @@ export const commandAliases = {
     'kick': 'kick',
     'mute': 'timeout',
     'warn': 'warn',
+    'am': 'automod',
+    'automoderation': 'automod',
     'clear': 'purge',
     'purge': 'purge',
     'untimeout': 'untimeout',
