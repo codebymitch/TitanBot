@@ -31,17 +31,17 @@ export const botConfig = {
       {
         name: "", // required by Discord API, not shown in the client
         state: "join discord manay society",     // this is what people actually see
-        type: 0,               // Custom
+        type: 4,               // Custom
       },
       {
         name: " ",
         state: "selalu ada buat kamu",
-        type: 0,
+        type: 4,
       },
       {
         name: " ",
         state: "tunggu apalagi sung join",
-        type: 0,
+        type: 4,
       },
     ],
   },
