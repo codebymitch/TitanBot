@@ -23,16 +23,16 @@ export const MAX_ROUND_SECONDS = 180;
 export const MODE_CLASSIC = 'classic';
 export const MODE_ZOOM = 'zoom';
 
-const BASE_POINTS = { Mudah: 10, Sedang: 15, Sulit: 20 };
+const BASE_POINTS = { Easy: 10, Medium: 15, Hard: 20 };
 const HINT_PENALTY = 3;
 const MIN_POINTS = 5;
 
 // Konfigurasi potongan kecil (crop detail yang di-zoom).
 const ZOOM_SIZE = 640; // ukuran kanvas persegi (px)
 // Bagian gambar yang terlihat di awal ronde (makin kecil makin sulit).
-const ZOOM_START_SCALE = { Mudah: 0.6, Sedang: 0.45, Sulit: 0.3 };
+const ZOOM_START_SCALE = { Easy: 0.6, Medium: 0.45, Hard: 0.3 };
 const ZOOM_ATTACHMENT_NAME = 'tebak-gambar-potongan.png';
-const IMAGE_USER_AGENT = 'TitanBot/2.1 (Discord bot; fitur tebak gambar)';
+const IMAGE_USER_AGENT = 'TitanBot/2.1 (Discord bot; guess-the-picture feature)';
 const IMAGE_CACHE_MAX = 40;
 
 // guildId -> session
@@ -54,8 +54,8 @@ export function getDifficultyChoices() {
 
 export function getModeChoices() {
   return [
-    { name: 'Klasik (gambar utuh)', value: MODE_CLASSIC },
-    { name: 'Potongan (detail kecil)', value: MODE_ZOOM },
+    { name: 'Classic (full image)', value: MODE_CLASSIC },
+    { name: 'Zoom (small detail)', value: MODE_ZOOM },
   ];
 }
 
@@ -124,7 +124,7 @@ function buildPattern(answer, revealedCount) {
 
 function pickEntry(session) {
   const pool = getPlayableImages().filter((entry) => {
-    const matchesCategory = session.category === 'Campuran' || entry.category === session.category;
+    const matchesCategory = session.category === 'Mixed' || entry.category === session.category;
     const matchesDifficulty = !session.difficulty || entry.difficulty === session.difficulty;
     return matchesCategory && matchesDifficulty;
   });
@@ -149,7 +149,7 @@ function computePoints(entry, hintsShown) {
 function buildHints(entry) {
   const letters = entry.answer.replace(/[^A-Za-z0-9]/g, '').length;
   return [
-    `Kategori: **${entry.category}** • Jumlah huruf: **${letters}**`,
+    `Category: **${entry.category}** • Letters: **${letters}**`,
     `Pola: ${buildPattern(entry.answer, 1)}`,
     `Pola: ${buildPattern(entry.answer, 2)}`,
   ];
@@ -222,25 +222,25 @@ function zoomRevealTargets(startScale) {
 function buildRoundFields(session) {
   const entry = session.currentEntry;
   return [
-    { name: 'Kategori', value: entry.category, inline: true },
-    { name: 'Kesulitan', value: entry.difficulty, inline: true },
-    { name: 'Poin', value: `${computePoints(entry, session.hintsShown)}`, inline: true },
-    { name: 'Waktu tersisa', value: `<t:${Math.floor(session.roundEndsAt / 1000)}:R>`, inline: false },
+    { name: 'Category', value: entry.category, inline: true },
+    { name: 'Difficulty', value: entry.difficulty, inline: true },
+    { name: 'Points', value: `${computePoints(entry, session.hintsShown)}`, inline: true },
+    { name: 'Time left', value: `<t:${Math.floor(session.roundEndsAt / 1000)}:R>`, inline: false },
   ];
 }
 
 function buildClassicPayload(session) {
   const entry = session.currentEntry;
-  const hints = session.hintsShown > 0 ? session.hintLines.join('\n') : 'Belum ada petunjuk.';
+  const hints = session.hintsShown > 0 ? session.hintLines.join('\n') : 'No hints yet.';
 
   return {
     embeds: [
       createEmbed({
-        title: `Tebak Gambar — Ronde ${session.round}`,
+        title: `Guess the Picture — Round ${session.round}`,
         description: [
-          'Gambar apakah ini? Ketik jawabanmu langsung di chat.',
+          'What image is this? Type your answer right in the chat.',
           '',
-          `**Petunjuk**\n${hints}`,
+          `**Hints**\n${hints}`,
         ].join('\n'),
         color: 'blurple',
         image: entry.imageUrl,
@@ -258,11 +258,11 @@ async function buildZoomPayload(session) {
   return {
     embeds: [
       createEmbed({
-        title: `Tebak Gambar Potongan — Ronde ${session.round}`,
+        title: `Guess the Picture: Zoom — Round ${session.round}`,
         description: [
-          'Objek apakah ini? Ketik jawabanmu langsung di chat.',
+          'What object is this? Type your answer right in the chat.',
           '',
-          `**Petunjuk**\nBagian terlihat: **${Math.round(session.zoomScale * 100)}%**`,
+          `**Hints**\nVisible area: **${Math.round(session.zoomScale * 100)}%**`,
         ].join('\n'),
         color: 'blurple',
         image: `attachment://${ZOOM_ATTACHMENT_NAME}`,
@@ -291,14 +291,14 @@ function buildRevealEmbed(session, { winnerId = null, points = 0 }) {
 
   return createEmbed({
     title: won
-      ? `Tebak Gambar${zoom ? ' Potongan' : ''} — Ronde ${session.round} Selesai`
-      : `Tebak Gambar${zoom ? ' Potongan' : ''} — Ronde ${session.round} Waktu Habis`,
+      ? `Guess the Picture${zoom ? ' (Zoom)' : ''} — Round ${session.round} Solved`
+      : `Guess the Picture${zoom ? ' (Zoom)' : ''} — Round ${session.round} Time's Up`,
     description: [
       won
-        ? `<@${winnerId}> berhasil menebak dan mendapat **${points}** poin!`
-        : 'Tidak ada yang berhasil menebak gambar ini tepat waktu.',
+        ? `<@${winnerId}> guessed it and earned **${points}** points!`
+        : 'No one managed to guess this image in time.',
       '',
-      `Jawaban: **${entry.answer}**`,
+      `Answer: **${entry.answer}**`,
     ].join('\n'),
     color: won ? 'success' : 'error',
     image: entry.imageUrl,
@@ -370,7 +370,7 @@ function scheduleNextRound(session, client) {
 async function startRound(session, client) {
   const entry = pickEntry(session);
   if (!entry) {
-    await stopSession(session, client, 'Semua gambar untuk kategori ini sudah dimainkan.');
+    await stopSession(session, client, 'All images for this category have been played.');
     return;
   }
 
@@ -399,14 +399,14 @@ async function startRound(session, client) {
     } else {
       const channel = await getChannel(client, session.channelId);
       if (!channel) {
-        await stopSession(session, client, 'Channel permainan tidak ditemukan.');
+        await stopSession(session, client, 'Game channel not found.');
         return;
       }
       session.roundMessage = await channel.send(payload);
     }
   } catch (error) {
     logger.error('Failed to send tebak gambar round message:', error);
-    await stopSession(session, client, 'Gagal mengirim gambar ronde berikutnya.');
+    await stopSession(session, client, 'Failed to send the next round image.');
     return;
   }
 
@@ -448,7 +448,7 @@ async function stopSession(session, client, reason = null) {
   if (reason) {
     const channel = await getChannel(client, session.channelId);
     await channel
-      ?.send({ embeds: [createEmbed({ title: 'Tebak Gambar Berhenti', description: reason, color: 'secondary' })] })
+      ?.send({ embeds: [createEmbed({ title: 'Guess the Picture Stopped', description: reason, color: 'secondary' })] })
       .catch(() => {});
   }
 }
@@ -461,7 +461,7 @@ export async function startGame(client, {
   guildId,
   channelId,
   hostId,
-  category = 'Campuran',
+  category = 'Mixed',
   difficulty = null,
   durationSec = DEFAULT_ROUND_SECONDS,
   mode = MODE_CLASSIC,
@@ -477,7 +477,7 @@ export async function startGame(client, {
     return { started: false, reason: 'no_images' };
   }
 
-  const resolvedCategory = resolveCategory(category) || 'Campuran';
+  const resolvedCategory = resolveCategory(category) || 'Mixed';
   const resolvedDifficulty = difficulty ? resolveDifficulty(difficulty) : null;
 
   const session = {
@@ -524,7 +524,7 @@ export async function stopGame(client, guildId, { userId = null, force = false }
 
   const channelId = session.channelId;
   const round = session.round;
-  await stopSession(session, client, 'Permainan tebak gambar dihentikan.');
+  await stopSession(session, client, 'The guess-the-picture game has been stopped.');
   return { stopped: true, channelId, round };
 }
 
