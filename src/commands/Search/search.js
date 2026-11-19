@@ -2,7 +2,6 @@ import { SlashCommandBuilder } from 'discord.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 import searchDefine from './modules/search_define.js';
-import searchGoogle from './modules/search_google.js';
 import searchUrban from './modules/search_urban.js';
 
 export default {
@@ -16,15 +15,6 @@ export default {
                 .addStringOption(option =>
                     option.setName('word')
                         .setDescription('The word to look up')
-                        .setRequired(true))
-        )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('google')
-                .setDescription('Search Google')
-                .addStringOption(option =>
-                    option.setName('query')
-                        .setDescription('What would you like to search for?')
                         .setRequired(true))
         )
         .addSubcommand(subcommand =>
@@ -43,8 +33,6 @@ export default {
         switch (subcommand) {
             case 'define':
                 return await searchDefine.execute(interaction, config, client);
-            case 'google':
-                return await searchGoogle.execute(interaction, config, client);
             case 'urban':
                 return await searchUrban.execute(interaction, config, client);
             default:

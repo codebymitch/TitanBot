@@ -35,9 +35,9 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 - **Pay System** - Transfer money between users
 
 ### Fun & Entertainment
-- **Random Facts** - Learn something new
-- **Wanted Poster** - Create fun wanted images
-- **Text Reversal** - Reverse any text
+- **Counting Game** - Collaborative counting challenge
+- **Truth or Dare** - Interactive truth or dare prompts
+- **Guess the Image** - Tebak gambar guessing game
 
 ### Advanced Ticket System
 - **Claim & Priority** - Staff ticket management
@@ -46,7 +46,7 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 
 ### Server Stats
 - **Member Counter** - Live member count channels
-- **Voice Counters** - Track voice stats
+- **Bot Counter** - Live bot count channels
 - **Dynamic Updates** - Real-time channel updates
 
 ### Reaction Roles

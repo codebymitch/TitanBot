@@ -47,19 +47,10 @@ export const commandAliases = {
     'items': 'inventory',
 
     'user': 'userinfo',
-    'avatar': 'avatar',
-    'pfp': 'avatar',
-    'icon': 'avatar',
 
     'bd': 'birthday',
     'bday': 'birthday',
     'b': 'birthday',
-
-    'flip': 'flip',
-    'coin': 'flip',
-    'roll': 'roll',
-    'dice': 'roll',
-    'fight': 'fight',
 
     'gcreate': 'gcreate',
     'gstart': 'gcreate',
@@ -114,6 +105,9 @@ export const subcommandAliases = {
     'c': 'complete',
     'done': 'complete',
     'd': 'complete',
+
+    'pfp': 'avatar',
+    'icon': 'avatar',
 
     'start': 'create',
     'stop': 'end',
