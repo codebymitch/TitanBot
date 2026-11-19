@@ -28,8 +28,14 @@ export default {
                 .addChannelOption((option) =>
                     option
                         .setName("category")
-                        .setDescription("Category to create the channel in.")
+                        .setDescription("Category for the new trigger and temporary voice channels.")
                         .addChannelTypes(ChannelType.GuildCategory)
+                )
+                .addChannelOption((option) =>
+                    option
+                        .setName("trigger_channel")
+                        .setDescription("Use an existing voice channel as the Join to Create trigger.")
+                        .addChannelTypes(ChannelType.GuildVoice)
                 )
                 .addStringOption((option) =>
                     option
@@ -117,10 +123,19 @@ export default {
 async function handleSetupSubcommand(interaction, client) {
     try {
         const category = interaction.options.getChannel('category');
+        const selectedTriggerChannel = interaction.options.getChannel('trigger_channel');
         const nameTemplate = interaction.options.getString('channel_name') || "{username}'s Room";
         const userLimit = interaction.options.getInteger('user_limit') || 0;
         const bitrate = interaction.options.getInteger('bitrate') || 64;
         const guildId = interaction.guild.id;
+
+        if (category && selectedTriggerChannel) {
+            throw new TitanBotError(
+                'Both a category and an existing trigger channel were selected',
+                ErrorTypes.VALIDATION,
+                'Pilih `category` untuk membuat trigger baru, atau `trigger_channel` untuk memakai channel yang sudah ada. Jangan isi keduanya.'
+            );
+        }
 
         logger.debug(`Setting up Join to Create in guild ${guildId} with template: ${nameTemplate}`);
 
@@ -164,20 +179,37 @@ async function handleSetupSubcommand(interaction, client) {
             }
         }
 
-        logger.debug('Creating Join to Create trigger channel...');
-        let triggerChannel = await interaction.guild.channels.create({
-            name: 'Join to Create',
-            type: ChannelType.GuildVoice,
-            parent: category?.id,
-            userLimit: 0,
-            bitrate: 64000,
-            permissionOverwrites: [
-                {
-                    id: interaction.guild.id,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
-                },
-            ],
-        });
+        let triggerChannel = selectedTriggerChannel;
+        if (triggerChannel) {
+            const botMember = interaction.guild.members.me;
+            const permissions = botMember ? triggerChannel.permissionsFor(botMember) : null;
+            if (!permissions?.has([
+                PermissionFlagsBits.ManageChannels,
+                PermissionFlagsBits.MoveMembers,
+                PermissionFlagsBits.Connect
+            ])) {
+                throw new TitanBotError(
+                    'Bot lacks permissions in the selected trigger channel',
+                    ErrorTypes.PERMISSION,
+                    `Bot perlu izin **Manage Channels**, **Move Members**, dan **Connect** di ${triggerChannel}.`
+                );
+            }
+        } else {
+            logger.debug('Creating Join to Create trigger channel...');
+            triggerChannel = await interaction.guild.channels.create({
+                name: 'Join to Create',
+                type: ChannelType.GuildVoice,
+                parent: category?.id,
+                userLimit: 0,
+                bitrate: 64000,
+                permissionOverwrites: [
+                    {
+                        id: interaction.guild.id,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+                    },
+                ],
+            });
+        }
 
         logger.debug(`Created trigger channel ${triggerChannel.id}, initializing config...`);
 
@@ -185,7 +217,7 @@ async function handleSetupSubcommand(interaction, client) {
             nameTemplate: nameTemplate,
             userLimit: userLimit,
             bitrate: bitrate * 1000,
-            categoryId: category?.id
+            categoryId: triggerChannel.parentId
         });
 
         await logConfigurationChange(client, guildId, interaction.user.id, 'Initialized Join to Create', {
@@ -199,12 +231,12 @@ async function handleSetupSubcommand(interaction, client) {
 
         const responseEmbed = successEmbed(
             '✅ Setup Complete',
-            `Created Join to Create channel: ${triggerChannel}\n\n` +
+            `${selectedTriggerChannel ? 'Set up existing trigger channel' : 'Created Join to Create channel'}: ${triggerChannel}\n\n` +
             `**Settings:**\n` +
             `• Template: \`${nameTemplate}\`\n` +
             `• User Limit: ${userLimit === 0 ? 'Unlimited' : userLimit + ' users'}\n` +
             `• Bitrate: ${bitrate} kbps\n` +
-            `${category ?`• Category: ${category.name}`: '• Category: Root level'}`
+            `${triggerChannel.parent ? `• Category: ${triggerChannel.parent.name}` : '• Category: Root level'}`
         );
 
         await interaction.channel.send(createJoinToCreatePanel()).catch((error) => {
