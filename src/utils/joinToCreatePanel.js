@@ -1,5 +1,9 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { fileURLToPath } from 'node:url';
 import { createEmbed } from './embeds.js';
+
+const CONTROL_IMAGE_PATH = fileURLToPath(new URL('../assets/jtc-control-reference.png', import.meta.url));
+const CONTROL_IMAGE_NAME = 'jtc-control-reference.png';
 
 const PANEL_ROWS = [
     [
@@ -39,14 +43,10 @@ const PANEL_ROWS = [
 export function createJoinToCreatePanel() {
     const embed = createEmbed({
         title: 'TempVoice Interface',
-        description:
-            'Antarmuka ini dapat digunakan untuk mengatur voice channel sementara kamu.\n\n' +
-            '**NAMA** · **BATAS** · **PRIVASI** · **SEMBUNYIKAN / TAMPILKAN** · **CHAT**\n' +
-            '**PERCAYAI** · **UNDANG** · **BLOKIR / BUKA BLOKIR** · **USIR**\n' +
-            '**AMBIL** · **SERAHKAN** · **BITRATE** · **INFO** · **RESET** · **HAPUS**\n\n' +
-            'Antarmuka ini dapat digunakan dengan mengklik tombol di bawah ini.',
+        description: 'Atur voice channel kamu di sini. Ganti nama, limit member, pindahin user, atau kunci room sesuai kebutuhan.',
         color: 'info',
-        footer: 'Kontrol pengelolaan hanya dapat digunakan oleh pemilik room sementara.',
+        image: `attachment://${CONTROL_IMAGE_NAME}`,
+        footer: 'Klik tombol di bawah untuk mengatur temporary voice channel.',
     });
 
     const components = PANEL_ROWS.map((row) =>
@@ -60,7 +60,11 @@ export function createJoinToCreatePanel() {
         )
     );
 
-    return { embeds: [embed], components };
+    return {
+        embeds: [embed],
+        components,
+        files: [new AttachmentBuilder(CONTROL_IMAGE_PATH, { name: CONTROL_IMAGE_NAME })],
+    };
 }
 
 export default createJoinToCreatePanel;
