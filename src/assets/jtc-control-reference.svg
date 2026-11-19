@@ -9,7 +9,7 @@
       .card { fill: url(#button); stroke: #222329; stroke-width: 2; }
     </style>
   </defs>
-  <rect width="1680" height="720" fill="#000000"/>
+  <rect width="1680" height="720" fill="#2b2d31"/>
 
   <g transform="translate(27 20)">
     <rect class="card" width="396" height="124" rx="52"/>
