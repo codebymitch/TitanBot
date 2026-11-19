@@ -29,17 +29,17 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name: "Custom Status", // required by Discord API, not shown in the client
+        name: "", // required by Discord API, not shown in the client
         state: "join discord manay society",     // this is what people actually see
         type: 0,               // Custom
       },
       {
-        name: "Custom Status",
+        name: " ",
         state: "selalu ada buat kamu",
         type: 0,
       },
       {
-        name: "Custom Status",
+        name: " ",
         state: "tunggu apalagi sung join",
         type: 0,
       },
