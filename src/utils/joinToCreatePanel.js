@@ -13,26 +13,26 @@ const PANEL_ROWS = [
         { id: 'show', emoji: '👁️', style: ButtonStyle.Secondary },
     ],
     [
-        { id: 'name', emoji: '✏️', style: ButtonStyle.Primary },
-        { id: 'limit', emoji: '👥', style: ButtonStyle.Primary },
-        { id: 'bitrate', emoji: '🎵', style: ButtonStyle.Primary },
-        { id: 'info', emoji: 'ℹ️', style: ButtonStyle.Primary },
+        { id: 'name', emoji: '✏️', style: ButtonStyle.Secondary },
+        { id: 'limit', emoji: '👥', style: ButtonStyle.Secondary },
+        { id: 'bitrate', emoji: '🎵', style: ButtonStyle.Secondary },
+        { id: 'info', emoji: 'ℹ️', style: ButtonStyle.Secondary },
     ],
     [
-        { id: 'trust', emoji: '✅', style: ButtonStyle.Success },
-        { id: 'invite', emoji: '📨', style: ButtonStyle.Success },
-        { id: 'block', emoji: '🚫', style: ButtonStyle.Danger },
+        { id: 'trust', emoji: '✅', style: ButtonStyle.Secondary },
+        { id: 'invite', emoji: '📨', style: ButtonStyle.Secondary },
+        { id: 'block', emoji: '🚫', style: ButtonStyle.Secondary },
         { id: 'unblock', emoji: '♻️', style: ButtonStyle.Secondary },
     ],
     [
-        { id: 'kick', emoji: '👢', style: ButtonStyle.Danger },
-        { id: 'claim', emoji: '👑', style: ButtonStyle.Primary },
-        { id: 'transfer', emoji: '🔁', style: ButtonStyle.Primary },
+        { id: 'kick', emoji: '👢', style: ButtonStyle.Secondary },
+        { id: 'claim', emoji: '👑', style: ButtonStyle.Secondary },
+        { id: 'transfer', emoji: '🔁', style: ButtonStyle.Secondary },
         { id: 'chat', emoji: '💬', style: ButtonStyle.Secondary },
     ],
     [
         { id: 'reset', emoji: '🔄', style: ButtonStyle.Secondary },
-        { id: 'delete', emoji: '🗑️', style: ButtonStyle.Danger },
+        { id: 'delete', emoji: '🗑️', style: ButtonStyle.Secondary },
     ],
 ];
 
