@@ -16,7 +16,7 @@ export const botConfig = {
     // How long each activity is shown before switching to the next one (ms).
     // Set to 0 to disable rotation (only the first activity is used).
     // Keep this >= 15000 to stay well clear of Discord's presence rate limits.
-    rotateIntervalMs: 10000,
+    rotateIntervalMs: 30000,
 
     // Activity lines shown under the bot name. When `rotateIntervalMs` > 0 and
     // there is more than one entry, the bot cycles through them in order.
