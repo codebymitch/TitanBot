@@ -39,11 +39,7 @@ const PANEL_ROWS = [
 export function createJoinToCreatePanel() {
     const embed = createEmbed({
         title: '🎛️ Temporary Voice Control Panel',
-        description:
-            'Join the **Join to Create** voice channel to get your own temporary room.\n\n' +
-            'Once you are inside your room, use the buttons below to manage it:\n' +
-            '**Lock / Unlock** • **Hide / Show** • **Name** • **Limit** • **Bitrate**\n' +
-            '**Trust / Block / Unblock / Invite** • **Kick / Claim / Transfer** • **Chat** • **Reset** • **Delete**',
+        description: 'Atur voice channel kamu di sini. Ganti nama, limit member, pindahin user, atau kunci room sesuai kebutuhan',
         color: 'info',
         footer: 'Only the owner of the temporary room can use these controls.',
     });
