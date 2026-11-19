@@ -1,93 +1,133 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1410" height="312" viewBox="0 0 1410 312">
-  <style>
-    .label { font: 700 29px "DejaVu Sans", Arial, sans-serif; fill: #f5f5f7; }
-    .icon { font: 700 29px "DejaVu Sans", Arial, sans-serif; fill: #b8bdc6; }
-  </style>
-  <g>
-    <rect x="0" y="0" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <text x="30" y="48" class="icon">↔</text>
-    <text x="66" y="48" class="label">NAME</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="720" viewBox="0 0 1680 720">
+  <defs>
+    <linearGradient id="button" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#1c1d22"/>
+      <stop offset="1" stop-color="#15161a"/>
+    </linearGradient>
+    <style>
+      .label { font: 600 52px "Noto Sans", "DejaVu Sans", Arial, sans-serif; fill: #f4f5f8; }
+      .card { fill: url(#button); stroke: #222329; stroke-width: 2; }
+    </style>
+  </defs>
+  <rect width="1680" height="720" fill="#050506"/>
 
-    <rect x="284" y="0" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <text x="306" y="47" class="icon">● ●</text>
-    <text x="360" y="48" class="label">LIMIT</text>
+  <g transform="translate(15 20)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M83 58V44a22 22 0 0 1 44 0v14" fill="none" stroke="#8ec9dc" stroke-width="9" stroke-linecap="round"/>
+    <rect x="75" y="55" width="60" height="54" rx="9" fill="#ffbd16"/>
+    <circle cx="105" cy="78" r="6" fill="#292b30"/><path d="M105 82v12" stroke="#292b30" stroke-width="6" stroke-linecap="round"/>
+    <text class="label" x="170" y="82">Lock</text>
+  </g>
+  <g transform="translate(427 20)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M83 58V44a22 22 0 0 1 44 0" fill="none" stroke="#8ec9dc" stroke-width="9" stroke-linecap="round"/>
+    <rect x="75" y="55" width="60" height="54" rx="9" fill="#ffbd16"/>
+    <circle cx="105" cy="78" r="6" fill="#292b30"/><path d="M105 82v12" stroke="#292b30" stroke-width="6" stroke-linecap="round"/>
+    <text class="label" x="170" y="82">Unlock</text>
+  </g>
+  <g transform="translate(839 20)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <circle cx="104" cy="67" r="29" fill="#a97550"/>
+    <circle cx="78" cy="75" r="13" fill="#c68d66"/><circle cx="130" cy="75" r="13" fill="#c68d66"/>
+    <ellipse cx="104" cy="80" rx="19" ry="15" fill="#f0c59e"/>
+    <path d="M92 80q4-7 8 0m8 0q4-7 8 0m-15 8q7 6 14 0" fill="none" stroke="#422e27" stroke-width="3" stroke-linecap="round"/>
+    <path d="M74 55q12-27 30-12m-29 4q12-3 18 18m51-10q-12-27-30-12m29 4q-12-3-18 18" fill="none" stroke="#c68d66" stroke-width="12" stroke-linecap="round"/>
+    <text class="label" x="170" y="82">Hide</text>
+  </g>
+  <g transform="translate(1251 20)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M62 62q43-40 86 0-43 40-86 0z" fill="#f3f5f8" stroke="#b9c4d1" stroke-width="5"/>
+    <circle cx="105" cy="62" r="24" fill="#9b633b"/><circle cx="105" cy="62" r="12" fill="#24272d"/>
+    <circle cx="114" cy="52" r="6" fill="#fff"/>
+    <text class="label" x="170" y="82">Show</text>
+  </g>
 
-    <rect x="568" y="0" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <path d="M594 31v-8a10 10 0 0 1 20 0v8m-22 0h24v27h-24z" fill="none" stroke="#e83d65" stroke-width="4" stroke-linejoin="round"/>
-    <text x="632" y="48" class="label">PRIVACY</text>
+  <g transform="translate(15 161)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M78 90l49-49 17 17-49 49-22 6z" fill="#ffbd22" stroke="#d49017" stroke-width="3"/>
+    <path d="M127 41l13-13 22 22-13 13z" fill="#ed526c"/><path d="M78 90l17 17-22 6z" fill="#f5dfbc"/>
+    <path d="M91 77l17 17" stroke="#db941e" stroke-width="5"/>
+    <text class="label" x="170" y="82">Name</text>
+  </g>
+  <g transform="translate(427 161)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <circle cx="87" cy="54" r="21" fill="#1596e9"/><path d="M49 104c2-27 16-40 38-40s36 13 38 40z" fill="#1596e9"/>
+    <circle cx="130" cy="57" r="19" fill="#1596e9"/><path d="M112 103c2-20 8-31 21-31s27 12 30 31z" fill="#1596e9"/>
+    <text class="label" x="170" y="82">Limit</text>
+  </g>
+  <g transform="translate(839 161)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M107 43v47a17 17 0 1 1-12-16V51l43-9v39a17 17 0 1 1-12-16V32z" fill="#8053dd"/>
+    <text class="label" x="170" y="82">Bitrate</text>
+  </g>
+  <g transform="translate(1251 161)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <rect x="63" y="26" width="80" height="76" rx="14" fill="#85c5de"/>
+    <text x="87" y="86" style="font:700 68px 'Noto Sans',Arial,sans-serif;fill:#fff">i</text>
+    <text class="label" x="170" y="82">Info</text>
+  </g>
 
-    <rect x="852" y="0" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <circle cx="882" cy="36" r="20" fill="none" stroke="#c4c8d0" stroke-width="3"/>
-    <path d="M882 21v16l12 7" fill="none" stroke="#ffc02e" stroke-width="4" stroke-linecap="round"/>
-    <text x="914" y="31" class="label">WAITING</text>
-    <text x="914" y="58" class="label">ROOM</text>
+  <g transform="translate(15 302)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <rect x="63" y="25" width="78" height="78" rx="13" fill="#61bf46"/>
+    <path d="M80 64l17 18 30-39" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="label" x="170" y="82">Trust</text>
+  </g>
+  <g transform="translate(427 302)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M65 46h79v57H65z" fill="#f6f7f9" stroke="#b8c4ce" stroke-width="4"/>
+    <path d="M65 49l39 31 40-31" fill="none" stroke="#46505b" stroke-width="5"/>
+    <path d="M49 47h14m-14 17h10m-10 17h8" stroke="#55c5e7" stroke-width="4"/>
+    <text class="label" x="170" y="82">Invite</text>
+  </g>
+  <g transform="translate(839 302)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <circle cx="104" cy="62" r="40" fill="none" stroke="#e82d4b" stroke-width="10"/>
+    <path d="M76 34l56 56" stroke="#e82d4b" stroke-width="11" stroke-linecap="round"/>
+    <text class="label" x="170" y="82">Block</text>
+  </g>
+  <g transform="translate(1251 302)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M100 23l16 18-18 4m18-4q20 3 27 20m-14 33l-24 2 7-17m17 17q-18 12-36 4M69 70l9-23 10 15m-10-15q-4-18 11-31" fill="none" stroke="#4cb740" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="label" x="170" y="82">Unblock</text>
+  </g>
 
-    <rect x="1136" y="0" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <path d="M1160 20h36a11 11 0 0 1 11 11v13a11 11 0 0 1-11 11h-12l-12 8v-8h-12a11 11 0 0 1-11-11V31a11 11 0 0 1 11-11z" fill="#b8bdc6"/>
-    <text x="1217" y="48" class="label">CHAT</text>
+  <g transform="translate(15 443)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M81 27h34l-4 43 16 9 16 1-5 22q-4 9-18 7l-38-3q-14-2-13-16l6-35z" fill="#9f5b36"/>
+    <path d="M90 37h13v40l20 13-5 12-29-9q-8-3-7-12z" fill="#c5794b"/>
+    <text class="label" x="170" y="82">Kick</text>
+  </g>
+  <g transform="translate(427 443)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M65 91l7-36 18 22 15-41 18 41 18-22 7 36z" fill="#ffbd22" stroke="#dc9a0d" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="72" cy="48" r="7" fill="#ffbd22"/><circle cx="105" cy="28" r="8" fill="#ffbd22"/><circle cx="138" cy="48" r="7" fill="#ffbd22"/>
+    <circle cx="88" cy="70" r="6" fill="#168bff"/><circle cx="105" cy="77" r="6" fill="#ed315b"/><circle cx="122" cy="70" r="6" fill="#168bff"/>
+    <text class="label" x="170" y="82">Claim</text>
+  </g>
+  <g transform="translate(839 443)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <rect x="59" y="25" width="88" height="78" rx="14" fill="#ff9e0d"/>
+    <path d="M75 48h47l-11-12m11 12-11 12m-30 25h47l-11-12m11 12-11 12" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="label" x="170" y="82">Transfer</text>
+  </g>
+  <g transform="translate(1251 443)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M65 39a18 18 0 0 1 18-18h44a18 18 0 0 1 18 18v31a18 18 0 0 1-18 18h-14l-20 19V88H83a18 18 0 0 1-18-18z" fill="#f5f6f8"/>
+    <circle cx="91" cy="57" r="5" fill="#323942"/><circle cx="105" cy="57" r="5" fill="#323942"/><circle cx="119" cy="57" r="5" fill="#323942"/>
+    <text class="label" x="170" y="82">Chat</text>
+  </g>
 
-    <rect x="0" y="80" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <circle cx="29" cy="104" r="10" fill="#b8bdc6"/><path d="M12 137c1-13 8-20 17-20s16 7 17 20" fill="#b8bdc6"/>
-    <circle cx="48" cy="136" r="11" fill="#278b5b"/><path d="M48 130v12m-6-6h12" stroke="#f5f5f7" stroke-width="3"/>
-    <text x="66" y="128" class="label">TRUST</text>
-
-    <rect x="284" y="80" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <circle cx="311" cy="104" r="10" fill="#b8bdc6"/><path d="M294 137c1-13 8-20 17-20s16 7 17 20" fill="#b8bdc6"/>
-    <path d="M293 140l38-39" stroke="#e83d65" stroke-width="4"/>
-    <text x="350" y="128" class="label">UNTRUST</text>
-
-    <rect x="568" y="80" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <path d="M596 100c-5 3-6 10-3 16 7 14 17 24 31 31 6 3 13 2 16-3l5-8-15-10-7 7c-6-3-13-10-16-16l7-7-10-15z" fill="none" stroke="#b8bdc6" stroke-width="4" stroke-linejoin="round"/>
-    <circle cx="616" cy="101" r="10" fill="#278b5b"/><path d="M616 95v12m-6-6h12" stroke="#f5f5f7" stroke-width="3"/>
-    <text x="648" y="128" class="label">INVITE</text>
-
-    <rect x="852" y="80" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <path d="M880 100c-5 3-6 10-3 16 7 14 17 24 31 31 6 3 13 2 16-3l5-8-15-10-7 7c-6-3-13-10-16-16l7-7-10-15z" fill="none" stroke="#b8bdc6" stroke-width="4" stroke-linejoin="round"/>
-    <circle cx="904" cy="101" r="10" fill="#c83255"/><path d="M899 96l10 10m0-10l-10 10" stroke="#f5f5f7" stroke-width="2.5"/>
-    <text x="932" y="128" class="label">KICK</text>
-
-    <rect x="1136" y="80" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <circle cx="1172" cy="116" r="21" fill="none" stroke="#b8bdc6" stroke-width="4"/>
-    <path d="M1152 116h40m-20-21c-8 9-8 33 0 42m0-42c8 9 8 33 0 42m-16-32h32m-32 22h32" fill="none" stroke="#b8bdc6" stroke-width="2"/>
-    <text x="1202" y="128" class="label">REGION</text>
-
-    <rect x="0" y="160" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <circle cx="29" cy="184" r="10" fill="#b8bdc6"/><path d="M12 217c1-13 8-20 17-20s16 7 17 20" fill="#b8bdc6"/>
-    <circle cx="48" cy="216" r="11" fill="#c83255"/><path d="M42 216h12" stroke="#f5f5f7" stroke-width="3"/>
-    <text x="66" y="208" class="label">BLOCK</text>
-
-    <rect x="284" y="160" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <circle cx="311" cy="184" r="10" fill="#b8bdc6"/><path d="M294 217c1-13 8-20 17-20s16 7 17 20" fill="#b8bdc6"/>
-    <path d="M293 220l38-39" stroke="#e83d65" stroke-width="4"/>
-    <circle cx="329" cy="216" r="10" fill="none" stroke="#727780" stroke-width="3"/>
-    <path d="M324 216h10" stroke="#727780" stroke-width="3"/>
-    <text x="350" y="208" class="label">UNBLOCK</text>
-
-    <rect x="568" y="160" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <path d="M596 201l6-22 13 14 13-14 6 22-19 12z" fill="#ffb321"/>
-    <circle cx="602" cy="176" r="4" fill="#ffb321"/><circle cx="615" cy="170" r="4" fill="#ffb321"/><circle cx="628" cy="176" r="4" fill="#ffb321"/>
-    <text x="646" y="208" class="label">CLAIM</text>
-
-    <rect x="852" y="160" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <path d="M878 214l9-29 14 12 17-20m-1 0h-13m13 0v13" fill="none" stroke="#ffb321" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="930" y="208" class="label">TRANSFER</text>
-
-    <rect x="1136" y="160" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <path d="M1160 184h26m-21 0 2 33h12l2-33m-16-5h12m-9 9v23m6-23v23" fill="none" stroke="#d83259" stroke-width="4" stroke-linecap="round"/>
-    <text x="1202" y="208" class="label">DELETE</text>
-
-    <rect x="0" y="240" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <path d="M15 281h3m7-13v27m8-35v43m8-34v25m8-19v13m8-19v25m8-18v12" stroke="#b8bdc6" stroke-width="4" stroke-linecap="round"/>
-    <text x="72" y="288" class="label">BITRATE</text>
-
-    <rect x="284" y="240" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <circle cx="320" cy="276" r="23" fill="#b8bdc6"/>
-    <text x="311" y="288" style="font:700 34px 'DejaVu Sans',Arial,sans-serif;fill:#1c1d22">i</text>
-    <text x="350" y="288" class="label">RESET</text>
-
-    <rect x="568" y="240" width="266" height="72" rx="24" fill="#1c1d22"/>
-    <circle cx="604" cy="276" r="22" fill="#b8bdc6"/>
-    <text x="595" y="288" style="font:700 32px 'DejaVu Sans',Arial,sans-serif;fill:#1c1d22">i</text>
-    <text x="632" y="288" class="label">INFO</text>
+  <g transform="translate(15 584)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <rect x="63" y="25" width="78" height="78" rx="14" fill="#87c7df"/>
+    <path d="M78 47h39l-12-13m12 13-12 13m12 17H78l12-13m-12 13 12 13" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="label" x="170" y="82">Reset</text>
+  </g>
+  <g transform="translate(427 584)">
+    <rect class="card" width="396" height="124" rx="52"/>
+    <path d="M76 44h58l-5 59H81z" fill="none" stroke="#e9234c" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M68 35h74m-48-8h22l6 8m-30 22v35m17-35v35m17-35v35" fill="none" stroke="#e9234c" stroke-width="9" stroke-linecap="round"/>
+    <text class="label" x="170" y="82">Delete</text>
   </g>
 </svg>

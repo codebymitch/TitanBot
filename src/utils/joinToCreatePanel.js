@@ -7,32 +7,32 @@ const CONTROL_IMAGE_NAME = 'jtc-control-reference.png';
 
 const PANEL_ROWS = [
     [
-        { id: 'lock', label: '🔒 Lock', style: ButtonStyle.Secondary },
-        { id: 'unlock', label: '🔓 Unlock', style: ButtonStyle.Secondary },
-        { id: 'hide', label: '🙈 Hide', style: ButtonStyle.Secondary },
-        { id: 'show', label: '👁️ Show', style: ButtonStyle.Secondary },
+        { id: 'lock', emoji: '🔒', style: ButtonStyle.Secondary },
+        { id: 'unlock', emoji: '🔓', style: ButtonStyle.Secondary },
+        { id: 'hide', emoji: '🙈', style: ButtonStyle.Secondary },
+        { id: 'show', emoji: '👁️', style: ButtonStyle.Secondary },
     ],
     [
-        { id: 'name', label: '✏️ Name', style: ButtonStyle.Primary },
-        { id: 'limit', label: '👥 Limit', style: ButtonStyle.Primary },
-        { id: 'bitrate', label: '🎵 Bitrate', style: ButtonStyle.Primary },
-        { id: 'info', label: 'ℹ️ Info', style: ButtonStyle.Primary },
+        { id: 'name', emoji: '✏️', style: ButtonStyle.Primary },
+        { id: 'limit', emoji: '👥', style: ButtonStyle.Primary },
+        { id: 'bitrate', emoji: '🎵', style: ButtonStyle.Primary },
+        { id: 'info', emoji: 'ℹ️', style: ButtonStyle.Primary },
     ],
     [
-        { id: 'trust', label: '✅ Trust', style: ButtonStyle.Success },
-        { id: 'invite', label: '📨 Invite', style: ButtonStyle.Success },
-        { id: 'block', label: '🚫 Block', style: ButtonStyle.Danger },
-        { id: 'unblock', label: '♻️ Unblock', style: ButtonStyle.Secondary },
+        { id: 'trust', emoji: '✅', style: ButtonStyle.Success },
+        { id: 'invite', emoji: '📨', style: ButtonStyle.Success },
+        { id: 'block', emoji: '🚫', style: ButtonStyle.Danger },
+        { id: 'unblock', emoji: '♻️', style: ButtonStyle.Secondary },
     ],
     [
-        { id: 'kick', label: '👢 Kick', style: ButtonStyle.Danger },
-        { id: 'claim', label: '👑 Claim', style: ButtonStyle.Primary },
-        { id: 'transfer', label: '🔁 Transfer', style: ButtonStyle.Primary },
-        { id: 'chat', label: '💬 Chat', style: ButtonStyle.Secondary },
+        { id: 'kick', emoji: '👢', style: ButtonStyle.Danger },
+        { id: 'claim', emoji: '👑', style: ButtonStyle.Primary },
+        { id: 'transfer', emoji: '🔁', style: ButtonStyle.Primary },
+        { id: 'chat', emoji: '💬', style: ButtonStyle.Secondary },
     ],
     [
-        { id: 'reset', label: '🔄 Reset', style: ButtonStyle.Secondary },
-        { id: 'delete', label: '🗑️ Delete', style: ButtonStyle.Danger },
+        { id: 'reset', emoji: '🔄', style: ButtonStyle.Secondary },
+        { id: 'delete', emoji: '🗑️', style: ButtonStyle.Danger },
     ],
 ];
 
@@ -54,7 +54,7 @@ export function createJoinToCreatePanel() {
             row.map((button) =>
                 new ButtonBuilder()
                     .setCustomId(`jtc-control:${button.id}`)
-                    .setLabel(button.label)
+                    .setEmoji(button.emoji)
                     .setStyle(button.style)
             )
         )
