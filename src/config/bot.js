@@ -29,18 +29,18 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name: "/help | show all commands", // required by Discord API, not shown in the client
-        state: "",     // this is what people actually see
+        name: "join discord manay society", // required by Discord API, not shown in the client
+        state: "/help | Show all commands",     // this is what people actually see
         type: 4,               // Custom
       },
       {
-        name: "/help | show all commands",
-        state: "",
+        name: "selalu ada untukmu",
+        state: "/help | Show all commands",
         type: 4,
       },
       {
-        name: "/help | show all commands",
-        state: "",
+        name: "tunggu apalagi sung ajah join",
+        state: "/help | Show all commands",
         type: 4,
       },
     ],
