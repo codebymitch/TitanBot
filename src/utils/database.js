@@ -1022,10 +1022,25 @@ export function formatChannelName(template, variables) {
     for (const [placeholder, value] of Object.entries(replacements)) {
         formatted = formatted.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
     }
-    
-    formatted = formatted.replace(/[^\w\s-]/g, '').trim();
-formatted = formatted.substring(0, 100);
-    
+
+    // Nama channel mendukung emoji/unicode. Hanya buang karakter kontrol,
+    // newline, dan karakter yang tidak diizinkan Discord (@, #, :, backtick).
+    formatted = formatted
+        .replace(/[\r\n\t]+/g, ' ')
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/[@#:`]/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    if (formatted.length > 100) {
+        formatted = formatted.substring(0, 100);
+        // Jangan sampai memotong di tengah pasangan surrogate (emoji jadi rusak).
+        if (/[\uD800-\uDBFF]$/.test(formatted)) {
+            formatted = formatted.slice(0, -1);
+        }
+        formatted = formatted.trim();
+    }
+
     return formatted || 'Voice Channel';
 }
 
