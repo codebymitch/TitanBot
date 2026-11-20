@@ -205,6 +205,13 @@ async function handleStreakActivity(message, client) {
       return;
     }
 
+    // Streak hanya aktif di channel streak yang di-set oleh /streak channel.
+    // Chat di channel lain tidak akan memicu bot merespons di channel streak.
+    const streakChannelId = guildConfig.streak.channelId;
+    if (streakChannelId && message.channel.id !== streakChannelId) {
+      return;
+    }
+
     const result = await StreakService.recordActivity(client, message.guild.id, message.author.id, {
       timestamp: message.createdTimestamp,
     });
@@ -222,11 +229,10 @@ async function handleStreakActivity(message, client) {
         })
       : createEmbed({
           title: '<a:Firee:1572339013346402384> THE FIRE IS ALREADY ON',
-          description: 'Streak kamu udah aktif lagi Besok jangan lupa mampir dan chat lagi yaa',
+          description: `Streak kamu ${message.author} udah aktif lagi\nBesok jangan lupa mampir dan chat lagi yaa`,
           color: 'success',
         });
 
-    const streakChannelId = guildConfig.streak.channelId;
     const streakChannel = streakChannelId
       ? message.guild.channels.cache.get(streakChannelId)
       : null;
@@ -236,7 +242,10 @@ async function handleStreakActivity(message, client) {
         .send({ embeds: [embed], allowedMentions: { users: [message.author.id] } })
         .catch(() => null);
     } else {
-      await message.reply({ embeds: [embed], allowedMentions: { repliedUser: true } }).catch(() => null);
+      await message.reply({
+        embeds: [embed],
+        allowedMentions: { users: [message.author.id], repliedUser: true },
+      }).catch(() => null);
     }
   } catch (error) {
     logger.error('Error handling streak activity:', error);
