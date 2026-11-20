@@ -279,7 +279,7 @@ const LIVE_REFRESH_INTERVAL_MS = 30 * 1000; // 30 detik
 
 const EMOJI_AVAILABLE = '<a:open:1573216908667523182>';
 const EMOJI_IN_USE = '<a:close:1573216813238591518>';
-const EMOJI_TITLE = '<a:cd2:1573254950115483722>';
+const EMOJI_TITLE = '<a:cd1:1573219932575899738>';
 
 /**
  * Simpan referensi pesan live status untuk guild tertentu.

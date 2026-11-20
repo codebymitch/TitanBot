@@ -18,7 +18,7 @@ import {
 
 const EMOJI_AVAILABLE = '<a:open:1573216908667523182>';
 const EMOJI_IN_USE = '<a:close:1573216813238591518>';
-const EMOJI_TITLE = '<a:cd2:1573254950115483722>';
+const EMOJI_TITLE = '<a:cd1:1573219932575899738>';
 
 function hasManageGuildPermission(member) {
     return member?.permissions?.has?.(PermissionFlagsBits.ManageGuild) ?? false;
