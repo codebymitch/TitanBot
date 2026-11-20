@@ -12,7 +12,9 @@ import {
     removeTriggerChannel,
     hasManageGuildPermission,
     logConfigurationChange,
-    getConfiguration
+    getConfiguration,
+    setPanelImage,
+    getPanelImage
 } from '../../services/joinToCreateService.js';
 
 export default {
@@ -70,6 +72,12 @@ export default {
             subcommand
                 .setName("panel")
                 .setDescription("Post the temporary voice control panel in this channel.")
+                .addStringOption((option) =>
+                    option
+                        .setName("image")
+                        .setDescription("Custom image URL for the panel embed (saved for this server).")
+                        .setMaxLength(500)
+                )
         ),
     category: "utility",
 
@@ -239,7 +247,9 @@ async function handleSetupSubcommand(interaction, client) {
             `${triggerChannel.parent ? `• Category: ${triggerChannel.parent.name}` : '• Category: Root level'}`
         );
 
-        await interaction.channel.send(createJoinToCreatePanel()).catch((error) => {
+        const panelImage = await getPanelImage(client, guildId).catch(() => null);
+
+        await interaction.channel.send(createJoinToCreatePanel(panelImage)).catch((error) => {
             logger.warn(`Failed to post Join to Create panel in guild ${guildId}: ${error.message}`);
         });
 
@@ -269,10 +279,21 @@ async function handlePanelSubcommand(interaction, client) {
         );
     }
 
-    await channel.send(createJoinToCreatePanel());
+    const guildId = interaction.guild.id;
+    const imageOption = interaction.options.getString('image');
+
+    if (imageOption) {
+        await setPanelImage(client, guildId, imageOption);
+    }
+
+    const panelImage = await getPanelImage(client, guildId);
+
+    await channel.send(createJoinToCreatePanel(panelImage));
 
     return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [successEmbed('Panel Posted', `The voice control panel was posted in ${channel}.`)]
+        embeds: [successEmbed('Panel Posted', imageOption
+            ? `The voice control panel was posted in ${channel} using the new image.`
+            : `The voice control panel was posted in ${channel}.`)]
     });
 }
 

@@ -38,14 +38,18 @@ const PANEL_ROWS = [
 
 /**
  * Build the public control panel message for temporary voice channels.
- * @returns {{ embeds: import('discord.js').EmbedBuilder[], components: import('discord.js').ActionRowBuilder[] }}
+ * @param {string|null} imageUrl Custom image URL. Falls back to the bundled default image when empty.
+ * @returns {{ embeds: import('discord.js').EmbedBuilder[], components: import('discord.js').ActionRowBuilder[], files?: import('discord.js').AttachmentBuilder[] }}
  */
-export function createJoinToCreatePanel() {
+export function createJoinToCreatePanel(imageUrl = null) {
+    const customImage = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+    const useCustomImage = customImage.length > 0;
+
     const embed = createEmbed({
         title: 'TempVoice Interface',
         description: 'Atur voice channel kamu di sini. Ganti nama, limit member, pindahin user, atau kunci room sesuai kebutuhan.',
         color: 'info',
-        image: `attachment://${CONTROL_IMAGE_NAME}`,
+        image: useCustomImage ? customImage : `attachment://${CONTROL_IMAGE_NAME}`,
         footer: 'Klik tombol di bawah untuk mengatur temporary voice channel.',
     });
 
@@ -60,9 +64,17 @@ export function createJoinToCreatePanel() {
         )
     );
 
-    return {
+    const payload = {
         embeds: [embed],
         components,
+    };
+
+    if (useCustomImage) {
+        return payload;
+    }
+
+    return {
+        ...payload,
         files: [new AttachmentBuilder(CONTROL_IMAGE_PATH, { name: CONTROL_IMAGE_NAME })],
     };
 }
