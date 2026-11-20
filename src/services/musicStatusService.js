@@ -280,7 +280,6 @@ const LIVE_REFRESH_INTERVAL_MS = 30 * 1000; // 30 detik
 const EMOJI_AVAILABLE = '<a:open:1573216908667523182>';
 const EMOJI_IN_USE = '<a:close:1573216813238591518>';
 const EMOJI_TITLE = '<a:cd2:1573254950115483722>';
-const EMOJI_FOOTER = '<:emoji_82:1573299979915628645>';
 
 /**
  * Simpan referensi pesan live status untuk guild tertentu.
@@ -410,7 +409,7 @@ export function buildLiveStatusEmbed(snapshot, guildName) {
         description,
         color: 0x2B2D31,
         footer: total > 0
-            ? { text: `${EMOJI_FOOTER} Total ${total} bot musik · diperbarui ${updatedAt}` }
+            ? { text: `Total ${total} bot musik · diperbarui ${updatedAt}` }
             : { text: `Diperbarui ${updatedAt}` },
         timestamp: new Date().toISOString(),
     };

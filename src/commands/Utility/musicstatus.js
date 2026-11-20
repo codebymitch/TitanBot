@@ -19,7 +19,6 @@ import {
 const EMOJI_AVAILABLE = '<a:open:1573216908667523182>';
 const EMOJI_IN_USE = '<a:close:1573216813238591518>';
 const EMOJI_TITLE = '<a:cd2:1573254950115483722>';
-const EMOJI_FOOTER = '<:emoji_82:1573299979915628645>';
 
 function hasManageGuildPermission(member) {
     return member?.permissions?.has?.(PermissionFlagsBits.ManageGuild) ?? false;
@@ -84,7 +83,7 @@ function buildStatusEmbed(snapshot, guildName) {
         title: `${EMOJI_TITLE} STATUS MUSIC ${guildName.toUpperCase()}`,
         description,
         color: 'primary',
-        footer: total > 0 ? `${EMOJI_FOOTER} Total ${total} bot musik` : null,
+        footer: total > 0 ? `Total ${total} bot musik` : null,
     });
 }
 
