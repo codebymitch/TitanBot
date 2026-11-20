@@ -165,26 +165,22 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
 
                 logger.info(`Creating temporary channel for user ${member.id} with user limit: ${userLimit}`);
 
-                const existingChannels = guild.channels.cache.filter(c =>
-                    c.parentId === triggerChannel.parentId &&
-                    c.name.startsWith(triggerChannel.name)
-                ).size;
+                const formattedName = formatChannelName(nameTemplate, {
+                    username: member.user.username,
+                    userTag: member.user.tag,
+                    displayName: member.displayName,
+                    guildName: guild.name,
+                    channelName: triggerChannel.name
+                });
+                const hasTemplateVariable = /\{(?:username|user_tag|displayName|display_name|guildName|guild_name|channelName|channel_name)\}/.test(nameTemplate);
 
-                let finalName;
-
-                if (
-                    nameTemplate.includes('{username}') ||
-                    nameTemplate.includes('{displayName}')
-                ) {
-                    finalName = formatChannelName(nameTemplate, {
-                        username: member.user.username,
-                        userTag: member.user.tag,
-                        displayName: member.displayName,
-                        guildName: guild.name,
-                        channelName: triggerChannel.name
-                    });
-                } else {
-                    finalName = `${triggerChannel.name} ${existingChannels + 1}`;
+                let finalName = formattedName;
+                if (!hasTemplateVariable) {
+                    const existingChannels = guild.channels.cache.filter(c =>
+                        c.parentId === triggerChannel.parentId &&
+                        c.name.startsWith(formattedName)
+                    ).size;
+                    finalName = `${formattedName} ${existingChannels + 1}`;
                 }
 
                 const channelName = sanitizeVoiceChannelName(finalName);
