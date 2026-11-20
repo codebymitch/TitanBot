@@ -313,8 +313,8 @@ async function postMilestoneAnnouncement(
     const embed = new EmbedBuilder()
       .setColor(role?.color || 0xD6B15E)
       .setDescription(
-        `<a:tada:1571992051933773976> **MILESTONE ACHIEVED**\n\n` +
-        `selamat buat <@${userId}> yang berhasil mencapai **${role?.name || milestone.label}** di **${guild.name}**\n\n` +
+        `## <a:itemcyantada:1573389100730552321> **MILESTONE ACHIEVED**\n\n` +
+        `selamat buat <@${userId}> yang berhasil mencapai **${role?.name || milestone.label} (${milestone.hours} hours)** di **${guild.name}**\n\n` +
         `Makasih udah sering nemenin dan ngeramein voice channel. terus aktif, makin akrab sama member lain, dan nikmatin keseruannya bareng-bareng!\n\n` +
         `<:stats:1571992208058617867> **VOICE STATISTICS**\n` +
         `<a:clock:1571422433427324938> Total Voice: ${formatAnnouncementDuration(totalMs)}\n` +
