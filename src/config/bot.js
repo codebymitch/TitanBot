@@ -31,17 +31,17 @@ export const botConfig = {
       {
         name: "/help | Show all commands", // required by Discord API, not shown in the client
         state: "",     // this is what people actually see
-        type: 3,               // Watching
+        type: 4,               // Custom
       },
       {
         name: "/help | Show all commands",
         state: "",
-        type: 3,
+        type: 4,
       },
       {
         name: "/help | Show all commands",
         state: "",
-        type: 3,
+        type: 4,
       },
     ],
   },
