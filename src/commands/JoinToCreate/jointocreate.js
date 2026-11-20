@@ -132,7 +132,7 @@ async function handleSetupSubcommand(interaction, client) {
     try {
         const category = interaction.options.getChannel('category');
         const selectedTriggerChannel = interaction.options.getChannel('trigger_channel');
-        const nameTemplate = interaction.options.getString('channel_name') || "{username}'s Room";
+        const nameTemplate = interaction.options.getString('channel_name') || '🔊 voice {displayName}';
         const userLimit = interaction.options.getInteger('user_limit') || 0;
         const bitrate = interaction.options.getInteger('bitrate') || 64;
         const guildId = interaction.guild.id;
@@ -312,7 +312,7 @@ async function handleConfigSubcommand(interaction, client) {
             .addFields(
                 {
                     name: 'Channel Name Template',
-                    value: `\`${channelConfig.nameTemplate || currentConfig.channelNameTemplate || "{username}'s Room"}\``,
+                    value: `\`${channelConfig.nameTemplate || currentConfig.channelNameTemplate || '🔊 voice {displayName}'}\``,
                     inline: false
                 },
                 {
@@ -441,7 +441,7 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
     try {
         const currentTemplate = currentConfig.channelConfig?.nameTemplate
             || currentConfig.channelNameTemplate
-            || "{username}'s Room";
+            || '🔊 voice {displayName}';
 
         const modal = new ModalBuilder()
             .setCustomId(`jtc_name_modal_${triggerChannel.id}`)
@@ -451,7 +451,7 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
                     new TextInputBuilder()
                         .setCustomId('name_template')
                         .setLabel('Template ({username}, {displayName}, ...)')
-                        .setPlaceholder("{username}'s Room")
+                        .setPlaceholder('🔊 voice {displayName}')
                         .setStyle(TextInputStyle.Short)
                         .setRequired(true)
                         .setMaxLength(100)

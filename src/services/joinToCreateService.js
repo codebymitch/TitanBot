@@ -560,7 +560,7 @@ export async function createTemporaryChannel(guild, member, options = {}) {
             validateBitrate(bitrate / 1000);
         }
 
-        const channelName = formatChannelName(nameTemplate || '{username}\'s Room', {
+        const channelName = formatChannelName(nameTemplate || '🔊 voice {displayName}', {
             username: member.user.username,
             displayName: member.displayName,
             userTag: member.user.tag,

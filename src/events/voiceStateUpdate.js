@@ -156,7 +156,10 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
                 }
 
                 const channelOptions = config.channelOptions?.[triggerChannel.id] || {};
-                const nameTemplate = channelOptions.nameTemplate || config.channelNameTemplate || "{username}'s Room";
+                const savedNameTemplate = channelOptions.nameTemplate || config.channelNameTemplate;
+                const nameTemplate = !savedNameTemplate || savedNameTemplate === "{username}'s Room"
+                    ? '🔊 voice {displayName}'
+                    : savedNameTemplate;
                 
                 let userLimit = channelOptions.userLimit ?? config.userLimit ?? 0;
                 const bitrate = clampVoiceBitrate(channelOptions.bitrate ?? config.bitrate ?? DEFAULT_VOICE_BITRATE);

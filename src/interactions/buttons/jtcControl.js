@@ -181,7 +181,10 @@ async function toggleChat(interaction, voiceChannel) {
 async function resetRoom(interaction, client, voiceChannel, tempInfo) {
     const config = await getJoinToCreateConfig(client, interaction.guild.id);
     const channelOptions = config.channelOptions?.[tempInfo.triggerChannelId] || {};
-    const template = channelOptions.nameTemplate || config.channelNameTemplate || "{username}'s Room";
+    const savedTemplate = channelOptions.nameTemplate || config.channelNameTemplate;
+    const template = !savedTemplate || savedTemplate === "{username}'s Room"
+        ? '🔊 voice {displayName}'
+        : savedTemplate;
 
     const owner = await interaction.guild.members.fetch(tempInfo.ownerId).catch(() => null);
     const newName = formatChannelName(template, {
