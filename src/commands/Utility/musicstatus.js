@@ -16,8 +16,10 @@ import {
     clearLiveMessage,
 } from '../../services/musicStatusService.js';
 
-const EMOJI_AVAILABLE = '<a:loadinggreen:1570737155142189096>';
-const EMOJI_IN_USE = '<a:loadingred:1570737219738804295>';
+const EMOJI_AVAILABLE = '<a:open:1573216908667523182>';
+const EMOJI_IN_USE = '<a:close:1573216813238591518>';
+const EMOJI_TITLE = '<a:cd2:1573254950115483722>';
+const EMOJI_FOOTER = '<:emoji_82:1573299979915628645>';
 
 function hasManageGuildPermission(member) {
     return member?.permissions?.has?.(PermissionFlagsBits.ManageGuild) ?? false;
@@ -79,10 +81,10 @@ function buildStatusEmbed(snapshot, guildName) {
     const description = lines.join('\n');
 
     return createEmbed({
-        title: `STATUS MUSIC ${guildName.toUpperCase()}`,
+        title: `${EMOJI_TITLE} STATUS MUSIC ${guildName.toUpperCase()}`,
         description,
         color: 'primary',
-        footer: total > 0 ? `Total ${total} bot musik` : null,
+        footer: total > 0 ? `${EMOJI_FOOTER} Total ${total} bot musik` : null,
     });
 }
 
