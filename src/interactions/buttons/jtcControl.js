@@ -43,12 +43,19 @@ export const jtcControlHandler = {
             }
 
             if (action === 'claim') {
+                if (!tempInfo) {
+                    await replyEphemeral(interaction, 'Claim is only available for temporary Join to Create rooms.');
+                    return;
+                }
                 await handleClaim(interaction, client, voiceChannel, tempInfo);
                 return;
             }
 
-            if (tempInfo.ownerId !== interaction.user.id) {
-                await replyEphemeral(interaction, 'Only the owner of this temporary room can use these controls.');
+            const isManager = interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels) ?? false;
+            const isOwner = tempInfo?.ownerId === interaction.user.id;
+
+            if (!isOwner && !isManager) {
+                await replyEphemeral(interaction, 'Only the room owner or a member with Manage Channels can use these controls.');
                 return;
             }
 
@@ -73,11 +80,15 @@ export const jtcControlHandler = {
                     await toggleChat(interaction, voiceChannel);
                     break;
                 case 'reset':
+                    if (!tempInfo) {
+                        await replyEphemeral(interaction, 'Reset is only available for temporary Join to Create rooms.');
+                        return;
+                    }
                     await resetRoom(interaction, client, voiceChannel, tempInfo);
                     break;
                 case 'delete':
-                    await voiceChannel.delete('Temporary room closed by its owner');
-                    await replyEphemeral(interaction, '🗑️ Your temporary room has been deleted.');
+                    await voiceChannel.delete('Voice room deleted from the TempVoice interface');
+                    await replyEphemeral(interaction, '🗑️ The voice room has been deleted.');
                     break;
                 case 'name':
                     await promptText(interaction, voiceChannel, 'name', 'Rename Room', 'New channel name', 'My Room', 100);
@@ -104,6 +115,10 @@ export const jtcControlHandler = {
                     await promptText(interaction, voiceChannel, 'kick', 'Kick a User', 'User ID or mention', '', 32);
                     break;
                 case 'transfer':
+                    if (!tempInfo) {
+                        await replyEphemeral(interaction, 'Ownership transfer is only available for temporary Join to Create rooms.');
+                        return;
+                    }
                     await promptText(interaction, voiceChannel, 'transfer', 'Transfer Ownership', 'User ID or mention', '', 32);
                     break;
                 default:
@@ -120,14 +135,10 @@ async function resolveContext(interaction, client) {
     const voiceChannel = interaction.member?.voice?.channel;
 
     if (!voiceChannel) {
-        return { error: 'You must be connected to a temporary voice channel to use these controls.' };
+        return { error: 'Join a voice channel first to use these controls.' };
     }
 
     const tempInfo = await getTemporaryChannelInfo(client, interaction.guild.id, voiceChannel.id);
-
-    if (!tempInfo) {
-        return { error: 'The voice channel you are in is not a temporary Join to Create room.' };
-    }
 
     return { voiceChannel, tempInfo };
 }
@@ -137,11 +148,12 @@ async function showInfo(interaction, voiceChannel, tempInfo) {
         title: `ℹ️ ${voiceChannel.name}`,
         color: 'info',
         fields: [
-            { name: 'Owner', value: `<@${tempInfo.ownerId}>`, inline: true },
+            { name: 'Type', value: tempInfo ? 'Temporary room' : 'Regular voice channel', inline: true },
+            { name: 'Owner', value: tempInfo?.ownerId ? `<@${tempInfo.ownerId}>` : 'Not assigned', inline: true },
             { name: 'Members', value: `${voiceChannel.members.size}`, inline: true },
             { name: 'User Limit', value: voiceChannel.userLimit === 0 ? 'Unlimited' : `${voiceChannel.userLimit}`, inline: true },
             { name: 'Bitrate', value: `${Math.round(voiceChannel.bitrate / 1000)} kbps`, inline: true },
-            { name: 'Created', value: `<t:${Math.floor((tempInfo.createdAt || Date.now()) / 1000)}:R>`, inline: true },
+            ...(tempInfo ? [{ name: 'Created', value: `<t:${Math.floor((tempInfo.createdAt || Date.now()) / 1000)}:R>`, inline: true }] : []),
         ],
     });
 

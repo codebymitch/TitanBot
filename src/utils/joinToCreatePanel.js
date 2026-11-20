@@ -47,10 +47,10 @@ export function createJoinToCreatePanel(imageUrl = null) {
 
     const embed = createEmbed({
         title: 'TempVoice Interface',
-        description: 'Atur voice channel kamu di sini. Ganti nama, limit member, pindahin user, atau kunci room sesuai kebutuhan.',
+        description: 'Atur voice channel tempat kamu berada. Pemilik room atau moderator dapat mengganti nama, membatasi member, memindahkan user, dan mengunci room.',
         color: 'info',
         image: useCustomImage ? customImage : `attachment://${CONTROL_IMAGE_NAME}`,
-        footer: 'Klik tombol di bawah untuk mengatur temporary voice channel.',
+        footer: 'Klaim, transfer, dan reset hanya tersedia untuk temporary room.',
     });
 
     const components = PANEL_ROWS.map((row) =>
