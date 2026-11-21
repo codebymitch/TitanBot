@@ -226,6 +226,171 @@ class EconomyService {
     }
   }
 
+  static async transferServerBalance(client, sourceGuildId, destGuildId, userId, amount = null) {
+    logger.debug(`[ECONOMY_SERVICE] transferServerBalance requested`, {
+      userId,
+      sourceGuildId,
+      destGuildId
+    });
+
+    if (sourceGuildId === destGuildId) {
+      throw createError(
+        "Same source and destination server",
+        ErrorTypes.VALIDATION,
+        "Source and destination servers must be different.",
+        { userId, sourceGuildId, destGuildId }
+      );
+    }
+
+    const [sourceData, destData] = await Promise.all([
+      getEconomyData(client, sourceGuildId, userId),
+      getEconomyData(client, destGuildId, userId)
+    ]);
+
+    if (!sourceData || !destData) {
+      logger.error(`[ECONOMY_SERVICE] Failed to load economy data for server transfer`, {
+        userId,
+        sourceGuildId,
+        destGuildId
+      });
+      throw createError(
+        "Failed to load economy data",
+        ErrorTypes.DATABASE,
+        "Failed to load economy data. Please try again later.",
+        { userId, sourceGuildId, destGuildId }
+      );
+    }
+
+    const walletAvailable = sourceData.wallet || 0;
+    const bankAvailable = sourceData.bank || 0;
+    const totalAvailable = walletAvailable + bankAvailable;
+
+    if (totalAvailable <= 0) {
+      throw createError(
+        "Nothing to transfer",
+        ErrorTypes.VALIDATION,
+        "You have no wallet or bank balance to move from this server.",
+        { userId, sourceGuildId }
+      );
+    }
+
+    let walletMoved;
+    let bankMoved;
+
+    if (amount == null) {
+      walletMoved = walletAvailable;
+      bankMoved = bankAvailable;
+    } else {
+      this.validateAmount(amount, { operation: 'transferServer', userId, sourceGuildId, destGuildId });
+
+      if (amount > totalAvailable) {
+        throw createError(
+          "Insufficient balance",
+          ErrorTypes.VALIDATION,
+          `You only have **$${totalAvailable.toLocaleString()}** in total on this server.`,
+          { required: amount, available: totalAvailable, userId, sourceGuildId }
+        );
+      }
+
+      walletMoved = Math.min(amount, walletAvailable);
+      bankMoved = amount - walletMoved;
+    }
+
+    const sourceWalletBefore = walletAvailable;
+    const sourceBankBefore = bankAvailable;
+
+    const destWalletBefore = destData.wallet || 0;
+    const destBankBefore = destData.bank || 0;
+    const destMaxBank = getMaxBankCapacity(destData);
+
+    let destBankAfter = destBankBefore + bankMoved;
+    let bankOverflow = 0;
+
+    if (destBankAfter > destMaxBank) {
+      bankOverflow = destBankAfter - destMaxBank;
+      destBankAfter = destMaxBank;
+    }
+
+    const destWalletAfter = destWalletBefore + walletMoved + bankOverflow;
+
+    this.assertSafeBalance(destWalletAfter, { operation: 'transferServer.wallet', userId, destGuildId });
+    this.assertSafeBalance(destBankAfter, { operation: 'transferServer.bank', userId, destGuildId });
+
+    sourceData.wallet = sourceWalletBefore - walletMoved;
+    sourceData.bank = sourceBankBefore - bankMoved;
+    destData.wallet = destWalletAfter;
+    destData.bank = destBankAfter;
+
+    const sourceSaved = await setEconomyData(client, sourceGuildId, userId, sourceData);
+    if (!sourceSaved) {
+      logger.error(`[ECONOMY_SERVICE] Failed to debit source server for cross-server transfer`, {
+        userId,
+        sourceGuildId,
+        destGuildId
+      });
+      throw createError(
+        "Failed to save transfer",
+        ErrorTypes.DATABASE,
+        "Failed to process the transfer. Please try again.",
+        { userId, sourceGuildId, destGuildId }
+      );
+    }
+
+    const destSaved = await setEconomyData(client, destGuildId, userId, destData);
+    if (!destSaved) {
+      logger.error(`[ECONOMY_CRITICAL] Failed to credit destination ${destGuildId}. Attempting rollback for source ${sourceGuildId}...`, {
+        userId,
+        sourceGuildId,
+        destGuildId
+      });
+
+      sourceData.wallet = sourceWalletBefore;
+      sourceData.bank = sourceBankBefore;
+
+      const rollbackSaved = await setEconomyData(client, sourceGuildId, userId, sourceData);
+      if (!rollbackSaved) {
+        logger.error(`[ECONOMY_FATAL] ROLLBACK FAILED for cross-server transfer. Data is now inconsistent.`, {
+          userId,
+          sourceGuildId,
+          destGuildId
+        });
+      }
+
+      throw createError(
+        "Failed to save transfer",
+        ErrorTypes.DATABASE,
+        "Failed to process the transfer. Please try again.",
+        { userId, sourceGuildId, destGuildId }
+      );
+    }
+
+    logger.info(`[ECONOMY_TRANSACTION] Balance moved across servers`, {
+      type: 'server_transfer',
+      userId,
+      sourceGuildId,
+      destGuildId,
+      walletMoved,
+      bankMoved,
+      bankOverflow,
+      sourceWalletAfter: sourceData.wallet,
+      sourceBankAfter: sourceData.bank,
+      destWalletAfter: destData.wallet,
+      destBankAfter: destData.bank,
+      timestamp: new Date().toISOString()
+    });
+
+    return {
+      walletMoved,
+      bankMoved,
+      bankOverflow,
+      sourceWallet: sourceData.wallet,
+      sourceBank: sourceData.bank,
+      destWallet: destData.wallet,
+      destBank: destData.bank,
+      destMaxBank
+    };
+  }
+
   static async addMoney(client, guildId, userId, amount, source = 'unknown') {
     if (amount <= 0) {
       throw createError(

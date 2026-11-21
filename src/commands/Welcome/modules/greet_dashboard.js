@@ -180,7 +180,7 @@ export default {
                 throw new TitanBotError(
                     'Greet system not configured',
                     ErrorTypes.CONFIGURATION,
-                    'Neither Welcome nor Goodbye has been set up yet. Run `/welcome setup` or `/goodbye setup` first.',
+                    'Neither Welcome nor Goodbye has been set up yet. Run `/welcome setup` or `/welcome goodbye` first.',
                 );
             }
 

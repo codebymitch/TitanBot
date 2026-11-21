@@ -7,6 +7,22 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SHOP_ITEMS = shopItems;
+const ADMIN_POTION_ID = 'admin_potion';
+// Map shop role items to the guild config key that stores the role to grant.
+const ROLE_ITEM_CONFIG_KEYS = {
+    premium_role: 'premiumRoleId',
+    premium_role_plus: 'premiumPlusRoleId',
+};
+// Potion ini langsung aktif saat dibeli. Admin potion TIDAK termasuk di sini:
+// admin potion disimpan ke inventory dulu supaya bisa dipakai (/use) atau dikirim (/give).
+const LUCK_POTION_IDS = new Set([
+    'luck_potion_1',
+    'luck_potion_2',
+    'luck_potion_3',
+    'luck_potion_4',
+    'luck_potion_5',
+]);
+const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
 
 export default {
     data: new SlashCommandBuilder()
@@ -36,7 +52,7 @@ export default {
             const itemId = interaction.options.getString("item_id").toLowerCase();
             const quantity = interaction.options.getInteger("quantity") || 1;
 
-            const item = SHOP_ITEMS.find(i => i.id === itemId);
+            const item = SHOP_ITEMS.find(i => i.id.toLowerCase() === itemId);
 
             if (!item) {
                 throw createError(
@@ -44,6 +60,15 @@ export default {
                     ErrorTypes.VALIDATION,
                     `The item ID \`${itemId}\` does not exist in the shop.`,
                     { itemId }
+                );
+            }
+
+            if (item.requiredRoleId && !interaction.member.roles.cache.has(item.requiredRoleId)) {
+                throw createError(
+                    "Restricted item",
+                    ErrorTypes.VALIDATION,
+                    `**${item.name}** can only be purchased by members with the required role.`,
+                    { itemId, requiredRoleId: item.requiredRoleId }
                 );
             }
 
@@ -59,7 +84,8 @@ export default {
             const totalCost = item.price * quantity;
 
             const guildConfig = await getGuildConfig(client, guildId);
-            const PREMIUM_ROLE_ID = guildConfig.premiumRoleId;
+            const ROLE_CONFIG_KEY = ROLE_ITEM_CONFIG_KEYS[itemId];
+            const ROLE_ITEM_ID = ROLE_CONFIG_KEY ? guildConfig[ROLE_CONFIG_KEY] : null;
 
             const userData = await getEconomyData(client, guildId, userId);
 
@@ -72,21 +98,21 @@ export default {
                 );
             }
 
-            if (item.type === "role" && itemId === "premium_role") {
-                if (!PREMIUM_ROLE_ID) {
+            if (item.type === "role" && ROLE_CONFIG_KEY) {
+                if (!ROLE_ITEM_ID) {
                     throw createError(
                         "Premium role not configured",
                         ErrorTypes.CONFIGURATION,
-                        "The **Premium Shop Role** has not been configured by a server administrator yet.",
+                        `The **${item.name}** has not been configured by a server administrator yet.`,
                         { itemId }
                     );
                 }
-                if (interaction.member.roles.cache.has(PREMIUM_ROLE_ID)) {
+                if (interaction.member.roles.cache.has(ROLE_ITEM_ID)) {
                     throw createError(
                         "Role already owned",
                         ErrorTypes.VALIDATION,
                         `You already have the **${item.name}** role.`,
-                        { itemId, roleId: PREMIUM_ROLE_ID }
+                        { itemId, roleId: ROLE_ITEM_ID }
                     );
                 }
                 if (quantity > 1) {
@@ -103,17 +129,17 @@ export default {
 
             let successDescription = `You successfully purchased ${quantity}x **${item.name}** for **$${totalCost.toLocaleString()}**!`;
 
-            if (item.type === "role" && itemId === "premium_role") {
+            if (item.type === "role" && ROLE_CONFIG_KEY) {
                 const member = interaction.member;
 
-                const role = interaction.guild.roles.cache.get(PREMIUM_ROLE_ID);
+                const role = interaction.guild.roles.cache.get(ROLE_ITEM_ID);
 
                 if (!role) {
                     throw createError(
                         "Role not found",
                         ErrorTypes.CONFIGURATION,
                         "The configured premium role no longer exists in this guild.",
-                        { roleId: PREMIUM_ROLE_ID }
+                        { roleId: ROLE_ITEM_ID }
                     );
                 }
 
@@ -130,17 +156,28 @@ export default {
                         "Role assignment failed",
                         ErrorTypes.DISCORD_API,
                         "Successfully deducted money, but failed to grant the role. Your cash has been refunded.",
-                        { roleId: PREMIUM_ROLE_ID, originalError: roleError.message }
+                        { roleId: ROLE_ITEM_ID, originalError: roleError.message }
                     );
                 }
             } else if (item.type === "upgrade") {
                 userData.upgrades[itemId] = true;
                 successDescription += `\n\n**✨ Your upgrade is now active!**`;
+            } else if (item.type === "consumable" && LUCK_POTION_IDS.has(itemId)) {
+                const now = Date.now();
+                const potionExpiries = userData.luckPotionExpiresAt || {};
+                const currentExpiry = Math.max(now, Number(potionExpiries[itemId]) || 0);
+                const duration = Number(item.effect?.duration) || DEFAULT_LUCK_POTION_DURATION_MS;
+                potionExpiries[itemId] = currentExpiry + (duration * quantity);
+                userData.luckPotionExpiresAt = potionExpiries;
+                const activeMinutes = Math.ceil((potionExpiries[itemId] - now) / 60000);
+                successDescription += `\n\n🧪 **Active for ${activeMinutes} minutes. Timer started at purchase.**`;
             } else if (item.type === "consumable" || item.type === "tool") {
                 userData.inventory[itemId] =
                     (userData.inventory[itemId] || 0) + quantity;
                 if (item.type === "tool") {
                     successDescription += `\n\n**🛠️ ${item.name} added to your inventory!**`;
+                } else if (itemId === ADMIN_POTION_ID) {
+                    successDescription += `\n\n👑 **Added to your inventory!** Activate it with \`/use item_id:${ADMIN_POTION_ID}\` or gift it with \`/give\`.`;
                 }
             }
 
