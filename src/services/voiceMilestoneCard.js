@@ -92,15 +92,19 @@ function drawShield(context, x, y, size, color) {
 }
 
 async function getBackground() {
-  backgroundPromise ??= readFile(BACKGROUND_PATH).then(loadImage);
-  return backgroundPromise;
+  try {
+    backgroundPromise ??= readFile(BACKGROUND_PATH).then(loadImage);
+    return await backgroundPromise;
+  } catch {
+    return null;
+  }
 }
 
 async function getAvatar(member) {
-  const avatarUrl = member?.user?.displayAvatarURL?.({ extension: 'png', size: 256 });
-  if (!avatarUrl) return null;
-
   try {
+    const avatarUrl = member?.user?.displayAvatarURL?.({ extension: 'png', size: 256 });
+    if (!avatarUrl) return null;
+
     const response = await fetch(avatarUrl);
     if (!response.ok) return null;
     return await loadImage(Buffer.from(await response.arrayBuffer()));
@@ -130,16 +134,24 @@ export async function renderVoiceMilestoneCard({
   const context = canvas.getContext('2d');
   ensureFonts();
   const background = await getBackground();
-  const scale = Math.max(CARD_WIDTH / background.width, CARD_HEIGHT / background.height);
-  const backgroundWidth = background.width * scale;
-  const backgroundHeight = background.height * scale;
-  context.drawImage(
-    background,
-    (CARD_WIDTH - backgroundWidth) / 2,
-    (CARD_HEIGHT - backgroundHeight) / 2,
-    backgroundWidth,
-    backgroundHeight,
-  );
+  if (background) {
+    const scale = Math.max(CARD_WIDTH / background.width, CARD_HEIGHT / background.height);
+    const backgroundWidth = background.width * scale;
+    const backgroundHeight = background.height * scale;
+    context.drawImage(
+      background,
+      (CARD_WIDTH - backgroundWidth) / 2,
+      (CARD_HEIGHT - backgroundHeight) / 2,
+      backgroundWidth,
+      backgroundHeight,
+    );
+  } else {
+    const fallbackBackground = context.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
+    fallbackBackground.addColorStop(0, '#10191D');
+    fallbackBackground.addColorStop(1, '#283B3D');
+    context.fillStyle = fallbackBackground;
+    context.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+  }
 
   context.fillStyle = 'rgba(9, 14, 17, 0.58)';
   context.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
@@ -198,6 +210,7 @@ export async function renderVoiceMilestoneCard({
   context.letterSpacing = '4px';
   const serverLabel = String(guildName || 'Server').toUpperCase();
   fitText(
+    context,
     isTest ? `${serverLabel}  ·  TEST PREVIEW` : `${serverLabel}  ·  VOICE MILESTONE`,
     contentX,
     76,
@@ -261,6 +274,53 @@ export async function renderVoiceMilestoneCard({
   context.fillText(formatHours(totalMs), col1X, colY + 42);
   context.fillText(rank ? `#${rank}` : '#—', col2X, colY + 42);
   fitText(context, next ? next.label.toUpperCase() : 'HALL OF FAME', col3X, colY + 42, 300, 26, 18);
+
+  return canvas.toBuffer('image/png');
+}
+
+export function renderVoiceMilestoneFallbackCard({
+  guildName = 'Manay Society',
+  member,
+  milestone,
+  totalMs,
+  roleColor,
+  rank = null,
+}) {
+  const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
+  const context = canvas.getContext('2d');
+  const accent = toHexColor(roleColor);
+  const displayName = member?.displayName
+    || member?.user?.globalName
+    || member?.user?.username
+    || 'Manay Member';
+
+  const background = context.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
+  background.addColorStop(0, '#10191D');
+  background.addColorStop(1, '#283B3D');
+  context.fillStyle = background;
+  context.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+
+  roundedRect(context, 28, 24, CARD_WIDTH - 56, CARD_HEIGHT - 48, 28);
+  context.fillStyle = 'rgba(12, 18, 20, 0.72)';
+  context.fill();
+  context.lineWidth = 3;
+  context.strokeStyle = accent;
+  context.stroke();
+
+  context.fillStyle = accent;
+  context.font = 'bold 22px sans-serif';
+  context.fillText(`${String(guildName).toUpperCase()}  ·  VOICE MILESTONE`, 72, 82);
+  context.fillStyle = '#F5F6F6';
+  context.font = 'bold 42px sans-serif';
+  context.fillText(displayName, 72, 158);
+  context.fillStyle = accent;
+  context.font = 'bold 58px sans-serif';
+  context.fillText(String(milestone?.label || 'MILESTONE').toUpperCase(), 72, 242);
+  context.fillStyle = '#D8DEDF';
+  context.font = 'bold 22px sans-serif';
+  context.fillText(`TOTAL VOICE  ${formatHours(totalMs)}    GLOBAL RANK  #${rank ?? '—'}`, 72, 326);
+  context.font = '20px sans-serif';
+  context.fillText('Kartu milestone berhasil dibuat dengan mode cadangan', 72, 372);
 
   return canvas.toBuffer('image/png');
 }

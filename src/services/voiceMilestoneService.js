@@ -7,7 +7,10 @@
 
 import { logger } from '../utils/logger.js';
 import { AttachmentBuilder, EmbedBuilder } from 'discord.js';
-import { renderVoiceMilestoneCard } from './voiceMilestoneCard.js';
+import {
+  renderVoiceMilestoneCard,
+  renderVoiceMilestoneFallbackCard,
+} from './voiceMilestoneCard.js';
 import { renderVoiceLeaderboardCard } from './voiceLeaderboardCard.js';
 import {
   getVoiceMilestoneConfigKey,
@@ -341,6 +344,19 @@ async function postMilestoneAnnouncement(
       embed.setImage('attachment://voice-milestone.png');
     } catch (error) {
       logger.warn(`Failed to render voice milestone card for ${userId}:`, error);
+      try {
+        cardBuffer = renderVoiceMilestoneFallbackCard({
+          guildName: guild.name,
+          member,
+          milestone,
+          totalMs,
+          roleColor: role?.color,
+          rank,
+        });
+        embed.setImage('attachment://voice-milestone.png');
+      } catch (fallbackError) {
+        logger.error(`Failed to render fallback voice milestone card for ${userId}:`, fallbackError);
+      }
     }
 
     const payload = {
