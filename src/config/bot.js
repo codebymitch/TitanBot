@@ -25,7 +25,7 @@ export const botConfig = {
       {
         name: 
           ", // required by Discord API, not shown in the client
-        state: "SafeGuard Bank
+        state: "SafeGuardBank
           ",     // this is what people actually see
         type: 3
         ,               // Custom
