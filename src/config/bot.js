@@ -23,11 +23,9 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name: 
-    
-        state: "Chilling" 
-          ",     // this is what people actually see
-        type: 3,
+        name: "Custom Status", // required by Discord API, not shown in the client
+        state: "stalking",     // this is what people actually see
+        type: 4,               // Custom
       },
     ],
   },
@@ -95,8 +93,8 @@ export const botConfig = {
   embeds: {
     colors: {
       // Main brand colors.
-      primary: " #FFD700",
-      secondary: "#000000",
+      primary: "#336699",
+      secondary: "#2F3136",
 
       // Standard status colors for success/error/warning/info messages.
       success: "#57F287",
@@ -648,6 +646,9 @@ export function getRandomColor() {
     typeof color === "string" ? color : Object.values(color),
   );
   return colors[Math.floor(Math.random() * colors.length)];
+}
+
+export default botConfig;
 }
 
 export default botConfig;
