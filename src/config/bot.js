@@ -23,7 +23,7 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name
+        name:
     
         state "Chilling" 
           ",     // this is what people actually see
