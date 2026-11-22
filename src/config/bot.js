@@ -633,51 +633,6 @@ import {
 import { getColor } from '../../config/bot.js';
 
 // =========================
-// EDIT THIS SECTION
-// =========================
-const HOME = {
-  // Direct URL to your banner image (the big "Welcome" graphic).
-  // Upload it to a Discord channel and copy the link, or host it anywhere.
-  bannerUrl: 'https://example.com/welcome-banner.png',
-
-  title: 'Home',
-
-  // {topic} is replaced by the /homepage topic option.
-  intro:
-    "We're so glad you found us — this is the **home base** for everything related to **{topic}**.",
-
-  whyWeExist: [
-    'To bring together people who love {topic}',
-    'To share knowledge, fun, and creativity',
-    'To build a safe & friendly community',
-  ],
-
-  whatYoullFind: [
-    '💬 Active chats & discussions',
-    '🎁 Giveaways & events',
-    '📚 Helpful resources & guides',
-    '🎭 Roles to personalize your experience',
-  ],
-
-  outro: 'Take the **Server Tour** to get familiar with all the key channels and features.',
-  footer: 'Welcome to the community!',
-
-  buttonLabel: 'Server Tour',
-};
-
-// Steps shown (privately) when someone clicks the Server Tour button.
-// Use channel mentions like <#CHANNEL_ID> so they become clickable.
-const TOUR_STEPS = [
-  { name: '📜 Rules', value: 'Read the server rules: <#RULES_CHANNEL_ID>' },
-  { name: '💬 Chat', value: 'Hang out and talk in <#CHAT_CHANNEL_ID>' },
-  { name: '🎁 Giveaways', value: 'Win prizes in <#GIVEAWAY_CHANNEL_ID>' },
-  { name: '🎭 Roles', value: 'Pick your roles in <#ROLES_CHANNEL_ID>' },
-  { name: '🎫 Support', value: 'Need help? Open a ticket in <#TICKET_CHANNEL_ID>' },
-];
-
-export const HOME_TOUR_BUTTON_ID = 'home_server_tour';
-
-// =========================
 // HELPERS
 // =========================
 const fill = (text, topic) => text.replaceAll('{topic}', topic);
