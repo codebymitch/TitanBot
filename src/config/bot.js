@@ -24,8 +24,8 @@ export const botConfig = {
     activities: [
       {
         name: 
-          ", // required by Discord API, not shown in the client
-        state: "SafeGuardBank
+    
+        state: "Chilling
           ",     // this is what people actually see
         type: 3
         ,               // Custom
