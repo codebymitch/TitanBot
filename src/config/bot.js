@@ -25,7 +25,7 @@ export const botConfig = {
       {
         name:
     
-        state: "Chilling" 
+        state "Chilling" 
           ",     // this is what people actually see
         type: 3,
       },
