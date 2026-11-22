@@ -2,30 +2,18 @@ import { logger } from '../utils/logger.js';
 
 export const botConfig = {
   // =========================
-  // BOT PRESENCE (what users see under the bot name)
+  // BOT PRESENCE
   // =========================
-  // `status` options:
-  // - "online"    = green dot
-  // - "idle"      = yellow moon
-  // - "dnd"       = red do-not-disturb
-  // - "invisible" = appears offline
+  // status: "online" | "idle" | "dnd" | "invisible"
   presence: {
-    // Current online state shown on Discord.
     status: "online",
 
-    // Activity lines shown under the bot name.
-    // `type` number mapping from Discord:
-    // 0 = Playing
-    // 1 = Streaming
-    // 2 = Listening
-    // 3 = Watching
-    // 4 = Custom
-    // 5 = Competing
+    // type: 0 = Playing, 1 = Streaming, 2 = Listening, 3 = Watching, 4 = Custom, 5 = Competing
     activities: [
       {
         name: "Custom Status", // required by Discord API, not shown in the client
-        state: "stalking",     // this is what people actually see
-        type: 4,               // Custom
+        state: "Watching over the server, // what people actually see
+        type: 4,
       },
     ],
   },
@@ -34,24 +22,22 @@ export const botConfig = {
   // COMMAND BEHAVIOR
   // =========================
   commands: {
-    // Bot owner user IDs (comma-separated in OWNER_IDS env var).
-    // Owners can access owner/admin-level bot commands.
+    // Comma-separated user IDs in the OWNER_IDS env var.
     owners: process.env.OWNER_IDS?.split(",").map((id) => id.trim()).filter(Boolean) || [],
 
-    // Default wait time between command uses (in seconds).
+    // Default cooldown between command uses (seconds).
     defaultCooldown: 3,
 
     // If true, old commands are removed before re-registering.
     deleteCommands: false,
 
-    // Optional server ID retained for tutorial compatibility; not used for command registration.
+    // Guild used while developing; kept for compatibility.
     testGuildId: process.env.TEST_GUILD_ID,
 
-    // When true (or MAINTENANCE_MODE=true), only bot owners can run commands.
+    // When true (or MAINTENANCE_MODE=true), only owners can run commands.
     maintenanceMode: process.env.MAINTENANCE_MODE === "true",
 
-    // Command prefix for text-based commands (e.g., "!" for "!ping").
-    // Supports both slash commands and prefix commands.
+    // Prefix for text commands (e.g. "!ping").
     prefix: process.env.PREFIX || "!",
   },
 
@@ -59,55 +45,47 @@ export const botConfig = {
   // APPLICATIONS SYSTEM
   // =========================
   applications: {
-    // Default questions shown when someone fills out an application.
     defaultQuestions: [
       { question: "What is your name?", required: true },
       { question: "How old are you?", required: true },
       { question: "Why do you want to join?", required: true },
     ],
 
-    // Embed colors by application status.
     statusColors: {
       pending: "#FFA500",
       approved: "#00FF00",
       denied: "#FF0000",
     },
 
-    // How long users must wait before submitting another application (hours).
+    // Hours a user must wait before submitting another application.
     applicationCooldown: 24,
 
-    // Auto-delete denied applications after this many days.
+    // Auto-delete denied/approved applications after this many days.
     deleteDeniedAfter: 7,
-
-    // Auto-delete approved applications after this many days.
     deleteApprovedAfter: 30,
 
     // Role IDs allowed to manage applications.
-    managerRoles: [], // Will be populated from environment or database
+    managerRoles: [],
   },
 
   // =========================
   // EMBED COLORS & BRANDING
   // =========================
-  // IMPORTANT: This is the SINGLE SOURCE OF TRUTH for all bot colors
+  // SINGLE SOURCE OF TRUTH for all bot colors.
   embeds: {
     colors: {
-      // Main brand colors.
-      primary: "#336699",
+      primary: "#7C3AED",
       secondary: "#2F3136",
 
-      // Standard status colors for success/error/warning/info messages.
       success: "#57F287",
       error: "#ED4245",
       warning: "#FEE75C",
       info: "#3498DB",
 
-      // Neutral utility colors.
       light: "#FFFFFF",
       dark: "#202225",
       gray: "#99AAB5",
 
-      // Discord-style palette shortcuts.
       blurple: "#5865F2",
       green: "#57F287",
       yellow: "#FEE75C",
@@ -115,7 +93,6 @@ export const botConfig = {
       red: "#ED4245",
       black: "#000000",
 
-      // Feature-specific colors.
       giveaway: {
         active: "#57F287",
         ended: "#ED4245",
@@ -130,7 +107,6 @@ export const botConfig = {
       birthday: "#E91E63",
       moderation: "#9B59B6",
 
-      // Ticket priority color mapping.
       priority: {
         none: "#95A5A6",
         low: "#3498db",
@@ -138,17 +114,23 @@ export const botConfig = {
         high: "#f1c40f",
         urgent: "#e74c3c",
       },
+
+      // New in Nova
+      leveling: "#F59E0B",
+      starboard: "#FFD700",
+      poll: "#3B82F6",
+      suggestion: {
+        pending: "#99AAB5",
+        approved: "#57F287",
+        denied: "#ED4245",
+      },
     },
     footer: {
-      // Default footer text used in bot embeds.
-      text: "Titan Bot",
-      // Footer icon URL (null = no icon).
+      text: "Nova Bot",
       icon: null,
     },
-    // Default thumbnail URL for embeds (null = no thumbnail).
     thumbnail: null,
     author: {
-      // Optional default embed author block.
       name: null,
       icon: null,
       url: null,
@@ -160,28 +142,18 @@ export const botConfig = {
   // =========================
   economy: {
     currency: {
-      // Currency display name.
       name: "coins",
-      // Plural display name.
       namePlural: "coins",
-      // Currency symbol shown in balances.
       symbol: "$",
     },
 
-    // Starting balance for new users.
     startingBalance: 0,
-
-    // Maximum bank amount before upgrades (if upgrades are used).
     baseBankCapacity: 100000,
-
-    // Daily reward amount.
     dailyAmount: 100,
 
-    // Work command random payout range.
     workMin: 10,
     workMax: 100,
 
-    // Beg command random payout range.
     begMin: 5,
     begMax: 50,
 
@@ -196,65 +168,32 @@ export const botConfig = {
     // Chance to succeed when robbing (0.4 = 40%).
     robSuccessRate: 0.4,
 
-    // Jail time after failed rob (milliseconds).
-    // 3600000 = 1 hour.
+    // Jail time after a failed rob (ms). 3600000 = 1 hour.
     robFailJailTime: 3600000,
   },
 
   // =========================
   // SHOP SETTINGS
   // =========================
-  // Add shop defaults here when needed.
-  shop: {
-
-  },
+  shop: {},
 
   // =========================
   // TICKET SYSTEM
   // =========================
   tickets: {
-    // Category ID where new tickets are created (null = no forced category).
     defaultCategory: null,
-
-    // Role IDs allowed to manage/support tickets.
     supportRoles: [],
 
-    // Priority options users/staff can assign.
     priorities: {
-      none: {
-        emoji: "⚪",
-        color: "#95A5A6",
-        label: "None",
-      },
-      low: {
-        emoji: "🟢",
-        color: "#2ECC71",
-        label: "Low",
-      },
-      medium: {
-        emoji: "🟡",
-        color: "#F1C40F",
-        label: "Medium",
-      },
-      high: {
-        emoji: "🔴",
-        color: "#E74C3C",
-        label: "High",
-      },
-      urgent: {
-        emoji: "🚨",
-        color: "#E91E63",
-        label: "Urgent",
-      },
+      none: { emoji: "⚪", color: "#95A5A6", label: "None" },
+      low: { emoji: "🟢", color: "#2ECC71", label: "Low" },
+      medium: { emoji: "🟡", color: "#F1C40F", label: "Medium" },
+      high: { emoji: "🔴", color: "#E74C3C", label: "High" },
+      urgent: { emoji: "🚨", color: "#E91E63", label: "Urgent" },
     },
 
-    // Default priority for new tickets.
     defaultPriority: "none",
-
-    // Category ID where closed tickets are archived.
     archiveCategory: null,
-
-    // Channel ID where ticket logs are sent.
     logChannel: null,
   },
 
@@ -262,24 +201,12 @@ export const botConfig = {
   // GIVEAWAY SETTINGS
   // =========================
   giveaways: {
-    // Default giveaway duration in milliseconds.
-    // 86400000 = 24 hours.
-    defaultDuration: 86400000,
-
-    // Allowed winner count range.
+    defaultDuration: 86400000, // 24 hours
     minimumWinners: 1,
     maximumWinners: 10,
-
-    // Allowed giveaway duration range in milliseconds.
-    // 300000 = 5 minutes.
-    minimumDuration: 300000,
-    // 2592000000 = 30 days.
-    maximumDuration: 2592000000,
-
-    // Role IDs allowed to host giveaways.
+    minimumDuration: 300000, // 5 minutes
+    maximumDuration: 2592000000, // 30 days
     allowedRoles: [],
-
-    // Role IDs that bypass giveaway restrictions.
     bypassRoles: [],
   },
 
@@ -287,13 +214,8 @@ export const botConfig = {
   // BIRTHDAY SETTINGS
   // =========================
   birthday: {
-    // Role ID given to users on their birthday.
     defaultRole: null,
-
-    // Channel ID where birthday announcements are posted.
     announcementChannel: null,
-
-    // Timezone used to calculate birthday dates.
     timezone: "UTC",
   },
 
@@ -301,67 +223,35 @@ export const botConfig = {
   // VERIFICATION SETTINGS
   // =========================
   verification: {
-    // Message shown when posting the verification panel.
     defaultMessage: "Click the button below to verify yourself and gain access to the server!",
-
-    // Text on the verification button.
     defaultButtonText: "Verify",
 
-    // Automatic verification behavior.
     autoVerify: {
-      // How automatic verification decides who is auto-approved:
-      // - "none"        = everyone is auto-verified immediately
-      // - "account_age" = account must be older than set days
-      // - "server_size" = auto-verify everyone only in smaller servers
+      // "none" | "account_age" | "server_size"
       defaultCriteria: "none",
-
-      // Days used when `defaultCriteria` is `account_age`.
       defaultAccountAgeDays: 7,
-
-      // Member count threshold used when `defaultCriteria` is `server_size`.
-      // Example: 1000 means auto-verify if server has fewer than 1000 members.
       serverSizeThreshold: 1000,
-
-      // Allowed safety limits for account-age requirements.
-      // 1 = minimum day, 365 = maximum days.
       minAccountAge: 1,
       maxAccountAge: 365,
-
-      // If true, user receives a DM after verification.
       sendDMNotification: true,
 
-      // Human-readable descriptions for each criteria mode.
       criteria: {
         account_age: "Account must be older than specified days",
         server_size: "All users if server has less than 1000 members",
-        none: "All users immediately"
-      }
+        none: "All users immediately",
+      },
     },
 
-    // Minimum time between verification attempts (milliseconds).
-    // 5000 = 5 seconds.
     verificationCooldown: 5000,
-
-    // Maximum failed attempts allowed inside the time window below.
     maxVerificationAttempts: 3,
-
-    // Time window for counting attempts (milliseconds).
-    // 60000 = 1 minute.
     attemptWindow: 60000,
 
-    // In-memory safety limits (helps avoid unbounded memory growth).
     maxCooldownEntries: 10000,
     maxAttemptEntries: 10000,
-    // Cleanup frequency for cooldown/attempt maps (milliseconds).
-    // 300000 = 5 minutes.
     cooldownCleanupInterval: 300000,
-    // Maximum metadata payload size for audit entries (bytes).
     maxAuditMetadataBytes: 4096,
-    // Maximum number of audit entries kept in memory.
     maxInMemoryAuditEntries: 1000,
-    // If true, log every verification action.
     logAllVerifications: true,
-    // If true, preserve verification audit history.
     keepAuditTrail: true,
   },
 
@@ -369,18 +259,15 @@ export const botConfig = {
   // WELCOME / GOODBYE MESSAGES
   // =========================
   welcome: {
-    // Welcome template posted when a user joins.
     // Placeholders: {user}, {server}, {memberCount}
     defaultWelcomeMessage:
       "Welcome {user} to {server}! We now have {memberCount} members!",
-    // Goodbye template posted when a user leaves.
-    // Placeholders: {user}, {memberCount}
     defaultGoodbyeMessage:
       "{user} has left the server. We now have {memberCount} members.",
-    // Channel ID for welcome messages.
     defaultWelcomeChannel: null,
-    // Channel ID for goodbye messages.
     defaultGoodbyeChannel: null,
+    // Role IDs given automatically on join.
+    autoRoles: [],
   },
 
   // =========================
@@ -388,28 +275,21 @@ export const botConfig = {
   // =========================
   counters: {
     defaults: {
-      // Default naming/description templates for counter entries.
       name: "{name} Counter",
       description: "Server {name} counter",
-      // Channel type used for counters (typically "voice").
       type: "voice",
-      // Channel name format. `{count}` is replaced automatically.
       channelName: "{name}-{count}",
     },
     permissions: {
-      // Default denied permissions for the counter channel.
       deny: ["VIEW_CHANNEL"],
-      // Default allowed permissions for the counter channel.
       allow: ["VIEW_CHANNEL", "CONNECT", "SPEAK"],
     },
     messages: {
-      // Default response messages for counter actions.
       created: "✅ Created counter **{name}**",
       deleted: "🗑️ Deleted counter **{name}**",
       updated: "🔄 Updated counter **{name}**",
     },
     types: {
-      // Built-in counter types and how each count is calculated.
       members: {
         name: "👥 Members",
         description: "Total members in the server",
@@ -431,6 +311,82 @@ export const botConfig = {
   },
 
   // =========================
+  // LEVELING SYSTEM (new)
+  // =========================
+  leveling: {
+    xpMin: 10,
+    xpMax: 20,
+    // Seconds between XP gains per user.
+    xpCooldown: 60,
+    // XP needed for next level = baseXp * level ^ exponent
+    baseXp: 100,
+    exponent: 1.5,
+    // e.g. { "ROLE_ID": 1.5 }
+    roleMultipliers: {},
+    ignoredChannels: [],
+    // e.g. { 5: "ROLE_ID", 10: "ROLE_ID" }
+    roleRewards: {},
+    levelUpMessage: "🎉 {user} reached **level {level}**!",
+    // null = reply in the same channel
+    levelUpChannel: null,
+  },
+
+  // =========================
+  // AUTOMOD (new)
+  // =========================
+  automod: {
+    bannedWords: [],
+    antiSpam: {
+      enabled: true,
+      maxMessages: 5,
+      interval: 5000,
+      timeoutDuration: 60, // seconds
+    },
+    antiInvite: {
+      enabled: false,
+      bypassRoles: [],
+    },
+    antiCaps: {
+      enabled: false,
+      threshold: 70, // percent
+      minLength: 10,
+    },
+    logChannel: null,
+  },
+
+  // =========================
+  // STARBOARD (new)
+  // =========================
+  starboard: {
+    emoji: "⭐",
+    threshold: 3,
+    channel: null,
+    selfStar: false,
+    ignoredChannels: [],
+  },
+
+  // =========================
+  // SUGGESTIONS (new)
+  // =========================
+  suggestions: {
+    channel: null,
+    upvoteEmoji: "👍",
+    downvoteEmoji: "👎",
+    reviewerRoles: [],
+    requireReason: false,
+  },
+
+  // =========================
+  // POLLS (new)
+  // =========================
+  polls: {
+    maxOptions: 10,
+    minDuration: 60 * 1000,
+    maxDuration: 7 * 24 * 60 * 60 * 1000,
+    defaultDuration: 24 * 60 * 60 * 1000,
+  },
+
+  // =========================
   // GENERIC BOT MESSAGES
   // =========================
   messages: {
@@ -448,25 +404,21 @@ export const botConfig = {
   // =========================
   // Set any feature to `false` to disable it globally.
   features: {
-    // Core systems.
     economy: true,
     leveling: true,
     moderation: true,
     logging: true,
     welcome: true,
 
-    // Community engagement systems.
     tickets: true,
     giveaways: true,
     birthday: true,
     counter: true,
 
-    // Security and self-service systems.
     verification: true,
     reactionRoles: true,
     joinToCreate: true,
 
-    // Utility/quality-of-life modules.
     voice: true,
     search: true,
     tools: true,
@@ -474,10 +426,19 @@ export const botConfig = {
     community: true,
     fun: true,
     music: true,
+
+    // New in Nova
+    automod: true,
+    starboard: true,
+    suggestions: true,
+    polls: true,
   },
 };
 
-export function validateConfig(config) {
+// =========================
+// VALIDATION
+// =========================
+export function validateConfig(config = botConfig) {
   const errors = [];
 
   if (process.env.NODE_ENV !== 'production') {
@@ -498,9 +459,12 @@ export function validateConfig(config) {
     errors.push("Client ID is required (CLIENT_ID environment variable)");
   }
 
+  if (config.leveling && config.leveling.xpMin > config.leveling.xpMax) {
+    errors.push("leveling.xpMin cannot be greater than leveling.xpMax");
+  }
+
   if (process.env.NODE_ENV === 'production') {
-    // A full connection URL (DATABASE_URL / POSTGRES_URL) satisfies all Postgres
-    // requirements, matching how src/config/database/postgres.js resolves the pool config.
+    // A full connection URL satisfies all Postgres requirements.
     const hasConnectionUrl = Boolean(process.env.POSTGRES_URL || process.env.DATABASE_URL);
 
     if (!hasConnectionUrl) {
@@ -529,7 +493,11 @@ if (configErrors.length > 0) {
 
 export const BotConfig = botConfig;
 
+// =========================
+// HELPERS
+// =========================
 const COMMAND_CATEGORY_FEATURE_MAP = {
+  automod: "automod",
   birthday: "birthday",
   community: "community",
   economy: "economy",
@@ -540,9 +508,12 @@ const COMMAND_CATEGORY_FEATURE_MAP = {
   logging: "logging",
   moderation: "moderation",
   music: "music",
+  polls: "polls",
   reaction_roles: "reactionRoles",
   search: "search",
   serverstats: "counter",
+  starboard: "starboard",
+  suggestions: "suggestions",
   ticket: "tickets",
   tools: "tools",
   utility: "utility",
@@ -565,10 +536,7 @@ export function getBotOwners() {
 }
 
 export function isBotOwner(userId) {
-  if (!userId) {
-    return false;
-  }
-
+  if (!userId) return false;
   return getBotOwners().includes(String(userId));
 }
 
@@ -580,65 +548,62 @@ export function getBotMessage(key, replacements = {}) {
   let message = botConfig.messages?.[key] || key;
 
   for (const [placeholder, value] of Object.entries(replacements)) {
-    message = message.replace(new RegExp(`\\{${placeholder}\\}`, "g"), String(value));
+    message = message.replaceAll(`{${placeholder}}`, String(value));
   }
 
   return message;
 }
 
 export function isFeatureEnabled(featureKey) {
-  if (!featureKey) {
-    return true;
-  }
-
+  if (!featureKey) return true;
   return botConfig.features?.[featureKey] !== false;
 }
 
 export function isCommandCategoryEnabled(category) {
   const normalized = normalizeCategoryKey(category);
 
-  if (!normalized || normalized === "core") {
-    return true;
-  }
+  if (!normalized || normalized === "core") return true;
 
   const featureKey = COMMAND_CATEGORY_FEATURE_MAP[normalized];
-  if (!featureKey) {
-    return true;
-  }
+  if (!featureKey) return true;
 
   return isFeatureEnabled(featureKey);
 }
 
-export function getApplicationStatusColor(status) {
-  const colors = botConfig.applications?.statusColors || {};
-  const hex = colors[status];
-  return hex ? getColor(hex) : getColor(status === "approved" ? "success" : status === "denied" ? "error" : "warning");
-}
-
-export function getDefaultApplicationQuestions() {
-  return (botConfig.applications?.defaultQuestions || []).map((entry) =>
-    typeof entry === "string" ? entry : entry.question,
-  ).filter(Boolean);
-}
-
+// Accepts "#RRGGBB", a number, or a dot path like "suggestion.approved".
 export function getColor(path, fallback = "#99AAB5") {
-  
   if (typeof path === "number") return path;
+
   if (typeof path === "string" && path.startsWith("#")) {
-    
     return parseInt(path.replace("#", ""), 16);
   }
-  const result = path
+
+  const result = String(path)
     .split(".")
     .reduce(
       (obj, key) => (obj && obj[key] !== undefined ? obj[key] : fallback),
       botConfig.embeds.colors,
     );
-  
+
   if (typeof result === "string" && result.startsWith("#")) {
     return parseInt(result.replace("#", ""), 16);
   }
-  return result;
+
+  return typeof result === "number" ? result : parseInt(fallback.replace("#", ""), 16);
+}
+
+export function getApplicationStatusColor(status) {
+  const colors = botConfig.applications?.statusColors || {};
+  const hex = colors[status];
+  return hex
+    ? getColor(hex)
+    : getColor(status === "approved" ? "success" : status === "denied" ? "error" : "warning");
+}
+
+export function getDefaultApplicationQuestions() {
+  return (botConfig.applications?.defaultQuestions || [])
+    .map((entry) => (typeof entry === "string" ? entry : entry.question))
+    .filter(Boolean);
 }
 
 export function getRandomColor() {
@@ -648,4 +613,238 @@ export function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
+// XP needed to go from `level` to `level + 1`.
+export function getXpForLevel(level) {
+  const { baseXp, exponent } = botConfig.leveling;
+  return Math.floor(baseXp * Math.pow(level, exponent));
+}
+
 export default botConfig;
+
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+} from 'discord.js';
+import { getColor } from '../../config/bot.js';
+
+// =========================
+// HELPERS
+// =========================
+const fill = (text, topic) => text.replaceAll('{topic}', topic);
+
+function buildHomeMessage(topic) {
+  const color = getColor('primary');
+
+  // Embed 1: banner image only
+  const bannerEmbed = new EmbedBuilder()
+    .setColor(color)
+    .setImage(HOME.bannerUrl);
+
+  // Embed 2: main content
+  const quote = HOME.whyWeExist.map((line) => `> ${fill(line, topic)}`).join('\n');
+  const found = HOME.whatYoullFind.join('\n');
+
+  const description = [
+    fill(HOME.intro, topic),
+    '',
+    '**Why we exist:**',
+    quote,
+    '',
+    '**What you\'ll find here:**',
+    found,
+    '',
+    HOME.outro,
+  ].join('\n');
+
+  const homeEmbed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(HOME.title)
+    .setDescription(description)
+    .setFooter({ text: HOME.footer });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(HOME_TOUR_BUTTON_ID)
+      .setLabel(HOME.buttonLabel)
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  return { embeds: [bannerEmbed, homeEmbed], components: [row] };
+}
+
+// =========================
+// SLASH COMMAND
+// =========================
+export default {
+  data: new SlashCommandBuilder()
+    .setName('homepage')
+    .setDescription('Post the server home/welcome panel in this channel')
+    .addStringOption((option) =>
+      option
+        .setName('topic')
+        .setDescription('What your server is about (e.g. gaming, art, coding)')
+        .setRequired(false),
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDMPermission(false),
+
+  async execute(interaction) {
+    const topic = interaction.options.getString('topic') ?? 'our community';
+
+    await interaction.channel.send(buildHomeMessage(topic));
+
+    await interaction.reply({
+      content: '✅ Home panel posted!',
+      flags: MessageFlags.Ephemeral,
+    });
+  },
+};
+
+// =========================
+// BUTTON HANDLER
+// =========================
+// Call this from your interactionCreate event for buttons.
+// Returns true if the interaction was handled.
+export async function handleHomeButton(interaction) {
+  if (!interaction.isButton() || interaction.customId !== HOME_TOUR_BUTTON_ID) {
+    return false;
+  }
+
+  const tourEmbed = new EmbedBuilder()
+    .setColor(getColor('primary'))
+    .setTitle('🧭 Server Tour')
+    .setDescription('Here are the key places to get you started:')
+    .addFields(TOUR_STEPS)
+    .setFooter({ text: HOME.footer });
+
+  await interaction.reply({
+    embeds: [tourEmbed],
+    flags: MessageFlags.Ephemeral,
+  });
+
+  return true;
+}
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+} from 'discord.js';
+import { getColor } from '../../config/bot.js';
+
+// =========================
+// EDIT THIS SECTION
+// =========================
+const SITE = 'https://juicy-safe-guard-vault.base44.app';
+
+const HOME = {
+  title: 'SafeGuard Bank — Now Recruiting',
+  titleUrl: SITE, // makes the title a blue clickable link, like your screenshot
+
+  tagline: 'Fair Commissions • Verified Payouts • Every Shift',
+
+  intro:
+    'Your next chapter starts behind the counter. Keep more of what you print with a ' +
+    '**75% teller commission** and a **$35,000 sign-on bonus** for experienced bankers.',
+
+  linkLine: `👉 [**Visit the SafeGuard Bank Portal**](${SITE})`,
+
+  roles: [
+    { name: 'Teller', detail: '75% print commission' },
+    { name: 'Manager', detail: '2% of approved print sessions' },
+    { name: 'Senior Manager', detail: '2% of all bank printing' },
+  ],
+
+  // Large banner shown at the bottom of the embed.
+  // This is your site's preview image; swap it for a custom SafeGuard Bank banner.
+  imageUrl:
+    'https://media.base44.com/images/public/6b01df585c1c7000ccc4da8e/78907cceb_Screenshot2026-11-21095136.png/v1/fill/w_1200,h_630/78907cceb_Screenshot2026-11-21095136.png',
+
+  footer: 'SafeGuard Bank • Roblox RP • All amounts are in-game currency',
+
+  // Link buttons under the embed (set to [] to hide them).
+  buttons: [
+    { label: 'Apply Now', url: `${SITE}/apply` },
+    { label: 'Join the Discord', url: 'https://discord.gg/safeguardbank' },
+    { label: 'Teller Handbook', url: `${SITE}/handbook` },
+  ],
+};
+
+// =========================
+// BUILDER
+// =========================
+function buildHomeMessage() {
+  const rolesText = HOME.roles
+    .map((r) => `• **${r.name}:** ${r.detail}`)
+    .join('\n');
+
+  const description = [
+    `*${HOME.tagline}*`,
+    '',
+    HOME.intro,
+    '',
+    HOME.linkLine,
+    '',
+    '**Open Roles:**',
+    rolesText,
+  ].join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(getColor('primary'))
+    .setTitle(HOME.title)
+    .setURL(HOME.titleUrl)
+    .setDescription(description)
+    .setImage(HOME.imageUrl)
+    .setFooter({ text: HOME.footer });
+
+  const message = { embeds: [embed] };
+
+  if (HOME.buttons.length > 0) {
+    message.components = [
+      new ActionRowBuilder().addComponents(
+        HOME.buttons.map((b) =>
+          new ButtonBuilder()
+            .setLabel(b.label)
+            .setURL(b.url)
+            .setStyle(ButtonStyle.Link),
+        ),
+      ),
+    ];
+  }
+
+  return message;
+}
+
+// =========================
+// SLASH COMMAND
+// =========================
+export default {
+  data: new SlashCommandBuilder()
+    .setName('homepage')
+    .setDescription('Post the SafeGuard Bank recruiting panel in this channel')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDMPermission(false),
+
+  async execute(interaction) {
+    await interaction.channel.send(buildHomeMessage());
+
+    await interaction.reply({
+      content: '✅ Panel posted!',
+      flags: MessageFlags.Ephemeral,
+    });
+  },
+};
+
+// Kept so an existing `import { handleHomeButton }` in interactionCreate
+// doesn't crash. The panel now uses link buttons, so there is nothing to handle.
+export async function handleHomeButton() {
+  return false;
+}
