@@ -25,9 +25,9 @@ export const botConfig = {
       {
         name: 
     
-        state: "Chilling",
+        state: 
           ",     // this is what people actually see
-        type: 3,
+        type: ,
       },
     ],
   },
