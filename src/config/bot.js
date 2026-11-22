@@ -620,3 +620,157 @@ export function getXpForLevel(level) {
 }
 
 export default botConfig;
+
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+} from 'discord.js';
+import { getColor } from '../../config/bot.js';
+
+// =========================
+// EDIT THIS SECTION
+// =========================
+const HOME = {
+  // Direct URL to your banner image (the big "Welcome" graphic).
+  // Upload it to a Discord channel and copy the link, or host it anywhere.
+  bannerUrl: 'https://example.com/welcome-banner.png',
+
+  title: 'Home',
+
+  // {topic} is replaced by the /homepage topic option.
+  intro:
+    "We're so glad you found us — this is the **home base** for everything related to **{topic}**.",
+
+  whyWeExist: [
+    'To bring together people who love {topic}',
+    'To share knowledge, fun, and creativity',
+    'To build a safe & friendly community',
+  ],
+
+  whatYoullFind: [
+    '💬 Active chats & discussions',
+    '🎁 Giveaways & events',
+    '📚 Helpful resources & guides',
+    '🎭 Roles to personalize your experience',
+  ],
+
+  outro: 'Take the **Server Tour** to get familiar with all the key channels and features.',
+  footer: 'Welcome to the community!',
+
+  buttonLabel: 'Server Tour',
+};
+
+// Steps shown (privately) when someone clicks the Server Tour button.
+// Use channel mentions like <#CHANNEL_ID> so they become clickable.
+const TOUR_STEPS = [
+  { name: '📜 Rules', value: 'Read the server rules: <#RULES_CHANNEL_ID>' },
+  { name: '💬 Chat', value: 'Hang out and talk in <#CHAT_CHANNEL_ID>' },
+  { name: '🎁 Giveaways', value: 'Win prizes in <#GIVEAWAY_CHANNEL_ID>' },
+  { name: '🎭 Roles', value: 'Pick your roles in <#ROLES_CHANNEL_ID>' },
+  { name: '🎫 Support', value: 'Need help? Open a ticket in <#TICKET_CHANNEL_ID>' },
+];
+
+export const HOME_TOUR_BUTTON_ID = 'home_server_tour';
+
+// =========================
+// HELPERS
+// =========================
+const fill = (text, topic) => text.replaceAll('{topic}', topic);
+
+function buildHomeMessage(topic) {
+  const color = getColor('primary');
+
+  // Embed 1: banner image only
+  const bannerEmbed = new EmbedBuilder()
+    .setColor(color)
+    .setImage(HOME.bannerUrl);
+
+  // Embed 2: main content
+  const quote = HOME.whyWeExist.map((line) => `> ${fill(line, topic)}`).join('\n');
+  const found = HOME.whatYoullFind.join('\n');
+
+  const description = [
+    fill(HOME.intro, topic),
+    '',
+    '**Why we exist:**',
+    quote,
+    '',
+    '**What you\'ll find here:**',
+    found,
+    '',
+    HOME.outro,
+  ].join('\n');
+
+  const homeEmbed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(HOME.title)
+    .setDescription(description)
+    .setFooter({ text: HOME.footer });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(HOME_TOUR_BUTTON_ID)
+      .setLabel(HOME.buttonLabel)
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  return { embeds: [bannerEmbed, homeEmbed], components: [row] };
+}
+
+// =========================
+// SLASH COMMAND
+// =========================
+export default {
+  data: new SlashCommandBuilder()
+    .setName('homepage')
+    .setDescription('Post the server home/welcome panel in this channel')
+    .addStringOption((option) =>
+      option
+        .setName('topic')
+        .setDescription('What your server is about (e.g. gaming, art, coding)')
+        .setRequired(false),
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDMPermission(false),
+
+  async execute(interaction) {
+    const topic = interaction.options.getString('topic') ?? 'our community';
+
+    await interaction.channel.send(buildHomeMessage(topic));
+
+    await interaction.reply({
+      content: '✅ Home panel posted!',
+      flags: MessageFlags.Ephemeral,
+    });
+  },
+};
+
+// =========================
+// BUTTON HANDLER
+// =========================
+// Call this from your interactionCreate event for buttons.
+// Returns true if the interaction was handled.
+export async function handleHomeButton(interaction) {
+  if (!interaction.isButton() || interaction.customId !== HOME_TOUR_BUTTON_ID) {
+    return false;
+  }
+
+  const tourEmbed = new EmbedBuilder()
+    .setColor(getColor('primary'))
+    .setTitle('🧭 Server Tour')
+    .setDescription('Here are the key places to get you started:')
+    .addFields(TOUR_STEPS)
+    .setFooter({ text: HOME.footer });
+
+  await interaction.reply({
+    embeds: [tourEmbed],
+    flags: MessageFlags.Ephemeral,
+  });
+
+  return true;
+}
