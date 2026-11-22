@@ -23,11 +23,11 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name: 
+        name
     
-        state: "Chilling" 
+        state "Chilling" 
           ",     // this is what people actually see
-        type: 3,
+        type 3,
       },
     ],
   },
