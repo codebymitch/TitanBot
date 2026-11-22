@@ -28,7 +28,6 @@ export const botConfig = {
         state: "Chilling
           ",     // this is what people actually see
         type: 3
-        ,               // Custom
       },
     ],
   },
