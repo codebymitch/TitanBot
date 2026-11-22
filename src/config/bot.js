@@ -23,7 +23,7 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name: "SafeGuard Bank
+        name: 
           ", // required by Discord API, not shown in the client
         state: "SafeGuard Bank
           ",     // this is what people actually see
