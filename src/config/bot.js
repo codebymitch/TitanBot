@@ -729,3 +729,122 @@ export async function handleHomeButton(interaction) {
 
   return true;
 }
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+} from 'discord.js';
+import { getColor } from '../../config/bot.js';
+
+// =========================
+// EDIT THIS SECTION
+// =========================
+const SITE = 'https://juicy-safe-guard-vault.base44.app';
+
+const HOME = {
+  title: 'SafeGuard Bank — Now Recruiting',
+  titleUrl: SITE, // makes the title a blue clickable link, like your screenshot
+
+  tagline: 'Fair Commissions • Verified Payouts • Every Shift',
+
+  intro:
+    'Your next chapter starts behind the counter. Keep more of what you print with a ' +
+    '**75% teller commission** and a **$35,000 sign-on bonus** for experienced bankers.',
+
+  linkLine: `👉 [**Visit the SafeGuard Bank Portal**](${SITE})`,
+
+  roles: [
+    { name: 'Teller', detail: '75% print commission' },
+    { name: 'Manager', detail: '2% of approved print sessions' },
+    { name: 'Senior Manager', detail: '2% of all bank printing' },
+  ],
+
+  // Large banner shown at the bottom of the embed.
+  // This is your site's preview image; swap it for a custom SafeGuard Bank banner.
+  imageUrl:
+    'https://media.base44.com/images/public/6b01df585c1c7000ccc4da8e/78907cceb_Screenshot2026-11-21095136.png/v1/fill/w_1200,h_630/78907cceb_Screenshot2026-11-21095136.png',
+
+  footer: 'SafeGuard Bank • Roblox RP • All amounts are in-game currency',
+
+  // Link buttons under the embed (set to [] to hide them).
+  buttons: [
+    { label: 'Apply Now', url: `${SITE}/apply` },
+    { label: 'Join the Discord', url: 'https://discord.gg/safeguardbank' },
+    { label: 'Teller Handbook', url: `${SITE}/handbook` },
+  ],
+};
+
+// =========================
+// BUILDER
+// =========================
+function buildHomeMessage() {
+  const rolesText = HOME.roles
+    .map((r) => `• **${r.name}:** ${r.detail}`)
+    .join('\n');
+
+  const description = [
+    `*${HOME.tagline}*`,
+    '',
+    HOME.intro,
+    '',
+    HOME.linkLine,
+    '',
+    '**Open Roles:**',
+    rolesText,
+  ].join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(getColor('primary'))
+    .setTitle(HOME.title)
+    .setURL(HOME.titleUrl)
+    .setDescription(description)
+    .setImage(HOME.imageUrl)
+    .setFooter({ text: HOME.footer });
+
+  const message = { embeds: [embed] };
+
+  if (HOME.buttons.length > 0) {
+    message.components = [
+      new ActionRowBuilder().addComponents(
+        HOME.buttons.map((b) =>
+          new ButtonBuilder()
+            .setLabel(b.label)
+            .setURL(b.url)
+            .setStyle(ButtonStyle.Link),
+        ),
+      ),
+    ];
+  }
+
+  return message;
+}
+
+// =========================
+// SLASH COMMAND
+// =========================
+export default {
+  data: new SlashCommandBuilder()
+    .setName('homepage')
+    .setDescription('Post the SafeGuard Bank recruiting panel in this channel')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDMPermission(false),
+
+  async execute(interaction) {
+    await interaction.channel.send(buildHomeMessage());
+
+    await interaction.reply({
+      content: '✅ Panel posted!',
+      flags: MessageFlags.Ephemeral,
+    });
+  },
+};
+
+// Kept so an existing `import { handleHomeButton }` in interactionCreate
+// doesn't crash. The panel now uses link buttons, so there is nothing to handle.
+export async function handleHomeButton() {
+  return false;
+}
