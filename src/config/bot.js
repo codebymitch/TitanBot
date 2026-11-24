@@ -29,7 +29,7 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name: "tambun pride", // required by Discord API, not shown in the client
+        name: "/help | Show All Commands", // required by Discord API, not shown in the client
         state: "",     // this is what people actually see
         type: 4,               // Custom
       },
