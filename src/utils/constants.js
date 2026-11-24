@@ -45,6 +45,12 @@ export const DEFAULT_GUILD_CONFIG = {
         enabled: false,
         channelId: null
     },
+    aiChat: {
+        enabled: false,
+        channelId: null,
+        systemPrompt: null,
+        model: null
+    },
     musicStatus: {
         groups: [],
         live: { channelId: null, messageId: null }

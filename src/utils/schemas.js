@@ -64,6 +64,15 @@ const StreakConfigSchema = z
   })
   .default({ enabled: false, channelId: null });
 
+const AiChatConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    channelId: z.string().nullable().optional(),
+    systemPrompt: z.string().nullable().optional(),
+    model: z.string().nullable().optional(),
+  })
+  .default({ enabled: false, channelId: null, systemPrompt: null, model: null });
+
 export const GuildConfigSchema = z
   .object({
     prefix: z.string().optional(),
@@ -85,7 +94,8 @@ export const GuildConfigSchema = z
     ticketLogging: TicketLoggingSchema.optional(),
     enableLogging: z.boolean().optional(),
     verification: VerificationConfigSchema,
-    streak: StreakConfigSchema
+    streak: StreakConfigSchema,
+    aiChat: AiChatConfigSchema
   })
   .passthrough();
 

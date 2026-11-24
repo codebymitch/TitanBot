@@ -448,6 +448,40 @@ export const botConfig = {
   },
 
   // =========================
+  // AI CHAT SETTINGS
+  // =========================
+  // Works with any OpenAI-compatible endpoint (OpenAI, Groq, OpenRouter, ...).
+  ai: {
+    // Base URL of the OpenAI-compatible API (no trailing slash needed).
+    baseUrl: process.env.AI_BASE_URL || "https://api.openai.com/v1",
+
+    // API key for the provider. When empty, AI chat stays disabled bot-wide.
+    apiKey: process.env.AI_API_KEY || "",
+
+    // Default model used when a server does not override it.
+    model: process.env.AI_MODEL || "gpt-4o-mini",
+
+    // System prompt / personality used when a server does not set its own.
+    defaultSystemPrompt:
+      "You are a helpful, friendly assistant inside a Discord server. Reply concisely and naturally in the same language the user writes in. Keep answers short and readable in chat.",
+
+    // Maximum tokens generated per reply.
+    maxTokens: Number(process.env.AI_MAX_TOKENS) || 700,
+
+    // Sampling temperature (0 = deterministic, 2 = very random).
+    temperature: Number(process.env.AI_TEMPERATURE) || 0.7,
+
+    // How many previous messages are kept per channel as conversation memory.
+    historyLimit: Number(process.env.AI_HISTORY_LIMIT) || 12,
+
+    // Minimum time between two AI requests from the same user (milliseconds).
+    cooldownMs: Number(process.env.AI_COOLDOWN_MS) || 3000,
+
+    // HTTP timeout for a single provider request (milliseconds).
+    requestTimeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS) || 30000,
+  },
+
+  // =========================
   // GENERIC BOT MESSAGES
   // =========================
   messages: {
@@ -491,6 +525,9 @@ export const botConfig = {
     utility: true,
     community: true,
     fun: true,
+
+    // AI chat assistant.
+    aiChat: true,
   },
 };
 
@@ -547,6 +584,7 @@ if (configErrors.length > 0) {
 export const BotConfig = botConfig;
 
 const COMMAND_CATEGORY_FEATURE_MAP = {
+  ai: "aiChat",
   birthday: "birthday",
   community: "community",
   economy: "economy",

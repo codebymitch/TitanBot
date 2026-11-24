@@ -22,6 +22,7 @@ const CATEGORY_SELECT_ID = "help-category-select";
 const ALL_COMMANDS_ID = "help-all-commands";
 
 const CATEGORY_ICONS = {
+    AI: "🤖",
     Core: "ℹ️",
     Moderation: "🛡️",
     Economy: "💰",

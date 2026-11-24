@@ -7,8 +7,14 @@ import { getPrefixRestriction } from '../config/commands/prefixRestrictions.js';
 import { getGuildConfig } from '../services/config/guildConfig.js';
 import { getCommandPrefix, getBotMessage, isBotOwner, isCommandCategoryEnabled, isMaintenanceMode } from '../config/bot.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
-import { createEmbed } from '../utils/embeds.js';
+import { createEmbed, warningEmbed } from '../utils/embeds.js';
 import { isCommandEnabled } from '../services/commandAccessService.js';
+import {
+  generateReply as generateAiReply,
+  splitMessage as splitAiMessage,
+  checkCooldown as checkAiCooldown,
+  isAiConfigured,
+} from '../services/aiChatService.js';
 import {
   getCountingGameConfig,
   saveCountingGameConfig,
@@ -54,6 +60,11 @@ export default {
       await handleAutoReaction(message, client);
 
       await handleStreakActivity(message, client);
+
+      const aiHandled = await handleAiChat(message, client);
+      if (aiHandled) {
+        return;
+      }
 
       await handlePrefixCommand(message, client);
     } catch (error) {
@@ -243,5 +254,69 @@ async function handleStreakActivity(message, client) {
     }
   } catch (error) {
     logger.error('Error handling streak activity:', error);
+  }
+}
+
+async function handleAiChat(message, client) {
+  try {
+    if (!message.guild || message.author?.bot) {
+      return false;
+    }
+
+    const guildConfig = await getGuildConfig(client, message.guild.id);
+    const aiChat = guildConfig?.aiChat;
+
+    if (!aiChat?.enabled || !aiChat.channelId || message.channel.id !== aiChat.channelId) {
+      return false;
+    }
+
+    // Jangan balas pesan yang sebenarnya prefix command.
+    const prefix = guildConfig?.prefix || getCommandPrefix();
+    if (prefix && message.content.startsWith(prefix)) {
+      return false;
+    }
+
+    if (!message.content.trim()) {
+      return false;
+    }
+
+    if (!isAiConfigured()) {
+      logger.warn(`AI chat is enabled in guild ${message.guild.id} but no API key is configured.`);
+      return false;
+    }
+
+    // Cooldown per user supaya tidak spam; diamkan saja kalau masih cooldown.
+    const cooldown = checkAiCooldown(`${message.guild.id}:${message.author.id}`);
+    if (!cooldown.allowed) {
+      return true;
+    }
+
+    if (typeof message.channel.sendTyping === 'function') {
+      await message.channel.sendTyping().catch(() => {});
+    }
+
+    const reply = await generateAiReply(client, message.guild.id, message.channel.id, message.content);
+
+    const chunks = splitAiMessage(reply);
+
+    await message.reply({
+      content: chunks[0],
+      allowedMentions: { repliedUser: false, parse: [] },
+    });
+
+    for (const chunk of chunks.slice(1)) {
+      await message.channel.send({
+        content: chunk,
+        allowedMentions: { parse: [] },
+      }).catch(() => null);
+    }
+
+    return true;
+  } catch (error) {
+    logger.error('Error handling AI chat:', error);
+    await message.channel.send({
+      embeds: [warningEmbed('AI Error', error?.userMessage || 'AI gagal membalas. Coba lagi sebentar lagi.')],
+    }).catch(() => null);
+    return true;
   }
 }
