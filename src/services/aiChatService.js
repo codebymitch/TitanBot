@@ -262,7 +262,9 @@ async function requestCompletion(cfg, messages) {
         lastError = createError(
           `AI provider rejected the request (HTTP ${status}): ${response.data?.error?.message || 'unknown'}`,
           ErrorTypes.NETWORK,
-          'Ada masalah pas nyambung ke AI-nya. Coba lagi nanti ya.',
+          status === 400
+            ? 'Konfigurasi request AI ditolak (HTTP 400). Admin perlu cek **AI_MODEL** dan pengaturan provider di hosting.'
+            : 'Ada masalah pas nyambung ke AI-nya. Coba lagi nanti ya.',
           { expected: true },
         );
         retryable = false;
