@@ -1,0 +1,23 @@
+{
+  "name": "manay-society-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Discord AI assistant bot for Manay Society",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "check": "node --check index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.2.3",
+    "mongoose": "^8.19.1",
+    "openai": "^5.12.2"
+  }
+}
