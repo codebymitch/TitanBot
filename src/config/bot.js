@@ -34,12 +34,12 @@ export const botConfig = {
         type: 4,               // Custom
       },
       {
-        name: "",
+        name: "/help | Show All Commands",
         state: "",
         type: 4,
       },
       {
-        name: "",
+        name: "/help | Show All Commands",
         state: "",
         type: 4,
       },
