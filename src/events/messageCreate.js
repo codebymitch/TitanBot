@@ -20,6 +20,15 @@ import { handleStickyMessage } from '../services/stickyService.js';
 import { handleAutoReaction } from '../services/autoReactionService.js';
 import StreakService from '../services/streakService.js';
 import { trackChatMessage } from '../services/chatLeaderboardService.js';
+import {
+  isAiConfigured,
+  getCooldownRemaining,
+  markCooldown,
+  enqueue,
+  generateReply,
+  getAiErrorMessage,
+  splitMessage,
+} from '../services/aiChatService.js';
 
 export default {
   name: Events.MessageCreate,
@@ -38,6 +47,12 @@ export default {
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
       trackChatMessage(message);
+
+      // AI Auto Chat: balas otomatis, tapi HANYA di channel AI yang di-set.
+      const aiProcessed = await handleAiAutoChat(message, client);
+      if (aiProcessed) {
+        return;
+      }
 
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
@@ -61,6 +76,98 @@ export default {
     }
   }
 };
+
+/**
+ * AI Auto Chat — balas otomatis pesan member di channel AI yang sudah di-set.
+ * Hanya aktif di channel tersebut; channel lain tidak disentuh sama sekali.
+ * @returns {Promise<boolean>} true kalau pesan "dimiliki" handler ini (jangan diproses handler lain).
+ */
+async function handleAiAutoChat(message, client) {
+  try {
+    if (!isAiConfigured()) {
+      return false;
+    }
+
+    const guildConfig = await getGuildConfig(client, message.guild.id);
+    const ai = guildConfig?.ai;
+    if (!ai || ai.enabled !== true || !ai.channelId) {
+      return false;
+    }
+
+    // Cuma aktif di channel AI yang di-set. Channel lain diabaikan.
+    if (message.channel.id !== ai.channelId) {
+      return false;
+    }
+
+    // Pesan bot/webhook/sistem nggak pernah dibalas (anti-loop).
+    if (message.author?.bot || message.webhookId || message.system) {
+      return true;
+    }
+
+    const content = (message.content || '').trim();
+    if (content.length === 0) {
+      return true;
+    }
+
+    // Biarin prefix command tetap jalan di channel AI biar fitur lain nggak rusak.
+    const prefix = guildConfig?.prefix || getCommandPrefix();
+    if (prefix && content.startsWith(prefix)) {
+      return false;
+    }
+
+    const guildId = message.guild.id;
+    const userId = message.author.id;
+
+    // Cooldown: kalau masih di dalam cooldown, diem aja biar nggak spam.
+    if (getCooldownRemaining(guildId, userId) > 0) {
+      return true;
+    }
+    markCooldown(guildId, userId);
+
+    // Typing indicator selama AI mikir (di-refresh tiap 8 detik).
+    message.channel.sendTyping().catch(() => null);
+    const typingTimer = setInterval(() => {
+      message.channel.sendTyping().catch(() => null);
+    }, 8000);
+
+    try {
+      const displayName = message.member?.displayName || message.author.username;
+
+      const reply = await enqueue(guildId, userId, () =>
+        generateReply(guildId, userId, { userMessage: content, displayName }),
+      );
+
+      const chunks = splitMessage(reply);
+
+      await message
+        .reply({ content: chunks[0], allowedMentions: { repliedUser: false, parse: [] } })
+        .catch(() =>
+          message.channel
+            .send({ content: chunks[0], allowedMentions: { parse: [] } })
+            .catch(() => null),
+        );
+
+      for (const chunk of chunks.slice(1)) {
+        await message.channel
+          .send({ content: chunk, allowedMentions: { parse: [] } })
+          .catch(() => null);
+      }
+    } catch (error) {
+      logger.error('AI auto chat error:', { guildId, userId, error: error?.message });
+      await message.channel
+        .send({ content: getAiErrorMessage(error), allowedMentions: { parse: [] } })
+        .catch(() => null);
+    } finally {
+      clearInterval(typingTimer);
+    }
+
+    return true;
+  } catch (error) {
+    // Error tak terduga jangan sampai ngeblok handler lain.
+    logger.error('Error in AI auto chat handler:', error);
+    return false;
+  }
+}
 
 async function handlePrefixCommand(message, client) {
   try {
