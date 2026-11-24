@@ -2,10 +2,13 @@ import { Conversation } from '../models/Conversation.js';
 import { consumeUsage } from '../database/settings.js';
 import { getEnv } from '../config/env.js';
 import { buildSystemPrompt } from './prompts.js';
-import { getOpenAI } from './client.js';
+import { requestChatCompletion, requestImage } from './client.js';
 
 const cooldowns = new Map();
 const queues = new Map();
+const freeRequestQueues = new Map();
+const nextFreeRequestAt = { text: 0, image: 0 };
+const freeRequestDepth = { text: 0, image: 0 };
 
 export function isChannelAllowed(config, channelId) {
   if (!config.enabled) return false;
@@ -45,6 +48,50 @@ function enqueueConversation(key, task) {
   return current;
 }
 
+function enqueueFreeRequest(kind, task) {
+  if (freeRequestDepth[kind] >= 12) {
+    const error = new Error('The free AI request queue is full.');
+    error.code = 'AI_QUEUE_FULL';
+    throw error;
+  }
+
+  freeRequestDepth[kind] += 1;
+  const previous = freeRequestQueues.get(kind) || Promise.resolve();
+  const current = previous.then(async () => {
+    const env = getEnv();
+    const waitMs = Math.max(0, nextFreeRequestAt[kind] - Date.now());
+    if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+
+    const interval = kind === 'image' ? env.freeImageIntervalMs : env.freeTextIntervalMs;
+    nextFreeRequestAt[kind] = Date.now() + interval;
+    try {
+      return await task();
+    } catch (error) {
+      if (error?.retryAfterSeconds) {
+        nextFreeRequestAt[kind] = Math.max(
+          nextFreeRequestAt[kind],
+          Date.now() + error.retryAfterSeconds * 1000,
+        );
+      }
+      throw error;
+    }
+  });
+
+  const tracked = current.catch(() => {});
+  freeRequestQueues.set(kind, tracked);
+  current.then(
+    () => {
+      freeRequestDepth[kind] = Math.max(0, freeRequestDepth[kind] - 1);
+      if (freeRequestQueues.get(kind) === tracked) freeRequestQueues.delete(kind);
+    },
+    () => {
+      freeRequestDepth[kind] = Math.max(0, freeRequestDepth[kind] - 1);
+      if (freeRequestQueues.get(kind) === tracked) freeRequestQueues.delete(kind);
+    },
+  );
+  return current;
+}
+
 export async function generateChatResponse({ guildId, userId, prompt, config }) {
   const env = getEnv();
   const text = String(prompt || '').trim();
@@ -54,8 +101,6 @@ export async function generateChatResponse({ guildId, userId, prompt, config }) 
   }
 
   return enqueueConversation(`${guildId}:${userId}`, async () => {
-    await consumeUsage(guildId, userId, config.dailyLimit);
-
     const conversation = config.memoryEnabled
       ? await Conversation.findOne({ guildId, userId }).lean()
       : null;
@@ -64,19 +109,23 @@ export async function generateChatResponse({ guildId, userId, prompt, config }) 
       : [];
     const messages = [
       { role: 'system', content: buildSystemPrompt(config) },
-      ...history.slice(-(config.maxHistory * 2)).map(({ role, content }) => ({ role, content })),
+      ...history.map(({ role, content }) => ({ role, content })),
       { role: 'user', content: text },
     ];
 
-    const completion = await getOpenAI().chat.completions.create({
-      model: config.model || env.defaultChatModel,
-      messages,
-      max_completion_tokens: 1200,
-      temperature: 0.7,
-    });
+    const completion = await enqueueFreeRequest(
+      'text',
+      async () => {
+        await consumeUsage(guildId, userId, config.dailyLimit);
+        return requestChatCompletion({
+          model: config.model === 'openai-fast' ? config.model : env.defaultChatModel,
+          messages,
+        });
+      },
+    );
 
     const response = extractText(completion.choices?.[0]?.message?.content);
-    if (!response) throw new Error('OpenAI returned an empty chat response.');
+    if (!response) throw new Error('Free AI service returned an empty chat response.');
 
     if (config.memoryEnabled) {
       const updatedMessages = [
@@ -130,45 +179,31 @@ export async function generateImage(prompt, { guildId, userId, config } = {}) {
     throw new Error(`Prompt is too long. The maximum is ${env.maxImagePromptLength} characters.`);
   }
 
-  if (guildId && userId && config) {
-    await consumeUsage(guildId, userId, config.dailyLimit);
-  }
-
-  const result = await getOpenAI().images.generate({
-    model: env.imageModel,
-    prompt: text,
-    size: '1024x1024',
-    n: 1,
+  return enqueueFreeRequest('image', async () => {
+    if (guildId && userId && config) {
+      await consumeUsage(guildId, userId, config.dailyLimit);
+    }
+    return requestImage(text);
   });
-
-  const image = result.data?.[0];
-  if (image?.b64_json) {
-    const data = Buffer.from(image.b64_json, 'base64');
-    if (data.length > 8 * 1024 * 1024) throw new Error('Generated image is too large to upload to Discord.');
-    return data;
-  }
-  if (image?.url) {
-    const response = await fetch(image.url);
-    if (!response.ok) throw new Error(`Could not download generated image (HTTP ${response.status}).`);
-    const data = Buffer.from(await response.arrayBuffer());
-    if (data.length > 8 * 1024 * 1024) throw new Error('Generated image is too large to upload to Discord.');
-    return data;
-  }
-
-  throw new Error('OpenAI returned no image data.');
 }
 
 export function formatAiError(error) {
   if (error?.code === 'AI_DAILY_LIMIT') {
     return 'Kamu sudah mencapai batas penggunaan AI hari ini. Coba lagi besok ya.';
   }
+  if (error?.code === 'AI_QUEUE_FULL') {
+    return 'Antrean AI gratis sedang penuh. Coba kirim lagi beberapa saat ya.';
+  }
+  if (error?.status === 402) {
+    const wait = error.retryAfterSeconds
+      ? ` Coba lagi sekitar ${error.retryAfterSeconds} detik lagi.`
+      : ' Coba lagi setelah cooldown sebentar.';
+    return `Kuota gratis AI sedang cooldown.${wait}`;
+  }
   if (error?.status === 429) {
-    return 'OpenAI lagi membatasi request atau kuota API habis. Coba beberapa saat lagi.';
+    return 'Layanan AI gratis sedang membatasi request. Coba lagi sebentar.';
   }
-  if (error?.status === 401 || error?.status === 403) {
-    return 'OpenAI API key tidak valid atau tidak punya akses. Minta admin cek konfigurasi.';
-  }
-  if (error?.status >= 500 || error?.name === 'APIConnectionTimeoutError') {
+  if (error?.status >= 500 || error?.name === 'TimeoutError' || error?.name === 'AbortError') {
     return 'Layanan AI sedang bermasalah atau timeout. Coba lagi sebentar.';
   }
   return error?.message || 'Terjadi error saat memproses permintaan AI.';

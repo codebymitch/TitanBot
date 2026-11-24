@@ -51,7 +51,7 @@ export default {
         userId,
         config,
       });
-      const attachment = new AttachmentBuilder(image, { name: 'manay-society-ai.png' });
+      const attachment = new AttachmentBuilder(image, { name: 'manay-society-ai.jpg' });
       return interaction.editReply({
         content: `Gambar dari prompt: ${prompt}`,
         files: [attachment],

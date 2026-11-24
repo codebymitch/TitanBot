@@ -88,7 +88,7 @@ export function buildModelMenu() {
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId('nexa:panel:select-model')
-      .setPlaceholder('Pilih model OpenAI')
+      .setPlaceholder('Pilih model AI')
       .addOptions(MODEL_CHOICES.map(({ name, value }) => ({
         label: name,
         value,

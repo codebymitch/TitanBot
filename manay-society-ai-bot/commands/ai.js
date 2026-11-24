@@ -67,7 +67,7 @@ const data = new SlashCommandBuilder()
   .addSubcommand((sub) => sub.setName('disable').setDescription('Nonaktifkan AI server'))
   .addSubcommand((sub) => sub
     .setName('setmodel')
-    .setDescription('Pilih model OpenAI')
+    .setDescription('Pilih model AI gratis')
     .addStringOption((option) => option
       .setName('model')
       .setDescription('Model yang dipakai server')

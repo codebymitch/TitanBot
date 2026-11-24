@@ -1,24 +1,26 @@
 # Manay Society AI
 
-Standalone Discord AI bot built with Node.js, Discord.js v14, OpenAI, and MongoDB. This folder is independent from the existing TitanBot project.
+Standalone Discord AI bot built with Node.js, Discord.js v14, Pollinations Classic, and MongoDB. This folder is independent from the existing TitanBot project.
 
 ## Features
 
-- OpenAI chat in Indonesian or English, with per-server personality and model settings.
+- Free hosted chat in Indonesian or English without an AI API key.
 - Per-guild, per-user conversation memory with reset and configurable history size.
 - Auto chat in an allowlist of text channels, or in all text channels with exclusions.
 - Administrator-only channel, model, personality, memory, and usage settings.
 - Interactive ephemeral settings panel using buttons, select menus, channel select menus, and modals.
-- OpenAI image generation with Discord file attachments.
+- Free image generation with Discord file attachments.
 - Per-user daily usage limits, cooldowns, bounded context, request timeout, and error handling.
 - MongoDB persistence for settings, conversation history, and usage counters.
+
+The anonymous free provider is best-effort and rate-limited by its public egress IP: text requests are spaced by about 31 seconds and image requests by about 46 seconds. Busy servers may see requests queue. The free catalog currently exposes one text model, and generated images can contain provider branding.
 
 ## Requirements
 
 - Node.js 20.10 or newer.
 - A Discord application and bot token.
 - A MongoDB database (MongoDB Atlas or a local MongoDB server).
-- An OpenAI API key with API billing enabled. Chat and image generation usage may incur charges.
+- Internet access to Pollinations Classic; no AI API key or AI billing setup is required.
 
 ## Installation
 
@@ -39,12 +41,11 @@ DISCORD_TOKEN=your_discord_bot_token
 CLIENT_ID=your_discord_application_id
 GUILD_ID=your_test_server_id
 MONGODB_URI=mongodb+srv://db_user:password@cluster.example.mongodb.net/manay_society_ai?retryWrites=true&w=majority
-OPENAI_API_KEY=your_openai_api_key
 ```
 
 `GUILD_ID` is optional. Set it during development to register commands to one server immediately. Leave it empty to register commands globally; Discord may take time to propagate global command updates.
 
-For MongoDB Atlas, create a database user and allow the bot host in Network Access. Keep `.env` private and never commit API keys or bot tokens.
+For MongoDB Atlas, create a database user and allow the bot host in Network Access. Keep `.env` private and never commit the Discord token or MongoDB credentials.
 
 7. Start the bot:
 
@@ -87,7 +88,7 @@ When all-channel mode is off, AI only responds in explicitly selected channels. 
 - `/ai personality type:<friendly|professional|funny|custom>`: set the server personality.
 - `/ai prompt text:<instructions>`: set the custom system prompt and select Custom personality.
 - `/ai resetpersonality`: restore Friendly personality and clear the custom prompt.
-- `/ai setmodel model:<model>`: choose a supported OpenAI chat model.
+- `/ai setmodel model:<model>`: select the anonymous free model (`openai-fast`). The no-key catalog currently exposes one model.
 - `/ai setlimit requests:<1-1000>`: set the daily request limit per user in this server.
 - `/ai enable` and `/ai disable`: enable or disable AI for this server.
 - `/ai status`: view the current server configuration.
@@ -100,7 +101,7 @@ All configuration changes require the Discord **Administrator** permission. Chat
 
 - `/imagine prompt:<description>`: generate and upload one image in an allowed channel.
 
-Image generation can require separate OpenAI model access and billing. The default model is configured with `OPENAI_IMAGE_MODEL` in `.env`.
+Image generation uses Pollinations Classic and needs no AI key. The free endpoint is rate-limited, best-effort, and may add its logo to generated images.
 
 ## Environment variables
 
@@ -110,17 +111,18 @@ Image generation can require separate OpenAI model access and billing. The defau
 | `CLIENT_ID` | Yes | Discord application ID |
 | `GUILD_ID` | No | Test server for instant command registration |
 | `MONGODB_URI` | Yes | MongoDB connection string |
-| `OPENAI_API_KEY` | Yes | OpenAI API key |
-| `OPENAI_CHAT_MODEL` | No | Default chat model (`gpt-4.1-mini`) |
-| `OPENAI_IMAGE_MODEL` | No | Image generation model (`gpt-image-1-mini`) |
 | `DEFAULT_DAILY_LIMIT` | No | Initial per-user daily request limit (25) |
 | `DEFAULT_MAX_HISTORY` | No | Initial per-user memory length in messages (16) |
 | `AI_COOLDOWN_MS` | No | Per-user cooldown in milliseconds (3000) |
-| `OPENAI_TIMEOUT_MS` | No | API request timeout (60000) |
+| `AI_PROVIDER_TIMEOUT_MS` | No | Free provider request timeout (90000 ms) |
+| `FREE_TEXT_INTERVAL_MS` | No | Minimum spacing between text requests (31000 ms) |
+| `FREE_IMAGE_INTERVAL_MS` | No | Minimum spacing between image requests (46000 ms) |
 | `MAX_PROMPT_LENGTH` | No | Maximum chat prompt size (4000 characters) |
 | `MAX_IMAGE_PROMPT_LENGTH` | No | Maximum image prompt size (1000 characters) |
 
 Guild settings are stored separately by Discord server ID. Conversation memory is stored separately by server ID and user ID. Usage counters expire after 90 days.
+
+Chat prompts are sent to a third-party free service. Do not send passwords, API credentials, or other sensitive information to the AI.
 
 ## Project structure
 
@@ -128,7 +130,7 @@ Guild settings are stored separately by Discord server ID. Conversation memory i
 commands/   Slash commands
 events/     Discord events
 handlers/   Command registration, event loading, interaction routing
-ai/         OpenAI integration, prompts, chat and image services
+ai/         Free AI provider integration, prompts, chat and image services
 database/   MongoDB connection and persistence operations
 models/     Mongoose models
 utils/      Permission checks, settings UI, message and log helpers

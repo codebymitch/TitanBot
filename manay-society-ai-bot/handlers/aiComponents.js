@@ -153,7 +153,7 @@ async function handleButton(interaction) {
       });
     case 'nexa:panel:model':
       return interaction.update({
-        content: 'Pilih model OpenAI.',
+        content: 'Pilih model AI gratis.',
         embeds: [],
         components: [buildModelMenu(), new ActionRowBuilder().addComponents(backButton())],
       });

@@ -12,7 +12,7 @@ const guildAIConfigSchema = new mongoose.Schema({
     default: 'friendly',
   },
   customSystemPrompt: { type: String, default: '' },
-  model: { type: String, default: 'gpt-4.1-mini' },
+  model: { type: String, default: 'openai-fast' },
   memoryEnabled: { type: Boolean, default: true },
   maxHistory: { type: Number, default: 16, min: 2, max: 60 },
   dailyLimit: { type: Number, default: 25, min: 1, max: 1000 },

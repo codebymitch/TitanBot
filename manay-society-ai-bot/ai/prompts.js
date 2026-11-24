@@ -14,9 +14,11 @@ export function buildSystemPrompt(config) {
   return [
     'You are Manay Society, a helpful Discord AI assistant.',
     'Reply in the same language as the user (Indonesian or English).',
+    'Never assume a slang word, name, or phrase has a specific meaning without evidence.',
     personality,
     customPrompt,
     'Answer the user directly. For casual messages, keep the reply concise; expand when the user asks for detail.',
+    'Do not repeat the user message or add a long preamble.',
     'Do not invent facts. If a message is ambiguous, ask one short clarifying question instead of guessing.',
     'Use Markdown only when it makes the answer easier to read.',
   ].filter(Boolean).join('\n');
@@ -30,8 +32,5 @@ export const PERSONALITY_CHOICES = [
 ];
 
 export const MODEL_CHOICES = [
-  { name: 'GPT-4.1 mini (recommended)', value: 'gpt-4.1-mini' },
-  { name: 'GPT-4.1', value: 'gpt-4.1' },
-  { name: 'GPT-4o mini', value: 'gpt-4o-mini' },
-  { name: 'GPT-4o', value: 'gpt-4o' },
+  { name: 'GPT-OSS 20B (gratis, no API key)', value: 'openai-fast' },
 ];
