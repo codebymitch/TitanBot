@@ -153,7 +153,9 @@ async function handleAiAutoChat(message, client) {
           .catch(() => null);
       }
     } catch (error) {
-      logger.error('AI auto chat error:', { guildId, userId, error: error?.message });
+      logger.error(
+        `AI auto chat error: guild=${guildId} user=${userId} error=${error?.message || String(error)}`,
+      );
       await message.channel
         .send({ content: getAiErrorMessage(error), allowedMentions: { parse: [] } })
         .catch(() => null);

@@ -67,7 +67,9 @@ export default {
                     .catch(() => null);
             }
         } catch (error) {
-            logger.error('ai_chat error:', { guildId, userId, error: error?.message });
+            logger.error(
+                `ai_chat error: guild=${guildId} user=${userId} error=${error?.message || String(error)}`,
+            );
             await InteractionHelper.safeEditReply(interaction, { content: getAiErrorMessage(error) });
         }
     },
