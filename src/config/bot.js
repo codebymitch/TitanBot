@@ -465,9 +465,6 @@ export const botConfig = {
   // =========================
   // Set any feature to `false` to disable it globally.
   features: {
-    // AI Chat Assistant (slash command /ai + AI Auto Chat).
-    ai: true,
-
     // Core systems.
     economy: true,
     moderation: true,
@@ -550,7 +547,6 @@ if (configErrors.length > 0) {
 export const BotConfig = botConfig;
 
 const COMMAND_CATEGORY_FEATURE_MAP = {
-  ai: "ai",
   birthday: "birthday",
   community: "community",
   economy: "economy",

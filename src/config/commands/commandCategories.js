@@ -3,7 +3,6 @@
  */
 
 export const CATEGORY_ICONS = {
-  AI: '🤖',
   Birthday: '🎂',
   AutoReactions: '🔁',
   Community: '👥',
