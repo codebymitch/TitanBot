@@ -57,6 +57,21 @@ const VerificationConfigSchema = z
   })
   .optional();
 
+const StreakConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    channelId: z.string().nullable().optional(),
+  })
+  .default({ enabled: false, channelId: null });
+
+const AiConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    channelId: z.string().nullable().optional(),
+  })
+  .passthrough()
+  .optional();
+
 export const GuildConfigSchema = z
   .object({
     prefix: z.string().optional(),
@@ -70,13 +85,16 @@ export const GuildConfigSchema = z
     reportChannelId: z.string().nullable().optional(),
     birthdayChannelId: z.string().nullable().optional(),
     premiumRoleId: z.string().nullable().optional(),
+    premiumPlusRoleId: z.string().nullable().optional(),
     logIgnore: LogIgnoreSchema.optional(),
     disabledCommands: z.record(z.boolean()).optional(),
     disabledCategories: z.record(z.boolean()).optional(),
     logging: LoggingConfigSchema.optional(),
     ticketLogging: TicketLoggingSchema.optional(),
     enableLogging: z.boolean().optional(),
-    verification: VerificationConfigSchema
+    verification: VerificationConfigSchema,
+    streak: StreakConfigSchema,
+    ai: AiConfigSchema
   })
   .passthrough();
 
@@ -96,6 +114,7 @@ export const EconomyDataSchema = z
     xp: z.number().int().nonnegative().default(0),
     level: z.number().int().nonnegative().default(1),
     inventory: z.record(z.any()).default({}),
+    fishCollection: z.record(z.number().int().nonnegative()).default({}),
     cooldowns: z.record(z.number().int().nonnegative()).default({})
   })
   .passthrough();

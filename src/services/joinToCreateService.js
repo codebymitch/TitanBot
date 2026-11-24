@@ -112,6 +112,61 @@ export function validateUserLimit(limit) {
     return true;
 }
 
+const PANEL_IMAGE_URL_MAX_LENGTH = 500;
+
+export function validatePanelImageUrl(url) {
+    if (typeof url !== 'string' || url.trim().length === 0) {
+        throw new TitanBotError(
+            'Panel image URL is empty',
+            ErrorTypes.VALIDATION,
+            'Please provide a valid image URL.'
+        );
+    }
+
+    const trimmed = url.trim();
+
+    if (trimmed.length > PANEL_IMAGE_URL_MAX_LENGTH) {
+        throw new TitanBotError(
+            'Panel image URL exceeds maximum length',
+            ErrorTypes.VALIDATION,
+            `Image URL cannot exceed ${PANEL_IMAGE_URL_MAX_LENGTH} characters.`
+        );
+    }
+
+    let parsed;
+    try {
+        parsed = new URL(trimmed);
+    } catch {
+        throw new TitanBotError(
+            'Panel image URL is invalid',
+            ErrorTypes.VALIDATION,
+            'Please provide a valid image URL (http or https).'
+        );
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new TitanBotError(
+            'Panel image URL has unsupported protocol',
+            ErrorTypes.VALIDATION,
+            'The image URL must start with http:// or https://.'
+        );
+    }
+
+    return trimmed;
+}
+
+export async function setPanelImage(client, guildId, imageUrl) {
+    const normalized = validatePanelImageUrl(imageUrl);
+    await updateJoinToCreateConfig(client, guildId, { panelImage: normalized });
+    logger.info(`Updated Join to Create panel image for guild ${guildId}`);
+    return normalized;
+}
+
+export async function getPanelImage(client, guildId) {
+    const config = await getConfiguration(client, guildId);
+    return config.panelImage || null;
+}
+
 export function formatChannelName(template, variables) {
     try {
         const safeTemplate = template.normalize('NFKC').replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '').trim();
@@ -505,7 +560,7 @@ export async function createTemporaryChannel(guild, member, options = {}) {
             validateBitrate(bitrate / 1000);
         }
 
-        const channelName = formatChannelName(nameTemplate || '{username}\'s Room', {
+        const channelName = formatChannelName(nameTemplate || '🔊 voice {displayName}', {
             username: member.user.username,
             displayName: member.displayName,
             userTag: member.user.tag,
@@ -554,6 +609,7 @@ export default {
     validateChannelNameTemplate,
     validateBitrate,
     validateUserLimit,
+    validatePanelImageUrl,
     formatChannelName,
     initializeJoinToCreate,
     updateChannelConfig,
@@ -563,5 +619,7 @@ export default {
     getChannelConfiguration,
     hasManageGuildPermission,
     logConfigurationChange,
-    createTemporaryChannel
+    createTemporaryChannel,
+    setPanelImage,
+    getPanelImage
 };

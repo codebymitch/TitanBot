@@ -3,8 +3,46 @@ import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { reconcileTicketPanels, reconcileVerificationPanels, reconcileReactionRolePanelHealth } from "../services/panelHealthService.js";
-import { reconcileLevelRoles } from "../services/leveling/levelRoleSyncService.js";
-import { initRiffyAfterReady } from "../services/music/riffySetup.js";
+import { startLiveStatusUpdater } from "../services/musicStatusService.js";
+import {
+  initializeVoiceMilestoneSessions,
+  startVoiceMilestoneLeaderboardUpdater,
+  updateVoiceMilestoneLeaderboards,
+} from "../services/voiceMilestoneService.js";
+import {
+  initializeChatLeaderboards,
+  startChatLeaderboardUpdater,
+  updateChatLeaderboards,
+} from "../services/chatLeaderboardService.js";
+import { startStreakBreakChecker } from "../services/streakService.js";
+
+/**
+ * Set the bot presence. When `presence.rotateIntervalMs` > 0 and more than one
+ * activity is configured, the bot cycles through them in order.
+ */
+function startPresenceRotation(client) {
+  const presence = config.bot?.presence;
+  const activities = Array.isArray(presence?.activities) ? presence.activities.filter(Boolean) : [];
+  if (activities.length === 0) return;
+
+  let index = 0;
+  const applyNext = () => {
+    client.user.setPresence({
+      status: presence.status || "online",
+      activities: [activities[index]],
+    });
+    index = (index + 1) % activities.length;
+  };
+
+  applyNext();
+
+  const intervalMs = Number(presence.rotateIntervalMs) || 0;
+  if (activities.length > 1 && intervalMs > 0) {
+    if (client.presenceRotationTimer) clearInterval(client.presenceRotationTimer);
+    client.presenceRotationTimer = setInterval(applyNext, intervalMs);
+    startupLog(`Presence rotation enabled (${activities.length} activities, every ${intervalMs / 1000}s)`);
+  }
+}
 
 export default {
   name: Events.ClientReady,
@@ -12,15 +50,11 @@ export default {
 
   async execute(client) {
     try {
-      client.user.setPresence(config.bot.presence);
+      startPresenceRotation(client);
 
       startupLog(`Ready! Logged in as ${client.user.tag}`);
       startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
       startupLog(`Loaded ${client.commands.size} commands`);
-
-      if (client.config?.features?.music) {
-        initRiffyAfterReady(client);
-      }
 
       const reconciliationSummary = await reconcileReactionRoleMessages(client);
       startupLog(
@@ -42,10 +76,16 @@ export default {
         `Reaction role panel health: scanned ${reactionRolePanelSummary.scannedPanels} panels, healthy ${reactionRolePanelSummary.healthyPanels}, deleted ${reactionRolePanelSummary.deletedPanels}, missing channel ${reactionRolePanelSummary.missingChannels}, recovered ${reactionRolePanelSummary.recoveredIds}, errors ${reactionRolePanelSummary.errors}`
       );
 
-      const levelRoleSummary = await reconcileLevelRoles(client);
-      startupLog(
-        `Level role sync: scanned ${levelRoleSummary.scannedGuilds} guilds, pruned ${levelRoleSummary.prunedRewardEntries} stale rewards, re-awarded ${levelRoleSummary.rolesReAwarded} roles, errors ${levelRoleSummary.errors}`
-      );
+      // Mulai auto-refresh untuk live status bot musik
+      startLiveStatusUpdater(client);
+      await initializeVoiceMilestoneSessions(client);
+      await updateVoiceMilestoneLeaderboards(client);
+      startVoiceMilestoneLeaderboardUpdater(client);
+      await initializeChatLeaderboards(client);
+      await updateChatLeaderboards(client);
+      startChatLeaderboardUpdater(client);
+      startStreakBreakChecker(client);
+
     } catch (error) {
       logger.error("Error in ready event:", error);
     }

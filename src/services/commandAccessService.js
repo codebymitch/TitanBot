@@ -6,6 +6,7 @@ import {
   formatCategoryName,
   getCategoryIcon,
   PROTECTED_COMMANDS,
+  OWNER_CATEGORIES,
 } from '../config/commands/commandCategories.js';
 
 function normalizeToggleRecord(raw) {
@@ -26,7 +27,7 @@ function normalizeToggleRecord(raw) {
   return {};
 }
 
-export function buildCommandRegistry(client) {
+export function buildCommandRegistry(client, { includeOwner = true } = {}) {
   const categories = new Map();
 
   for (const command of client.commands.values()) {
@@ -36,6 +37,11 @@ export function buildCommandRegistry(client) {
 
     const category = command.category || 'Core';
     const categoryKey = normalizeCategoryKey(category);
+
+    // Kategori khusus owner disembunyikan kalau viewer bukan owner.
+    if (!includeOwner && OWNER_CATEGORIES.has(categoryKey)) {
+      continue;
+    }
 
     if (!categories.has(categoryKey)) {
       categories.set(categoryKey, {
@@ -154,8 +160,8 @@ export async function isCommandEnabled(client, guildId, commandName, category = 
   return isCommandEnabledInConfig(config, commandName, resolvedCategory);
 }
 
-export function getCommandAccessSnapshot(client, config) {
-  const registry = buildCommandRegistry(client);
+export function getCommandAccessSnapshot(client, config, { includeOwner = true } = {}) {
+  const registry = buildCommandRegistry(client, { includeOwner });
   const disabledCommands = normalizeToggleRecord(config?.disabledCommands);
   const disabledCategories = normalizeToggleRecord(config?.disabledCategories);
 
@@ -307,12 +313,12 @@ export async function resetCategoryCommands(client, guildId, categoryKey, contex
   return { categoryKey: normalizedKey, displayName: category.displayName };
 }
 
-export function resolveCategoryChoice(client, input) {
+export function resolveCategoryChoice(client, input, { includeOwner = true } = {}) {
   if (!input) {
     return null;
   }
 
-  const registry = buildCommandRegistry(client);
+  const registry = buildCommandRegistry(client, { includeOwner });
   const normalizedInput = normalizeCategoryKey(input);
 
   for (const [key, category] of registry.entries()) {

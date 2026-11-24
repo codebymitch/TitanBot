@@ -13,7 +13,13 @@ export const botConfig = {
     // Current online state shown on Discord.
     status: "online",
 
-    // Activity lines shown under the bot name.
+    // How long each activity is shown before switching to the next one (ms).
+    // Set to 0 to disable rotation (only the first activity is used).
+    // Keep this >= 15000 to stay well clear of Discord's presence rate limits.
+    rotateIntervalMs: 30000,
+
+    // Activity lines shown under the bot name. When `rotateIntervalMs` > 0 and
+    // there is more than one entry, the bot cycles through them in order.
     // `type` number mapping from Discord:
     // 0 = Playing
     // 1 = Streaming
@@ -23,9 +29,19 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name: "Custom Status", // required by Discord API, not shown in the client
-        state: "stalking",     // this is what people actually see
+        name: "/help | Show All Commands", // required by Discord API, not shown in the client
+        state: "",     // this is what people actually see
         type: 4,               // Custom
+      },
+      {
+        name: "",
+        state: "",
+        type: 4,
+      },
+      {
+        name: "",
+        state: "",
+        type: 4,
       },
     ],
   },
@@ -97,7 +113,7 @@ export const botConfig = {
       secondary: "#2F3136",
 
       // Standard status colors for success/error/warning/info messages.
-      success: "#57F287",
+      success: "#ff88d7",
       error: "#ED4245",
       warning: "#FEE75C",
       info: "#3498DB",
@@ -141,7 +157,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: "MannNayla",
       // Footer icon URL (null = no icon).
       icon: null,
     },
@@ -172,7 +188,8 @@ export const botConfig = {
     startingBalance: 0,
 
     // Maximum bank amount before upgrades (if upgrades are used).
-    baseBankCapacity: 100000,
+    // 10 triliun (10T).
+    baseBankCapacity: 10_000_000_000_000,
 
     // Daily reward amount.
     dailyAmount: 100,
@@ -448,9 +465,11 @@ export const botConfig = {
   // =========================
   // Set any feature to `false` to disable it globally.
   features: {
+    // AI Chat Assistant (slash command /ai + AI Auto Chat).
+    ai: true,
+
     // Core systems.
     economy: true,
-    leveling: true,
     moderation: true,
     logging: true,
     welcome: true,
@@ -464,16 +483,17 @@ export const botConfig = {
     // Security and self-service systems.
     verification: true,
     reactionRoles: true,
+    autoReactions: true,
     joinToCreate: true,
 
     // Utility/quality-of-life modules.
     voice: true,
     search: true,
+    sticky: true,
     tools: true,
     utility: true,
     community: true,
     fun: true,
-    music: true,
   },
 };
 
@@ -530,23 +550,25 @@ if (configErrors.length > 0) {
 export const BotConfig = botConfig;
 
 const COMMAND_CATEGORY_FEATURE_MAP = {
+  ai: "ai",
   birthday: "birthday",
   community: "community",
   economy: "economy",
   fun: "fun",
   giveaway: "giveaways",
   jointocreate: "joinToCreate",
-  leveling: "leveling",
   logging: "logging",
   moderation: "moderation",
-  music: "music",
   reaction_roles: "reactionRoles",
+  autoreactions: "autoReactions",
   search: "search",
+  sticky: "sticky",
   serverstats: "counter",
   ticket: "tickets",
   tools: "tools",
   utility: "utility",
   verification: "verification",
+  voicemilestone: "voice",
   welcome: "welcome",
 };
 

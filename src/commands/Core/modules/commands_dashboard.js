@@ -15,6 +15,8 @@ import {
   resetCategoryCommands,
 } from '../../../services/commandAccessService.js';
 import { getGuildConfig } from '../../../services/config/guildConfig.js';
+import { isBotOwner } from '../../../config/bot.js';
+import { OWNER_CATEGORIES } from '../../../config/commands/commandCategories.js';
 
 export const DASHBOARD_CATEGORY_SELECT = 'cmdaccess_category';
 export const DASHBOARD_COMMAND_SELECT = 'cmdaccess_command';
@@ -267,9 +269,9 @@ export function buildCategoryComponents(guildId, category) {
   return rows;
 }
 
-export async function buildDashboardView(client, guildId, guild, view = 'overview', categoryKey = null) {
+export async function buildDashboardView(client, guildId, guild, view = 'overview', categoryKey = null, isOwner = false) {
   const config = await getGuildConfig(client, guildId);
-  const snapshot = getCommandAccessSnapshot(client, config);
+  const snapshot = getCommandAccessSnapshot(client, config, { includeOwner: isOwner });
 
   if (view === 'category' && categoryKey) {
     const category = snapshot.categories.find((entry) => entry.key === categoryKey);
@@ -306,11 +308,22 @@ export async function handleDashboardComponent(interaction, client) {
     });
   }
 
+  const isOwner = isBotOwner(interaction.user.id);
+
+  // Kategori khusus owner nggak boleh diakses/diubah oleh non-owner.
+  const requestedKey = String(suffix || interaction.values?.[0] || '').toLowerCase();
+  if (OWNER_CATEGORIES.has(requestedKey) && !isOwner) {
+    return interaction.reply({
+      content: 'This category is only available to the bot owner.',
+      ephemeral: true,
+    });
+  }
+
   if (action === DASHBOARD_COMMAND_SELECT) {
     const categoryKey = suffix;
     const commandName = interaction.values[0];
     const config = await getGuildConfig(client, guildId);
-    const snapshot = getCommandAccessSnapshot(client, config);
+    const snapshot = getCommandAccessSnapshot(client, config, { includeOwner: isOwner });
     const category = snapshot.categories.find((entry) => entry.key === categoryKey);
     const enabled = category?.enabledCommands.includes(commandName);
 
@@ -320,27 +333,27 @@ export async function handleDashboardComponent(interaction, client) {
       await enableCommand(client, guildId, commandName);
     }
 
-    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', categoryKey);
+    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', categoryKey, isOwner);
     return interaction.update({ embeds: [view.embed], components: view.components });
   }
 
   if (action === DASHBOARD_CATEGORY_SELECT) {
     const categoryKey = interaction.values[0];
-    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', categoryKey);
+    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', categoryKey, isOwner);
     return interaction.update({ embeds: [view.embed], components: view.components });
   }
 
   await interaction.deferUpdate();
 
   if (action === DASHBOARD_REFRESH || action === DASHBOARD_HOME) {
-    const view = await buildDashboardView(client, guildId, interaction.guild, 'overview');
+    const view = await buildDashboardView(client, guildId, interaction.guild, 'overview', null, isOwner);
     return interaction.editReply({ embeds: [view.embed], components: view.components });
   }
 
   if (action === DASHBOARD_TOGGLE_CATEGORY) {
     const categoryKey = suffix;
     const config = await getGuildConfig(client, guildId);
-    const snapshot = getCommandAccessSnapshot(client, config);
+    const snapshot = getCommandAccessSnapshot(client, config, { includeOwner: isOwner });
     const category = snapshot.categories.find((entry) => entry.key === categoryKey);
 
     if (category?.categoryDisabled) {
@@ -349,27 +362,27 @@ export async function handleDashboardComponent(interaction, client) {
       await disableCategory(client, guildId, categoryKey);
     }
 
-    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', categoryKey);
+    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', categoryKey, isOwner);
     return interaction.editReply({ embeds: [view.embed], components: view.components });
   }
 
   if (action === DASHBOARD_ENABLE_ALL) {
     await enableCategory(client, guildId, suffix);
     await resetCategoryCommands(client, guildId, suffix);
-    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', suffix);
+    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', suffix, isOwner);
     return interaction.editReply({ embeds: [view.embed], components: view.components });
   }
 
   if (action === DASHBOARD_DISABLE_ALL) {
     await disableCategory(client, guildId, suffix);
-    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', suffix);
+    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', suffix, isOwner);
     return interaction.editReply({ embeds: [view.embed], components: view.components });
   }
 
   if (action === DASHBOARD_RESET_COMMANDS) {
     await enableCategory(client, guildId, suffix);
     await resetCategoryCommands(client, guildId, suffix);
-    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', suffix);
+    const view = await buildDashboardView(client, guildId, interaction.guild, 'category', suffix, isOwner);
     return interaction.editReply({ embeds: [view.embed], components: view.components });
   }
 

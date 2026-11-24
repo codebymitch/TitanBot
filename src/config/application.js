@@ -74,7 +74,6 @@ const appConfig = {
 
   features: {
     ...botConfig.features,
-    music: botConfig.features?.music ?? true,
   },
 
   env: process.env.NODE_ENV || "development",

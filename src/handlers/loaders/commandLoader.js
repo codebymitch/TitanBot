@@ -263,11 +263,54 @@ async function registerGlobalCommands(client, clientId, commands, totalSubcomman
     logger.info('Global commands may take up to an hour to appear in all servers on first deploy');
 }
 
+/**
+ * Remove every guild-scoped command from each guild the bot is in.
+ *
+ * Commands are registered globally (see registerCommands), so any guild-scoped
+ * commands are leftovers from older deploys that registered per-guild (e.g. via
+ * GUILD_ID or TEST_GUILD_ID). If left in place they show up in Discord as
+ * duplicate entries next to the global copies, so we clear them on startup.
+ */
+async function clearGuildScopedCommands(client, clientId) {
+    const guilds = Array.from(client.guilds?.cache?.keys?.() || []);
+
+    for (const guildId of guilds) {
+        const route = `/applications/${clientId}/guilds/${guildId}/commands`;
+
+        try {
+            const existingCommands = await client.rest.get(route);
+            if (!Array.isArray(existingCommands) || existingCommands.length === 0) {
+                continue;
+            }
+
+            await client.rest.put(route, { body: [] });
+            logger.info(`Cleared ${existingCommands.length} stale guild-scoped command(s) from guild ${guildId}`);
+        } catch (error) {
+            logger.warn(`Failed to clear guild-scoped commands for guild ${guildId}: ${error.message}`);
+        }
+    }
+}
+
 export async function registerCommands(client, options = {}) {
     const { clientId = null } = options;
 
     try {
         const { commands, totalSubcommands } = collectCommandPayloads(client);
+
+        if (!clientId) {
+            throw new Error('CLIENT_ID is required for slash command registration');
+        }
+        if (!client.rest) {
+            throw new Error('Discord REST client is not available for slash command registration');
+        }
+
+        validateCommands(commands);
+
+        // Always register globally so the bot works in every server it is invited to.
+        // GUILD_ID / TEST_GUILD_ID are intentionally NOT used: guild-scoped
+        // registration would duplicate the global commands in that one guild and
+        // hide them from every other server.
+        await clearGuildScopedCommands(client, clientId);
         await registerGlobalCommands(client, clientId, commands, totalSubcommands);
     } catch (error) {
         logger.error('Error registering commands:', error);
