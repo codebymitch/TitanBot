@@ -33,7 +33,8 @@ export function getProviderConfig() {
     baseUrl: (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, ''),
     model: process.env.AI_MODEL || 'gpt-4o-mini',
     timeout: clampInt(process.env.AI_TIMEOUT_MS, 30000, 5000, 120000),
-    maxTokens: clampInt(process.env.AI_MAX_TOKENS, 256, 50, 4096),
+    // Leave room for reasoning models to produce a visible answer; prompt enforces brevity.
+    maxTokens: clampInt(process.env.AI_MAX_TOKENS, 512, 50, 4096),
     temperature: clampFloat(process.env.AI_TEMPERATURE, 0.7, 0, 2),
     maxHistory: clampInt(process.env.AI_MAX_HISTORY, 16, 2, 60),
     cooldownMs: clampInt(process.env.AI_COOLDOWN_MS, 3000, 0, 60000),
@@ -197,6 +198,27 @@ function retryDelayMs(attempt, status, headers) {
   return Math.min(500 * 2 ** (attempt - 1), 5000);
 }
 
+function extractCompletionText(responseData) {
+  const content = responseData?.choices?.[0]?.message?.content;
+
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === 'string') return part;
+        if (typeof part?.text === 'string') return part.text;
+        return '';
+      })
+      .join('')
+      .trim();
+  }
+
+  return '';
+}
+
 /**
  * Kirim chat completion ke provider OpenAI-compatible.
  * Mengembalikan teks balasan, atau melempar TitanBotError yang sudah bertipe.
@@ -268,14 +290,15 @@ async function requestCompletion(cfg, messages) {
         );
         retryable = false;
       } else {
-        const content = response.data?.choices?.[0]?.message?.content;
-        if (typeof content === 'string' && content.trim().length > 0) {
-          return content.trim();
+        const choice = response.data?.choices?.[0];
+        const content = extractCompletionText(response.data);
+        if (content) {
+          return content;
         }
         lastError = createError(
-          'AI provider returned an empty response',
+          `AI provider returned an empty response (model=${cfg.model}, finish_reason=${choice?.finish_reason || 'unknown'}, response_id=${response.data?.id || 'unknown'})`,
           ErrorTypes.NETWORK,
-          'AI-nya diam aja nih, kayak lagi mikir 😅 coba kirim lagi ya.',
+          'Model AI-nya belum ngasih teks jawaban. Coba sekali lagi ya; kalau terus begitu, admin perlu cek model atau batas tokennya.',
           { expected: true },
         );
       }
