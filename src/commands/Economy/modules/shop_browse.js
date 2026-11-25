@@ -21,12 +21,12 @@ export default {
                     .setDescription('Use `/buy item_id:<id> quantity:<amount>` to purchase an item.');
                 pageItems.forEach(item => {
                     embed.addFields({
-                        name: `${item.name} (${item.id})`,
-                        value: `**Type:** ${item.type}\n **Price:** $${item.price.toLocaleString()}\n${item.description}`,
+                        name: `🍓 {item.name} (🍓 {item.id})`,
+                        value: `**Type:** 🍓 {item.type}\n **Price:** 🍓 🍓 {item.price.toLocaleString()}\n🍓 {item.description}`,
                         inline: false,
                     });
                 });
-                embed.setFooter({ text: `Page ${page}/${totalPages}` });
+                embed.setFooter({ text: `Page 🍓 {page}/🍓 {totalPages}` });
                 return embed;
             };
 
