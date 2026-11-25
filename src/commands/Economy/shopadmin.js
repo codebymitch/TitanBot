@@ -2,27 +2,28 @@ import { ChannelType, SlashCommandBuilder } from 'discord.js';
 import { cleanName, isStaff, loadShops, saveConfig } from '../../services/berryRpg.js';
 
 const slug = value => cleanName(value).toLowerCase();
-const postTypes = [ChannelType.PublicThread, ChannelType.AnnouncementThread];
+function attachForumTarget(shop, guildId, channel, post) {
+  if (!channel && !post) return;
+  const isServerTextChannel = value => Boolean(
+    value?.guildId && !value.isDMBased?.()
+    && (value.type === ChannelType.GuildForum || value.isTextBased?.())
+  );
+  if (channel && !isServerTextChannel(channel)) {
+    throw new Error('Choose a server text channel, Forum, or thread.');
+  }
+  if (post && !post.isThread?.()) {
+    throw new Error('Choose a thread in the post option.');
+  }
+  if (channel && post && channel.id !== post.parentId) {
+    throw new Error('The selected thread does not belong to the selected channel or Forum.');
+  }
 
-function attachForumTarget(shop, guildId, forumChannel, forumPost) {
-  if (!forumChannel && !forumPost) return;
-  if (forumChannel && forumChannel.type !== ChannelType.GuildForum) {
-    throw new Error('Choose a Forum channel in the forum option.');
-  }
-  if (forumPost && !postTypes.includes(forumPost.type)) {
-    throw new Error('Choose a forum post thread in the forum post option.');
-  }
-  if (forumChannel && forumPost && forumPost.parentId !== forumChannel.id) {
-    throw new Error('The selected post does not belong to the selected forum.');
-  }
-
-  const parentId = forumChannel?.id || forumPost?.parentId || null;
-  const postId = forumPost?.id || null;
+  const target = post || channel;
+  const parentId = target.isThread?.() ? target.parentId : target.id;
+  const threadId = target.isThread?.() ? target.id : null;
   shop.forumChannelId = parentId;
-  shop.forumThreadId = postId;
-  shop.forumUrl = postId
-    ? 'https://discord.com/channels/' + guildId + '/' + postId
-    : parentId ? 'https://discord.com/channels/' + guildId + '/' + parentId : null;
+  shop.forumThreadId = threadId;
+  shop.forumUrl = 'https://discord.com/channels/' + guildId + '/' + (threadId || parentId);
 }
 
 export default {
@@ -43,11 +44,11 @@ export default {
     .addIntegerOption(option => option.setName('price').setDescription('Price in Berries').setMinValue(1).setMaxValue(100000000))
     .addIntegerOption(option => option.setName('stock').setDescription('Number available').setMinValue(0).setMaxValue(100000))
     .addStringOption(option => option.setName('description').setDescription('Short item description').setMaxLength(300))
-    .addChannelOption(option => option.setName('forum').setDescription('Select the shop forum channel').addChannelTypes(ChannelType.GuildForum))
-    .addChannelOption(option => option.setName('forum_post').setDescription('Select a specific post/thread').addChannelTypes(...postTypes)),
+    .addChannelOption(option => option.setName('forum').setDescription('Choose any server channel, Forum, or thread'))
+    .addChannelOption(option => option.setName('forum_post').setDescription('Optional thread inside the selected channel or Forum')),
 
   async execute(interaction, config, client) {
-    if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can manage shops.', ephemeral: true });
+    if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
     const action = interaction.options.getString('action');
     const name = cleanName(interaction.options.getString('shop'));
     const shopKey = slug(name);

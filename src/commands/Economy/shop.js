@@ -1,16 +1,29 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { ChannelType, SlashCommandBuilder } from 'discord.js';
 import { adjustBerries, cleanName, loadShops, saveConfig } from '../../services/berryRpg.js';
 import { formatCurrency, getEconomyData, setEconomyData } from '../../utils/economy.js';
 
 const slug = value => cleanName(value).toLowerCase();
 
-async function getForumPostText(client, guildId, shop) {
-  if (!shop.forumThreadId) return '';
-  const thread = await client.channels.fetch(shop.forumThreadId).catch(() => null);
-  if (!thread?.isThread?.()) return '';
-  const starter = await thread.fetchStarterMessage().catch(() => null);
-  const text = starter?.content?.trim();
-  return text ? text.slice(0, 700) : '';
+async function getLinkedChannelText(client, shop) {
+  const targetId = shop.forumThreadId || shop.forumChannelId;
+  if (!targetId) return '';
+  const channel = await client.channels.fetch(targetId).catch(() => null);
+  if (!channel) return '';
+
+  let text = '';
+  if (channel.isThread?.()) {
+    const starter = await channel.fetchStarterMessage().catch(() => null);
+    text = starter?.content?.trim() || '';
+  } else if (channel.type === ChannelType.GuildForum) {
+    const active = await channel.threads.fetchActive().catch(() => null);
+    const thread = active?.threads?.first();
+    const starter = thread ? await thread.fetchStarterMessage().catch(() => null) : null;
+    text = starter?.content?.trim() || '';
+  } else if (channel.isTextBased?.() && !channel.isDMBased?.()) {
+    const messages = await channel.messages.fetch({ limit: 1 }).catch(() => null);
+    text = messages?.first()?.content?.trim() || '';
+  }
+  return text.slice(0, 700);
 }
 
 export default {
@@ -55,8 +68,8 @@ export default {
     if (!itemName) {
       const items = shop.items.filter(item => item.stock > 0);
       const body = items.length ? items.map(item => '• **' + item.name + '** — ' + formatCurrency(item.price) + ' — ' + item.stock + ' left' + (item.description ? '\n  ' + item.description : '')).join('\n') : 'This shop is sold out.';
-      const postText = await getForumPostText(client, interaction.guildId, shop);
-      const linkedText = postText ? '\n\n📜 **Shop post**\n' + postText : '';
+      const postText = await getLinkedChannelText(client, shop);
+      const linkedText = postText ? '\n\n📜 **Linked channel post**\n' + postText : '';
       return interaction.reply({ content: '🛍️ **' + shop.name + '**\n' + (shop.forumUrl ? shop.forumUrl + '\n' : '') + body + linkedText + '\n\nUse /shop shop:<name> item:<name> to buy.', ephemeral: true });
     }
 

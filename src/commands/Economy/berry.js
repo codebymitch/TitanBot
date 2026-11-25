@@ -31,7 +31,7 @@ export default {
     }
 
     if (!isStaff(interaction)) {
-      return interaction.reply({ content: 'Only server administrators or members with Manage Server can give Berries.', ephemeral: true });
+      return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
     }
 
     const user = interaction.options.getUser('user');

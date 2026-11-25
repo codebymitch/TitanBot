@@ -1,11 +1,6 @@
 import { ChannelType, SlashCommandBuilder } from 'discord.js';
 import { isStaff, loadJourneyConfig, saveConfig, cleanName } from '../../services/berryRpg.js';
 
-const travelChannels = [
-  ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.GuildForum,
-  ChannelType.PublicThread, ChannelType.AnnouncementThread, ChannelType.PrivateThread,
-];
-
 export default {
   data: new SlashCommandBuilder()
     .setName('boatconfig')
@@ -21,11 +16,10 @@ export default {
       ))
     .addStringOption(option => option.setName('island').setDescription('Island name').setMaxLength(80))
     .addIntegerOption(option => option.setName('minutes').setDescription('Trip duration (1 to 3 minutes)').setMinValue(1).setMaxValue(3))
-    .addChannelOption(option => option.setName('channel').setDescription('Manual departure channel, thread, or forum')
-      .addChannelTypes(...travelChannels)),
+    .addChannelOption(option => option.setName('channel').setDescription('Choose a server channel, Forum, or thread')),
 
   async execute(interaction, config, client) {
-    if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can change travel settings.', ephemeral: true });
+    if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
     const cfg = await loadJourneyConfig(client, interaction.guildId);
     const action = interaction.options.getString('action');
     const island = cleanName(interaction.options.getString('island'));
@@ -46,7 +40,10 @@ export default {
       cfg.durationMinutes = minutes;
     } else if (action === 'manual') {
       const channel = interaction.options.getChannel('channel');
-      if (!channel) return interaction.reply({ content: 'Choose a channel, thread, or forum for manual departure requests.', ephemeral: true });
+      if (!channel) return interaction.reply({ content: 'Choose a server channel, Forum, or thread for manual departure requests.', ephemeral: true });
+      const canReceiveText = channel.type === ChannelType.GuildForum
+        || (channel.isTextBased?.() && !channel.isDMBased?.());
+      if (!canReceiveText) return interaction.reply({ content: 'Choose a text channel, Forum, or thread. Voice channels and categories cannot receive travel updates.', ephemeral: true });
       cfg.manualChannelId = channel.id;
     } else if (action === 'auto') {
       cfg.manualChannelId = null;

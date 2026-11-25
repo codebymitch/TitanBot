@@ -32,7 +32,7 @@ export default {
     const journeys = await getJourneys(client, guildId);
 
     if (action === 'confirm') {
-      if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can confirm departures.', ephemeral: true });
+      if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
       const user = interaction.options.getUser('user');
       if (!user || journeys[user.id]?.status !== 'pending') return interaction.reply({ content: 'There is no pending manual departure for that member.', ephemeral: true });
       journeys[user.id].status = 'traveling';
