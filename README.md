@@ -284,3 +284,40 @@ TitanBot is released under the MIT License. See [LICENSE](LICENSE) for details.
 Thank you for choosing TitanBot for your Discord server! We're constantly working to improve and add new features based on community feedback.
 
 *Last updated: May 2026*
+
+## Berry Roleplay Systems
+
+The roleplay commands use the server's Berry balance and save their lists and settings in the bot database. Use PostgreSQL in production so the data survives restarts.\n\nThe role `Admin` (ID `1569520212858904577`) is required for staff-only Berry RPG commands, including list management, travel configuration, relay setup, Berry grants, and staff ship grants. Discord server permissions alone do not replace this role.
+
+### Berries and ships
+
+- `/berry balance` checks a balance; staff can use `/berry give` to grant Berries.
+- Money uses the server emoji `<:Berry:1573798988988031087>`.
+- `/shipyard action:catalog` shows Caravel (10,000,000), Brigantine (50,000,000), and Custom (from 200,000,000) prices. Quality choices are Standard, Fast, Damaged, and Special Vessel.
+- Use `/shipyard action:buy` with a ship class, quality, and name. Staff can use `action:grant`; `action:boats`, `action:rename`, and `action:delete` manage your fleet.
+- Use `/boat action:start` and select your boat, departure island, and destination from the Discord choices. A trip takes at most 3 minutes; ship class and quality can shorten it.
+
+### Shops, merchants, and loot
+
+- `/shopadmin` maintains each shop and its stock. `action:create` creates a shop; `add`, `remove`, and `stock` edit the item list. `action:link` opens Discord channel pickers for a Forum and/or a specific Forum post. You can also choose these while creating a shop.
+- `/shop` lists shops and items. A linked Forum post's starter text is shown when members browse that shop. Purchases deduct Berries and reduce stock; sold-out listings are removed.
+- `/merchantadmin` edits the Regular and Black Market item lists and prices.
+- `/lootadmin` edits locations and the Common, Rare, and Epic loot tables. Common chests award Common items; Rare may award Common or Rare; Epic may award Common, Rare, or Epic. Chests can be empty.
+- `/checkloot` finds and opens chests and shows a player's loot inventory.
+
+### Picking channels in Discord
+
+Commands with a channel option open Discord's channel picker. Choose the server, channel, Forum, or thread there; you don't need to copy a channel ID. For shops, set `/shopadmin action:link` and select `forum`, `forum_post`, or both. For manual travel review, use `/boatconfig action:manual` and select a text channel, Forum, or thread. To turn it off, use `/boatconfig action:auto`.
+
+For a Forum, the bot creates a departure post for manual travel. It can read linked shop Forum post text and relay messages from Forum threads. Give the bot **View Channel** and **Read Message History** for channels it needs to read. It needs **Send Messages** for regular channels and **Send Messages in Threads** (plus **Create Public Threads** in a Forum) for posting there.
+
+### Message relay
+
+- A server administrator or member with Manage Server can use `/call action:start`, choose a member to ping and a destination channel/thread, and optionally choose a source channel, Forum, or thread. If no source is selected, the current channel is used.
+- The relay forwards messages sent by the staff member who configured it. `/call action:stop` removes that member's relays.
+- Duplicate saved relay links are collapsed. If all bot replies still appear twice after updating, make sure the hosting service is running only one copy of the bot.
+
+### Island travel
+
+- `/boatconfig` manages the island list, base trip length (1–3 minutes), and optional manual departure review channel, Forum, or thread. Manual review requires staff to confirm with `/boat action:confirm user:<member>`.
+- Travel posts only progress updates at 25%, 50%, 75%, and 100%; random encounters and travel events are disabled. A player must finish the current trip before starting another.
