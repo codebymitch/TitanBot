@@ -47,7 +47,7 @@ export default {
     .addChannelOption(option => option.setName('forum_post').setDescription('Select a specific post/thread').addChannelTypes(...postTypes)),
 
   async execute(interaction, config, client) {
-    if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can manage shops.', ephemeral: true });
+    if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
     const action = interaction.options.getString('action');
     const name = cleanName(interaction.options.getString('shop'));
     const shopKey = slug(name);
