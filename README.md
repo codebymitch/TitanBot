@@ -320,4 +320,4 @@ For a Forum, the bot creates a departure post for manual travel. It can read lin
 ### Island travel
 
 - `/boatconfig` manages the island list, base trip length (1–3 minutes), and optional manual departure review channel, Forum, or thread. Manual review requires staff to confirm with `/boat action:confirm user:<member>`.
-- Progress posts at 25%, 50%, 75%, and 100%. Storm and ship trouble are roleplay events and do not extend travel; treasure events award a small Berry bonus. A player must finish the current trip before starting another.
+- Travel posts only progress updates at 25%, 50%, 75%, and 100%; random encounters and travel events are disabled. A player must finish the current trip before starting another.
