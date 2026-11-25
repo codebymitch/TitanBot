@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { ChannelType, SlashCommandBuilder } from 'discord.js';
 import { randomUUID } from 'node:crypto';
 import { cleanName, isStaff, loadLoot, saveConfig } from '../../services/berryRpg.js';
 import { isForumPost } from '../../services/berryLootPosts.js';
@@ -52,63 +52,238 @@ function parseManualList(raw, post) {
   return itemsByChest;
 }
 
-function postSummary(post) {
-  return Object.values(post || {}).slice(0, 25).map(entry => {
+function postSummary(posts) {
+  return Object.values(posts || {}).slice(0, 20).map(entry => {
     const chestText = (entry.chests || []).map((chest, index) => {
       const contents = (chest.items || []).filter(item => item.quantity > 0)
-        .map(item => item.kind === 'berry' ? item.name + ' (' + item.quantity.toLocaleString() + ' Berries)' : item.name + ' × ' + item.quantity)
+        .map(item => item.kind === 'berry'
+          ? item.name + ' (' + item.quantity.toLocaleString() + ' Berries)'
+          : item.name + ' × ' + item.quantity)
         .join(', ');
-      return (index + 1) + ': ' + (contents || 'empty');
-    }).join(' | ');
-    return '• **' + entry.name + '** — ' + (entry.chests || []).length + ' chest(s)' + (chestText ? '\n  ' + chestText : '');
+      return 'Chest ' + (index + 1) + ': ' + (contents || 'empty');
+    }).join('\n');
+    return '• **' + entry.name + '** — ' + (entry.chests || []).length + ' chest(s)' + (chestText ? '\n' + chestText : '');
+  }).join('\n\n').slice(0, 3900);
+}
+
+function tableSummary(tables) {
+  return rarityChoices.map(({ name, value }) => {
+    const entries = tables?.[value] || [];
+    return '**' + name + '**: ' + (entries.length
+      ? entries.map(entry => entry.name + ' (' + (entry.kind || 'item') + ')').join(', ')
+      : 'No items yet');
   }).join('\n').slice(0, 3900);
+}
+
+function addLocationOption(subcommand) {
+  return subcommand.addChannelOption(option => option.setName('location')
+    .setDescription('Pick the Forum post where these chests belong')
+    .addChannelTypes(ChannelType.PublicThread)
+    .setRequired(true));
+}
+
+function addItemKindOption(subcommand) {
+  return subcommand.addStringOption(option => option.setName('kind')
+    .setDescription('Choose the item type (defaults to Other item)')
+    .addChoices(...itemKinds));
+}
+
+function addQuantityOption(subcommand) {
+  return subcommand.addIntegerOption(option => option.setName('quantity')
+    .setDescription('Amount to add (defaults to 1; Berries use this full amount)')
+    .setMinValue(1)
+    .setMaxValue(1000000000));
 }
 
 export default {
   data: new SlashCommandBuilder()
     .setName('lootadmin')
-    .setDescription('Set up chest loot on Forum posts (Admin role required).')
-    .addStringOption(option => option.setName('action').setDescription('What to configure').setRequired(true)
-      .addChoices(
-        { name: 'List configured posts', value: 'list' },
-        { name: 'Set up empty chests', value: 'setup' },
-        { name: 'Guided: fill chests from a rarity table', value: 'guided' },
-        { name: 'Set chest count', value: 'set_count' },
-        { name: 'Add item to a chest', value: 'add_item' },
-        { name: 'Remove item from a chest', value: 'remove_item' },
-        { name: 'Manually replace chest item lists', value: 'manual' },
-        { name: 'Clear one chest', value: 'clear' },
-        { name: 'Remove this location', value: 'remove_location' },
-        { name: 'Add to guided rarity table', value: 'table_add' },
-        { name: 'Remove from guided rarity table', value: 'table_remove' }
-      ))
-    .addChannelOption(option => option.setName('location').setDescription('Choose a Forum post for this location'))
-    .addIntegerOption(option => option.setName('chest_count').setDescription('Number of chests (1 to 20)').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(option => option.setName('chest_number').setDescription('Chest number to edit (starts at 1)').setMinValue(1).setMaxValue(20))
-    .addStringOption(option => option.setName('item').setDescription('Item name for guided changes').setMaxLength(80))
-    .addStringOption(option => option.setName('kind').setDescription('Item type').addChoices(...itemKinds))
-    .addIntegerOption(option => option.setName('quantity').setDescription('Copies, or Berry amount for a Berry stack').setMinValue(1).setMaxValue(1000000000))
-    .addStringOption(option => option.setName('rarity').setDescription('Rarity table for guided setup').addChoices(...rarityChoices))
-    .addStringOption(option => option.setName('manual_list').setDescription('One line per item: chest | name | kind | quantity').setMaxLength(1500)),
+    .setDescription('Manage chest loot on Forum posts (Admin role required).')
+    .addSubcommand(subcommand => subcommand.setName('help')
+      .setDescription('Show a quick guide to setting up chest loot'))
+    .addSubcommand(subcommand => subcommand.setName('list')
+      .setDescription('Show every configured chest location and its remaining loot'))
+    .addSubcommand(subcommand => subcommand.setName('setup')
+      .setDescription('Create empty chests at a Forum post')
+      .addChannelOption(option => option.setName('location')
+        .setDescription('Pick the Forum post where these chests belong')
+        .addChannelTypes(ChannelType.PublicThread)
+        .setRequired(true))
+      .addIntegerOption(option => option.setName('chests')
+        .setDescription('How many empty chests to create (1 to 20)')
+        .setMinValue(1)
+        .setMaxValue(20)
+        .setRequired(true)))
+    .addSubcommand(subcommand => subcommand.setName('guided-setup')
+      .setDescription('Create chests with random items from one rarity table')
+      .addChannelOption(option => option.setName('location')
+        .setDescription('Pick the Forum post where these chests belong')
+        .addChannelTypes(ChannelType.PublicThread)
+        .setRequired(true))
+      .addStringOption(option => option.setName('rarity')
+        .setDescription('Choose the rarity table to draw from')
+        .addChoices(...rarityChoices)
+        .setRequired(true))
+      .addIntegerOption(option => option.setName('chests')
+        .setDescription('How many chests to create (1 to 20)')
+        .setMinValue(1)
+        .setMaxValue(20)
+        .setRequired(true))
+      .addIntegerOption(option => option.setName('quantity')
+        .setDescription('Amount in each chest (defaults to 1)')
+        .setMinValue(1)
+        .setMaxValue(1000000000)))
+    .addSubcommand(subcommand => subcommand.setName('set-count')
+      .setDescription('Change how many chests a Forum post has')
+      .addChannelOption(option => option.setName('location')
+        .setDescription('Pick the Forum post to update')
+        .addChannelTypes(ChannelType.PublicThread)
+        .setRequired(true))
+      .addIntegerOption(option => option.setName('chests')
+        .setDescription('New total number of chests (1 to 20)')
+        .setMinValue(1)
+        .setMaxValue(20)
+        .setRequired(true)))
+    .addSubcommand(subcommand => subcommand.setName('add-item')
+      .setDescription('Put an item or Berry stack into one chest')
+      .addChannelOption(option => option.setName('location')
+        .setDescription('Pick the Forum post to update')
+        .addChannelTypes(ChannelType.PublicThread)
+        .setRequired(true))
+      .addIntegerOption(option => option.setName('chest')
+        .setDescription('Chest number, starting at 1')
+        .setMinValue(1)
+        .setMaxValue(20)
+        .setRequired(true))
+      .addStringOption(option => option.setName('item')
+        .setDescription('Name shown to players')
+        .setMaxLength(80)
+        .setRequired(true))
+      .addIntegerOption(option => option.setName('quantity')
+        .setDescription('How many; Berries use this as the Berry amount (defaults to 1)')
+        .setMinValue(1)
+        .setMaxValue(1000000000))
+      .addStringOption(option => option.setName('kind')
+        .setDescription('Choose the item type (defaults to Other item)')
+        .addChoices(...itemKinds)))
+    .addSubcommand(subcommand => subcommand.setName('remove-item')
+      .setDescription('Remove a named item from one chest')
+      .addChannelOption(option => option.setName('location')
+        .setDescription('Pick the Forum post to update')
+        .addChannelTypes(ChannelType.PublicThread)
+        .setRequired(true))
+      .addIntegerOption(option => option.setName('chest')
+        .setDescription('Chest number, starting at 1')
+        .setMinValue(1)
+        .setMaxValue(20)
+        .setRequired(true))
+      .addStringOption(option => option.setName('item')
+        .setDescription('Enter the exact item name to remove')
+        .setMaxLength(80)
+        .setRequired(true)))
+    .addSubcommand(subcommand => subcommand.setName('replace-list')
+      .setDescription('Replace all loot at a location with a manual list')
+      .addChannelOption(option => option.setName('location')
+        .setDescription('Pick the Forum post to replace')
+        .addChannelTypes(ChannelType.PublicThread)
+        .setRequired(true))
+      .addStringOption(option => option.setName('items')
+        .setDescription('One line each: chest number | item name | kind | quantity')
+        .setMaxLength(1500)
+        .setRequired(true)))
+    .addSubcommand(subcommand => subcommand.setName('clear-chest')
+      .setDescription('Remove every item from one chest')
+      .addChannelOption(option => option.setName('location')
+        .setDescription('Pick the Forum post to update')
+        .addChannelTypes(ChannelType.PublicThread)
+        .setRequired(true))
+      .addIntegerOption(option => option.setName('chest')
+        .setDescription('Chest number, starting at 1')
+        .setMinValue(1)
+        .setMaxValue(20)
+        .setRequired(true)))
+    .addSubcommand(subcommand => subcommand.setName('remove-location')
+      .setDescription('Delete all chest settings for a Forum post')
+      .addChannelOption(option => option.setName('location')
+        .setDescription('Pick the Forum post to remove')
+        .addChannelTypes(ChannelType.PublicThread)
+        .setRequired(true)))
+    .addSubcommand(subcommand => subcommand.setName('table-list')
+      .setDescription('Show the items in the Common, Rare, and Epic guided tables'))
+    .addSubcommand(subcommand => subcommand.setName('table-add')
+      .setDescription('Add an item to a guided rarity table')
+      .addStringOption(option => option.setName('rarity')
+        .setDescription('Choose the table to add to')
+        .addChoices(...rarityChoices)
+        .setRequired(true))
+      .addStringOption(option => option.setName('item')
+        .setDescription('Item name')
+        .setMaxLength(80)
+        .setRequired(true))
+      .addStringOption(option => option.setName('kind')
+        .setDescription('Choose the item type (defaults to Other item)')
+        .addChoices(...itemKinds)))
+    .addSubcommand(subcommand => subcommand.setName('table-remove')
+      .setDescription('Remove an item from a guided rarity table')
+      .addStringOption(option => option.setName('rarity')
+        .setDescription('Choose the table to remove from')
+        .addChoices(...rarityChoices)
+        .setRequired(true))
+      .addStringOption(option => option.setName('item')
+        .setDescription('Enter the exact item name')
+        .setMaxLength(80)
+        .setRequired(true))),
 
   async execute(interaction, config, client) {
-    if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
-    const action = interaction.options.getString('action');
+    if (!isStaff(interaction)) {
+      return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
+    }
+
+    const action = interaction.options.getSubcommand();
     const loot = await loadLoot(client, interaction.guildId);
     loot.posts ||= {};
+    loot.tables ||= {};
+
+    if (action === 'help') {
+      return interaction.reply({
+        content: [
+          '🏴‍☠️ **Loot Admin Quick Guide**',
+          '',
+          '**Easy setup:** run `/lootadmin setup`, choose a Forum post and chest count, then run `/lootadmin add-item` once per item stack.',
+          '**Quick random setup:** fill the Common, Rare, or Epic table with `/lootadmin table-add`, then use `/lootadmin guided-setup`.',
+          '**Review:** `/lootadmin list` shows locations and contents; `/lootadmin table-list` shows guided tables.',
+          '**Edit later:** use `/lootadmin add-item`, `remove-item`, `set-count`, or `clear-chest`.',
+          '**Replace everything at a location:** `/lootadmin replace-list` overwrites all chest contents there.',
+          '',
+          'For a manual list, use one line per stack: `chest number | item name | kind | quantity`.',
+          'Example: `1 | Wado Ichimonji | weapon | 1` or `2 | Berries | berry | 1000000`.',
+          'Kinds: berry, weapon, devil_fruit, item. A Berry quantity is the Berry amount.'
+        ].join('\n'),
+        ephemeral: true
+      });
+    }
 
     if (action === 'list') {
       const list = postSummary(loot.posts);
-      return interaction.reply({ content: '🗺️ **Configured Forum post chests**\n' + (list || 'No Forum posts have chest settings yet.'), ephemeral: true });
+      return interaction.reply({
+        content: '🗺️ **Configured Forum Post Chests**\n' + (list || 'No Forum posts have chest settings yet. Use `/lootadmin setup` to make the first chests.'),
+        ephemeral: true
+      });
     }
 
-    if (action === 'table_add' || action === 'table_remove') {
+    if (action === 'table-list') {
+      return interaction.reply({ content: '🎲 **Guided Loot Tables**\n' + tableSummary(loot.tables), ephemeral: true });
+    }
+
+    if (action === 'table-add' || action === 'table-remove') {
       const rarity = interaction.options.getString('rarity');
       const itemName = cleanName(interaction.options.getString('item'));
-      if (!rarity || !itemName) return interaction.reply({ content: 'Choose a rarity and enter an item name.', ephemeral: true });
+      if (!rarity || !itemName) {
+        return interaction.reply({ content: 'Choose a rarity and enter an item name.', ephemeral: true });
+      }
       const kind = interaction.options.getString('kind') || 'item';
       loot.tables[rarity] ||= [];
-      if (action === 'table_add') {
+      if (action === 'table-add') {
         if (!loot.tables[rarity].some(entry => entry.name.toLowerCase() === itemName.toLowerCase())) {
           loot.tables[rarity].push({ name: itemName, kind });
         }
@@ -116,7 +291,12 @@ export default {
         loot.tables[rarity] = loot.tables[rarity].filter(entry => entry.name.toLowerCase() !== itemName.toLowerCase());
       }
       await saveConfig(client, 'loot', interaction.guildId, loot);
-      return interaction.reply({ content: action === 'table_add' ? 'Added **' + itemName + '** to the ' + rarity + ' guided table.' : 'Removed **' + itemName + '** from the ' + rarity + ' guided table.', ephemeral: true });
+      return interaction.reply({
+        content: action === 'table-add'
+          ? 'Added **' + itemName + '** to the ' + rarity + ' guided table. Use `/lootadmin table-list` to review it.'
+          : 'Removed **' + itemName + '** from the ' + rarity + ' guided table.',
+        ephemeral: true
+      });
     }
 
     const location = selectedForumPost(interaction);
@@ -124,26 +304,38 @@ export default {
       return interaction.reply({ content: 'Choose a post inside a Forum channel in the location option.', ephemeral: true });
     }
     const stored = loot.posts[location.id];
-    const chestCount = interaction.options.getInteger('chest_count');
-    const chestNumber = interaction.options.getInteger('chest_number');
+    const chestCount = interaction.options.getInteger('chests');
+    const chestNumber = interaction.options.getInteger('chest');
     const itemName = cleanName(interaction.options.getString('item'));
     const kind = interaction.options.getString('kind') || 'item';
     const quantity = interaction.options.getInteger('quantity') || 1;
 
     if (action === 'setup') {
-      if (stored) return interaction.reply({ content: 'This Forum post already has chest settings. Use Set chest count or edit its contents instead of resetting it.', ephemeral: true });
-      if (!chestCount) return interaction.reply({ content: 'Set a chest count from 1 to 20.', ephemeral: true });
-      loot.posts[location.id] = { name: postName(location), parentId: location.parentId, chests: Array.from({ length: chestCount }, makeChest), updatedAt: Date.now() };
+      if (stored) {
+        return interaction.reply({ content: 'This post already has chests. Use `/lootadmin set-count` or edit its contents.', ephemeral: true });
+      }
+      loot.posts[location.id] = {
+        name: postName(location),
+        parentId: location.parentId,
+        chests: Array.from({ length: chestCount }, makeChest),
+        updatedAt: Date.now()
+      };
       await saveConfig(client, 'loot', interaction.guildId, loot);
-      return interaction.reply({ content: '📦 Set up **' + chestCount + '** empty chest(s) for **' + postName(location) + '**. Add contents with Add item or Manually replace chest item lists.', ephemeral: true });
+      return interaction.reply({
+        content: '📦 Created **' + chestCount + '** empty chest(s) in **' + postName(location) + '**. Next, use `/lootadmin add-item` to fill them.',
+        ephemeral: true
+      });
     }
 
-    if (action === 'guided') {
-      if (stored) return interaction.reply({ content: 'This Forum post already has chest settings. Use Set chest count or edit its contents instead of replacing it.', ephemeral: true });
+    if (action === 'guided-setup') {
+      if (stored) {
+        return interaction.reply({ content: 'This post already has chests. Use `/lootadmin set-count` or edit its contents.', ephemeral: true });
+      }
       const rarity = interaction.options.getString('rarity');
-      if (!chestCount || !rarity) return interaction.reply({ content: 'Choose a rarity and chest count from 1 to 20.', ephemeral: true });
       const table = loot.tables[rarity] || [];
-      if (!table.length) return interaction.reply({ content: 'The ' + rarity + ' guided table is empty. Use Add to guided rarity table first.', ephemeral: true });
+      if (!table.length) {
+        return interaction.reply({ content: 'The ' + rarity + ' table is empty. Add items with `/lootadmin table-add`, then try again.', ephemeral: true });
+      }
       loot.posts[location.id] = {
         name: postName(location),
         parentId: location.parentId,
@@ -154,47 +346,57 @@ export default {
         updatedAt: Date.now()
       };
       await saveConfig(client, 'loot', interaction.guildId, loot);
-      return interaction.reply({ content: '🎲 Filled **' + chestCount + '** chests for **' + postName(location) + '** using the ' + rarity + ' table.', ephemeral: true });
+      return interaction.reply({
+        content: '🎲 Created **' + chestCount + '** chest(s) in **' + postName(location) + '** using the ' + rarity + ' table.',
+        ephemeral: true
+      });
     }
 
-    if (!stored && action !== 'remove_location') {
-      return interaction.reply({ content: 'This Forum post has no chest setup yet. Use Setup empty chests or Guided setup first.', ephemeral: true });
+    if (!stored) {
+      return interaction.reply({ content: 'This post has no chest setup yet. Start with `/lootadmin setup` or `/lootadmin guided-setup`.', ephemeral: true });
     }
 
-    if (action === 'remove_location') {
-      if (!stored) return interaction.reply({ content: 'This Forum post has no chest setup.', ephemeral: true });
+    if (action === 'remove-location') {
       delete loot.posts[location.id];
-    } else if (action === 'set_count') {
-      if (!chestCount) return interaction.reply({ content: 'Set a chest count from 1 to 20.', ephemeral: true });
+    } else if (action === 'set-count') {
       if (chestCount < stored.chests.length && stored.chests.slice(chestCount).some(chest => chest.items?.some(item => item.quantity > 0))) {
-        return interaction.reply({ content: 'The extra chests contain loot. Remove or clear their items before lowering the chest count.', ephemeral: true });
+        return interaction.reply({ content: 'The extra chests still contain loot. Remove or clear those items before lowering the count.', ephemeral: true });
       }
       stored.chests = stored.chests.slice(0, chestCount);
       while (stored.chests.length < chestCount) stored.chests.push(makeChest());
       stored.updatedAt = Date.now();
-    } else if (action === 'add_item') {
+    } else if (action === 'add-item') {
       const chest = getChest(stored, chestNumber);
-      if (!chest || !itemName) return interaction.reply({ content: 'Choose a valid chest number and item name.', ephemeral: true });
+      if (!chest) {
+        return interaction.reply({ content: 'That chest number does not exist here. Use `/lootadmin list` to see the current chest count.', ephemeral: true });
+      }
       const activeStacks = stored.chests.reduce((sum, entry) => sum + (entry.items || []).filter(item => item.quantity > 0).length, 0);
-      if (activeStacks >= 25) return interaction.reply({ content: 'This location already has 25 item stacks. Raise an existing stack with the manual list instead.', ephemeral: true });
+      if (activeStacks >= 25) {
+        return interaction.reply({ content: 'This location already has 25 item stacks. Use `/lootadmin replace-list` to reorganize them.', ephemeral: true });
+      }
       chest.items.push({ id: randomUUID(), name: itemName, kind, quantity });
       stored.updatedAt = Date.now();
-    } else if (action === 'remove_item') {
+    } else if (action === 'remove-item') {
       const chest = getChest(stored, chestNumber);
-      if (!chest || !itemName) return interaction.reply({ content: 'Choose a valid chest number and enter the exact item name.', ephemeral: true });
+      if (!chest) {
+        return interaction.reply({ content: 'That chest number does not exist here. Use `/lootadmin list` to see the current chest count.', ephemeral: true });
+      }
       const itemIndex = chest.items.findIndex(item => item.name.toLowerCase() === itemName.toLowerCase());
-      if (itemIndex < 0) return interaction.reply({ content: 'That item is not in this chest.', ephemeral: true });
+      if (itemIndex < 0) {
+        return interaction.reply({ content: 'That exact item name is not in this chest.', ephemeral: true });
+      }
       chest.items.splice(itemIndex, 1);
       stored.updatedAt = Date.now();
-    } else if (action === 'clear') {
+    } else if (action === 'clear-chest') {
       const chest = getChest(stored, chestNumber);
-      if (!chest) return interaction.reply({ content: 'Choose a valid chest number.', ephemeral: true });
+      if (!chest) {
+        return interaction.reply({ content: 'That chest number does not exist here. Use `/lootadmin list` to see the current chest count.', ephemeral: true });
+      }
       chest.items = [];
       stored.updatedAt = Date.now();
-    } else if (action === 'manual') {
-      const manual = interaction.options.getString('manual_list');
+    } else if (action === 'replace-list') {
       try {
-        const itemsByChest = parseManualList(manual, stored);
+        const itemsByChest = parseManualList(interaction.options.getString('items'), stored);
         for (const chest of stored.chests) chest.items = itemsByChest.get(chest.id) || [];
       } catch (error) {
         return interaction.reply({ content: error.message, ephemeral: true });
@@ -203,6 +405,17 @@ export default {
     }
 
     await saveConfig(client, 'loot', interaction.guildId, loot);
-    return interaction.reply({ content: action === 'remove_location' ? 'Removed chest setup for **' + postName(location) + '**.' : 'Updated chest loot for **' + postName(location) + '**.', ephemeral: true });
+    return interaction.reply({
+      content: action === 'remove-location'
+        ? 'Removed all chest settings for **' + postName(location) + '**.'
+        : action === 'clear-chest'
+          ? 'Cleared every item from Chest ' + chestNumber + ' at **' + postName(location) + '**.'
+          : action === 'set-count'
+            ? 'Updated **' + postName(location) + '** to **' + chestCount + '** chest(s).'
+            : action === 'replace-list'
+              ? 'Replaced all chest contents at **' + postName(location) + '**.'
+              : 'Updated loot for **' + postName(location) + '**. Use `/lootadmin list` to review it.',
+      ephemeral: true
+    });
   }
 };
