@@ -369,7 +369,7 @@ async function postMilestoneAnnouncement(
     }
 
     const payload = {
-      content: isTest ? '🧪 Ini preview pengumuman; role dan progres tidak diubah.' : null,
+      content: isTest ? '🧪 Ini preview pengumuman; role dan progres tidak diubah.' : `🎉 Selamat <@${userId}>!`,
       embeds: [embed],
       allowedMentions: { users: isTest ? [] : [userId] },
     };
