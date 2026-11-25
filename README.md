@@ -287,30 +287,37 @@ Thank you for choosing TitanBot for your Discord server! We're constantly workin
 
 ## Berry Roleplay Systems
 
-The economy wallet is displayed as Berries. Persistent shop, merchant, loot, relay, and travel data is stored through the bot database; use PostgreSQL for data that must survive restarts.
+The roleplay commands use the server's Berry balance and save their lists and settings in the bot database. Use PostgreSQL in production so the data survives restarts.
 
-### Berry balance
-- `/berry balance` checks a Berry balance.
-- `/berry give user amount` lets a server administrator or member with Manage Server grant Berries.
-- `/berry inventory` shows items found in loot chests.
+### Berries and ships
 
-### Shops and merchants
-- `/shop` lists configured shops. Use `/shop shop:<name>` to browse and `/shop shop:<name> item:<name>` to buy.
-- `/shopadmin` creates shops, adds or removes listings, updates stock, links a shop to its Discord forum post, and deletes shops. Purchases decrement stock and remove sold-out items.
-- `/merchant type:regular` or `/merchant type:black_market` browses those lists; add an item option to buy it.
-- `/merchantadmin` maintains either merchant's item list and Berry prices. Set higher prices for Black Market stock.
+- `/berry balance` checks a balance; staff can use `/berry give` to grant Berries.
+- Money uses the server emoji `<:Berry:1573798988988031087>`.
+- `/shipyard action:catalog` shows Caravel (10,000,000), Brigantine (50,000,000), and Custom (from 200,000,000) prices. Quality choices are Standard, Fast, Damaged, and Special Vessel.
+- Use `/shipyard action:buy` with a ship class, quality, and name. Staff can use `action:grant`; `action:boats`, `action:rename`, and `action:delete` manage your fleet.
+- Use `/boat action:start` and select your boat, departure island, and destination from the Discord choices. A trip takes at most 3 minutes; ship class and quality can shorten it.
 
-### Chests and loot
-- `/lootadmin action:location location:<name> rarity:<common|rare|epic>` assigns a chest rarity to a place.
-- `/lootadmin action:add rarity:<rarity> item:<name>` adds an item to a rarity table.
-- `/checkloot action:search location:<name>` finds one chest or five. `/checkloot action:open chest:<number>` opens one, and `/checkloot action:inventory` shows collected items.
-- Common chests can award common loot; rare chests can award common or rare loot; epic chests can award any rarity. Chests can be empty.
+### Shops, merchants, and loot
+
+- `/shopadmin` maintains each shop and its stock. `action:create` creates a shop; `add`, `remove`, and `stock` edit the item list. `action:link` opens Discord channel pickers for a Forum and/or a specific Forum post. You can also choose these while creating a shop.
+- `/shop` lists shops and items. A linked Forum post's starter text is shown when members browse that shop. Purchases deduct Berries and reduce stock; sold-out listings are removed.
+- `/merchantadmin` edits the Regular and Black Market item lists and prices.
+- `/lootadmin` edits locations and the Common, Rare, and Epic loot tables. Common chests award Common items; Rare may award Common or Rare; Epic may award Common, Rare, or Epic. Chests can be empty.
+- `/checkloot` finds and opens chests and shows a player's loot inventory.
+
+### Picking channels in Discord
+
+Commands with a channel option open Discord's channel picker. Choose the server, channel, Forum, or thread there; you don't need to copy a channel ID. For shops, set `/shopadmin action:link` and select `forum`, `forum_post`, or both. For manual travel review, use `/boatconfig action:manual` and select a text channel, Forum, or thread. To turn it off, use `/boatconfig action:auto`.
+
+For a Forum, the bot creates a departure post for manual travel. It can read linked shop Forum post text and relay messages from Forum threads. Give the bot **View Channel** and **Read Message History** for channels it needs to read. It needs **Send Messages** for regular channels and **Send Messages in Threads** (plus **Create Public Threads** in a Forum) for posting there.
 
 ### Message relay
-- A server administrator or member with Manage Server can use `/call action:start user:<member> channel:<destination> source:<channel>` to forward their future messages from the source channel and ping the selected member in the destination.
-- `/call action:stop` stops relays created by that staff member.
+
+- A server administrator or member with Manage Server can use `/call action:start`, choose a member to ping and a destination channel/thread, and optionally choose a source channel, Forum, or thread. If no source is selected, the current channel is used.
+- The relay forwards messages sent by the staff member who configured it. `/call action:stop` removes that member's relays.
+- Duplicate saved relay links are collapsed. If all bot replies still appear twice after updating, make sure the hosting service is running only one copy of the bot.
 
 ### Island travel
-- `/boat action:start from:<island> to:<island>` starts travel; `/boat action:status` checks progress. Progress advances in four stages and travel events are posted in the channel where the trip was started or confirmed.
-- `/boatconfig` manages the island list, travel duration, and optional manual-departure review channel. If manual review is enabled, staff confirm requests with `/boat action:confirm user:<member>`.
-- Journeys default to 60 minutes. Storm events add 10 minutes; stranded ships pause until the player uses `/boat action:repair`. Journeys cannot be cancelled or skipped, and a player cannot start a second journey until arriving.
+
+- `/boatconfig` manages the island list, base trip length (1–3 minutes), and optional manual departure review channel, Forum, or thread. Manual review requires staff to confirm with `/boat action:confirm user:<member>`.
+- Progress posts at 25%, 50%, 75%, and 100%. Storm and ship trouble are roleplay events and do not extend travel; treasure events award a small Berry bonus. A player must finish the current trip before starting another.
