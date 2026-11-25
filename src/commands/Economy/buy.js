@@ -40,9 +40,9 @@ export default {
 
             if (!item) {
                 throw createError(
-                    `Item 🍓 {itemId} not found`,
+                    `Item ${itemId} not found`,
                     ErrorTypes.VALIDATION,
-                    `The item ID \`🍓 {itemId}\` does not exist in the shop.`,
+                    `The item ID \`${itemId}\` does not exist in the shop.`,
                     { itemId }
                 );
             }
@@ -67,7 +67,7 @@ export default {
                 throw createError(
                     "Insufficient funds",
                     ErrorTypes.VALIDATION,
-                    `You need **🍓 🍓 {totalCost.toLocaleString()}** to purchase 🍓 {quantity}x **🍓 {item.name}**, but you only have **🍓 🍓 {userData.wallet.toLocaleString()}** in cash.`,
+                    `You need **🍓 ${totalCost.toLocaleString()}** to purchase ${quantity}x **${item.name}**, but you only have **🍓 ${userData.wallet.toLocaleString()}** in cash.`,
                     { required: totalCost, current: userData.wallet, itemId, quantity }
                 );
             }
@@ -85,7 +85,7 @@ export default {
                     throw createError(
                         "Role already owned",
                         ErrorTypes.VALIDATION,
-                        `You already have the **🍓 {item.name}** role.`,
+                        `You already have the **${item.name}** role.`,
                         { itemId, roleId: PREMIUM_ROLE_ID }
                     );
                 }
@@ -93,7 +93,7 @@ export default {
                     throw createError(
                         "Invalid quantity for role",
                         ErrorTypes.VALIDATION,
-                        `You can only purchase the **🍓 {item.name}** role once.`,
+                        `You can only purchase the **${item.name}** role once.`,
                         { itemId, quantity }
                     );
                 }
@@ -101,7 +101,7 @@ export default {
 
             userData.wallet -= totalCost;
 
-            let successDescription = `You successfully purchased 🍓 {quantity}x **🍓 {item.name}** for **🍓 🍓 {totalCost.toLocaleString()}**!`;
+            let successDescription = `You successfully purchased ${quantity}x **${item.name}** for **🍓 ${totalCost.toLocaleString()}**!`;
 
             if (item.type === "role" && itemId === "premium_role") {
                 const member = interaction.member;
@@ -120,9 +120,9 @@ export default {
                 try {
                     await member.roles.add(
                         role,
-                        `Purchased role: 🍓 {item.name}`,
+                        `Purchased role: ${item.name}`,
                     );
-                    successDescription += `\n\n**👑 The role 🍓 {role.toString()} has been granted to you!**`;
+                    successDescription += `\n\n**👑 The role ${role.toString()} has been granted to you!**`;
                 } catch (roleError) {
                     userData.wallet += totalCost;
                     await setEconomyData(client, guildId, userId, userData);
@@ -140,7 +140,7 @@ export default {
                 userData.inventory[itemId] =
                     (userData.inventory[itemId] || 0) + quantity;
                 if (item.type === "tool") {
-                    successDescription += `\n\n**🛠️ 🍓 {item.name} added to your inventory!**`;
+                    successDescription += `\n\n**🛠️ ${item.name} added to your inventory!**`;
                 }
             }
 
@@ -151,7 +151,7 @@ export default {
                 successDescription,
             ).addFields({
                 name: "New Balance",
-                value: `🍓 🍓 {userData.wallet.toLocaleString()}`,
+                value: `🍓 ${userData.wallet.toLocaleString()}`,
                 inline: true,
             });
 
