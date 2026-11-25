@@ -25,7 +25,7 @@ export default {
       .addChannelTypes(...travelChannels)),
 
   async execute(interaction, config, client) {
-    if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can change travel settings.', ephemeral: true });
+    if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
     const cfg = await loadJourneyConfig(client, interaction.guildId);
     const action = interaction.options.getString('action');
     const island = cleanName(interaction.options.getString('island'));
