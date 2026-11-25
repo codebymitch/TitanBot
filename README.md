@@ -302,7 +302,7 @@ The economy wallet is displayed as Berries. Persistent shop, merchant, loot, rel
 
 ### Chests and loot
 - `/lootadmin action:location location:<name> rarity:<common|rare|epic>` assigns a chest rarity to a place.
-- `/lootadmin action:add location:<place> rarity:<rarity> item:<name>` adds an item to a rarity table. (The location option is not needed for adding loot.)
+- `/lootadmin action:add rarity:<rarity> item:<name>` adds an item to a rarity table.
 - `/checkloot action:search location:<name>` finds one chest or five. `/checkloot action:open chest:<number>` opens one, and `/checkloot action:inventory` shows collected items.
 - Common chests can award common loot; rare chests can award common or rare loot; epic chests can award any rarity. Chests can be empty.
 
@@ -313,4 +313,4 @@ The economy wallet is displayed as Berries. Persistent shop, merchant, loot, rel
 ### Island travel
 - `/boat action:start from:<island> to:<island>` starts travel; `/boat action:status` checks progress. Progress advances in four stages and travel events are posted in the channel where the trip was started or confirmed.
 - `/boatconfig` manages the island list, travel duration, and optional manual-departure review channel. If manual review is enabled, staff confirm requests with `/boat action:confirm user:<member>`.
-- Journeys default to 60 minutes. They cannot be cancelled or skipped, and a player cannot start a second journey until arriving.
+- Journeys default to 60 minutes. Storm events add 10 minutes; stranded ships pause until the player uses `/boat action:repair`. Journeys cannot be cancelled or skipped, and a player cannot start a second journey until arriving.
