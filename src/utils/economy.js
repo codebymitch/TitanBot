@@ -52,8 +52,9 @@ export function getMaxBankCapacity(userData) {
 }
 
 export function formatCurrency(amount) {
-    const currencyName = ECONOMY_CONFIG.currency?.name || 'coins';
-    return `${amount.toLocaleString()} ${currencyName}`;
+    const currency = ECONOMY_CONFIG.currency || {};
+    const label = amount === 1 ? (currency.name || 'Berry') : (currency.namePlural || 'Berries');
+    return `${amount.toLocaleString()} ${label}`;
 }
 
 export async function getEconomyData(client, guildId, userId) {

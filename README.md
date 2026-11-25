@@ -284,3 +284,33 @@ TitanBot is released under the MIT License. See [LICENSE](LICENSE) for details.
 Thank you for choosing TitanBot for your Discord server! We're constantly working to improve and add new features based on community feedback.
 
 *Last updated: May 2026*
+
+## Berry Roleplay Systems
+
+The economy wallet is displayed as Berries. Persistent shop, merchant, loot, relay, and travel data is stored through the bot database; use PostgreSQL for data that must survive restarts.
+
+### Berry balance
+- `/berry balance` checks a Berry balance.
+- `/berry give user amount` lets a server administrator or member with Manage Server grant Berries.
+- `/berry inventory` shows items found in loot chests.
+
+### Shops and merchants
+- `/shop` lists configured shops. Use `/shop shop:<name>` to browse and `/shop shop:<name> item:<name>` to buy.
+- `/shopadmin` creates shops, adds or removes listings, updates stock, links a shop to its Discord forum post, and deletes shops. Purchases decrement stock and remove sold-out items.
+- `/merchant type:regular` or `/merchant type:black_market` browses those lists; add an item option to buy it.
+- `/merchantadmin` maintains either merchant's item list and Berry prices. Set higher prices for Black Market stock.
+
+### Chests and loot
+- `/lootadmin action:location location:<name> rarity:<common|rare|epic>` assigns a chest rarity to a place.
+- `/lootadmin action:add rarity:<rarity> item:<name>` adds an item to a rarity table.
+- `/checkloot action:search location:<name>` finds one chest or five. `/checkloot action:open chest:<number>` opens one, and `/checkloot action:inventory` shows collected items.
+- Common chests can award common loot; rare chests can award common or rare loot; epic chests can award any rarity. Chests can be empty.
+
+### Message relay
+- A server administrator or member with Manage Server can use `/call action:start user:<member> channel:<destination> source:<channel>` to forward their future messages from the source channel and ping the selected member in the destination.
+- `/call action:stop` stops relays created by that staff member.
+
+### Island travel
+- `/boat action:start from:<island> to:<island>` starts travel; `/boat action:status` checks progress. Progress advances in four stages and travel events are posted in the channel where the trip was started or confirmed.
+- `/boatconfig` manages the island list, travel duration, and optional manual-departure review channel. If manual review is enabled, staff confirm requests with `/boat action:confirm user:<member>`.
+- Journeys default to 60 minutes. Storm events add 10 minutes; stranded ships pause until the player uses `/boat action:repair`. Journeys cannot be cancelled or skipped, and a player cannot start a second journey until arriving.

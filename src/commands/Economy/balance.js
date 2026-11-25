@@ -60,18 +60,18 @@ export default {
             })
                 .addFields(
                     {
-                        name: "💵 Cash",
-                        value: `$${wallet.toLocaleString()}`,
+                        name: "🍓 Berry Wallet",
+                        value: `🍓 ${wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "🏦 Bank",
-                        value: `$${bank.toLocaleString()} / $${maxBank.toLocaleString()}`,
+                        name: "🏦 Berry Bank",
+                        value: `🍓 ${bank.toLocaleString()} / 🍓 ${maxBank.toLocaleString()}`,
                         inline: true,
                     },
                     {
-                        name: "💰 Total",
-                        value: `$${(wallet + bank).toLocaleString()}`,
+                        name: "💰 Total Berries",
+                        value: `🍓 ${(wallet + bank).toLocaleString()}`,
                         inline: true,
                     }
                 )
