@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { createJoinToCreatePanel } from '../../utils/joinToCreatePanel.js';
 import { logger } from '../../utils/logger.js';
@@ -7,7 +7,10 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import {
     hasManageGuildPermission,
     setPanelImage,
-    getPanelImage
+    getPanelImage,
+    getConfiguration,
+    initializeJoinToCreate,
+    removeTriggerChannel
 } from '../../services/joinToCreateService.js';
 
 export default {
@@ -25,6 +28,25 @@ export default {
                         .setName("image")
                         .setDescription("Custom image URL for the panel embed (saved for this server).")
                         .setMaxLength(500)
+                )
+        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("setup")
+                .setDescription("Set the voice channel that creates a temporary room when joined.")
+                .addChannelOption((option) =>
+                    option
+                        .setName("channel")
+                        .setDescription("The voice channel members join to create their own temporary room.")
+                        .addChannelTypes(ChannelType.GuildVoice)
+                        .setRequired(true)
+                )
+                .addChannelOption((option) =>
+                    option
+                        .setName("category")
+                        .setDescription("Category the temporary rooms are created under.")
+                        .addChannelTypes(ChannelType.GuildCategory)
+                        .setRequired(false)
                 )
         ),
     category: "utility",
@@ -45,6 +67,11 @@ export default {
 
             if (subcommand === "panel") {
                 await handlePanelSubcommand(interaction, client);
+                return;
+            }
+
+            if (subcommand === "setup") {
+                await handleSetupSubcommand(interaction, client);
                 return;
             }
 
@@ -94,5 +121,36 @@ async function handlePanelSubcommand(interaction, client) {
         embeds: [successEmbed('Panel Posted', imageOption
             ? `The voice control panel was posted in ${channel} using the new image.`
             : `The voice control panel was posted in ${channel}.`)]
+    });
+}
+
+async function handleSetupSubcommand(interaction, client) {
+    const guildId = interaction.guild.id;
+    const triggerChannel = interaction.options.getChannel('channel');
+    const category = interaction.options.getChannel('category');
+
+    if (!triggerChannel || triggerChannel.type !== ChannelType.GuildVoice) {
+        throw new TitanBotError(
+            'Selected channel is not a voice channel',
+            ErrorTypes.VALIDATION,
+            'Please select a voice channel as the Join to Create trigger.'
+        );
+    }
+
+    const config = await getConfiguration(client, guildId);
+
+    for (const existingChannelId of [...(config.triggerChannels || [])]) {
+        await removeTriggerChannel(client, guildId, existingChannelId);
+    }
+
+    await initializeJoinToCreate(client, guildId, triggerChannel.id, {
+        categoryId: category?.id || null
+    });
+
+    return await InteractionHelper.safeEditReply(interaction, {
+        embeds: [successEmbed('Join to Create Set Up', [
+            `Members who join ${triggerChannel} will now get their own temporary voice room.`,
+            category ? `New rooms are created under **${category.name}**.` : null
+        ].filter(Boolean).join('\n'))]
     });
 }
