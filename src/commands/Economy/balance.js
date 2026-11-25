@@ -24,9 +24,9 @@ export default {
         const targetUser = userOption || interaction.user;
         const guildId = interaction.guildId;
 
-        logger.info(`[ECONOMY] Balance check - userOption: ${userOption?.id || 'null'}, targetUser: ${targetUser.id}, guildId: ${guildId}, isPrefix: ${!!interaction._commandStartTime}`);
+        logger.info(`[ECONOMY] Balance check - userOption: 🍓 {userOption?.id || 'null'}, targetUser: 🍓 {targetUser.id}, guildId: 🍓 {guildId}, isPrefix: 🍓 {!!interaction._commandStartTime}`);
 
-        logger.debug(`[ECONOMY] Balance check for ${targetUser.id}`, { userId: targetUser.id, guildId });
+        logger.debug(`[ECONOMY] Balance check for 🍓 {targetUser.id}`, { userId: targetUser.id, guildId });
 
         if (targetUser.bot) {
             throw createError(
@@ -55,28 +55,28 @@ export default {
         const bank = typeof userData.bank === 'number' ? userData.bank : 0;
 
             const embed = createEmbed({
-                title: `${targetUser.username}'s Balance`,
-                description: `Here is the current financial status for ${targetUser.username}.`,
+                title: `🍓 {targetUser.username}'s Balance`,
+                description: `Here is the current financial status for 🍓 {targetUser.username}.`,
             })
                 .addFields(
                     {
                         name: "💵 Cash",
-                        value: `$${wallet.toLocaleString()}`,
+                        value: `🍓 🍓 {wallet.toLocaleString()}`,
                         inline: true,
                     },
                     {
                         name: "🏦 Bank",
-                        value: `$${bank.toLocaleString()} / $${maxBank.toLocaleString()}`,
+                        value: `🍓 🍓 {bank.toLocaleString()} / 🍓 🍓 {maxBank.toLocaleString()}`,
                         inline: true,
                     },
                     {
                         name: "💰 Total",
-                        value: `$${(wallet + bank).toLocaleString()}`,
+                        value: `🍓 🍓 {(wallet + bank).toLocaleString()}`,
                         inline: true,
                     }
                 )
                 .setFooter({
-                    text: `Requested by ${interaction.user.tag}`,
+                    text: `Requested by 🍓 {interaction.user.tag}`,
                     iconURL: interaction.user.displayAvatarURL(),
                 });
 
