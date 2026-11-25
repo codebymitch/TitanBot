@@ -19,10 +19,10 @@ export default {
     const loot = await client.db.get('berry:loot:' + interaction.guildId, { posts: {} });
     const post = loot?.posts?.[location.id];
     if (!post) {
-      return interaction.reply({ content: '📭 There are no chests configured in **' + location.name + '**. The search is over.', ephemeral: true });
+      return interaction.reply({ content: '📭 There are no chests configured in **' + location.name + '**. The search is over.' });
     }
 
     const panel = buildLootPanel(location.id, post);
-    return interaction.reply({ ...panel, ephemeral: true });
+    return interaction.reply(panel);
   }
 };

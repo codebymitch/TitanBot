@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ChannelType, StringSelectMenuBuilder } from 'discord.js';
+import { ActionRowBuilder, ChannelType, escapeMarkdown, StringSelectMenuBuilder } from 'discord.js';
 import { loadLoot } from './berryRpg.js';
 
 export async function isForumPost(channel) {
@@ -19,17 +19,34 @@ export function availableLoot(post) {
   return result;
 }
 
+function appendRecentClaims(lines, post) {
+  const recentClaims = (post?.claimHistory || []).slice(-5).reverse();
+  if (!recentClaims.length) return;
+  lines.push('', '**Recent claims:**');
+  for (const claim of recentClaims) {
+    const itemName = escapeMarkdown(claim.itemName || 'Unknown item');
+    const username = escapeMarkdown(claim.username || 'Unknown member');
+    const reward = claim.kind === 'berry'
+      ? ' — <:Berry:1573798988988031087> ' + Number(claim.quantity || 0).toLocaleString() + ' Berries'
+      : ' × ' + Number(claim.quantity || 1);
+    lines.push('• **' + username + '** claimed **' + itemName + '**' + reward);
+  }
+}
+
 export function buildLootPanel(threadId, post) {
   const available = availableLoot(post);
   const chestCount = (post?.chests || []).length;
   if (chestCount === 0) {
-    return { content: '🏴‍☠️ **' + post.name + '** has been fully looted. Everything is gone.', components: [] };
+    const lines = ['🏴‍☠️ **' + post.name + '** has been fully looted. Everything is gone.'];
+    appendRecentClaims(lines, post);
+    return { content: lines.join('\n').slice(0, 3900), components: [] };
   }
 
   const lines = ['📦 **' + post.name + '** has **' + chestCount + '** chest(s).'];
   if (available.length === 0) {
     lines.push('These chests have no loot left to take.');
-    return { content: lines.join('\n'), components: [] };
+    appendRecentClaims(lines, post);
+    return { content: lines.join('\n').slice(0, 3900), components: [] };
   }
 
   lines.push('Available loot:');
@@ -39,6 +56,7 @@ export function buildLootPanel(threadId, post) {
       : ' × ' + item.quantity)
   ));
   lines.push('Select an item below to take it. Item stacks give one item per selection; a Berry stack gives its listed amount.');
+  appendRecentClaims(lines, post);
 
   const options = available.slice(0, 25).map(({ chest, chestIndex, item }) => ({
     label: (item.name + (item.kind === 'berry' ? ' — Berries' : ' × ' + item.quantity)).slice(0, 100),
