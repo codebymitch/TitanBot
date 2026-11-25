@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { inventoryEntries, inventoryToken, findInventoryEntry, removeInventoryCount, addInventoryCount } from '../../services/berryInventory.js';
+import { isStaff } from '../../services/berryRpg.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -30,6 +31,7 @@ export default {
     const action = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     if (action === 'view') {
+      if (!isStaff(interaction)) return interaction.reply({ content: 'Viewing inventories requires the Admin staff role.', ephemeral: true });
       const user = interaction.options.getUser('user') || interaction.user;
       const account = await getEconomyData(client, guildId, user.id);
       const items = inventoryEntries(account);
