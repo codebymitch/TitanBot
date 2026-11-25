@@ -31,7 +31,7 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
       if (channel?.isTextBased()) {
         const description = lastProgress === 100
           ? '🏝️ <@' + userId + '> has arrived at **' + journey.to + '**. The journey is complete.'
-          : '🚢 <@' + userId + '> reached **' + lastProgress + '%** of the trip from **' + journey.from + '** to **' + journey.to + '**.\\n' + randomJourneyEvent();
+          : '🚢 <@' + userId + '> reached **' + lastProgress + '%** of the trip from **' + journey.from + '** to **' + journey.to + '**.\n' + randomJourneyEvent();
         await channel.send({ content: description, allowedMentions: { users: [userId], parse: [] } }).catch(() => {});
       }
       changed = true;
