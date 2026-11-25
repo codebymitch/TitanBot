@@ -7,7 +7,7 @@ export default {
     .setName('boat')
     .setDescription('Start or check an island journey.')
     .addStringOption(option => option.setName('action').setDescription('Journey action').setRequired(true)
-      .addChoices({ name: 'Start journey', value: 'start' }, { name: 'Check progress', value: 'status' }, { name: 'Confirm manual departure (staff)', value: 'confirm' }))
+      .addChoices({ name: 'Start journey', value: 'start' }, { name: 'Check progress', value: 'status' }, { name: 'Repair a stranded ship', value: 'repair' }, { name: 'Confirm manual departure (staff)', value: 'confirm' }))
     .addStringOption(option => option.setName('from').setDescription('Departure island').setAutocomplete(true))
     .addStringOption(option => option.setName('to').setDescription('Destination island').setAutocomplete(true))
     .addUserOption(option => option.setName('user').setDescription('Member whose manual departure to confirm')),
@@ -34,12 +34,23 @@ export default {
       return interaction.reply({ content: '✅ Confirmed ' + user.toString() + '’s journey from **' + journeys[user.id].from + '** to **' + journeys[user.id].to + '**. They can use /boat action:status to check progress.', allowedMentions: { users: [user.id], parse: [] } });
     }
 
+    if (action === 'repair') {
+      const journey = journeys[interaction.user.id];
+      if (!journey || journey.status !== 'stalled') return interaction.reply({ content: 'Your ship is not waiting for repairs.', ephemeral: true });
+      journey.startedAt += Date.now() - journey.stalledAt;
+      journey.status = 'traveling';
+      delete journey.stalledAt;
+      await saveJourneys(client, guildId, journeys);
+      return interaction.reply({ content: '🔧 Repairs are complete. Your journey from **' + journey.from + '** to **' + journey.to + '** continues at ' + journey.progress + '%.', ephemeral: true });
+    }
+
     if (action === 'status') {
       await processJourneys(client, guildId, interaction.user.id);
       const latest = await getJourneys(client, guildId);
       const journey = latest[interaction.user.id];
       if (!journey) return interaction.reply({ content: 'You do not have an active journey.', ephemeral: true });
       if (journey.status === 'pending') return interaction.reply({ content: 'Your departure from **' + journey.from + '** to **' + journey.to + '** is waiting for staff confirmation.', ephemeral: true });
+      if (journey.status === 'stalled') return interaction.reply({ content: 'Your ship is stranded at ' + journey.progress + '%. Use /boat action:repair to continue.', ephemeral: true });
       const progress = getJourneyProgress(journey);
       const next = Math.min(100, progress + 25);
       return interaction.reply({ content: '🚢 **' + journey.from + ' → ' + journey.to + '**\nProgress: **' + progress + '%**. Next stage at **' + next + '%**. Journey length: ' + journey.durationMinutes + ' minutes. The bot posts each stage and arrival automatically.', ephemeral: true });
