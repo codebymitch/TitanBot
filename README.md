@@ -315,7 +315,7 @@ For a Forum, the bot creates a departure post for manual travel. It can read lin
 
 ### Message relay
 
-- A member with the Admin role can use `/call action:start`, choose a member to ping and a destination channel/thread, and optionally choose a source channel, Forum, or thread. Choosing a Forum destination creates a relay thread. If no source is selected, the current channel is used.
+- A member with the Admin role can use `/call action:start` to choose a destination and optionally a source channel, Forum, or thread. Bot and webhook messages are copied as `Character name: message` without pinging anyone. Choosing a Forum destination creates a relay thread. If no source is selected, the current channel is used.
 - Relays copy messages from bot accounts and webhook characters such as Tupperbox; regular human messages are ignored. `/call action:stop` removes that member's relays.
 - Duplicate relay links and identical bot posts arriving close together are suppressed.
 

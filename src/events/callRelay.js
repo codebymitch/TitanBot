@@ -7,9 +7,9 @@ const seenPayloads = new Map();
 const DUPLICATE_WINDOW_MS = 5000;
 const MESSAGE_ID_TTL_MS = 10 * 60 * 1000;
 
-function payloadFingerprint(message, body) {
+function payloadFingerprint(message, characterName, body) {
   return createHash('sha256')
-    .update([message.channel.id, message.author.id, body].join('\n'))
+    .update([message.guild.id, message.channel.id, characterName.toLowerCase(), body.trim().replace(/\s+/g, ' ')].join('\n'))
     .digest('hex');
 }
 
@@ -19,6 +19,7 @@ export default {
     const isBotOrWebhook = message.author.bot || Boolean(message.webhookId);
     if (!message.guild || !isBotOrWebhook || message.author.id === client.user?.id) return;
 
+    const characterName = String(message.author.username || '').trim() || 'Bot';
     const attachmentText = [...message.attachments.values()].map(file => file.url).join('\n');
     const embedText = message.embeds.map(embed => [embed.title, embed.description, embed.url].filter(Boolean).join('\n')).filter(Boolean).join('\n');
     const body = [message.content, embedText, attachmentText].filter(Boolean).join('\n').slice(0, 1700);
@@ -33,48 +34,34 @@ export default {
     }
     if (seenMessageIds.has(message.id)) return;
 
-    const fingerprint = payloadFingerprint(message, body);
+    const fingerprint = payloadFingerprint(message, characterName, body);
     if (seenPayloads.has(fingerprint)) return;
 
-    // Share a short duplicate window through the database so separate bot workers
-    // using the same database do not relay the same Tupperbox post twice.
-    const dedupeKey = 'berry:call-relay-dedupe:' + message.guild.id;
-    const saved = await client.db.get(dedupeKey, {});
-    const recent = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
-    for (const [key, seenAt] of Object.entries(recent)) {
-      if (now - Number(seenAt) > DUPLICATE_WINDOW_MS) delete recent[key];
-    }
-    if (Number(recent[fingerprint]) && now - Number(recent[fingerprint]) <= DUPLICATE_WINDOW_MS) return;
-    recent[fingerprint] = now;
-    recent[message.id] = now;
-    await client.db.set(dedupeKey, recent).catch(() => {});
+    // Atomically claim this payload in PostgreSQL so duplicate bot workers
+    // cannot each send a copy of the same character post.
+    const claimKey = 'cache:callrelay:' + message.guild.id + ':' + fingerprint;
+    const claimed = await client.db.setIfAbsent?.(claimKey, true, Math.ceil(DUPLICATE_WINDOW_MS / 1000));
+    if (claimed === false) return;
 
     seenMessageIds.set(message.id, now);
     seenPayloads.set(fingerprint, now);
 
     const links = await client.db.get('berry:calls:' + message.guild.id, []);
-    const relaysByDestination = new Map();
+    const destinations = new Set();
     for (const link of Array.isArray(links) ? links : []) {
       const sourceMatches = link.sourceChannelId === message.channel.id
         || (message.channel.isThread?.() && link.sourceChannelId === message.channel.parentId);
-      if (!sourceMatches || link.destinationChannelId === message.channel.id) continue;
-
-      let relay = relaysByDestination.get(link.destinationChannelId);
-      if (!relay) {
-        relay = { targetIds: new Set() };
-        relaysByDestination.set(link.destinationChannelId, relay);
-      }
-      if (link.targetId) relay.targetIds.add(link.targetId);
+      if (!sourceMatches || !link.destinationChannelId || link.destinationChannelId === message.channel.id) continue;
+      destinations.add(link.destinationChannelId);
     }
 
-    for (const [destinationId, relay] of relaysByDestination) {
+    const content = (characterName + ': ' + body).slice(0, 2000);
+    for (const destinationId of destinations) {
       const channel = await message.guild.channels.fetch(destinationId).catch(() => null);
       if (!channel?.isTextBased() || channel.type === ChannelType.GuildForum) continue;
-      const targetIds = [...relay.targetIds];
-      const mentions = targetIds.map(id => '<@' + id + '>').join(' ');
       await channel.send({
-        content: [mentions, body].filter(Boolean).join('\n').slice(0, 2000),
-        allowedMentions: { users: targetIds, parse: [] },
+        content,
+        allowedMentions: { parse: [] },
       }).catch(error => logger.warn('Message relay failed:', error.message));
     }
   }

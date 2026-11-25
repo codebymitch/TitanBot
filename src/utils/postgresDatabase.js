@@ -449,6 +449,39 @@ class PostgreSQLDatabase {
         }
     }
 
+    async setIfAbsent(key, value, ttl = 30) {
+        try {
+            if (!this.isAvailable()) return null;
+
+            const parsedKey = parseKey(canonicalizeKey(key));
+            if (parsedKey.type !== 'cache') {
+                throw new Error('setIfAbsent only supports cache keys');
+            }
+
+            const table = assertAllowlistedIdentifier(pgConfig.tables.cache_data, this.allowedTableIdentifiers, 'cache table');
+            const quotedTable = quoteIdentifier(table);
+            const expiresAt = ttl > 0 ? new Date(Date.now() + ttl * 1000) : null;
+            const jsonValue = JSON.stringify(value ?? null);
+
+            await this.pool.query(
+                `DELETE FROM ${quotedTable}
+                 WHERE key = $1 AND expires_at IS NOT NULL AND expires_at <= NOW()`,
+                [parsedKey.fullKey],
+            );
+            const result = await this.pool.query(
+                `INSERT INTO ${quotedTable} (key, value, expires_at)
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (key) DO NOTHING
+                 RETURNING key`,
+                [parsedKey.fullKey, jsonValue, expiresAt],
+            );
+            return result.rowCount > 0;
+        } catch (error) {
+            logger.error(`Error claiming key ${key}:`, error);
+            return null;
+        }
+    }
+
     async delete(key) {
         try {
             if (!this.isAvailable()) {
