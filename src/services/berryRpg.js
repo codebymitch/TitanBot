@@ -2,7 +2,7 @@ import { getEconomyData, setEconomyData } from '../utils/economy.js';
 
 const key = (kind, guildId) => 'berry:' + kind + ':' + guildId;
 const defaultLoot = () => ({ locations: {}, tables: { common: [], rare: [], epic: [] } });
-const defaultJourneyConfig = () => ({ islands: ['Foosha Village', 'Alabasta', 'Water 7', 'Dressrosa', 'Wano'], durationMinutes: 60, manualChannelId: null });
+const defaultJourneyConfig = () => ({ islands: ['Foosha Village', 'Alabasta', 'Water 7', 'Dressrosa', 'Wano'], durationMinutes: 3, manualChannelId: null });
 
 export async function loadConfig(client, kind, guildId, fallback = {}) {
   const value = await client.db.get(key(kind, guildId), fallback);
@@ -39,7 +39,9 @@ export async function loadLoot(client, guildId) {
 
 export async function loadJourneyConfig(client, guildId) {
   const saved = await loadConfig(client, 'journey-config', guildId, defaultJourneyConfig());
-  return { ...defaultJourneyConfig(), ...saved };
+  const config = { ...defaultJourneyConfig(), ...saved };
+  config.durationMinutes = Math.min(3, Math.max(1, Number(config.durationMinutes) || 3));
+  return config;
 }
 
 export function isStaff(interaction) {
@@ -59,8 +61,8 @@ export const JOURNEY_EVENTS = [
   '⚓ Marine encounter: a Marine ship is spotted nearby, but it does not engage.',
   '🏴‍☠️ Pirate encounter: another crew crosses paths with yours.',
   '🐋 Sea beast: a huge creature surfaces beside the ship.',
-  '⛈️ Storm: rough weather slows the ship down.',
-  '🪢 Stranded: the ship has trouble and needs repairs before continuing.',
+  '⛈️ Storm: rough weather surrounds the ship; the crew keeps sailing.',
+  '🪢 Ship trouble: the crew makes quick repairs while the vessel continues.',
   '💰 Treasure discovery: the crew finds a small stash of treasure at sea.',
   '🏝️ Mysterious island: an uncharted island appears on the horizon.'
 ];

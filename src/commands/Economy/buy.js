@@ -67,7 +67,7 @@ export default {
                 throw createError(
                     "Insufficient funds",
                     ErrorTypes.VALIDATION,
-                    `You need **🍓 ${totalCost.toLocaleString()}** to purchase ${quantity}x **${item.name}**, but you only have **🍓 ${userData.wallet.toLocaleString()}** in cash.`,
+                    `You need **<:Berry:1573798988988031087> ${totalCost.toLocaleString()}** to purchase ${quantity}x **${item.name}**, but you only have **<:Berry:1573798988988031087> ${userData.wallet.toLocaleString()}** in cash.`,
                     { required: totalCost, current: userData.wallet, itemId, quantity }
                 );
             }
@@ -101,7 +101,7 @@ export default {
 
             userData.wallet -= totalCost;
 
-            let successDescription = `You successfully purchased ${quantity}x **${item.name}** for **🍓 ${totalCost.toLocaleString()}**!`;
+            let successDescription = `You successfully purchased ${quantity}x **${item.name}** for **<:Berry:1573798988988031087> ${totalCost.toLocaleString()}**!`;
 
             if (item.type === "role" && itemId === "premium_role") {
                 const member = interaction.member;
@@ -151,7 +151,7 @@ export default {
                 successDescription,
             ).addFields({
                 name: "New Balance",
-                value: `🍓 ${userData.wallet.toLocaleString()}`,
+                value: `<:Berry:1573798988988031087> ${userData.wallet.toLocaleString()}`,
                 inline: true,
             });
 

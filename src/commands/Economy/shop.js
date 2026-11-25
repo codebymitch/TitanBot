@@ -1,8 +1,17 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { adjustBerries, berryLabel, cleanName, loadShops, saveConfig } from '../../services/berryRpg.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { adjustBerries, cleanName, loadShops, saveConfig } from '../../services/berryRpg.js';
+import { formatCurrency, getEconomyData, setEconomyData } from '../../utils/economy.js';
 
 const slug = value => cleanName(value).toLowerCase();
+
+async function getForumPostText(client, guildId, shop) {
+  if (!shop.forumThreadId) return '';
+  const thread = await client.channels.fetch(shop.forumThreadId).catch(() => null);
+  if (!thread?.isThread?.()) return '';
+  const starter = await thread.fetchStarterMessage().catch(() => null);
+  const text = starter?.content?.trim();
+  return text ? text.slice(0, 700) : '';
+}
 
 export default {
   data: new SlashCommandBuilder()
@@ -24,7 +33,7 @@ export default {
     const shop = Object.values(shops).find(item => item.name.toLowerCase() === String(shopName || '').toLowerCase());
     const items = shop?.items || [];
     return interaction.respond(items.filter(item => item.stock > 0 && item.name.toLowerCase().includes(query)).slice(0, 25)
-      .map(item => ({ name: item.name + ' — ' + item.price.toLocaleString() + ' Berries (' + item.stock + ' left)', value: item.name })));
+      .map(item => ({ name: item.name + ' — ' + formatCurrency(item.price) + ' (' + item.stock + ' left)', value: item.name })));
   },
 
   async execute(interaction, config, client) {
@@ -45,8 +54,10 @@ export default {
 
     if (!itemName) {
       const items = shop.items.filter(item => item.stock > 0);
-      const body = items.length ? items.map(item => '• **' + item.name + '** — ' + item.price.toLocaleString() + ' Berries — ' + item.stock + ' left' + (item.description ? '\n  ' + item.description : '')).join('\n') : 'This shop is sold out.';
-      return interaction.reply({ content: '🛍️ **' + shop.name + '**\n' + (shop.forumUrl ? shop.forumUrl + '\n' : '') + body + '\n\nUse /shop shop:<name> item:<name> to buy.', ephemeral: true });
+      const body = items.length ? items.map(item => '• **' + item.name + '** — ' + formatCurrency(item.price) + ' — ' + item.stock + ' left' + (item.description ? '\n  ' + item.description : '')).join('\n') : 'This shop is sold out.';
+      const postText = await getForumPostText(client, interaction.guildId, shop);
+      const linkedText = postText ? '\n\n📜 **Shop post**\n' + postText : '';
+      return interaction.reply({ content: '🛍️ **' + shop.name + '**\n' + (shop.forumUrl ? shop.forumUrl + '\n' : '') + body + linkedText + '\n\nUse /shop shop:<name> item:<name> to buy.', ephemeral: true });
     }
 
     const item = shop.items.find(value => value.name.toLowerCase() === itemName.toLowerCase());
@@ -61,7 +72,7 @@ export default {
       const inventoryKey = 'shop_' + shopKey + '_' + slug(item.name).replaceAll(' ', '_');
       account.inventory[inventoryKey] = (account.inventory[inventoryKey] || 0) + 1;
       await setEconomyData(client, interaction.guildId, interaction.user.id, account);
-      return interaction.reply({ content: '✅ You bought **' + item.name + '** for **' + item.price.toLocaleString() + ' ' + berryLabel(item.price) + '**. Remaining balance: **' + balance.toLocaleString() + ' Berries**.', ephemeral: true });
+      return interaction.reply({ content: '✅ You bought **' + item.name + '** for **' + formatCurrency(item.price) + '**. Remaining balance: **' + formatCurrency(balance) + '**.', ephemeral: true });
     } catch (error) {
       return interaction.reply({ content: error.message || 'Purchase failed. Please try again.', ephemeral: true });
     }

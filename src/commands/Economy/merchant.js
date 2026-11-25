@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { adjustBerries, berryLabel, cleanName, loadMerchants, saveConfig } from '../../services/berryRpg.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { formatCurrency, getEconomyData, setEconomyData } from '../../utils/economy.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -15,7 +15,7 @@ export default {
     const merchants = await loadMerchants(client, interaction.guildId);
     const query = String(interaction.options.getFocused() || '').toLowerCase();
     return interaction.respond((merchants[type] || []).filter(item => item.stock > 0 && item.name.toLowerCase().includes(query)).slice(0, 25)
-      .map(item => ({ name: item.name + ' — ' + item.price.toLocaleString() + ' Berries (' + item.stock + ' left)', value: item.name })));
+      .map(item => ({ name: item.name + ' — ' + formatCurrency(item.price) + ' (' + item.stock + ' left)', value: item.name })));
   },
 
   async execute(interaction, config, client) {
@@ -26,7 +26,7 @@ export default {
     const title = type === 'black_market' ? '🕶️ Black Market Merchant' : '🧳 Regular Merchant';
     if (!itemName) {
       const items = list.filter(item => item.stock > 0);
-      const text = items.length ? items.map(item => '• **' + item.name + '** — ' + item.price.toLocaleString() + ' Berries — ' + item.stock + ' left' + (item.description ? '\n  ' + item.description : '')).join('\n') : 'This merchant has no stock right now.';
+      const text = items.length ? items.map(item => '• **' + item.name + '** — ' + formatCurrency(item.price) + ' — ' + item.stock + ' left' + (item.description ? '\n  ' + item.description : '')).join('\n') : 'This merchant has no stock right now.';
       return interaction.reply({ content: title + '\n' + text + '\n\nUse /merchant type:' + type + ' item:<name> to buy.', ephemeral: true });
     }
 
@@ -41,7 +41,7 @@ export default {
       const key = 'merchant_' + type + '_' + cleanName(item.name).toLowerCase().replaceAll(' ', '_');
       account.inventory[key] = (account.inventory[key] || 0) + 1;
       await setEconomyData(client, interaction.guildId, interaction.user.id, account);
-      return interaction.reply({ content: '✅ Bought **' + item.name + '** for **' + item.price.toLocaleString() + ' ' + berryLabel(item.price) + '**. You have **' + balance.toLocaleString() + ' Berries** left.', ephemeral: true });
+      return interaction.reply({ content: '✅ Bought **' + item.name + '** for **' + formatCurrency(item.price) + '**. You have **' + balance.toLocaleString() + ' Berries** left.', ephemeral: true });
     } catch (error) {
       return interaction.reply({ content: error.message || 'Purchase failed. Please try again.', ephemeral: true });
     }
