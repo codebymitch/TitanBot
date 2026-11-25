@@ -85,6 +85,7 @@ export default {
       return interaction.reply({ content: 'Your departure request was posted for staff. You cannot start another trip until this journey is completed.', ephemeral: true });
     }
 
-    return interaction.reply({ content: '🚢 Journey started: **' + canonicalFrom + '** → **' + canonicalTo + '**. Progress takes ' + cfg.durationMinutes + ' minutes, with updates at 25%, 50%, 75%, and 100%. You cannot cancel or skip it.', ephemeral: true });
+    await interaction.channel.send({ content: '🚢 <@' + interaction.user.id + '> departed **' + canonicalFrom + '** for **' + canonicalTo + '**. Use /boat action:status to follow the journey.', allowedMentions: { users: [interaction.user.id], parse: [] } }).catch(() => {});
+    return interaction.reply({ content: 'Journey started. Progress takes ' + cfg.durationMinutes + ' minutes, with updates at 25%, 50%, 75%, and 100%. You cannot cancel or skip it.', ephemeral: true });
   }
 };
