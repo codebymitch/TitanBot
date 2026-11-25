@@ -7,7 +7,7 @@ export default {
     .setName('boat')
     .setDescription('Start or check an island journey.')
     .addStringOption(option => option.setName('action').setDescription('Journey action').setRequired(true)
-      .addChoices({ name: 'Start journey', value: 'start' }, { name: 'Check progress', value: 'status' }, { name: 'Repair a stranded ship', value: 'repair' }, { name: 'Confirm manual departure (staff)', value: 'confirm' }))
+      .addChoices({ name: 'Start journey', value: 'start' }, { name: 'Check progress', value: 'status' }, { name: 'Confirm manual departure (staff)', value: 'confirm' }))
     .addStringOption(option => option.setName('from').setDescription('Departure island').setAutocomplete(true))
     .addStringOption(option => option.setName('to').setDescription('Destination island').setAutocomplete(true))
     .addUserOption(option => option.setName('user').setDescription('Member whose manual departure to confirm')),
@@ -32,16 +32,6 @@ export default {
       journeys[user.id].channelId = interaction.channelId;
       await saveJourneys(client, guildId, journeys);
       return interaction.reply({ content: '✅ Confirmed ' + user.toString() + '’s journey from **' + journeys[user.id].from + '** to **' + journeys[user.id].to + '**. They can use /boat action:status to check progress.', allowedMentions: { users: [user.id], parse: [] } });
-    }
-
-    if (action === 'repair') {
-      const journey = journeys[interaction.user.id];
-      if (!journey || journey.status !== 'stalled') return interaction.reply({ content: 'Your ship is not waiting for repairs.', ephemeral: true });
-      journey.startedAt += Date.now() - journey.stalledAt;
-      journey.status = 'traveling';
-      delete journey.stalledAt;
-      await saveJourneys(client, guildId, journeys);
-      return interaction.reply({ content: '🔧 Repairs are complete. Your journey from **' + journey.from + '** to **' + journey.to + '** continues at ' + journey.progress + '%.', ephemeral: true });
     }
 
     if (action === 'status') {
