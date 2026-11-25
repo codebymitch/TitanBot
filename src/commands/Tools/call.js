@@ -23,7 +23,7 @@ export default {
       .addChannelTypes(...sourceTypes)),
 
   async execute(interaction, config, client) {
-    if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can set up message relays.', ephemeral: true });
+    if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
     const key = 'berry:calls:' + interaction.guildId;
     const links = await client.db.get(key, []);
     const action = interaction.options.getString('action');
