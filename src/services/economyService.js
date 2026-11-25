@@ -56,7 +56,7 @@ class EconomyService {
       throw createError(
         "Daily cooldown active",
         ErrorTypes.RATE_LIMIT,
-        `You need to wait before claiming daily again. Try again in **🍓 {this.formatDuration(remaining)}**.`,
+        `You need to wait before claiming daily again. Try again in **${this.formatDuration(remaining)}**.`,
         { remaining, cooldownType: 'daily' }
       );
     }
@@ -154,7 +154,7 @@ class EconomyService {
       throw createError(
         "Insufficient funds",
         ErrorTypes.VALIDATION,
-        `You only have **🍓 🍓 {senderData.wallet.toLocaleString()}** in cash.`,
+        `You only have **🍓 ${senderData.wallet.toLocaleString()}** in cash.`,
         { required: amount, available: senderData.wallet, senderId }
       );
     }
@@ -178,14 +178,14 @@ class EconomyService {
         await setEconomyData(client, guildId, receiverId, receiverData);
       } catch (receiverError) {
         
-        logger.error(`[ECONOMY_CRITICAL] Failed to credit receiver 🍓 {receiverId}. Attempting rollback for sender 🍓 {senderId}...`, receiverError);
+        logger.error(`[ECONOMY_CRITICAL] Failed to credit receiver ${receiverId}. Attempting rollback for sender ${senderId}...`, receiverError);
         
         senderData.wallet = walletBefore;
         try {
           await setEconomyData(client, guildId, senderId, senderData);
-          logger.info(`[ECONOMY_ROLLBACK] Successfully rolled back sender 🍓 {senderId} after receiver credit failure.`);
+          logger.info(`[ECONOMY_ROLLBACK] Successfully rolled back sender ${senderId} after receiver credit failure.`);
         } catch (rollbackError) {
-          logger.error(`[ECONOMY_FATAL] ROLLBACK FAILED for sender 🍓 {senderId}! Data is now inconsistent.`, rollbackError);
+          logger.error(`[ECONOMY_FATAL] ROLLBACK FAILED for sender ${senderId}! Data is now inconsistent.`, rollbackError);
           
         }
         
@@ -279,7 +279,7 @@ class EconomyService {
       throw createError(
         "Insufficient funds",
         ErrorTypes.VALIDATION,
-        `You only have **🍓 🍓 {balanceBefore.toLocaleString()}**.`,
+        `You only have **🍓 ${balanceBefore.toLocaleString()}**.`,
         { required: amount, available: balanceBefore, reason }
       );
     }
@@ -312,7 +312,7 @@ class EconomyService {
       throw createError(
         "Insufficient cash",
         ErrorTypes.VALIDATION,
-        `You only have **🍓 🍓 {userData.wallet.toLocaleString()}** in cash.`,
+        `You only have **🍓 ${userData.wallet.toLocaleString()}** in cash.`,
         { required: amount, available: userData.wallet }
       );
     }
@@ -322,7 +322,7 @@ class EconomyService {
       throw createError(
         "Bank capacity exceeded",
         ErrorTypes.VALIDATION,
-        `Your bank can only hold **🍓 🍓 {maxBank.toLocaleString()}**. You would exceed capacity by **🍓 🍓 {(currentBank + amount - maxBank).toLocaleString()}**.`,
+        `Your bank can only hold **🍓 ${maxBank.toLocaleString()}**. You would exceed capacity by **🍓 ${(currentBank + amount - maxBank).toLocaleString()}**.`,
         { capacity: maxBank, current: currentBank, requested: amount }
       );
     }
@@ -360,7 +360,7 @@ class EconomyService {
       throw createError(
         "Insufficient bank balance",
         ErrorTypes.VALIDATION,
-        `You only have **🍓 🍓 {bank.toLocaleString()}** in your bank.`,
+        `You only have **🍓 ${bank.toLocaleString()}** in your bank.`,
         { required: amount, available: bank }
       );
     }
@@ -389,7 +389,7 @@ class EconomyService {
   }
 
   static checkCooldown(userData, action, cooldownMs) {
-    const lastActionField = `last🍓 {action.charAt(0).toUpperCase() + action.slice(1)}`;
+    const lastActionField = `last${action.charAt(0).toUpperCase() + action.slice(1)}`;
     const lastTime = userData[lastActionField] || 0;
     const now = Date.now();
     const remaining = Math.max(0, lastTime + cooldownMs - now);
@@ -439,24 +439,24 @@ class EconomyService {
     const seconds = totalSeconds % 60;
 
     if (hours > 0) {
-      return `🍓 {hours}h 🍓 {minutes}m 🍓 {seconds}s`;
+      return `${hours}h ${minutes}m ${seconds}s`;
     }
     if (minutes > 0) {
-      return `🍓 {minutes}m 🍓 {seconds}s`;
+      return `${minutes}m ${seconds}s`;
     }
-    return `🍓 {seconds}s`;
+    return `${seconds}s`;
   }
 
   static formatCooldownDisplay(ms) {
     const duration = this.formatDuration(ms);
-    return `**🍓 {duration}**`;
+    return `**${duration}**`;
   }
 }
 
 wrapServiceClassMethods(EconomyService, (methodName) => ({
   service: 'EconomyService',
   operation: methodName,
-  message: `Economy service operation failed: 🍓 {methodName}`,
+  message: `Economy service operation failed: ${methodName}`,
   userMessage: 'An economy operation failed. Please try again in a moment.'
 }));
 
