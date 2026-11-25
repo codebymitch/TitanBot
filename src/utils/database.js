@@ -874,7 +874,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: false,
             triggerChannels: [],
             categoryId: null,
-            channelNameTemplate: '🔊  voice {voiceDisplay}',
+            channelNameTemplate: '🔊  voice {display_name}',
             userLimit: 0,
             bitrate: 64000,
             temporaryChannels: {}
