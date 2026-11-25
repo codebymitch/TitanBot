@@ -60,7 +60,7 @@ export default {
       const quality = interaction.options.getString('quality');
       const name = String(interaction.options.getString('name') || '').trim();
       const recipient = action === 'grant' ? interaction.options.getUser('user') : interaction.user;
-      if (action === 'grant' && !isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can grant ships.', ephemeral: true });
+      if (action === 'grant' && !isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
       if (!shipClass || !quality || !name || !recipient) return interaction.reply({ content: 'Choose a ship class, quality, name, and (for staff grants) recipient.', ephemeral: true });
       if (recipient.bot) return interaction.reply({ content: 'Ships can only be assigned to people.', ephemeral: true });
 
