@@ -40,6 +40,15 @@ export default {
     .addChannelOption(option => option.setName('to')
       .setDescription('Choose a destination channel, Forum, post, or thread')
       .addChannelTypes(...JOURNEY_CHANNEL_TYPES))
+    .addChannelOption(option => option.setName('category')
+      .setDescription('Pick the server category that contains your sailing Forum')
+      .addChannelTypes(ChannelType.GuildCategory))
+    .addChannelOption(option => option.setName('forum')
+      .setDescription('Pick the Forum where the Sailing Seas post will be created')
+      .addChannelTypes(ChannelType.GuildForum))
+    .addStringOption(option => option.setName('crew_name')
+      .setDescription('Crew name used in the Sailing Seas post title')
+      .setMaxLength(85))
     .addUserOption(option => option.setName('user').setDescription('Member whose manual departure to confirm')),
 
   async autocomplete(interaction, client) {
@@ -89,8 +98,15 @@ export default {
     const fromChannel = interaction.options.getChannel('from');
     const toChannel = interaction.options.getChannel('to');
     const boatId = interaction.options.getString('boat');
+    const category = interaction.options.getChannel('category');
+    const forum = interaction.options.getChannel('forum');
+    const crewName = interaction.options.getString('crew_name')?.trim();
     if (!fromChannel || !toChannel || !boatId) return interaction.reply({ content: 'Choose a ship, departure location, and destination location.', ephemeral: true });
-    if (!isJourneyLocation(fromChannel) || !isJourneyLocation(toChannel)) return interaction.reply({ content: 'Choose server text channels, Forums, Forum posts, or threads for both locations.', ephemeral: true });
+    if (!category || !forum || !crewName) return interaction.reply({ content: 'For a new voyage, choose the Forum’s category and Forum, then enter your crew name.', ephemeral: true });
+    if (category.type !== ChannelType.GuildCategory || forum.type !== ChannelType.GuildForum || forum.parentId !== category.id) {
+      return interaction.reply({ content: 'Choose a Forum that is inside the category you selected.', ephemeral: true });
+    }
+    if (!isJourneyLocation(fromChannel) || !isJourneyLocation(toChannel)) return interaction.reply({ content: 'Choose server text channels, Forums, Forum posts, or threads for both journey locations.', ephemeral: true });
     if (fromChannel.id === toChannel.id) return interaction.reply({ content: 'Choose two different locations.', ephemeral: true });
     const canonicalFrom = locationName(fromChannel);
     const canonicalTo = locationName(toChannel);
@@ -109,40 +125,51 @@ export default {
       boatName: boat.name,
       boatClass: boat.shipClass,
       boatQuality: boat.quality,
+      crewName,
+      categoryId: category.id,
+      forumId: forum.id,
       status: cfg.manualChannelId ? 'pending' : 'traveling',
       progress: 0,
       startedAt: cfg.manualChannelId ? null : Date.now(),
       durationMs,
       durationMinutes: cfg.durationMinutes,
-      channelId: interaction.channelId,
+      channelId: null,
       createdAt: Date.now(),
     };
+
+    const sailingPost = await forum.threads.create({
+      name: ('Sailing Seas - ' + crewName).slice(0, 100),
+      message: {
+        content: '🏴‍☠️ **Sailing Seas**\n<@' + interaction.user.id + '>’s crew **' + crewName + '** is preparing to sail aboard **' + boat.name + '** from **' + canonicalFrom + '** to **' + canonicalTo + '**.\n' +
+          (cfg.manualChannelId ? '⏳ Waiting for staff to confirm departure. Progress: **0%**.' : '⛵ Voyage underway. Progress: **0%**.'),
+        allowedMentions: { users: [interaction.user.id], parse: [] },
+      },
+      reason: 'Create a Sailing Seas voyage log',
+    }).catch(() => null);
+    if (!sailingPost) {
+      return interaction.reply({ content: 'I could not create the Sailing Seas post. Check that I can view and create posts in that Forum.', ephemeral: true });
+    }
+    journey.channelId = sailingPost.id;
+    journey.sailingPostId = sailingPost.id;
     journeys[interaction.user.id] = journey;
     await saveJourneys(client, guildId, journeys);
 
     if (cfg.manualChannelId) {
       const channel = await client.channels.fetch(cfg.manualChannelId).catch(() => null);
-      const request = '📜 Departure request: <@' + interaction.user.id + '> wants to sail aboard **' + boat.name + '** from **' + canonicalFrom + '** to **' + canonicalTo + '**. Staff can confirm with /boat action:confirm user:' + interaction.user.toString() + '.';
+      const request = '📜 Departure request: <@' + interaction.user.id + '> wants to sail aboard **' + boat.name + '** from **' + canonicalFrom + '** to **' + canonicalTo + '**. Sailing log: https://discord.com/channels/' + guildId + '/' + sailingPost.id + '. Staff can confirm with /boat action:confirm user:' + interaction.user.toString() + '.';
       const allowedMentions = { users: [interaction.user.id], parse: [] };
       if (channel?.type === ChannelType.GuildForum) {
-        const thread = await channel.threads.create({
+        await channel.threads.create({
           name: ('Departure: ' + interaction.user.username + ' — ' + canonicalFrom + ' to ' + canonicalTo).slice(0, 100),
           message: { content: request, allowedMentions },
           reason: 'Create a manual island travel request',
-        }).catch(() => null);
-        if (thread) {
-          journey.channelId = thread.id;
-          await saveJourneys(client, guildId, journeys);
-        }
+        }).catch(() => {});
       } else if (channel?.isTextBased() && !channel.isDMBased()) {
         await channel.send({ content: request, allowedMentions }).catch(() => {});
-        journey.channelId = channel.id;
-        await saveJourneys(client, guildId, journeys);
       }
-      return interaction.reply({ content: 'Your departure request aboard **' + boat.name + '** was posted for staff. You cannot start another trip until this one arrives.', ephemeral: true });
+      return interaction.reply({ content: 'Your Sailing Seas post was created. Departure aboard **' + boat.name + '** is waiting for staff confirmation.', ephemeral: true });
     }
 
-    await interaction.channel.send({ content: '🚢 <@' + interaction.user.id + '> departed **' + canonicalFrom + '** for **' + canonicalTo + '** aboard **' + boat.name + '**.', allowedMentions: { users: [interaction.user.id], parse: [] } }).catch(() => {});
-    return interaction.reply({ content: 'Journey started aboard **' + boat.name + '**. This ship will arrive in about ' + Math.ceil(durationMs / 1000) + ' seconds (maximum 3 minutes).', ephemeral: true });
+    return interaction.reply({ content: 'Your Sailing Seas post was created in **' + forum.name + '**. Journey started aboard **' + boat.name + '** and will arrive in about ' + Math.ceil(durationMs / 1000) + ' seconds (maximum 3 minutes).', ephemeral: true });
   }
 };
