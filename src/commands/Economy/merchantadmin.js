@@ -15,7 +15,7 @@ export default {
     .addStringOption(option => option.setName('description').setDescription('Short item description').setMaxLength(300)),
 
   async execute(interaction, config, client) {
-    if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can manage merchants.', ephemeral: true });
+    if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
     const action = interaction.options.getString('action');
     const type = interaction.options.getString('type');
     const name = cleanName(interaction.options.getString('item'));
