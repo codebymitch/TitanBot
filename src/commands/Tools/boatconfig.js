@@ -1,6 +1,11 @@
 import { ChannelType, SlashCommandBuilder } from 'discord.js';
 import { isStaff, loadJourneyConfig, saveConfig, cleanName } from '../../services/berryRpg.js';
 
+const travelChannels = [
+  ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.GuildForum,
+  ChannelType.PublicThread, ChannelType.AnnouncementThread, ChannelType.PrivateThread,
+];
+
 export default {
   data: new SlashCommandBuilder()
     .setName('boatconfig')
@@ -11,12 +16,13 @@ export default {
         { name: 'Add island', value: 'add' },
         { name: 'Remove island', value: 'remove' },
         { name: 'Set journey duration', value: 'duration' },
-        { name: 'Set manual review channel', value: 'manual' },
+        { name: 'Set manual review channel or forum', value: 'manual' },
         { name: 'Turn off manual review', value: 'auto' }
       ))
     .addStringOption(option => option.setName('island').setDescription('Island name').setMaxLength(80))
     .addIntegerOption(option => option.setName('minutes').setDescription('Trip duration (1 to 3 minutes)').setMinValue(1).setMaxValue(3))
-    .addChannelOption(option => option.setName('channel').setDescription('Channel for manual departure requests').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)),
+    .addChannelOption(option => option.setName('channel').setDescription('Manual departure channel, thread, or forum')
+      .addChannelTypes(...travelChannels)),
 
   async execute(interaction, config, client) {
     if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can change travel settings.', ephemeral: true });
@@ -25,7 +31,7 @@ export default {
     const island = cleanName(interaction.options.getString('island'));
 
     if (action === 'list') {
-      return interaction.reply({ content: '🗺️ **Travel setup**\nIslands: ' + cfg.islands.join(', ') + '\nJourney length: ' + cfg.durationMinutes + ' minutes\nManual review: ' + (cfg.manualChannelId ? '<#' + cfg.manualChannelId + '>' : 'off'), ephemeral: true });
+      return interaction.reply({ content: '🗺️ **Travel setup**\nIslands: ' + cfg.islands.join(', ') + '\nJourney length: ' + cfg.durationMinutes + ' minutes maximum\nManual review: ' + (cfg.manualChannelId ? '<#' + cfg.manualChannelId + '>' : 'off'), ephemeral: true });
     }
     if (action === 'add') {
       if (!island) return interaction.reply({ content: 'Enter an island name.', ephemeral: true });
@@ -40,7 +46,7 @@ export default {
       cfg.durationMinutes = minutes;
     } else if (action === 'manual') {
       const channel = interaction.options.getChannel('channel');
-      if (!channel) return interaction.reply({ content: 'Choose a channel for manual departure requests.', ephemeral: true });
+      if (!channel) return interaction.reply({ content: 'Choose a channel, thread, or forum for manual departure requests.', ephemeral: true });
       cfg.manualChannelId = channel.id;
     } else if (action === 'auto') {
       cfg.manualChannelId = null;
