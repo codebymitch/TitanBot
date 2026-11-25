@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { ChannelType, SlashCommandBuilder } from 'discord.js';
 import { isStaff, loadJourneyConfig } from '../../services/berryRpg.js';
 import { getJourneyProgress, getJourneys, processJourneys, saveJourneys } from '../../services/berryTravel.js';
 import { calculateTravelDuration, formatShip, getBoats } from '../../services/berryShips.js';
@@ -53,7 +53,8 @@ export default {
       if (journey.status === 'pending') return interaction.reply({ content: 'Your departure from **' + journey.from + '** to **' + journey.to + '** aboard **' + journey.boatName + '** is waiting for staff confirmation.', ephemeral: true });
       const progress = getJourneyProgress(journey);
       const next = Math.min(100, progress + 25);
-      const remainingSeconds = Math.max(0, Math.ceil((journey.durationMs * (1 - progress / 100)) / 1000));
+      const durationMs = Math.min(180000, Math.max(15000, Number(journey.durationMs) || Number(journey.durationMinutes || 3) * 60000));
+      const remainingSeconds = Math.max(0, Math.ceil((durationMs * (1 - progress / 100)) / 1000));
       return interaction.reply({ content: '🚢 **' + journey.from + ' → ' + journey.to + '** aboard **' + journey.boatName + '**\nProgress: **' + progress + '%**. Next stage at **' + next + '%**. Estimated time remaining: ' + remainingSeconds + ' seconds.', ephemeral: true });
     }
 
@@ -93,7 +94,22 @@ export default {
     if (cfg.manualChannelId) {
       const channel = await client.channels.fetch(cfg.manualChannelId).catch(() => null);
       const request = '📜 Departure request: <@' + interaction.user.id + '> wants to sail aboard **' + boat.name + '** from **' + canonicalFrom + '** to **' + canonicalTo + '**. Staff can confirm with /boat action:confirm user:' + interaction.user.toString() + '.';
-      if (channel?.isTextBased() && !channel.isDMBased()) await channel.send({ content: request, allowedMentions: { users: [interaction.user.id], parse: [] } }).catch(() => {});
+      const allowedMentions = { users: [interaction.user.id], parse: [] };
+      if (channel?.type === ChannelType.GuildForum) {
+        const thread = await channel.threads.create({
+          name: ('Departure: ' + interaction.user.username + ' — ' + canonicalFrom + ' to ' + canonicalTo).slice(0, 100),
+          message: { content: request, allowedMentions },
+          reason: 'Create a manual island travel request',
+        }).catch(() => null);
+        if (thread) {
+          journey.channelId = thread.id;
+          await saveJourneys(client, guildId, journeys);
+        }
+      } else if (channel?.isTextBased() && !channel.isDMBased()) {
+        await channel.send({ content: request, allowedMentions }).catch(() => {});
+        journey.channelId = channel.id;
+        await saveJourneys(client, guildId, journeys);
+      }
       return interaction.reply({ content: 'Your departure request aboard **' + boat.name + '** was posted for staff. You cannot start another trip until this one arrives.', ephemeral: true });
     }
 
