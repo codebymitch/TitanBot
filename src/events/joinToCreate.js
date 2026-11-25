@@ -1,7 +1,7 @@
 // joinToCreate.js
 //
 // Creates a temporary voice room when a member joins a configured trigger
-// channel (named with the 🔊 voice {displayName} template) and removes the
+// channel (named with the 🔊  voice {displayName} template) and removes the
 // room once it becomes empty. The created room name is left untouched after
 // creation — nothing else renames it.
 
@@ -14,7 +14,7 @@ import {
 } from '../utils/database.js';
 import { createTemporaryChannel } from '../services/joinToCreateService.js';
 
-const DEFAULT_CHANNEL_NAME_TEMPLATE = '🔊 voice {displayName}';
+const DEFAULT_CHANNEL_NAME_TEMPLATE = '🔊  voice {displayName}';
 
 export default {
     name: 'voiceStateUpdate',
@@ -50,7 +50,7 @@ async function handleJoin(client, guild, member, channelId) {
     }
 
     const channelOptions = config.channelOptions?.[channelId] || {};
-    // Paksa nama channel selalu "🔊 voice {displayName}", abaikan template
+    // Paksa nama channel selalu "🔊  voice {displayName}", abaikan template
     // lawas seperti "{username}'s Room" yang tersimpan di config lama.
     const nameTemplate = DEFAULT_CHANNEL_NAME_TEMPLATE;
     const userLimit = channelOptions.userLimit ?? config.userLimit ?? 0;

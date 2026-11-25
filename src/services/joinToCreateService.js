@@ -214,7 +214,6 @@ export function formatChannelName(template, variables) {
             .normalize('NFKC')
             .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
             .replace(/[@#:`\n\r\t]/g, '') 
-            .replace(/\s+/g, ' ')
             .trim();
 
         if (formatted.length === 0) {
@@ -560,7 +559,7 @@ export async function createTemporaryChannel(guild, member, options = {}) {
             validateBitrate(bitrate / 1000);
         }
 
-        const channelName = formatChannelName(nameTemplate || '🔊 voice {displayName}', {
+        const channelName = formatChannelName(nameTemplate || '🔊  voice {displayName}', {
             username: member.user.username,
             displayName: member.displayName,
             userTag: member.user.tag,

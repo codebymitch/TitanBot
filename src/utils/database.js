@@ -846,7 +846,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: false,
             triggerChannels: [],
             categoryId: null,
-            channelNameTemplate: '🔊 voice {displayName}',
+            channelNameTemplate: '🔊  voice {displayName}',
             userLimit: 0,
             bitrate: 64000,
             temporaryChannels: {}
@@ -862,7 +862,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: unwrapped.enabled || false,
             triggerChannels: unwrapped.triggerChannels || [],
             categoryId: unwrapped.categoryId || null,
-            channelNameTemplate: unwrapped.channelNameTemplate || '🔊 voice {displayName}',
+            channelNameTemplate: unwrapped.channelNameTemplate || '🔊  voice {displayName}',
             userLimit: unwrapped.userLimit || 0,
             bitrate: unwrapped.bitrate || 64000,
             temporaryChannels: unwrapped.temporaryChannels || {},
@@ -874,7 +874,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: false,
             triggerChannels: [],
             categoryId: null,
-            channelNameTemplate: '🔊 voice {displayName}',
+            channelNameTemplate: '🔊  voice {displayName}',
             userLimit: 0,
             bitrate: 64000,
             temporaryChannels: {}
@@ -1029,7 +1029,6 @@ export function formatChannelName(template, variables) {
         .replace(/[\r\n\t]+/g, ' ')
         .replace(/[\x00-\x1F\x7F]/g, '')
         .replace(/[@#:`]/g, '')
-        .replace(/\s{2,}/g, ' ')
         .trim();
 
     if (formatted.length > 100) {

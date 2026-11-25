@@ -144,7 +144,7 @@ async function handleSetupSubcommand(interaction, client) {
     }
 
     await initializeJoinToCreate(client, guildId, triggerChannel.id, {
-        nameTemplate: '🔊 voice {displayName}',
+        nameTemplate: '🔊  voice {displayName}',
         categoryId: category?.id || null
     });
 

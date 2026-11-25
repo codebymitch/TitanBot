@@ -195,7 +195,7 @@ async function resetRoom(interaction, client, voiceChannel, tempInfo) {
     const channelOptions = config.channelOptions?.[tempInfo.triggerChannelId] || {};
     const savedTemplate = channelOptions.nameTemplate || config.channelNameTemplate;
     const template = !savedTemplate || savedTemplate === "{username}'s Room"
-        ? '🔊 voice {displayName}'
+        ? '🔊  voice {displayName}'
         : savedTemplate;
 
     const owner = await interaction.guild.members.fetch(tempInfo.ownerId).catch(() => null);
