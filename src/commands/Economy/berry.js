@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { formatCurrency, getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { adjustBerries, berryLabel, isStaff } from '../../services/berryRpg.js';
 
 export default {
@@ -19,7 +19,7 @@ export default {
     if (action === 'balance') {
       const user = interaction.options.getUser('user') || interaction.user;
       const account = await getEconomyData(client, interaction.guildId, user.id);
-      return interaction.reply({ content: '<:Berry:1573798988988031087> **' + user.username + '** has **' + account.wallet.toLocaleString() + ' ' + berryLabel(account.wallet) + '**.', ephemeral: true });
+      return interaction.reply({ content: '<:Berry:1573798988988031087> **' + user.username + '** has **' + formatCurrency(account.wallet) + '**.', ephemeral: true });
     }
 
     if (action === 'inventory') {
@@ -38,6 +38,6 @@ export default {
     const amount = interaction.options.getInteger('amount');
     if (user.bot) return interaction.reply({ content: 'Berries can only be given to people.', ephemeral: true });
     const balance = await adjustBerries(client, interaction.guildId, user.id, amount);
-    return interaction.reply({ content: '<:Berry:1573798988988031087> Gave **' + amount.toLocaleString() + ' Berries** to ' + user.toString() + '. Their new balance is **' + balance.toLocaleString() + ' Berries**.', ephemeral: true });
+    return interaction.reply({ content: '<:Berry:1573798988988031087> Gave **' + formatCurrency(amount) + '** to ' + user.toString() + '. Their new balance is **' + formatCurrency(balance) + '**.', ephemeral: true });
   }
 };
