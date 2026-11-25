@@ -44,8 +44,13 @@ export async function loadJourneyConfig(client, guildId) {
   return config;
 }
 
+const ADMIN_ROLE_ID = '1569520212858904577';
+
 export function isStaff(interaction) {
-  return Boolean(interaction.memberPermissions?.has('Administrator') || interaction.memberPermissions?.has('ManageGuild'));
+  const roles = interaction.member?.roles;
+  if (roles?.cache?.has) return roles.cache.has(ADMIN_ROLE_ID);
+  if (Array.isArray(roles)) return roles.includes(ADMIN_ROLE_ID);
+  return Array.isArray(interaction.memberRoles) && interaction.memberRoles.includes(ADMIN_ROLE_ID);
 }
 
 export function cleanName(value) {
