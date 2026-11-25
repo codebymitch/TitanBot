@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
-import { loadLoot, cleanName } from '../../services/berryRpg.js';
+import { loadLoot, cleanName, isStaff } from '../../services/berryRpg.js';
 import { inventoryEntries } from '../../services/berryInventory.js';
 
 const bagKey = (guildId, userId) => 'berry:loot-bag:' + guildId + ':' + userId;
@@ -20,6 +20,7 @@ export default {
     const userId = interaction.user.id;
     const action = interaction.options.getString('action');
     if (action === 'inventory') {
+      if (!isStaff(interaction)) return interaction.reply({ content: 'Viewing inventories requires the Admin staff role.', ephemeral: true });
       const account = await getEconomyData(client, guildId, userId);
       const found = inventoryEntries(account);
       const text = found.length ? found.map(item => '• ' + item.name + ' × ' + item.count).join('\n') : 'Your inventory is empty.';
