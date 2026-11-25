@@ -20,8 +20,13 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
 
   for (const [userId, journey] of Object.entries(journeys)) {
     if (onlyUserId && userId !== onlyUserId) continue;
+    if (journey.status === 'stalled') {
+      journey.status = 'traveling';
+      delete journey.stalledAt;
+      changed = true;
+    }
     if (journey.status !== 'traveling') continue;
-    const duration = Math.min(180000, Math.max(60000, Number(journey.durationMs) || Number(journey.durationMinutes || travelConfig.durationMinutes) * 60000));
+    const duration = Math.min(180000, Math.max(15000, Number(journey.durationMs) || Number(journey.durationMinutes || travelConfig.durationMinutes) * 60000));
     const progress = Math.min(100, Math.floor(((now - journey.startedAt) / duration) * 4) * 25);
     let lastProgress = Number(journey.progress || 0);
 
@@ -33,7 +38,6 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
         let description = lastProgress === 100
           ? '🏝️ <@' + userId + '> has arrived at **' + journey.to + '**. The journey is complete.'
           : '🚢 <@' + userId + '> reached **' + lastProgress + '%** of the trip from **' + journey.from + '** to **' + journey.to + '**.';
-        let shouldPause = false;
         if (lastProgress < 100 && Math.random() < 0.45) {
           const event = randomJourneyEvent();
           description += '\n' + event;
@@ -70,7 +74,7 @@ export async function processAllJourneys(client) {
 
 export function getJourneyProgress(journey) {
   if (journey.status !== 'traveling') return Number(journey.progress || 0);
-  const duration = Math.min(180000, Math.max(60000, Number(journey.durationMs) || Number(journey.durationMinutes || 3) * 60000));
+  const duration = Math.min(180000, Math.max(15000, Number(journey.durationMs) || Number(journey.durationMinutes || 3) * 60000));
   return Math.min(100, Math.floor(((Date.now() - journey.startedAt) / duration) * 4) * 25);
 }
 
