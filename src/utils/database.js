@@ -846,7 +846,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: false,
             triggerChannels: [],
             categoryId: null,
-            channelNameTemplate: '🔊  voice {displayName}',
+            channelNameTemplate: '🔊  voice {voiceDisplay}',
             userLimit: 0,
             bitrate: 64000,
             temporaryChannels: {}
@@ -862,7 +862,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: unwrapped.enabled || false,
             triggerChannels: unwrapped.triggerChannels || [],
             categoryId: unwrapped.categoryId || null,
-            channelNameTemplate: unwrapped.channelNameTemplate || '🔊  voice {displayName}',
+            channelNameTemplate: unwrapped.channelNameTemplate || '🔊  voice {voiceDisplay}',
             userLimit: unwrapped.userLimit || 0,
             bitrate: unwrapped.bitrate || 64000,
             temporaryChannels: unwrapped.temporaryChannels || {},
@@ -874,7 +874,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: false,
             triggerChannels: [],
             categoryId: null,
-            channelNameTemplate: '🔊  voice {displayName}',
+            channelNameTemplate: '🔊  voice {voiceDisplay}',
             userLimit: 0,
             bitrate: 64000,
             temporaryChannels: {}

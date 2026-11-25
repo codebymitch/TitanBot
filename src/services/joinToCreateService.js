@@ -21,6 +21,7 @@ const ALLOWED_TEMPLATE_PLACEHOLDERS = new Set([
     '{user_tag}',
     '{displayName}',
     '{display_name}',
+    '{voiceDisplay}',
     '{guildName}',
     '{guild_name}',
     '{channelName}',
@@ -199,6 +200,7 @@ export function formatChannelName(template, variables) {
             '{user_tag}': sanitized.userTag || 'User#0000',
             '{displayName}': sanitized.displayName || 'User',
             '{display_name}': sanitized.displayName || 'User',
+            '{voiceDisplay}': sanitized.displayName || 'User',
             '{guildName}': sanitized.guildName || 'Server',
             '{guild_name}': sanitized.guildName || 'Server',
             '{channelName}': sanitized.channelName || 'Voice Channel',
@@ -559,7 +561,7 @@ export async function createTemporaryChannel(guild, member, options = {}) {
             validateBitrate(bitrate / 1000);
         }
 
-        const channelName = formatChannelName(nameTemplate || '🔊  voice {displayName}', {
+        const channelName = formatChannelName(nameTemplate || '🔊  voice {voiceDisplay}', {
             username: member.user.username,
             displayName: member.displayName,
             userTag: member.user.tag,
