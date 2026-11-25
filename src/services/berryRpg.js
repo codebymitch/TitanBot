@@ -1,7 +1,7 @@
 import { getEconomyData, setEconomyData } from '../utils/economy.js';
 
 const key = (kind, guildId) => 'berry:' + kind + ':' + guildId;
-const defaultLoot = () => ({ locations: {}, tables: { common: [], rare: [], epic: [] } });
+const defaultLoot = () => ({ locations: {}, tables: { common: [], rare: [], epic: [] }, posts: {} });
 const defaultJourneyConfig = () => ({ islands: ['Foosha Village', 'Alabasta', 'Water 7', 'Dressrosa', 'Wano'], durationMinutes: 3, manualChannelId: null });
 
 export async function loadConfig(client, kind, guildId, fallback = {}) {
