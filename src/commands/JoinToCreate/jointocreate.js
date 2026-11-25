@@ -10,7 +10,8 @@ import {
     getPanelImage,
     getConfiguration,
     initializeJoinToCreate,
-    removeTriggerChannel
+    removeTriggerChannel,
+    validateChannelNameTemplate
 } from '../../services/joinToCreateService.js';
 
 export default {
@@ -46,6 +47,13 @@ export default {
                         .setName("category")
                         .setDescription("Category the temporary rooms are created under.")
                         .addChannelTypes(ChannelType.GuildCategory)
+                        .setRequired(false)
+                )
+                .addStringOption((option) =>
+                    option
+                        .setName("template")
+                        .setDescription("Custom room name template. Gunakan {displayName} atau {username}.")
+                        .setMaxLength(100)
                         .setRequired(false)
                 )
         ),
@@ -128,12 +136,25 @@ async function handleSetupSubcommand(interaction, client) {
     const guildId = interaction.guild.id;
     const triggerChannel = interaction.options.getChannel('channel');
     const category = interaction.options.getChannel('category');
+    const templateOption = interaction.options.getString('template');
 
     if (!triggerChannel || triggerChannel.type !== ChannelType.GuildVoice) {
         throw new TitanBotError(
             'Selected channel is not a voice channel',
             ErrorTypes.VALIDATION,
             'Please select a voice channel as the Join to Create trigger.'
+        );
+    }
+
+    const nameTemplate = templateOption?.trim() || '🔊  voice {displayName}';
+
+    try {
+        validateChannelNameTemplate(nameTemplate);
+    } catch (error) {
+        throw new TitanBotError(
+            'Invalid channel name template',
+            ErrorTypes.VALIDATION,
+            error.userMessage || 'Template nama channel tidak valid.'
         );
     }
 
@@ -144,13 +165,14 @@ async function handleSetupSubcommand(interaction, client) {
     }
 
     await initializeJoinToCreate(client, guildId, triggerChannel.id, {
-        nameTemplate: '🔊  voice {displayName}',
+        nameTemplate,
         categoryId: category?.id || null
     });
 
     return await InteractionHelper.safeEditReply(interaction, {
         embeds: [successEmbed('Join to Create Set Up', [
             `Members who join ${triggerChannel} will now get their own temporary voice room.`,
+            `Template nama: \`${nameTemplate}\``,
             category ? `New rooms are created under **${category.name}**.` : null
         ].filter(Boolean).join('\n'))]
     });

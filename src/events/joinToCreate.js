@@ -50,9 +50,9 @@ async function handleJoin(client, guild, member, channelId) {
     }
 
     const channelOptions = config.channelOptions?.[channelId] || {};
-    // Paksa nama channel selalu "🔊  voice {displayName}", abaikan template
-    // lawas seperti "{username}'s Room" yang tersimpan di config lama.
-    const nameTemplate = DEFAULT_CHANNEL_NAME_TEMPLATE;
+    // Pakai template custom dari config (per-channel lalu fallback global).
+    // Default ke "🔊  voice {displayName}" kalau belum diatur.
+    const nameTemplate = channelOptions.nameTemplate || config.channelNameTemplate || DEFAULT_CHANNEL_NAME_TEMPLATE;
     const userLimit = channelOptions.userLimit ?? config.userLimit ?? 0;
     const bitrate = channelOptions.bitrate ?? config.bitrate ?? 64000;
     const parentId = channelOptions.categoryId || config.categoryId || null;
