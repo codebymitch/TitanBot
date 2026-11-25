@@ -18,7 +18,7 @@ export default {
     .addStringOption(option => option.setName('item').setDescription('Loot item name').setMaxLength(80)),
 
   async execute(interaction, config, client) {
-    if (!isStaff(interaction)) return interaction.reply({ content: 'Only server administrators or members with Manage Server can change loot settings.', ephemeral: true });
+    if (!isStaff(interaction)) return interaction.reply({ content: 'This command requires the Admin role.', ephemeral: true });
     const action = interaction.options.getString('action');
     const loot = await loadLoot(client, interaction.guildId);
     const location = cleanName(interaction.options.getString('location'));
