@@ -25,7 +25,7 @@ export default {
     const island = cleanName(interaction.options.getString('island'));
 
     if (action === 'list') {
-      return interaction.reply({ content: '🗺️ **Travel setup**\\nIslands: ' + cfg.islands.join(', ') + '\\nJourney length: ' + cfg.durationMinutes + ' minutes\\nManual review: ' + (cfg.manualChannelId ? '<#' + cfg.manualChannelId + '>' : 'off'), ephemeral: true });
+      return interaction.reply({ content: '🗺️ **Travel setup**\nIslands: ' + cfg.islands.join(', ') + '\nJourney length: ' + cfg.durationMinutes + ' minutes\nManual review: ' + (cfg.manualChannelId ? '<#' + cfg.manualChannelId + '>' : 'off'), ephemeral: true });
     }
     if (action === 'add') {
       if (!island) return interaction.reply({ content: 'Enter an island name.', ephemeral: true });
