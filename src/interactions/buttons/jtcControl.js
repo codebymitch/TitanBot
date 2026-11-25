@@ -191,8 +191,8 @@ async function toggleChat(interaction, voiceChannel) {
 }
 
 async function resetRoom(interaction, client, voiceChannel, tempInfo) {
-    // Nama channel dikunci ke template "🔊  voice {voiceName}".
-    const template = '🔊  voice {voiceName}';
+    // Nama channel dikunci ke template "🔊  voice {displa_name}".
+    const template = '🔊  voice {display_name}';
 
     const owner = await interaction.guild.members.fetch(tempInfo.ownerId).catch(() => null);
     const newName = formatChannelName(template, {
