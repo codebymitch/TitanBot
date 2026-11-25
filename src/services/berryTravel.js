@@ -1,4 +1,4 @@
-import { loadJourneyConfig, randomJourneyEvent } from './berryRpg.js';
+import { adjustBerries, loadJourneyConfig, randomJourneyEvent } from './berryRpg.js';
 
 const journeyKey = guildId => 'berry:journeys:' + guildId;
 
@@ -20,7 +20,7 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
   for (const [userId, journey] of Object.entries(journeys)) {
     if (onlyUserId && userId !== onlyUserId) continue;
     if (journey.status !== 'traveling') continue;
-    const duration = Math.max(4, Number(journey.durationMinutes || travelConfig.durationMinutes)) * 60000;
+    const duration = Math.max(4, Number(journey.durationMinutes || travelConfig.durationMinutes)) * 60000 + Number(journey.delayMs || 0);
     const progress = Math.min(100, Math.floor(((now - journey.startedAt) / duration) * 4) * 25);
     let lastProgress = Number(journey.progress || 0);
 
@@ -29,9 +29,25 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
       journey.progress = lastProgress;
       const channel = await client.channels.fetch(journey.channelId).catch(() => null);
       if (channel?.isTextBased()) {
-        const description = lastProgress === 100
+        let description = lastProgress === 100
           ? '🏝️ <@' + userId + '> has arrived at **' + journey.to + '**. The journey is complete.'
-          : '🚢 <@' + userId + '> reached **' + lastProgress + '%** of the trip from **' + journey.from + '** to **' + journey.to + '**.\n' + randomJourneyEvent();
+          : '🚢 <@' + userId + '> reached **' + lastProgress + '%** of the trip from **' + journey.from + '** to **' + journey.to + '**.';
+        if (lastProgress < 100 && Math.random() < 0.45) {
+          const event = randomJourneyEvent();
+          description += '\n' + event;
+          if (event.startsWith('⛈️')) {
+            journey.delayMs = Number(journey.delayMs || 0) + 10 * 60000;
+            description += ' This adds 10 minutes to the journey.';
+          } else if (event.startsWith('🪢')) {
+            journey.status = 'stalled';
+            journey.stalledAt = now;
+            description += ' Use /boat action:repair to continue.';
+          } else if (event.startsWith('💰')) {
+            const reward = Math.floor(Math.random() * 41) + 10;
+            await adjustBerries(client, guildId, userId, reward).catch(() => {});
+            description += ' The crew gains ' + reward + ' Berries.';
+          }
+        }
         await channel.send({ content: description, allowedMentions: { users: [userId], parse: [] } }).catch(() => {});
       }
       changed = true;
@@ -54,7 +70,7 @@ export async function processAllJourneys(client) {
 
 export function getJourneyProgress(journey) {
   if (journey.status !== 'traveling') return Number(journey.progress || 0);
-  const duration = Math.max(4, Number(journey.durationMinutes || 60)) * 60000;
+  const duration = Math.max(4, Number(journey.durationMinutes || 60)) * 60000 + Number(journey.delayMs || 0);
   return Math.min(100, Math.floor(((Date.now() - journey.startedAt) / duration) * 4) * 25);
 }
 
