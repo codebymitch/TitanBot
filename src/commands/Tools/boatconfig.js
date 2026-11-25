@@ -15,7 +15,7 @@ export default {
         { name: 'Turn off manual review', value: 'auto' }
       ))
     .addStringOption(option => option.setName('island').setDescription('Island name').setMaxLength(80))
-    .addIntegerOption(option => option.setName('minutes').setDescription('Trip duration (4 to 10080 minutes)').setMinValue(4).setMaxValue(10080))
+    .addIntegerOption(option => option.setName('minutes').setDescription('Trip duration (1 to 3 minutes)').setMinValue(1).setMaxValue(3))
     .addChannelOption(option => option.setName('channel').setDescription('Channel for manual departure requests').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)),
 
   async execute(interaction, config, client) {
@@ -36,7 +36,7 @@ export default {
       cfg.islands = cfg.islands.filter(name => name.toLowerCase() !== island.toLowerCase());
     } else if (action === 'duration') {
       const minutes = interaction.options.getInteger('minutes');
-      if (!minutes) return interaction.reply({ content: 'Set a journey length between 4 minutes and 7 days.', ephemeral: true });
+      if (!minutes) return interaction.reply({ content: 'Set a journey length between 1 and 3 minutes.', ephemeral: true });
       cfg.durationMinutes = minutes;
     } else if (action === 'manual') {
       const channel = interaction.options.getChannel('channel');
