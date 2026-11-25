@@ -32,16 +32,19 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
         let description = lastProgress === 100
           ? '🏝️ <@' + userId + '> has arrived at **' + journey.to + '**. The journey is complete.'
           : '🚢 <@' + userId + '> reached **' + lastProgress + '%** of the trip from **' + journey.from + '** to **' + journey.to + '**.';
+        let shouldPause = false;
         if (lastProgress < 100 && Math.random() < 0.45) {
           const event = randomJourneyEvent();
           description += '\n' + event;
           if (event.startsWith('⛈️')) {
             journey.delayMs = Number(journey.delayMs || 0) + 10 * 60000;
             description += ' This adds 10 minutes to the journey.';
+            shouldPause = true;
           } else if (event.startsWith('🪢')) {
             journey.status = 'stalled';
             journey.stalledAt = now;
             description += ' Use /boat action:repair to continue.';
+            shouldPause = true;
           } else if (event.startsWith('💰')) {
             const reward = Math.floor(Math.random() * 41) + 10;
             await adjustBerries(client, guildId, userId, reward).catch(() => {});
@@ -55,6 +58,7 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
         delete journeys[userId];
         break;
       }
+      if (shouldPause) break;
     }
   }
 
