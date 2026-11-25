@@ -1,4 +1,5 @@
 import { adjustBerries, loadJourneyConfig, randomJourneyEvent } from './berryRpg.js';
+import { formatCurrency } from '../utils/economy.js';
 
 const journeyKey = guildId => 'berry:journeys:' + guildId;
 
@@ -48,7 +49,7 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
           } else if (event.startsWith('💰')) {
             const reward = Math.floor(Math.random() * 41) + 10;
             await adjustBerries(client, guildId, userId, reward).catch(() => {});
-            description += ' The crew gains ' + reward + ' Berries.';
+            description += ' The crew gains ' + formatCurrency(reward) + '.';
           }
         }
         await channel.send({ content: description, allowedMentions: { users: [userId], parse: [] } }).catch(() => {});
