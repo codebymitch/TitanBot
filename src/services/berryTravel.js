@@ -1,5 +1,4 @@
-import { adjustBerries, loadJourneyConfig, randomJourneyEvent } from './berryRpg.js';
-import { formatCurrency } from '../utils/economy.js';
+import { loadJourneyConfig } from './berryRpg.js';
 
 const journeyKey = guildId => 'berry:journeys:' + guildId;
 const processingGuilds = new Set();
@@ -39,22 +38,7 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
         journey.progress = lastProgress;
         const channel = await client.channels.fetch(journey.channelId).catch(() => null);
         if (channel?.isTextBased()) {
-          let description = lastProgress === 100
-            ? '🏝️ <@' + userId + '> has arrived at **' + journey.to + '**. The journey is complete.'
-            : '🚢 <@' + userId + '> reached **' + lastProgress + '%** of the trip from **' + journey.from + '** to **' + journey.to + '**.';
-          if (lastProgress < 100 && Math.random() < 0.45) {
-            const event = randomJourneyEvent();
-            description += '\n' + event;
-            if (event.startsWith('⛈️')) {
-              description += ' The crew braces for the waves and keeps moving.';
-            } else if (event.startsWith('🪢')) {
-              description += ' The crew makes quick repairs and continues.';
-            } else if (event.startsWith('💰')) {
-              const reward = Math.floor(Math.random() * 41) + 10;
-              await adjustBerries(client, guildId, userId, reward).catch(() => {});
-              description += ' The crew gains ' + formatCurrency(reward) + '.';
-            }
-          }
+          const description = '🚢 **' + journey.from + ' → ' + journey.to + '** — **' + lastProgress + '%** complete.';
           await channel.send({ content: description, allowedMentions: { users: [userId], parse: [] } }).catch(() => {});
         }
         changed = true;
