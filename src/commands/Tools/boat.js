@@ -42,7 +42,7 @@ export default {
       if (journey.status === 'pending') return interaction.reply({ content: 'Your departure from **' + journey.from + '** to **' + journey.to + '** is waiting for staff confirmation.', ephemeral: true });
       const progress = getJourneyProgress(journey);
       const next = Math.min(100, progress + 25);
-      return interaction.reply({ content: '🚢 **' + journey.from + ' → ' + journey.to + '**\\nProgress: **' + progress + '%**. Next stage at **' + next + '%**. Journey length: ' + journey.durationMinutes + ' minutes. The bot posts each stage and arrival automatically.', ephemeral: true });
+      return interaction.reply({ content: '🚢 **' + journey.from + ' → ' + journey.to + '**\nProgress: **' + progress + '%**. Next stage at **' + next + '%**. Journey length: ' + journey.durationMinutes + ' minutes. The bot posts each stage and arrival automatically.', ephemeral: true });
     }
 
     if (journeys[interaction.user.id]) return interaction.reply({ content: 'Finish your current journey before starting another. Journeys cannot be cancelled or skipped.', ephemeral: true });
