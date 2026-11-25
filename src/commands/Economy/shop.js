@@ -84,6 +84,8 @@ export default {
       const account = await getEconomyData(client, interaction.guildId, interaction.user.id);
       const inventoryKey = 'shop_' + shopKey + '_' + slug(item.name).replaceAll(' ', '_');
       account.inventory[inventoryKey] = (account.inventory[inventoryKey] || 0) + 1;
+      account.inventoryMeta ||= {};
+      account.inventoryMeta[inventoryKey] = { name: item.name, source: 'shop' };
       await setEconomyData(client, interaction.guildId, interaction.user.id, account);
       return interaction.reply({ content: '✅ You bought **' + item.name + '** for **' + formatCurrency(item.price) + '**. Remaining balance: **' + formatCurrency(balance) + '**.', ephemeral: true });
     } catch (error) {

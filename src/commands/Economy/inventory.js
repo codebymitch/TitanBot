@@ -1,70 +1,76 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { shopItems } from '../../config/shop/items.js';
-import { getEconomyData } from '../../utils/economy.js';
-import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { logger } from '../../utils/logger.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-
-const SHOP_ITEMS = shopItems;
+import { SlashCommandBuilder } from 'discord.js';
+import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { inventoryEntries, inventoryToken, findInventoryEntry, removeInventoryCount, addInventoryCount } from '../../services/berryInventory.js';
 
 export default {
-    data: new SlashCommandBuilder()
-        .setName('inventory')
-        .setDescription('View your economy inventory'),
+  data: new SlashCommandBuilder()
+    .setName('inventory')
+    .setDescription('View, use, or give items in your pirate inventory.')
+    .addSubcommand(sub => sub.setName('view').setDescription('Show items from shops, merchants, and chests.')
+      .addUserOption(option => option.setName('user').setDescription('Inventory to view')))
+    .addSubcommand(sub => sub.setName('use').setDescription('Consume or remove an item from your inventory.')
+      .addStringOption(option => option.setName('item').setDescription('Item to use').setRequired(true).setAutocomplete(true))
+      .addIntegerOption(option => option.setName('amount').setDescription('How many to use').setMinValue(1).setMaxValue(99)))
+    .addSubcommand(sub => sub.setName('give').setDescription('Give an item to another member.')
+      .addUserOption(option => option.setName('user').setDescription('Member receiving the item').setRequired(true))
+      .addStringOption(option => option.setName('item').setDescription('Item to give').setRequired(true).setAutocomplete(true))
+      .addIntegerOption(option => option.setName('amount').setDescription('How many to give').setMinValue(1).setMaxValue(99))),
 
-    execute: withErrorHandling(async (interaction, config, client) => {
-        const deferred = await InteractionHelper.safeDefer(interaction);
-        if (!deferred) return;
+  async autocomplete(interaction, client) {
+    const account = await getEconomyData(client, interaction.guildId, interaction.user.id);
+    const focused = String(interaction.options.getFocused() || '').toLowerCase();
+    const choices = inventoryEntries(account)
+      .filter(item => item.name.toLowerCase().includes(focused))
+      .slice(0, 25)
+      .map(item => ({ name: (item.name + ' × ' + item.count).slice(0, 100), value: inventoryToken(item.key) }));
+    return interaction.respond(choices);
+  },
 
-            const userId = interaction.user.id;
-            const guildId = interaction.guildId;
+  async execute(interaction, config, client) {
+    const action = interaction.options.getSubcommand();
+    const guildId = interaction.guildId;
+    if (action === 'view') {
+      const user = interaction.options.getUser('user') || interaction.user;
+      const account = await getEconomyData(client, guildId, user.id);
+      const items = inventoryEntries(account);
+      const body = items.length
+        ? items.map(item => '• **' + item.name + '** × ' + item.count).join('\n')
+        : 'Your inventory is empty.';
+      return interaction.reply({ content: '🎒 **' + user.username + '’s inventory**\n' + body, ephemeral: true });
+    }
 
-            logger.debug(`[ECONOMY] Inventory requested for ${userId}`, { userId, guildId });
+    const account = await getEconomyData(client, guildId, interaction.user.id);
+    const item = findInventoryEntry(account, interaction.options.getString('item'));
+    if (!item) return interaction.reply({ content: 'That item is no longer in your inventory. Run /inventory view and try again.', ephemeral: true });
+    const amount = interaction.options.getInteger('amount') || 1;
 
-            const userData = await getEconomyData(client, guildId, userId);
+    if (action === 'use') {
+      if (!removeInventoryCount(account, item.key, amount)) {
+        return interaction.reply({ content: 'You do not have that many **' + item.name + '**.', ephemeral: true });
+      }
+      if (!(await setEconomyData(client, guildId, interaction.user.id, account))) {
+        return interaction.reply({ content: 'I could not save your inventory change. Please try again.', ephemeral: true });
+      }
+      return interaction.reply({ content: '🏴‍☠️ Used/removed **' + amount + ' × ' + item.name + '** from your inventory.', ephemeral: true });
+    }
 
-            if (!userData) {
-                throw createError(
-                    "Failed to load economy data for inventory",
-                    ErrorTypes.DATABASE,
-                    "Failed to load your economy data. Please try again later.",
-                    { userId, guildId }
-                );
-            }
-
-            const inventory = userData.inventory || {};
-
-            let inventoryDescription = "Your inventory is currently empty.";
-
-            if (Object.keys(inventory).length > 0) {
-                inventoryDescription = Object.entries(inventory)
-                    .filter(
-                        ([itemId, quantity]) => {
-                            const item = SHOP_ITEMS.find(i => i.id === itemId);
-                            return quantity > 0 && item;
-                        }
-                    )
-                    .map(
-                        ([itemId, quantity]) => {
-                            const item = SHOP_ITEMS.find(i => i.id === itemId);
-                            return `**${item.name}:** ${quantity}x`;
-                        }
-                    )
-                    .join("\n");
-            }
-
-            logger.info(`[ECONOMY] Inventory retrieved`, { 
-                userId, 
-                guildId,
-                itemCount: Object.keys(inventory).length
-            });
-
-            const embed = createEmbed({ 
-                title: `🎒 ${interaction.user.username}'s Inventory`, 
-                description: inventoryDescription, 
-            }).setThumbnail(interaction.user.displayAvatarURL());
-
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-    }, { command: 'inventory' })
+    const recipient = interaction.options.getUser('user');
+    if (recipient.bot || recipient.id === interaction.user.id) {
+      return interaction.reply({ content: 'Choose another human member to receive the item.', ephemeral: true });
+    }
+    const recipientAccount = await getEconomyData(client, guildId, recipient.id);
+    if (!removeInventoryCount(account, item.key, amount)) {
+      return interaction.reply({ content: 'You do not have that many **' + item.name + '**.', ephemeral: true });
+    }
+    addInventoryCount(recipientAccount, item.key, amount, item.name);
+    const recipientSaved = await setEconomyData(client, guildId, recipient.id, recipientAccount);
+    if (!recipientSaved) return interaction.reply({ content: 'I could not save the recipient’s inventory. Nothing was transferred.', ephemeral: true });
+    const senderSaved = await setEconomyData(client, guildId, interaction.user.id, account);
+    if (!senderSaved) {
+      removeInventoryCount(recipientAccount, item.key, amount);
+      await setEconomyData(client, guildId, recipient.id, recipientAccount);
+      return interaction.reply({ content: 'The transfer could not be saved. Please try again.', ephemeral: true });
+    }
+    return interaction.reply({ content: '🎁 Gave **' + amount + ' × ' + item.name + '** to ' + recipient.toString() + '.', ephemeral: true });
+  }
 };

@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { loadLoot, cleanName } from '../../services/berryRpg.js';
+import { inventoryEntries } from '../../services/berryInventory.js';
 
 const bagKey = (guildId, userId) => 'berry:loot-bag:' + guildId + ':' + userId;
 const rarityList = rarity => rarity === 'common' ? ['common'] : rarity === 'rare' ? ['common', 'rare'] : ['common', 'rare', 'epic'];
@@ -20,8 +21,8 @@ export default {
     const action = interaction.options.getString('action');
     if (action === 'inventory') {
       const account = await getEconomyData(client, guildId, userId);
-      const found = Object.entries(account.inventory || {}).filter(([name, count]) => name.startsWith('loot_') && count > 0);
-      const text = found.length ? found.map(([name, count]) => '• ' + name.slice(5).replaceAll('_', ' ') + ' × ' + count).join('\n') : 'Your loot inventory is empty.';
+      const found = inventoryEntries(account);
+      const text = found.length ? found.map(item => '• ' + item.name + ' × ' + item.count).join('\n') : 'Your inventory is empty.';
       return interaction.reply({ content: '🎒 **Loot inventory**\n' + text, ephemeral: true });
     }
 
@@ -53,6 +54,8 @@ export default {
     const account = await getEconomyData(client, guildId, userId);
     const inventoryKey = 'loot_' + item.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
     account.inventory[inventoryKey] = (account.inventory[inventoryKey] || 0) + 1;
+    account.inventoryMeta ||= {};
+    account.inventoryMeta[inventoryKey] = { name: item.name, source: 'loot' };
     await setEconomyData(client, guildId, userId, account);
     return interaction.reply({ content: '🎁 Your **' + chest.rarity + '** chest from **' + chest.location + '** contained **' + item.name + '**! You have ' + bag.length + ' chest(s) left.', ephemeral: true });
   }

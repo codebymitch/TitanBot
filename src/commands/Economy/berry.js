@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { formatCurrency, getEconomyData, setEconomyData } from '../../utils/economy.js';
-import { adjustBerries, berryLabel, isStaff } from '../../services/berryRpg.js';
+import { formatCurrency, getEconomyData } from '../../utils/economy.js';
+import { adjustBerries, isStaff } from '../../services/berryRpg.js';
+import { inventoryEntries } from '../../services/berryInventory.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -11,7 +12,7 @@ export default {
     .addSubcommand(sub => sub.setName('give').setDescription('Give a member Berries (staff only).')
       .addUserOption(option => option.setName('user').setDescription('Member receiving Berries').setRequired(true))
       .addIntegerOption(option => option.setName('amount').setDescription('Whole number of Berries').setMinValue(1).setRequired(true)))
-    .addSubcommand(sub => sub.setName('inventory').setDescription('See items you have found in chests.')
+    .addSubcommand(sub => sub.setName('inventory').setDescription('See items in a member’s inventory.')
       .addUserOption(option => option.setName('user').setDescription('Member whose inventory to check'))),
 
   async execute(interaction, config, client) {
@@ -25,9 +26,9 @@ export default {
     if (action === 'inventory') {
       const user = interaction.options.getUser('user') || interaction.user;
       const account = await getEconomyData(client, interaction.guildId, user.id);
-      const items = Object.entries(account.inventory || {}).filter(([name, count]) => name.startsWith('loot_') && count > 0);
-      const text = items.length ? items.map(([name, count]) => '• ' + name.slice(5).replaceAll('_', ' ') + ' × ' + count).join('\n') : 'No loot items yet.';
-      return interaction.reply({ content: '🎒 **' + user.username + '’s loot inventory**\n' + text, ephemeral: true });
+      const items = inventoryEntries(account);
+      const text = items.length ? items.map(item => '• ' + item.name + ' × ' + item.count).join('\n') : 'No items yet.';
+      return interaction.reply({ content: '🎒 **' + user.username + '’s inventory**\n' + text, ephemeral: true });
     }
 
     if (!isStaff(interaction)) {
