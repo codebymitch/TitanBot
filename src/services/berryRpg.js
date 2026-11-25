@@ -2,7 +2,7 @@ import { getEconomyData, setEconomyData } from '../utils/economy.js';
 
 const key = (kind, guildId) => 'berry:' + kind + ':' + guildId;
 const defaultLoot = () => ({ locations: {}, tables: { common: [], rare: [], epic: [] } });
-const defaultJourneyConfig = () => ({ islands: ['Foosha Village', 'Alabasta', 'Water 7', 'Dressrosa', 'Wano'], durationMinutes: 60, manualChannelId: null });
+const defaultJourneyConfig = () => ({ islands: ['Foosha Village', 'Alabasta', 'Water 7', 'Dressrosa', 'Wano'], durationMinutes: 3, manualChannelId: null });
 
 export async function loadConfig(client, kind, guildId, fallback = {}) {
   const value = await client.db.get(key(kind, guildId), fallback);
@@ -39,7 +39,9 @@ export async function loadLoot(client, guildId) {
 
 export async function loadJourneyConfig(client, guildId) {
   const saved = await loadConfig(client, 'journey-config', guildId, defaultJourneyConfig());
-  return { ...defaultJourneyConfig(), ...saved };
+  const config = { ...defaultJourneyConfig(), ...saved };
+  config.durationMinutes = Math.min(3, Math.max(1, Number(config.durationMinutes) || 3));
+  return config;
 }
 
 export function isStaff(interaction) {
