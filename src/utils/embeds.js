@@ -3,7 +3,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { getColor, botConfig } from '../config/bot.js';
 
-const EMOJI_REGEX = /[\p{Extended_Pictographic}\uFE0F]/gu;
 const EMBED_FOOTER_SYMBOL = Symbol('titanbotFooterText');
 const EMBED_BASE_DESCRIPTION_SYMBOL = Symbol('titanbotBaseDescription');
 
@@ -13,7 +12,6 @@ function sanitizeEmbedText(text = '') {
   }
 
   return text
-    .replace(EMOJI_REGEX, '')
     .replace(/[ \t]+/g, ' ')  // Replace consecutive spaces/tabs with single space
     .replace(/[ \t]\n/g, '\n')  // Remove spaces before newlines
     .replace(/\n[ \t]/g, '\n')  // Remove spaces after newlines
@@ -38,7 +36,9 @@ const originalSetAuthor = EmbedBuilder.prototype.setAuthor;
 const originalAddFields = EmbedBuilder.prototype.addFields;
 
 EmbedBuilder.prototype.setTitle = function setSanitizedTitle(title) {
-  return originalSetTitle.call(this, sanitizeEmbedText(title));
+  const cleanTitle = sanitizeEmbedText(title);
+  const pirateTitle = cleanTitle && !cleanTitle.startsWith('🏴‍☠️') ? '🏴‍☠️ ' + cleanTitle : cleanTitle;
+  return originalSetTitle.call(this, pirateTitle);
 };
 
 EmbedBuilder.prototype.setAuthor = function setSanitizedAuthor(author) {
@@ -99,12 +99,16 @@ EmbedBuilder.prototype.setDescription = function(description = '') {
 
 EmbedBuilder.prototype.setFooter = function(footer) {
   const footerText = sanitizeEmbedText(normalizeFooterText(footer));
-  if (!footerText || !isImportantFooter(footerText)) {
+  if (!footerText) {
     return this;
   }
 
-  this[EMBED_FOOTER_SYMBOL] = footerText;
-  return originalSetFooter.call(this, { text: footerText });
+  const brandFooter = botConfig.embeds?.footer?.text || '';
+  const themedFooter = brandFooter && footerText !== brandFooter
+    ? footerText + ' • ' + brandFooter
+    : footerText;
+  this[EMBED_FOOTER_SYMBOL] = themedFooter;
+  return originalSetFooter.call(this, { text: themedFooter.substring(0, 2048) });
 };
 
 EmbedBuilder.prototype.setTimestamp = function() {
