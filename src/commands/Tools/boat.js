@@ -3,6 +3,16 @@ import { isStaff, loadJourneyConfig } from '../../services/berryRpg.js';
 import { getJourneyProgress, getJourneys, processJourneys, saveJourneys } from '../../services/berryTravel.js';
 import { calculateTravelDuration, formatShip, getBoats } from '../../services/berryShips.js';
 
+const JOURNEY_CHANNEL_TYPES = [
+  ChannelType.GuildText,
+  ChannelType.GuildAnnouncement,
+  ChannelType.GuildForum,
+  ChannelType.GuildMedia,
+  ChannelType.AnnouncementThread,
+  ChannelType.PublicThread,
+  ChannelType.PrivateThread,
+];
+
 function isJourneyLocation(channel) {
   return Boolean(channel?.guildId && !channel.isDMBased?.() && (
     channel.type === ChannelType.GuildForum || channel.isThread?.() || channel.isTextBased?.()
@@ -24,8 +34,12 @@ export default {
     .addStringOption(option => option.setName('action').setDescription('Journey action').setRequired(true)
       .addChoices({ name: 'Start journey', value: 'start' }, { name: 'Check progress', value: 'status' }, { name: 'Confirm manual departure (staff)', value: 'confirm' }))
     .addStringOption(option => option.setName('boat').setDescription('Choose the ship for this trip').setAutocomplete(true))
-    .addChannelOption(option => option.setName('from').setDescription('Choose a departure channel, Forum, post, or thread'))
-    .addChannelOption(option => option.setName('to').setDescription('Choose a destination channel, Forum, post, or thread'))
+    .addChannelOption(option => option.setName('from')
+      .setDescription('Choose a departure channel, Forum, post, or thread')
+      .addChannelTypes(...JOURNEY_CHANNEL_TYPES))
+    .addChannelOption(option => option.setName('to')
+      .setDescription('Choose a destination channel, Forum, post, or thread')
+      .addChannelTypes(...JOURNEY_CHANNEL_TYPES))
     .addUserOption(option => option.setName('user').setDescription('Member whose manual departure to confirm')),
 
   async autocomplete(interaction, client) {
