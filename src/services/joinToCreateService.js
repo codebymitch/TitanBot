@@ -19,12 +19,9 @@ const CONTROL_AND_INVISIBLE_CHARS_REGEX = /[\x00-\x1F\x7F\u200B-\u200D\uFEFF]/g;
 const ALLOWED_TEMPLATE_PLACEHOLDERS = new Set([
     '{username}',
     '{user_tag}',
-    '{displayName}',
     '{display_name}',
     '{voiceDisplay}',
-    '{guildName}',
     '{guild_name}',
-    '{channelName}',
     '{channel_name}'
 ]);
 
