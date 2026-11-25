@@ -25,7 +25,7 @@ export default {
             const guildId = interaction.guildId;
             const now = Date.now();
 
-            logger.debug(`[ECONOMY] Daily claimed started for ${userId}`, { userId, guildId });
+            logger.debug(`[ECONOMY] Daily claimed started for 🍓 {userId}`, { userId, guildId });
 
             const userData = await getEconomyData(client, guildId, userId);
             
@@ -45,7 +45,7 @@ export default {
                 throw createError(
                     "Daily cooldown active",
                     ErrorTypes.RATE_LIMIT,
-                    `You need to wait before claiming daily again. Try again in **${formatDuration(timeRemaining)}**.`,
+                    `You need to wait before claiming daily again. Try again in **🍓 {formatDuration(timeRemaining)}**.`,
                     { timeRemaining, cooldownType: 'daily' }
                 );
             }
@@ -66,7 +66,7 @@ export default {
                     DAILY_AMOUNT * PREMIUM_BONUS_PERCENTAGE,
                 );
                 earned += bonusAmount;
-                bonusMessage = `\n✨ **Premium Bonus:** +$${bonusAmount.toLocaleString()}`;
+                bonusMessage = `\n✨ **Premium Bonus:** +🍓 🍓 {bonusAmount.toLocaleString()}`;
                 hasPremiumRole = true;
             }
 
@@ -86,11 +86,11 @@ export default {
 
             const embed = successEmbed(
                 "✅ Daily Claimed!",
-                `You have claimed your daily **$${earned.toLocaleString()}**!${bonusMessage}`
+                `You have claimed your daily **🍓 🍓 {earned.toLocaleString()}**!🍓 {bonusMessage}`
             )
                 .addFields({
                     name: "New Cash Balance",
-                    value: `$${userData.wallet.toLocaleString()}`,
+                    value: `🍓 🍓 {userData.wallet.toLocaleString()}`,
                     inline: true,
                 })
                 .setFooter({
