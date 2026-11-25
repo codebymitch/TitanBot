@@ -16,7 +16,7 @@ export function inventoryEntries(account) {
   const metadata = account?.inventoryMeta || {};
   return Object.entries(inventory)
     .filter(([, count]) => typeof count === 'number' && count > 0)
-    .map(([key, count]) => ({ key, count, name: inventoryLabel(key, metadata) }));
+    .map(([key, count]) => ({ key, count, name: inventoryLabel(key, metadata), metadata: metadata[key] || {} }));
 }
 
 export function inventoryToken(key) {
@@ -42,9 +42,9 @@ export function removeInventoryCount(account, key, amount) {
   return true;
 }
 
-export function addInventoryCount(account, key, amount, name) {
+export function addInventoryCount(account, key, amount, name, extraMetadata = {}) {
   account.inventory ||= {};
   account.inventoryMeta ||= {};
   account.inventory[key] = Number(account.inventory[key] || 0) + amount;
-  if (name) account.inventoryMeta[key] = { ...(account.inventoryMeta[key] || {}), name };
+  if (name) account.inventoryMeta[key] = { ...(account.inventoryMeta[key] || {}), ...extraMetadata, name };
 }

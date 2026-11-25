@@ -87,7 +87,7 @@ export default {
         return interaction.reply({ content: 'You no longer have the requested item amount. The offer was not completed.', ephemeral: true });
       }
       removeInventoryCount(recipient, requestedItem.key, offer.itemAmount);
-      addInventoryCount(payer, requestedItem.key, offer.itemAmount, requestedItem.name);
+      addInventoryCount(payer, requestedItem.key, offer.itemAmount, requestedItem.name, requestedItem.metadata);
     }
 
     payer.wallet -= offer.berries;
@@ -99,7 +99,7 @@ export default {
       payer.wallet += offer.berries;
       if (requestedItem) {
         removeInventoryCount(payer, requestedItem.key, offer.itemAmount);
-        addInventoryCount(recipient, requestedItem.key, offer.itemAmount, requestedItem.name);
+        addInventoryCount(recipient, requestedItem.key, offer.itemAmount, requestedItem.name, requestedItem.metadata);
       }
       await setEconomyData(client, guildId, offer.fromId, payer);
       return interaction.reply({ content: 'The trade could not be saved. Please try again.', ephemeral: true });

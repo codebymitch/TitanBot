@@ -97,7 +97,7 @@ export const EconomyDataSchema = z
     level: z.number().int().nonnegative().default(1),
     inventory: z.record(z.any()).default({}),
     inventoryMeta: z.record(z.any()).default({}),
-    heldItem: z.object({ key: z.string(), name: z.string() }).nullable().default(null),
+    heldItem: z.object({ key: z.string(), name: z.string(), metadata: z.record(z.any()).default({}) }).nullable().default(null),
     cooldowns: z.record(z.number().int().nonnegative()).default({})
   })
   .passthrough();

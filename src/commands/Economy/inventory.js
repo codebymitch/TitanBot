@@ -2,13 +2,14 @@ import { SlashCommandBuilder } from 'discord.js';
 import { getEconomyData, setEconomyData, formatCurrency } from '../../utils/economy.js';
 import { inventoryEntries, inventoryToken, findInventoryEntry, removeInventoryCount, addInventoryCount } from '../../services/berryInventory.js';
 import { isStaff } from '../../services/berryRpg.js';
+import { buildInventoryGui } from '../../services/inventoryGui.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('inventory')
     .setDescription('Manage the items your pirate carries.')
-    .addSubcommand(sub => sub.setName('view').setDescription('Staff: view items and held item.')
-      .addUserOption(option => option.setName('user').setDescription('Inventory to view')))
+    .addSubcommand(sub => sub.setName('view').setDescription('View your private pirate inventory.')
+      .addUserOption(option => option.setName('user').setDescription('Staff can choose whose inventory to view.')))
     .addSubcommand(sub => sub.setName('use').setDescription('Consume or remove an item from your inventory.')
       .addStringOption(option => option.setName('item').setDescription('Item to use').setRequired(true).setAutocomplete(true))
       .addIntegerOption(option => option.setName('amount').setDescription('How many to use').setMinValue(1).setMaxValue(99)))
@@ -35,14 +36,20 @@ export default {
     const action = interaction.options.getSubcommand();
     const guildId = interaction.guildId;
     if (action === 'view') {
-      if (!isStaff(interaction)) return interaction.reply({ content: 'Viewing inventories requires the Admin staff role.', ephemeral: true });
-      const user = interaction.options.getUser('user') || interaction.user;
+      const selectedUser = interaction.options.getUser('user');
+      if (selectedUser && selectedUser.id !== interaction.user.id && !isStaff(interaction)) {
+        return interaction.reply({ content: 'You can view only your own inventory. Staff can view another member’s inventory.', ephemeral: true });
+      }
+      const user = selectedUser || interaction.user;
       const account = await getEconomyData(client, guildId, user.id);
-      const items = inventoryEntries(account);
-      const lines = items.map(item => '• **' + item.name + '** × ' + item.count);
-      if (account.heldItem?.name) lines.push('🗡️ **In hand:** ' + account.heldItem.name);
-      const body = lines.length ? lines.join('\n') : 'Your inventory is empty and you are not holding an item.';
-      return interaction.reply({ content: '🎒 **' + user.username + '’s inventory**\n' + body, ephemeral: true });
+      const response = buildInventoryGui({
+        user,
+        account,
+        viewerId: interaction.user.id,
+        targetId: user.id,
+        filter: 'all'
+      });
+      return interaction.reply({ ...response, ephemeral: true });
     }
 
     const account = await getEconomyData(client, guildId, interaction.user.id);
@@ -51,7 +58,7 @@ export default {
       if (!heldItem?.key || !heldItem?.name) {
         return interaction.reply({ content: 'You are not holding an item right now.', ephemeral: true });
       }
-      addInventoryCount(account, heldItem.key, 1, heldItem.name);
+      addInventoryCount(account, heldItem.key, 1, heldItem.name, heldItem.metadata || {});
       account.heldItem = null;
       if (!(await setEconomyData(client, guildId, interaction.user.id, account))) {
         return interaction.reply({ content: 'I could not save your inventory change. Please try again.', ephemeral: true });
@@ -102,7 +109,7 @@ export default {
       if (!removeInventoryCount(account, item.key, amount)) {
         return interaction.reply({ content: 'You do not have that many **' + item.name + '**.', ephemeral: true });
       }
-      addInventoryCount(recipientAccount, item.key, amount, item.name);
+      addInventoryCount(recipientAccount, item.key, amount, item.name, item.metadata);
       const recipientSaved = await setEconomyData(client, guildId, recipient.id, recipientAccount);
       if (!recipientSaved) return interaction.reply({ content: 'I could not save the recipient’s inventory. Nothing was transferred.', ephemeral: true });
       const senderSaved = await setEconomyData(client, guildId, interaction.user.id, account);
@@ -121,10 +128,11 @@ export default {
       if (account.heldItem?.key) {
         return interaction.reply({ content: 'You are already holding **' + account.heldItem.name + '**. Use /inventory stow before equipping another item.', ephemeral: true });
       }
+      const itemMetadata = { ...(account.inventoryMeta?.[item.key] || {}) };
       if (!removeInventoryCount(account, item.key, 1)) {
         return interaction.reply({ content: 'You do not have **' + item.name + '** anymore.', ephemeral: true });
       }
-      account.heldItem = { key: item.key, name: item.name };
+      account.heldItem = { key: item.key, name: item.name, metadata: itemMetadata };
       if (!(await setEconomyData(client, guildId, interaction.user.id, account))) {
         return interaction.reply({ content: 'I could not save your held item. Please try again.', ephemeral: true });
       }

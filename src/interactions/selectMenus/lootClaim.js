@@ -50,7 +50,7 @@ export default {
         }
         account.wallet = nextBalance;
       } else {
-        addInventoryCount(account, inventoryKeyFor(item), 1, item.name);
+        addInventoryCount(account, inventoryKeyFor(item), 1, item.name, { kind: item.kind, source: 'loot' });
       }
 
       if (!(await setEconomyData(client, interaction.guildId, interaction.user.id, account))) {

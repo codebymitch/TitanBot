@@ -3,15 +3,29 @@ import { isStaff, loadJourneyConfig } from '../../services/berryRpg.js';
 import { getJourneyProgress, getJourneys, processJourneys, saveJourneys } from '../../services/berryTravel.js';
 import { calculateTravelDuration, formatShip, getBoats } from '../../services/berryShips.js';
 
+function isJourneyLocation(channel) {
+  return Boolean(channel?.guildId && !channel.isDMBased?.() && (
+    channel.type === ChannelType.GuildForum || channel.isThread?.() || channel.isTextBased?.()
+  ));
+}
+
+function locationName(channel) {
+  if (channel.isThread?.()) {
+    const parentName = channel.parent?.name || 'Forum';
+    return parentName + ' / ' + channel.name;
+  }
+  return channel.name;
+}
+
 export default {
   data: new SlashCommandBuilder()
     .setName('boat')
-    .setDescription('Start or check an island journey.')
+    .setDescription('Start or check a journey between server locations.')
     .addStringOption(option => option.setName('action').setDescription('Journey action').setRequired(true)
       .addChoices({ name: 'Start journey', value: 'start' }, { name: 'Check progress', value: 'status' }, { name: 'Confirm manual departure (staff)', value: 'confirm' }))
     .addStringOption(option => option.setName('boat').setDescription('Choose the ship for this trip').setAutocomplete(true))
-    .addStringOption(option => option.setName('from').setDescription('Departure island').setAutocomplete(true))
-    .addStringOption(option => option.setName('to').setDescription('Destination island').setAutocomplete(true))
+    .addChannelOption(option => option.setName('from').setDescription('Choose a departure channel, Forum, post, or thread'))
+    .addChannelOption(option => option.setName('to').setDescription('Choose a destination channel, Forum, post, or thread'))
     .addUserOption(option => option.setName('user').setDescription('Member whose manual departure to confirm')),
 
   async autocomplete(interaction, client) {
@@ -22,8 +36,7 @@ export default {
       return interaction.respond(boats.filter(boat => boat.name.toLowerCase().includes(query)).slice(0, 25)
         .map(boat => ({ name: formatShip(boat).replaceAll('*', '').slice(0, 100), value: boat.id })));
     }
-    const cfg = await loadJourneyConfig(client, interaction.guildId);
-    return interaction.respond(cfg.islands.filter(name => name.toLowerCase().includes(query)).slice(0, 25).map(name => ({ name, value: name })));
+    return interaction.respond([]);
   },
 
   async execute(interaction, config, client) {
@@ -59,15 +72,15 @@ export default {
     }
 
     if (journeys[interaction.user.id]) return interaction.reply({ content: 'Finish your current journey before starting another. Journeys cannot be cancelled or skipped.', ephemeral: true });
-    const from = interaction.options.getString('from');
-    const to = interaction.options.getString('to');
+    const fromChannel = interaction.options.getChannel('from');
+    const toChannel = interaction.options.getChannel('to');
     const boatId = interaction.options.getString('boat');
-    if (!from || !to || !boatId) return interaction.reply({ content: 'Choose a ship, departure island, and destination.', ephemeral: true });
-    if (from.toLowerCase() === to.toLowerCase()) return interaction.reply({ content: 'Choose two different islands.', ephemeral: true });
+    if (!fromChannel || !toChannel || !boatId) return interaction.reply({ content: 'Choose a ship, departure location, and destination location.', ephemeral: true });
+    if (!isJourneyLocation(fromChannel) || !isJourneyLocation(toChannel)) return interaction.reply({ content: 'Choose server text channels, Forums, Forum posts, or threads for both locations.', ephemeral: true });
+    if (fromChannel.id === toChannel.id) return interaction.reply({ content: 'Choose two different locations.', ephemeral: true });
+    const canonicalFrom = locationName(fromChannel);
+    const canonicalTo = locationName(toChannel);
     const cfg = await loadJourneyConfig(client, guildId);
-    const canonicalFrom = cfg.islands.find(name => name.toLowerCase() === from.toLowerCase());
-    const canonicalTo = cfg.islands.find(name => name.toLowerCase() === to.toLowerCase());
-    if (!canonicalFrom || !canonicalTo) return interaction.reply({ content: 'Both islands must be in the travel list. Staff can manage them with /boatconfig.', ephemeral: true });
     const boats = await getBoats(client, guildId, interaction.user.id);
     const boat = boats.find(item => item.id === boatId);
     if (!boat) return interaction.reply({ content: 'You do not own that ship. Use /shipyard action:catalog to get a ship first.', ephemeral: true });
@@ -76,6 +89,8 @@ export default {
     const journey = {
       from: canonicalFrom,
       to: canonicalTo,
+      fromChannelId: fromChannel.id,
+      toChannelId: toChannel.id,
       boatId: boat.id,
       boatName: boat.name,
       boatClass: boat.shipClass,
