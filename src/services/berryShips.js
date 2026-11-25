@@ -29,7 +29,9 @@ export function priceBoat(shipClass, quality, customPrice = null) {
   const ship = SHIP_CLASSES[shipClass];
   const condition = SHIP_QUALITIES[quality];
   if (!ship || !condition) throw new Error('Choose a valid ship class and quality.');
-  const base = shipClass === 'custom' ? Number(customPrice) : ship.basePrice;
+  const base = shipClass === 'custom'
+    ? (customPrice === null ? ship.basePrice : Number(customPrice))
+    : ship.basePrice;
   if (!Number.isSafeInteger(base) || base < ship.basePrice) {
     throw new Error('Custom ships must cost at least 200,000,000 Berries.');
   }
