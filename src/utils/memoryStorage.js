@@ -33,6 +33,20 @@ class MemoryStorage {
         return true;
     }
 
+    async setIfAbsent(key, value, ttl = 30) {
+        const now = Date.now();
+        const expirationTime = this.expirationTimes.get(key);
+        if (expirationTime && now > expirationTime) {
+            this.data.delete(key);
+            this.expirationTimes.delete(key);
+        }
+        if (this.data.has(key)) return false;
+
+        this.data.set(key, value);
+        if (ttl > 0) this.expirationTimes.set(key, now + ttl * 1000);
+        return true;
+    }
+
     async delete(key) {
         this.data.delete(key);
         this.expirationTimes.delete(key);

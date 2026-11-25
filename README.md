@@ -284,3 +284,42 @@ TitanBot is released under the MIT License. See [LICENSE](LICENSE) for details.
 Thank you for choosing TitanBot for your Discord server! We're constantly working to improve and add new features based on community feedback.
 
 *Last updated: May 2026*
+
+## Berry Roleplay Systems
+
+The roleplay commands use the server's Berry balance and save their lists and settings in the bot database. Use PostgreSQL in production so the data survives restarts.
+
+Staff-only Berry RPG commands require the `Admin` role (ID `1569520212858904577`). This covers shops, merchant and loot list management, travel settings and confirmation, relay setup, Berry grants, and staff ship grants.
+
+### Berries and ships
+
+- `/berry balance` checks a balance; staff can use `/berry give` to grant Berries.
+- Money uses the server emoji `<:Berry:1573798988988031087>`.
+- `/shipyard action:catalog` shows Caravel (10,000,000), Brigantine (50,000,000), and Custom (from 200,000,000) prices. Quality choices are Standard, Fast, Damaged, and Special Vessel.
+- Use `/shipyard action:buy` with a ship class, quality, and name. Staff can use `action:grant`; `action:boats`, `action:rename`, and `action:delete` manage your fleet.
+- Use `/boat action:start` and select your boat, departure island, and destination from the Discord choices. A trip takes at most 3 minutes; ship class and quality can shorten it.
+
+### Shops, merchants, and loot
+
+- `/shopadmin` maintains each shop and its stock. `action:create` creates a shop; `add`, `remove`, and `stock` edit the item list. `action:link` opens Discord channel pickers for server channels, Forums, and threads. You can also choose these while creating a shop.
+- `/shop` lists shops and items. Text from a linked channel, selected thread, or active Forum post is shown when members browse that shop. Purchases deduct Berries and reduce stock; sold-out listings are removed.
+- `/merchantadmin` edits the Regular and Black Market item lists and prices.
+- `/lootadmin` edits locations and the Common, Rare, and Epic loot tables. Common chests award Common items; Rare may award Common or Rare; Epic may award Common, Rare, or Epic. Chests can be empty.
+- `/checkloot` finds and opens chests and shows a player's loot inventory.
+
+### Picking channels in Discord
+
+Channel options use Discord's server channel picker, so you can choose channels and threads that actually exist in your server instead of selecting from a hard-coded channel list. For shops, use `/shopadmin action:link` and choose a text channel, Forum, or thread. For manual travel review, use `/boatconfig action:manual` and choose the channel, Forum, or thread. For a relay, `/call action:start` lets you choose any text channel, Forum, or thread for the source and destination. Text features cannot use voice channels or categories.
+
+For a Forum, the bot creates a departure post for manual travel. It can read linked channel text and relay messages from selected channels, Forums, and threads. Give the bot **View Channel** and **Read Message History** for channels it needs to read. It needs **Send Messages** for regular channels and **Send Messages in Threads** (plus **Create Public Threads** in a Forum) for posting there.
+
+### Message relay
+
+- A member with the Admin role can use `/call action:start` to choose a destination and optionally a source channel, Forum, or thread. Bot and webhook messages are copied as `Character name: message` without pinging anyone. Choosing a Forum destination creates a relay thread. If no source is selected, the current channel is used.
+- Relays copy messages from bot accounts and webhook characters such as Tupperbox; regular human messages are ignored. `/call action:stop` removes that member's relays.
+- Duplicate relay links and identical bot posts arriving close together are suppressed.
+
+### Island travel
+
+- `/boatconfig` manages the island list, base trip length (1–3 minutes), and optional manual departure review channel, Forum, or thread. Manual review requires staff to confirm with `/boat action:confirm user:<member>`.
+- Travel posts only progress updates at 25%, 50%, 75%, and 100%. Ship encounters, random events, and travel reward events are disabled. A player must finish the current trip before starting another.

@@ -72,6 +72,13 @@ class DatabaseWrapper {
         return this.db.set(key, value, ttl);
     }
 
+    async setIfAbsent(key, value, ttl = 30) {
+        if (this.db?.setIfAbsent) {
+            return this.db.setIfAbsent(key, value, ttl);
+        }
+        return null;
+    }
+
     async get(key, defaultValue = null) {
         return this.db.get(key, defaultValue);
     }
