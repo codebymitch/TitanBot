@@ -21,7 +21,7 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
   for (const [userId, journey] of Object.entries(journeys)) {
     if (onlyUserId && userId !== onlyUserId) continue;
     if (journey.status !== 'traveling') continue;
-    const duration = Math.max(4, Number(journey.durationMinutes || travelConfig.durationMinutes)) * 60000 + Number(journey.delayMs || 0);
+    const duration = Math.min(180000, Math.max(60000, Number(journey.durationMs) || Number(journey.durationMinutes || travelConfig.durationMinutes) * 60000));
     const progress = Math.min(100, Math.floor(((now - journey.startedAt) / duration) * 4) * 25);
     let lastProgress = Number(journey.progress || 0);
 
@@ -38,14 +38,9 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
           const event = randomJourneyEvent();
           description += '\n' + event;
           if (event.startsWith('⛈️')) {
-            journey.delayMs = Number(journey.delayMs || 0) + 10 * 60000;
-            description += ' This adds 10 minutes to the journey.';
-            shouldPause = true;
+            description += ' The crew braces for the waves and keeps moving.';
           } else if (event.startsWith('🪢')) {
-            journey.status = 'stalled';
-            journey.stalledAt = now;
-            description += ' Use /boat action:repair to continue.';
-            shouldPause = true;
+            description += ' The crew makes quick repairs and continues.';
           } else if (event.startsWith('💰')) {
             const reward = Math.floor(Math.random() * 41) + 10;
             await adjustBerries(client, guildId, userId, reward).catch(() => {});
@@ -59,7 +54,7 @@ export async function processJourneys(client, guildId, onlyUserId = null) {
         delete journeys[userId];
         break;
       }
-      if (shouldPause) break;
+
     }
   }
 
@@ -75,7 +70,7 @@ export async function processAllJourneys(client) {
 
 export function getJourneyProgress(journey) {
   if (journey.status !== 'traveling') return Number(journey.progress || 0);
-  const duration = Math.max(4, Number(journey.durationMinutes || 60)) * 60000 + Number(journey.delayMs || 0);
+  const duration = Math.min(180000, Math.max(60000, Number(journey.durationMs) || Number(journey.durationMinutes || 3) * 60000));
   return Math.min(100, Math.floor(((Date.now() - journey.startedAt) / duration) * 4) * 25);
 }
 
