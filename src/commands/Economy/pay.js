@@ -103,22 +103,22 @@ export default {
 
             const embed = successEmbed(
                 'Payment Successful',
-                `You successfully paid **🍓 {receiver.username}** the amount of **🍓 🍓 {amount.toLocaleString()}**!`
+                `You successfully paid **${receiver.username}** the amount of **🍓 ${amount.toLocaleString()}**!`
             )
                 .addFields(
                     {
                         name: "Payment Amount",
-                        value: `🍓 🍓 {amount.toLocaleString()}`,
+                        value: `🍓 ${amount.toLocaleString()}`,
                         inline: true,
                     },
                     {
                         name: "Your New Balance",
-                        value: `🍓 🍓 {updatedSenderData.wallet.toLocaleString()}`,
+                        value: `🍓 ${updatedSenderData.wallet.toLocaleString()}`,
                         inline: true,
                     },
                 )
                 .setFooter({
-                    text: `Paid to 🍓 {receiver.tag}`,
+                    text: `Paid to ${receiver.tag}`,
                     iconURL: receiver.displayAvatarURL(),
                 });
 
@@ -135,15 +135,15 @@ export default {
             try {
                 const receiverEmbed = createEmbed({ 
                     title: "Incoming Payment!", 
-                    description: `🍓 {interaction.user.username} paid you **🍓 🍓 {amount.toLocaleString()}**.` 
+                    description: `${interaction.user.username} paid you **🍓 ${amount.toLocaleString()}**.` 
                 }).addFields({
                     name: "Your New Cash",
-                    value: `🍓 🍓 {updatedReceiverData.wallet.toLocaleString()}`,
+                    value: `🍓 ${updatedReceiverData.wallet.toLocaleString()}`,
                     inline: true,
                 });
                 await receiver.send({ embeds: [receiverEmbed] });
             } catch (e) {
-                    logger.warn(`Could not DM user 🍓 {receiver.id}: 🍓 {e.message}`);
+                    logger.warn(`Could not DM user ${receiver.id}: ${e.message}`);
             }
     }, { command: 'pay' })
 };
