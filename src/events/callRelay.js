@@ -41,7 +41,12 @@ export default {
     // cannot each send a copy of the same character post.
     const claimKey = 'cache:callrelay:' + message.guild.id + ':' + fingerprint;
     const claimed = await client.db.setIfAbsent?.(claimKey, true, Math.ceil(DUPLICATE_WINDOW_MS / 1000));
-    if (claimed === false) return;
+    // If the shared claim store is unavailable, skip this relay rather than
+    // letting multiple bot workers each send the same character message.
+    if (claimed !== true) {
+      if (claimed == null) logger.warn('Call relay skipped because duplicate protection is unavailable.');
+      return;
+    }
 
     seenMessageIds.set(message.id, now);
     seenPayloads.set(fingerprint, now);
