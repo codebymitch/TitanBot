@@ -369,9 +369,9 @@ async function postMilestoneAnnouncement(
     }
 
     const payload = {
-      content: isTest ? '🧪 Ini preview pengumuman: role dan progres tidak diubah.' : `🎉 Selamat <@${userId}>!`,
+      content: isTest ? '🧪 Ini preview pengumuman: role dan progres tidak diubah.' : `🎉 Selamat ${userId}!`,
       embeds: [embed],
-      allowedMentions: { users: isTest ? [] : [userId] },
+      allowedMentions: { users: isTest ? [userId] : [userId] },
     };
     if (cardBuffer) {
       payload.files = [new AttachmentBuilder(cardBuffer, { name: 'voice-milestone.png' })];
