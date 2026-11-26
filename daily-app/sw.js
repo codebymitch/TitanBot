@@ -1,6 +1,6 @@
 // Service worker: offline cache + notification support on mobile.
-const CACHE = 'daily-app-v6';
-const FILES = ['./', 'index.html', 'firebase-config.js', 'style.css', 'app.js', 'calories.js', 'habits.js', 'reminders.js', 'calendar.js', 'foods-db.js', 'manifest.json', 'icon.svg'];
+const CACHE = 'daily-app-v7';
+const FILES = ['./', 'index.html', 'firebase-config.js', 'style.css', 'app.js', 'calories.js', 'habits.js', 'reminders.js', 'tasks.js', 'calendar.js', 'foods-db.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));

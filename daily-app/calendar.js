@@ -5,6 +5,7 @@ window.CalendarModule = function (ctx) {
   const rem = () => ctx.rem;
   const hab = () => ctx.habits;
   const cal = () => ctx.cal;
+  const tsk = () => ctx.tasks;
   const rerender = () => ctx.render();
 
   const MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
@@ -17,7 +18,7 @@ window.CalendarModule = function (ctx) {
   let mode = pref('mode') || 'month';
   let cursor = dayKey();
   let selected = dayKey();
-  let layers = Object.assign({ holidays: true, habits: true, food: true }, JSON.parse(pref('layers') || '{}'));
+  let layers = Object.assign({ holidays: true, habits: true, food: true, tasks: true }, JSON.parse(pref('layers') || '{}'));
   let hiddenLists = JSON.parse(pref('hidden') || '[]');
 
   // ---------- Hebrew date & holidays ----------
@@ -111,6 +112,24 @@ window.CalendarModule = function (ctx) {
     const over = rem().occurrences(ms(addDays(k, -365)), ms(k)).filter((o) => o.over && !hiddenLists.includes(o.r.list)).map((o) => Object.assign({}, o, { carried: true }));
     return over.concat(list);
   }
+  // משימות עם תאריך יעד (ובהיום — גם משימות פתוחות שעבר התאריך שלהן)
+  function taskList(k, withOverdue) {
+    if (!layers.tasks) return [];
+    const list = tsk().dueOn(k);
+    return withOverdue && k === dayKey() ? tsk().overdueBefore(k).map((t) => Object.assign({ carried: true }, t, { _ref: t })).concat(list) : list;
+  }
+  function taskItem(t) {
+    const l = tsk().listOf(t.listId);
+    const sub = t.subtasks.length ? ` · ☑️ ${t.subtasks.filter((x) => x.done).length}/${t.subtasks.length}` : '';
+    return `<li class="kev ktask ${t.done ? 'done' : ''} ${t.carried ? 'over' : ''}" style="--c:${l.color}">
+      <button class="tick sq" data-kact="task-tick" data-id="${t.id}" aria-label="${t.done ? 'החזרה' : 'סימון כבוצעה'}">${t.done ? '✓' : ''}</button>
+      <button class="kev-body" data-kact="task-edit" data-id="${t.id}">
+        <span class="kev-time">${t.carried ? fmtDay(t.due) : t.time || '📋'}</span>
+        <span class="grow"><span class="title">${t.priority === 'high' ? '‼️ ' : ''}${esc(t.title)}</span>
+        <span class="sub">${t.carried ? '<b class="bad">באיחור</b> · ' : ''}${esc(l.emoji)} ${esc(l.name)}${sub}${t.notes ? ' · 📝' : ''}</span></span>
+      </button>
+    </li>`;
+  }
   const color = (o) => LIST_COLORS[o.r.list] || '#64748b';
   const hm = (ts) => rem().timeOf(ts);
 
@@ -146,6 +165,7 @@ window.CalendarModule = function (ctx) {
       <div class="chips-scroll k-filters">
         ${lists.map(([k, l]) => `<button class="chip k-list ${hiddenLists.includes(k) ? 'off' : ''}" style="--c:${LIST_COLORS[k]}" data-kact="list" data-l="${k}">${l}</button>`).join('')}
         <span class="k-sep"></span>
+        <button class="chip ${layers.tasks ? 'on' : ''}" data-kact="layer" data-l="tasks">📋 משימות</button>
         <button class="chip ${layers.holidays ? 'on' : ''}" data-kact="layer" data-l="holidays">🕎 חגים</button>
         <button class="chip ${layers.habits ? 'on' : ''}" data-kact="layer" data-l="habits">✅ הרגלים</button>
         <button class="chip ${layers.food ? 'on' : ''}" data-kact="layer" data-l="food">🔥 תזונה</button>
@@ -164,8 +184,9 @@ window.CalendarModule = function (ctx) {
     const t = dayKey();
     const goal = cal().goal();
 
-    let monthEvents = 0, monthOver = 0, habDone = 0, habTotal = 0;
+    let monthEvents = 0, monthOver = 0, habDone = 0, habTotal = 0, monthTasks = 0;
     for (let k = first; k <= last; k = addDays(k, 1)) {
+      monthTasks += taskList(k).filter((x) => !x.done).length;
       (ev[k] || []).forEach((o) => { monthEvents++; if (o.over) monthOver++; });
       if (k <= t) { const s = hab().dayStatus(k); habDone += s.done; habTotal += s.total; }
     }
@@ -175,6 +196,7 @@ window.CalendarModule = function (ctx) {
       const k = addDays(start, i);
       const kd = parseDay(k);
       const list = ev[k] || [];
+      const tl = taskList(k);
       const hd = heb(k);
       const hs = layers.holidays ? holidays(k) : [];
       const st = layers.habits && k <= t ? hab().dayStatus(k) : null;
@@ -188,9 +210,10 @@ window.CalendarModule = function (ctx) {
         ${hs.length ? `<span class="kc-hol">${esc(hs[0])}</span>` : ''}
         <span class="kc-evs">
           ${list.slice(0, 3).map((o) => `<i class="ev ${o.done ? 'done' : ''}" style="--c:${color(o)}"><b>${hm(o.ts)}</b> ${esc(o.r.title)}</i>`).join('')}
-          ${list.length > 3 ? `<i class="ev more">+${list.length - 3}</i>` : ''}
+          ${tl.slice(0, Math.max(0, 3 - list.length)).map((x) => `<i class="ev etask ${x.done ? 'done' : ''}" style="--c:${tsk().listOf(x.listId).color}">${x.done ? '☑' : '☐'} ${esc(x.title)}</i>`).join('')}
+          ${list.length + tl.length > 3 ? `<i class="ev more">+${list.length + tl.length - 3}</i>` : ''}
         </span>
-        <span class="kc-dots">${list.slice(0, 4).map((o) => `<i style="--c:${color(o)}" class="${o.done ? 'done' : ''}"></i>`).join('')}${list.length > 4 ? '<i class="plus">+</i>' : ''}</span>
+        <span class="kc-dots">${list.slice(0, 4).map((o) => `<i style="--c:${color(o)}" class="${o.done ? 'done' : ''}"></i>`).join('')}${tl.slice(0, Math.max(0, 4 - list.length)).map((x) => `<i style="--c:${tsk().listOf(x.listId).color}" class="sq ${x.done ? 'done' : ''}"></i>`).join('')}${list.length + tl.length > 4 ? '<i class="plus">+</i>' : ''}</span>
         ${st && st.total ? `<span class="kc-hab" title="הרגלים ${st.done}/${st.total}"><b style="width:${(st.done / st.total) * 100}%"></b></span>` : ''}
         ${kcal ? `<span class="kc-kcal ${kcal > goal * 1.1 ? 'over' : kcal >= goal * 0.8 ? 'ok' : ''}" title="${Math.round(kcal)} קק״ל"></span>` : ''}
       </button>`;
@@ -198,6 +221,7 @@ window.CalendarModule = function (ctx) {
     return `
       <div class="k-month-stats">
         <span>📌 <b>${monthEvents}</b> תזכורות החודש</span>
+        ${layers.tasks && monthTasks ? `<span>📋 <b>${monthTasks}</b> משימות פתוחות</span>` : ''}
         ${monthOver ? `<span class="bad">⚠️ <b>${monthOver}</b> באיחור</span>` : ''}
         ${layers.habits && habTotal ? `<span>✅ הרגלים <b dir="ltr">${Math.round((habDone / habTotal) * 100)}%</b></span>` : ''}
       </div>
@@ -232,10 +256,11 @@ window.CalendarModule = function (ctx) {
     return `<div class="card day-panel">
       <div class="dp-head">
         <div><strong>${k === t ? 'היום · ' : ''}יום ${DAY_NAMES[d.getDay()]}, ${d.getDate()} ב${MONTHS[d.getMonth()]}</strong><span>${hebFull(k)}</span></div>
-        <button class="btn small" data-kact="new" data-d="${k}">+ תזכורת</button>
+        <div class="dp-add"><button class="btn small" data-kact="new" data-d="${k}">+ תזכורת</button><button class="btn ghost small" data-kact="task-new" data-d="${k}">+ משימה</button></div>
       </div>
       ${hs.length ? `<div class="dp-hols">${hs.map((h) => `<span class="${MAJOR.includes(h) ? 'major' : ''}">🕎 ${esc(h)}</span>`).join('')}</div>` : ''}
       ${list.length ? `<ul class="list kevs">${list.map(evItem).join('')}</ul>` : `<p class="empty" style="padding:10px 0">אין תזכורות ביום הזה${k >= t ? ' — אפשר להוסיף ✨' : ''}</p>`}
+      ${(() => { const tl = taskList(k, true); return tl.length ? `<div class="section-label">משימות</div><ul class="list kevs">${tl.map(taskItem).join('')}</ul>` : ''; })()}
       ${habits.length ? `<div class="section-label">הרגלים</div><div class="dp-habits">${habits.map((h) => {
         const done = hab().isDone(h, k);
         return `<button class="dp-h ${done ? 'done' : ''}" style="--hc:${h.color}" data-kact="habit" data-id="${h.id}" data-d="${k}" ${k > t ? 'disabled' : ''}>${done ? '✓' : esc(h.emoji)} ${esc(h.name)}${h.type === 'count' ? ` <small>${hab().val(h, k)}/${h.target}</small>` : ''}</button>`;
@@ -254,7 +279,7 @@ window.CalendarModule = function (ctx) {
     const ev = eventsBetween(s, addDays(s, 7));
     const t = dayKey();
     const strip = Array.from({ length: 7 }, (_, i) => {
-      const k = addDays(s, i); const n = (ev[k] || []).length;
+      const k = addDays(s, i); const n = (ev[k] || []).length + taskList(k).length;
       return `<button class="ws-day ${k === t ? 'today' : ''} ${k === selected ? 'sel' : ''}" data-kact="pick" data-d="${k}"><span>${DAYS[i]}</span><b>${parseDay(k).getDate()}</b><i>${n ? '•'.repeat(Math.min(n, 3)) : ''}</i></button>`;
     }).join('');
     const days = Array.from({ length: 7 }, (_, i) => addDays(s, i)).map((k) => {
@@ -268,8 +293,8 @@ window.CalendarModule = function (ctx) {
           <span class="grow"><strong>יום ${DAY_NAMES[d.getDay()]}${k === t ? ' · היום' : ''}</strong><span>${hebFull(k)}${hs.length ? ' · 🕎 ' + esc(hs.join(' · ')) : ''}</span></span>
           ${st && st.total ? `<span class="wk-hab">✅ ${st.done}/${st.total}</span>` : ''}
         </button>
-        ${list.length ? `<ul class="list kevs">${list.map(evItem).join('')}</ul>` : ''}
-        <button class="link-btn" data-kact="new" data-d="${k}">+ תזכורת</button>
+        ${list.length || taskList(k).length ? `<ul class="list kevs">${list.map(evItem).join('')}${taskList(k).map(taskItem).join('')}</ul>` : ''}
+        <div class="wk-add"><button class="link-btn" data-kact="new" data-d="${k}">+ תזכורת</button><button class="link-btn" data-kact="task-new" data-d="${k}">+ משימה</button></div>
       </div>`;
     }).join('');
     return `<div class="week-strip">${strip}</div>${days}`;
@@ -323,19 +348,20 @@ window.CalendarModule = function (ctx) {
     let html = '';
     for (let k = from; k < to; k = addDays(k, 1)) {
       const list = ev[k] || [];
+      const tl = taskList(k);
       const hs = layers.holidays ? holidays(k) : [];
-      if (!list.length && !hs.length) continue;
+      if (!list.length && !hs.length && !tl.length) continue;
       const d = parseDay(k);
       html += `<div class="ag-day ${k === dayKey() ? 'today' : ''}">
         <button class="ag-date" data-kact="open-day" data-d="${k}"><b>${d.getDate()}</b><span>${DAYS[d.getDay()]}</span><small>${MONTHS[d.getMonth()].slice(0, 3)}</small></button>
         <div class="ag-body">
           <div class="ag-sub">${fmtDay(k)} · ${hebFull(k)}</div>
           ${hs.length ? `<div class="dp-hols">${hs.map((h) => `<span class="${MAJOR.includes(h) ? 'major' : ''}">🕎 ${esc(h)}</span>`).join('')}</div>` : ''}
-          ${list.length ? `<ul class="list kevs">${list.map(evItem).join('')}</ul>` : ''}
+          ${list.length || tl.length ? `<ul class="list kevs">${list.map(evItem).join('')}${tl.map(taskItem).join('')}</ul>` : ''}
         </div>
       </div>`;
     }
-    return `<div class="card">${html || '<p class="empty">אין תזכורות או חגים ב־60 הימים הקרובים</p>'}</div>
+    return `<div class="card">${html || '<p class="empty">אין תזכורות, משימות או חגים ב־60 הימים הקרובים</p>'}</div>
       <button class="btn" style="width:100%" data-kact="new" data-d="${dayKey()}">+ תזכורת חדשה</button>`;
   }
 
@@ -387,6 +413,9 @@ window.CalendarModule = function (ctx) {
         break;
       case 'open-day': case 'goto-day': cursor = selected = k; mode = 'day'; pref('mode', mode); rerender(); window.scrollTo(0, 0); break;
       case 'new': rem().openNew(k, k === dayKey() ? null : '09:00'); break;
+      case 'task-new': tsk().openEdit(null, { due: k }); break;
+      case 'task-edit': tsk().openEdit(b.dataset.id); break;
+      case 'task-tick': tsk().toggle(b.dataset.id); rerender(); break;
       case 'new-at': rem().openNew(k, String(b.dataset.h).padStart(2, '0') + ':00'); break;
       case 'edit': rem().openEdit(b.dataset.id); break;
       case 'tick': rem().toggle(b.dataset.id); rerender(); toast('עודכן ✓'); break;

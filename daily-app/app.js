@@ -6,6 +6,7 @@
   // נשמר מקומית בדפדפן, ואם המשתמש מחובר — גם בחשבון שלו (Firebase) ומסונכרן בין מכשירים.
   const BASE_KEY = 'daily-app-v1';
   const defaults = () => ({
+    tasks: [], taskLists: [],
     foods: [], habits: [], reminders: [], customFoods: [], favorites: [], weights: {},
     goals: { kcal: 2000, pPct: 25, cPct: 45, fPct: 30, fib: 28, sug: 50, na: 2300, profile: null },
     water: { goal: 8, cupMl: 250, log: {}, remind: { on: false, every: 60, from: '08:00', to: '22:00', last: 0 } },
@@ -250,7 +251,8 @@
   const cal = window.CaloriesModule(modCtx);
   const habitsMod = window.HabitsModule(modCtx);
   const remMod = window.RemindersModule(modCtx);
-  Object.assign(modCtx, { rem: remMod, habits: habitsMod, cal });
+  const tasksMod = window.TasksModule(modCtx);
+  Object.assign(modCtx, { rem: remMod, habits: habitsMod, cal, tasks: tasksMod });
   const calendarMod = window.CalendarModule(modCtx);
 
   // ---------- Router ----------
@@ -262,6 +264,7 @@
     water: { title: '💧 שתיית מים', render: renderWater },
     reminders: { title: '⏰ תזכורות', render: () => remMod.render() },
     calendar: { title: '📅 לוח שנה', render: () => calendarMod.render() },
+    tasks: { title: '📋 משימות', render: () => tasksMod.render() },
     account: { title: '👤 חשבון', render: renderAccount },
   };
   function currentRoute() {
@@ -278,7 +281,7 @@
     closeDrawer();
     updateChip();
   }
-  window.addEventListener('hashchange', () => { cal.close(); habitsMod.close(); remMod.close(); render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', () => { cal.close(); habitsMod.close(); remMod.close(); tasksMod.close(); render(); window.scrollTo(0, 0); });
   $('#backBtn').addEventListener('click', () => { location.hash = '#/'; });
 
   // ---------- Side menu (☰) ----------
@@ -316,6 +319,11 @@
         <a class="menu-card c-calnd" href="#/calendar">
           <div class="emoji">📅</div>
           <div><h2>לוח שנה</h2><p>${calendarMod.homeSummary()}</p></div>
+          <span class="arrow">‹</span>
+        </a>
+        <a class="menu-card c-task" href="#/tasks">
+          <div class="emoji">📋</div>
+          <div><h2>משימות</h2><p>${tasksMod.homeSummary()}</p></div>
           <span class="arrow">‹</span>
         </a>
         <a class="menu-card c-rem" href="#/reminders">
@@ -497,6 +505,7 @@
           <div><span class="muted">מאכלים שנרשמו</span><strong>${state.foods.length}</strong></div>
           <div><span class="muted">הרגלים</span><strong>${state.habits.length}</strong></div>
           <div><span class="muted">תזכורות</span><strong>${state.reminders.length}</strong></div>
+          <div><span class="muted">משימות</span><strong>${state.tasks.length}</strong></div>
           <div><span class="muted">ימים עם מעקב מים</span><strong>${Object.keys(state.water.log).length}</strong></div>
         </div>
       </div>`;

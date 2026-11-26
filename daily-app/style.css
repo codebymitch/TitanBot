@@ -663,3 +663,39 @@ a.chip-status { text-decoration: none; }
 .ag-day.today .ag-date span, .ag-day.today .ag-date small { color: #fff; }
 .ag-body { flex: 1; min-width: 0; }
 .ag-sub { font-size: .78rem; color: var(--muted); margin-bottom: 2px; }
+
+/* ===== tasks ===== */
+.c-task .emoji { background: #eef2ff; }
+@media (prefers-color-scheme: dark) { .c-task .emoji { background: #262a4a; } }
+.t-lists { margin-bottom: 10px; }
+.t-lchip { border-color: color-mix(in srgb, var(--lc) 60%, var(--border)); }
+.t-lchip.on { background: var(--lc); border-color: var(--lc); }
+.t-head { border-top: 4px solid var(--lc, var(--primary)); }
+.t-head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.t-head h2 { margin: 0 0 2px; font-size: 1.25rem; }
+.t-head .muted { font-size: .85rem; }
+.t-prog > div { background: var(--lc, var(--primary)); }
+.tasks li { gap: 10px; align-items: flex-start; }
+.t-check {
+  width: 24px; height: 24px; flex: none; margin-top: 3px; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--lc, var(--primary)); background: transparent; color: #fff; font-size: .8rem; font-weight: 800;
+}
+.t-check.small { width: 20px; height: 20px; margin-top: 0; }
+.task.prio-high .t-check { border-color: var(--danger); }
+.task.done .t-check, .subtasks li.done .t-check { background: var(--lc, var(--primary)); border-color: var(--lc, var(--primary)); }
+.task.done .title { text-decoration: line-through; color: var(--muted); }
+.t-body { flex: 1; min-width: 0; display: grid; gap: 3px; text-align: start; background: none; border: 0; padding: 2px 0; cursor: pointer; }
+.t-meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: .76rem; color: var(--muted); }
+.t-list { color: var(--lc); font-weight: 600; }
+.t-due.today { color: var(--primary); font-weight: 600; }
+.t-due.over { color: var(--danger); font-weight: 600; }
+.t-done-toggle { display: block; margin: 10px 0 4px; }
+.subtasks li { padding: 4px 0; gap: 8px; align-items: center; }
+.subtasks .sub-input { flex: 1; padding: 6px 8px; border-radius: 8px; }
+.subtasks li.done .sub-input { text-decoration: line-through; color: var(--muted); }
+/* tasks inside the calendar */
+.tick.sq { border-radius: 50%; }
+.ev.etask { border-inline-start-style: dotted; }
+.kc-dots i.sq { border-radius: 2px; }
+.dp-add { display: flex; gap: 6px; flex: none; }
+.wk-add { display: flex; gap: 14px; }
