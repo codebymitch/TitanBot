@@ -122,8 +122,8 @@ window.CalendarModule = function (ctx) {
     const l = tsk().listOf(t.listId);
     const sub = t.subtasks.length ? ` · ☑️ ${t.subtasks.filter((x) => x.done).length}/${t.subtasks.length}` : '';
     return `<li class="kev ktask ${t.done ? 'done' : ''} ${t.carried ? 'over' : ''}" style="--c:${l.color}">
-      <button class="tick sq" data-kact="task-tick" data-id="${t.id}" aria-label="${t.done ? 'החזרה' : 'סימון כבוצעה'}">${t.done ? '✓' : ''}</button>
-      <button class="kev-body" data-kact="task-edit" data-id="${t.id}">
+      <button class="tick sq" data-kact="task-tick" data-id="${t.key || t.id}" aria-label="${t.done ? 'החזרה' : 'סימון כבוצעה'}">${t.done ? '✓' : ''}</button>
+      <button class="kev-body" data-kact="task-edit" data-id="${t.key || t.id}">
         <span class="kev-time">${t.carried ? fmtDay(t.due) : t.time || '📋'}</span>
         <span class="grow"><span class="title">${t.priority === 'high' ? '‼️ ' : ''}${esc(t.title)}</span>
         <span class="sub">${t.carried ? '<b class="bad">באיחור</b> · ' : ''}${esc(l.emoji)} ${esc(l.name)}${sub}${t.notes ? ' · 📝' : ''}</span></span>
@@ -415,7 +415,7 @@ window.CalendarModule = function (ctx) {
       case 'new': rem().openNew(k, k === dayKey() ? null : '09:00'); break;
       case 'task-new': tsk().openEdit(null, { due: k }); break;
       case 'task-edit': tsk().openEdit(b.dataset.id); break;
-      case 'task-tick': tsk().toggle(b.dataset.id); rerender(); break;
+      case 'task-tick': tsk().toggle(b.dataset.id).then(rerender); break;
       case 'new-at': rem().openNew(k, String(b.dataset.h).padStart(2, '0') + ':00'); break;
       case 'edit': rem().openEdit(b.dataset.id); break;
       case 'tick': rem().toggle(b.dataset.id); rerender(); toast('עודכן ✓'); break;

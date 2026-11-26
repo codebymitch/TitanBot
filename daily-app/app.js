@@ -43,6 +43,13 @@
   const account = { status: 'loading', user: null, fb: null, docRef: null, unsub: null, lastSync: 0, error: '' };
   let cloudTimer = null, cloudWriting = false, cloudDirty = false, lastCloudJson = '';
   let authTab = 'login', authBusy = false, authEmail = '', authName = '';
+  // מצב תצוגה: pending (בטעינה בתוך claude.ai) · full (הכל) · tasks (משימות בלבד)
+  let gate = window.parent !== window ? 'pending' : 'full';
+  function setGate(g) {
+    gate = g;
+    document.body.classList.toggle('restricted', g === 'tasks');
+    if (g === 'tasks' && currentRoute() !== 'tasks') history.replaceState(null, '', '#/tasks');
+  }
 
   function queueCloudSave() {
     if (!account.docRef) return;
@@ -98,13 +105,19 @@
 
   // כשהאתר פתוח בתוך claude.ai (Artifact) — שמירה בחשבון Claude של המשתמש
   async function initClaude() {
-    if (window.parent === window) return false;
+    if (window.parent === window) { setGate('full'); return false; }
     let c = window.claude;
     for (let i = 0; i < 40 && !(c && typeof c.use === 'function'); i++) { await new Promise((r) => setTimeout(r, 250)); c = window.claude; }
-    if (!c || typeof c.use !== 'function') return false;
+    if (!c || typeof c.use !== 'function') { setGate('full'); return false; }
     const [user, db] = await Promise.all([c.use('user').catch(() => null), c.use('db').catch(() => null)]);
     const me = user ? await user.me() : null;
+    // רק הבעלים של האפליקציה רואה את כל הפונקציות; כל השאר — רק משימות
+    setGate(me && me.isOwner ? 'full' : 'tasks');
     if (!db || !me || !me.id) return false;
+    let canWrite = user && user.can ? await user.can('data.write') : null;
+    if (canWrite == null) canWrite = me.isOwner || me.canEdit ? true : null;
+    sharedSvc.start({ db, user, me: me.id, canWrite: canWrite !== false });
+    if (canWrite === false) { account.status = 'readonly'; refreshAccountUI(); render(); return true; } // צופה: המשימות האישיות נשמרות בדפדפן
     account.provider = 'claude';
     account.user = { claude: true, displayName: me.name || '', email: '', photoURL: me.avatarUrl };
     account.docRef = db.doc('data/users/' + me.id + '/state');
@@ -293,6 +306,8 @@
     $, esc, uid, dayKey, addDays, parseDay, fmtDay, DAYS, toast, notify, makeSheet, view: $('#view'),
     state: () => state, save: () => save(), render: () => render(),
   };
+  const sharedSvc = window.SharedLists(modCtx);
+  modCtx.shared = sharedSvc;
   const cal = window.CaloriesModule(modCtx);
   const habitsMod = window.HabitsModule(modCtx);
   const remMod = window.RemindersModule(modCtx);
@@ -318,7 +333,8 @@
   }
   const subRoute = () => location.hash.replace(/^#\/?/, '').split('/')[1] || '';
   function render() {
-    const r = currentRoute();
+    if (gate === 'pending') { view.innerHTML = '<p class="empty" style="padding-top:40px">טוען…</p>'; return; }
+    const r = gate === 'tasks' ? 'tasks' : currentRoute();
     $('#pageTitle').textContent = routes[r].title;
     $('#backBtn').hidden = r === '';
     document.querySelectorAll('#tabbar a').forEach((a) => a.classList.toggle('active', a.dataset.route === r));
