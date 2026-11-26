@@ -93,8 +93,8 @@ export const botConfig = {
   embeds: {
     colors: {
       // Main brand colors.
-      primary: "#336699",
-      secondary: "#2F3136",
+      primary: "#0B3954",
+      secondary: "#1B263B",
 
       // Standard status colors for success/error/warning/info messages.
       success: "#57F287",
@@ -126,7 +126,7 @@ export const botConfig = {
         closed: "#ED4245",
         pending: "#99AAB5",
       },
-      economy: "#F1C40F",
+      economy: "#D4AF37",
       birthday: "#E91E63",
       moderation: "#9B59B6",
 
@@ -141,7 +141,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: "⚓ Sailing the Grand Line • Berry Crew",
       // Footer icon URL (null = no icon).
       icon: null,
     },
@@ -149,7 +149,7 @@ export const botConfig = {
     thumbnail: null,
     author: {
       // Optional default embed author block.
-      name: null,
+      name: "🏴‍☠️ Pirate Crew",
       icon: null,
       url: null,
     },
@@ -161,11 +161,11 @@ export const botConfig = {
   economy: {
     currency: {
       // Currency display name.
-      name: "coins",
+      name: "Berry",
       // Plural display name.
-      namePlural: "coins",
+      namePlural: "Berries",
       // Currency symbol shown in balances.
-      symbol: "$",
+      symbol: "<:Berry:1573798988988031087>",
     },
 
     // Starting balance for new users.
@@ -450,7 +450,7 @@ export const botConfig = {
   features: {
     // Core systems.
     economy: true,
-    leveling: true,
+    leveling: false,
     moderation: true,
     logging: true,
     welcome: true,

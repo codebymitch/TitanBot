@@ -18,6 +18,8 @@ export const DEFAULT_ECONOMY_DATA = {
     lastDeposit: 0,
     lastWithdraw: 0,
     inventory: {},
+    inventoryMeta: {},
+    heldItem: null,
     upgrades: {},
     cooldowns: {}
 };

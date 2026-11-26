@@ -154,7 +154,7 @@ class EconomyService {
       throw createError(
         "Insufficient funds",
         ErrorTypes.VALIDATION,
-        `You only have **$${senderData.wallet.toLocaleString()}** in cash.`,
+        `You only have **<:Berry:1573798988988031087> ${senderData.wallet.toLocaleString()}** in cash.`,
         { required: amount, available: senderData.wallet, senderId }
       );
     }
@@ -279,7 +279,7 @@ class EconomyService {
       throw createError(
         "Insufficient funds",
         ErrorTypes.VALIDATION,
-        `You only have **$${balanceBefore.toLocaleString()}**.`,
+        `You only have **<:Berry:1573798988988031087> ${balanceBefore.toLocaleString()}**.`,
         { required: amount, available: balanceBefore, reason }
       );
     }
@@ -312,7 +312,7 @@ class EconomyService {
       throw createError(
         "Insufficient cash",
         ErrorTypes.VALIDATION,
-        `You only have **$${userData.wallet.toLocaleString()}** in cash.`,
+        `You only have **<:Berry:1573798988988031087> ${userData.wallet.toLocaleString()}** in cash.`,
         { required: amount, available: userData.wallet }
       );
     }
@@ -322,7 +322,7 @@ class EconomyService {
       throw createError(
         "Bank capacity exceeded",
         ErrorTypes.VALIDATION,
-        `Your bank can only hold **$${maxBank.toLocaleString()}**. You would exceed capacity by **$${(currentBank + amount - maxBank).toLocaleString()}**.`,
+        `Your bank can only hold **<:Berry:1573798988988031087> ${maxBank.toLocaleString()}**. You would exceed capacity by **<:Berry:1573798988988031087> ${(currentBank + amount - maxBank).toLocaleString()}**.`,
         { capacity: maxBank, current: currentBank, requested: amount }
       );
     }
@@ -360,7 +360,7 @@ class EconomyService {
       throw createError(
         "Insufficient bank balance",
         ErrorTypes.VALIDATION,
-        `You only have **$${bank.toLocaleString()}** in your bank.`,
+        `You only have **<:Berry:1573798988988031087> ${bank.toLocaleString()}** in your bank.`,
         { required: amount, available: bank }
       );
     }
