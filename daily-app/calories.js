@@ -111,7 +111,6 @@ window.CaloriesModule = function (ctx) {
               <span class="sub">${x.grams ? unitText(x) + ' · ' : ''}ח׳ ${fmt('p', n.p)} · פ׳ ${fmt('c', n.c)} · ש׳ ${fmt('f', n.f)}</span></span>
               <span class="kcal">${Math.round(n.kcal)}</span>
             </button>
-            <button class="del" data-cact="del-entry" data-id="${x.id}" aria-label="מחיקה">✕</button>
           </li>`;
         }).join('')}</ul>` : ''}
         <div class="meal-actions">

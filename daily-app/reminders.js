@@ -132,7 +132,6 @@ window.RemindersModule = function (ctx) {
         </span>
         ${firstLine ? `<span class="r-notes">📝 ${esc(firstLine)}</span>` : ''}
       </button>
-      <button class="del" data-ract="del-one" data-id="${r.id}" aria-label="מחיקת התזכורת" title="מחיקה">🗑️</button>
       ${over ? `<div class="snooze"><span>💤 נודניק:</span>
         <button class="chip" data-ract="snooze" data-id="${r.id}" data-m="10">10 דק׳</button>
         <button class="chip" data-ract="snooze" data-id="${r.id}" data-m="60">שעה</button>
@@ -398,11 +397,8 @@ window.RemindersModule = function (ctx) {
         save(); rerender(); toast(`💤 אזכיר שוב ב${fmtWhen(t)}`);
         break;
       }
-      case 'del-one':
-        if (r && (r.done || await ctx.ask(`למחוק את "${r.title}"?`, { ok: 'מחיקה', danger: true }))) { S().reminders = S().reminders.filter((x) => x.id !== r.id); save(); rerender(); toast('התזכורת נמחקה'); }
-        break;
       case 'clear-done':
-        if (await ctx.ask('למחוק את כל התזכורות שבוצעו?', { ok: 'מחיקה', danger: true })) { S().reminders = S().reminders.filter((x) => !x.done); save(); rerender(); }
+        { const n = S().reminders.filter((x) => x.done).length; if (n && await ctx.ask(`למחוק ${n} תזכורות שבוצעו?`, { ok: 'מחיקה', danger: true })) { S().reminders = S().reminders.filter((x) => !x.done); save(); rerender(); toast(`נמחקו ${n} תזכורות 🧹`); } }
         break;
       case 'ask-notify':
         try { await Notification.requestPermission(); } catch (err) { /* ignore */ }

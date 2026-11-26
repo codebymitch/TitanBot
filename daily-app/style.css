@@ -725,8 +725,6 @@ body.restricted { padding-bottom: 24px; }
 .c-new { margin-top: 8px; }
 .ro-info { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 10px 0 4px; font-size: .88rem; }
 .ro-info span { background: var(--bg); border-radius: 999px; padding: 4px 10px; }
-.t-del, .rem-item > .del { align-self: center; opacity: .55; font-size: .95rem; }
-.t-del:hover, .rem-item > .del:hover { opacity: 1; }
 
 /* ===== in-app dialog ===== */
 .ask-wrap { position: fixed; inset: 0; z-index: 60; background: rgba(10, 12, 30, .45); display: grid; place-items: center; padding: 16px; opacity: 0; transition: opacity .15s; }

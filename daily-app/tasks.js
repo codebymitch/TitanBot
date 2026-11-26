@@ -135,7 +135,6 @@ window.TasksModule = function (ctx) {
           ${t.shared && t.updatedBy && t.updatedBy !== SH().me() ? `<span class="t-by">עודכן ע״י ${esc(SH().nameOf(t.updatedBy))}</span>` : ''}
         </span>
       </button>
-      ${ro ? '' : `<button class="del t-del" data-tact="row-del" data-id="${t.key}" aria-label="מחיקת המשימה" title="מחיקה">🗑️</button>`}
     </li>`;
   }
 
@@ -509,18 +508,15 @@ window.TasksModule = function (ctx) {
       case 'join': openJoin(); break;
       case 'toggle': await toggle(b.dataset.id); rerender(); break;
       case 'edit': openEdit(b.dataset.id); break;
-      case 'row-del': {
-        const t = find(b.dataset.id);
-        if (!t || (!t.done && !(await ctx.ask(`למחוק את "${t.title}"?`, { ok: 'מחיקה', danger: true })))) break;
-        try { await removeTask(t); toast('המשימה נמחקה'); } catch (err) { fail(err); }
-        rerender();
-        break;
-      }
       case 'show-done': showDone = !showDone; rerender(); break;
       case 'clear-done': {
         const ds = filtered(current).filter((t) => t.done && canList(t.listId, 'editor'));
+        if (!ds.length) break;
         if (!(await ctx.ask(`למחוק ${ds.length} משימות שהושלמו?`, { ok: 'מחיקה', danger: true }))) break;
-        try { for (const t of ds) await removeTask(t); } catch (err) { fail(err); }
+        const localIds = new Set(ds.filter((t) => !t.shared).map((t) => t.id));
+        if (localIds.size) { S().tasks = S().tasks.filter((t) => !localIds.has(t.id)); save(); }
+        try { for (const t of ds.filter((x) => x.shared)) await SH().deleteTask(t.sid, t.id); toast(`נמחקו ${ds.length} משימות שהושלמו 🧹`); } catch (err) { fail(err); }
+        showDone = false;
         rerender();
         break;
       }
