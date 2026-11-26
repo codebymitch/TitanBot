@@ -596,6 +596,7 @@ window.CaloriesModule = function (ctx) {
           <label class="field"><span>משקל בגרם</span><input name="ugrams" type="number" min="1" max="2000" value="${u ? u[1] : ''}" inputmode="numeric"></label>
         </div>
         <button class="btn" style="width:100%;margin-top:14px">${ed ? 'שמירה' : 'שמירה במאגר'}</button>
+        ${ed ? `<button type="button" class="btn ghost danger" style="width:100%;margin-top:8px" data-cact="del-custom" data-id="${ed.id}">🗑️ מחיקת המאכל מהמאגר</button>` : ''}
       </form>`;
     $('#customForm').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -646,7 +647,7 @@ window.CaloriesModule = function (ctx) {
       case 'edit-entry': {
         const en = st.foods.find((x) => x.id === id);
         if (en && en.foodId && findFood(en.foodId)) openSheet({ mode: 'food', foodId: en.foodId, entryId: en.id, meal: en.meal, unit: en.unit || 'גרם', qty: en.qty || en.grams });
-        else toast('אפשר רק למחוק פריט שנוסף בהוספה מהירה');
+        else if (en && confirm(`למחוק את "${en.name}" (${Math.round(nutr(en).kcal)} קק״ל) מהיומן?`)) { st.foods = st.foods.filter((x) => x.id !== id); save(); rerender(); toast('נמחק מהיומן'); }
         break;
       }
       case 'close-sheet': closeSheet(); break;

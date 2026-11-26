@@ -132,6 +132,7 @@ window.RemindersModule = function (ctx) {
         </span>
         ${firstLine ? `<span class="r-notes">📝 ${esc(firstLine)}</span>` : ''}
       </button>
+      <button class="del" data-ract="del-one" data-id="${r.id}" aria-label="מחיקת התזכורת" title="מחיקה">🗑️</button>
       ${over ? `<div class="snooze"><span>💤 נודניק:</span>
         <button class="chip" data-ract="snooze" data-id="${r.id}" data-m="10">10 דק׳</button>
         <button class="chip" data-ract="snooze" data-id="${r.id}" data-m="60">שעה</button>
@@ -397,6 +398,9 @@ window.RemindersModule = function (ctx) {
         save(); rerender(); toast(`💤 אזכיר שוב ב${fmtWhen(t)}`);
         break;
       }
+      case 'del-one':
+        if (r && (r.done || confirm(`למחוק את "${r.title}"?`))) { S().reminders = S().reminders.filter((x) => x.id !== r.id); save(); rerender(); toast('התזכורת נמחקה'); }
+        break;
       case 'clear-done':
         if (confirm('למחוק את כל התזכורות שבוצעו?')) { S().reminders = S().reminders.filter((x) => !x.done); save(); rerender(); }
         break;

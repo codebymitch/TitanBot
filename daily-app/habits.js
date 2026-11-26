@@ -287,6 +287,7 @@ window.HabitsModule = function (ctx) {
         <label class="field" style="margin-top:12px"><span>הערות / למה זה חשוב לי</span><textarea name="notes" rows="2" maxlength="300">${esc(d.notes)}</textarea></label>
       </form>
       <div class="sheet-foot row">
+        ${isNew ? '' : '<button class="btn ghost danger" data-hact="delete" style="flex:0 0 auto" aria-label="מחיקת ההרגל">🗑️ מחיקה</button>'}
         <button class="btn" data-hact="save-habit">${isNew ? 'יצירת הרגל' : 'שמירה'}</button>
       </div>`;
     const form = $('#hForm');
