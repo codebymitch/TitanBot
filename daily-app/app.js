@@ -58,7 +58,8 @@
     const ref = account.docRef;
     try {
       if (json !== lastCloudJson) {
-        await account.fb.fs.setDoc(ref, { json, updatedAt: Date.now() });
+        if (account.provider === 'claude') await ref.set({ json, updatedAt: Date.now() });
+        else await account.fb.fs.setDoc(ref, { json, updatedAt: Date.now() });
         lastCloudJson = json;
         account.lastSync = Date.now();
         account.error = '';
@@ -75,7 +76,10 @@
 
   async function initAccount() {
     const cfg = window.FIREBASE_CONFIG;
-    if (!cfg || !cfg.apiKey) { account.status = 'unconfigured'; refreshAccountUI(); return; }
+    if (!cfg || !cfg.apiKey) {
+      if (await initClaude()) return;
+      account.status = 'unconfigured'; refreshAccountUI(); return;
+    }
     try {
       const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
       const [appM, authM, fs] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')]);
@@ -90,6 +94,47 @@
       account.error = 'לא הצלחנו לטעון את מערכת החשבונות — העבודה נשמרת מקומית';
       refreshAccountUI();
     }
+  }
+
+  // כשהאתר פתוח בתוך claude.ai (Artifact) — שמירה בחשבון Claude של המשתמש
+  async function initClaude() {
+    if (window.parent === window) return false;
+    let c = window.claude;
+    for (let i = 0; i < 40 && !(c && typeof c.use === 'function'); i++) { await new Promise((r) => setTimeout(r, 250)); c = window.claude; }
+    if (!c || typeof c.use !== 'function') return false;
+    const [user, db] = await Promise.all([c.use('user').catch(() => null), c.use('db').catch(() => null)]);
+    const me = user ? await user.me() : null;
+    if (!db || !me || !me.id) return false;
+    account.provider = 'claude';
+    account.user = { claude: true, displayName: me.name || '', email: '', photoURL: me.avatarUrl };
+    account.docRef = db.doc('data/users/' + me.id + '/state');
+    localKey = BASE_KEY + ':' + me.id;
+    try {
+      const snap = await account.docRef.get();
+      const remote = snap.exists ? snap.data() : null;
+      if (remote && remote.json) {
+        lastCloudJson = remote.json;
+        state = normalize(JSON.parse(remote.json));
+        try { localStorage.setItem(localKey, remote.json); } catch (e) { /* ignore */ }
+      } else save();
+      account.status = 'connected';
+      account.lastSync = Date.now();
+      const ref = account.docRef;
+      ref.onSnapshot((sn) => {
+        const d = sn.exists ? sn.data() : null;
+        if (!d || !d.json || d.json === lastCloudJson || cloudDirty || cloudWriting) return;
+        lastCloudJson = d.json;
+        state = normalize(JSON.parse(d.json));
+        try { localStorage.setItem(localKey, d.json); } catch (e) { /* ignore */ }
+        account.lastSync = Date.now();
+        render();
+      }, () => {});
+    } catch (e) {
+      account.status = 'error';
+      account.error = 'לא הצלחנו לטעון את הנתונים מהחשבון — העבודה נשמרת בדפדפן';
+    }
+    render();
+    return true;
   }
 
   async function onUser(u) {
@@ -446,7 +491,7 @@
           <div>
             <div class="title" id="accName"></div>
             <div class="sub" id="accEmail" dir="ltr" style="text-align:right"></div>
-            <div class="sub ok">☁️ מחובר/ת — הכל נשמר בחשבון</div>
+            <div class="sub ok">☁️ מחובר/ת — הכל נשמר בחשבון${u.claude ? ' Claude שלך' : ''}</div>
           </div>
         </div>
         <ul class="facts">
@@ -456,12 +501,12 @@
         <div class="sync-line muted">${account.error ? `<span style="color:var(--danger)">${esc(account.error)}</span>` : `סונכרן לאחרונה: ${new Date(account.lastSync).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`}</div>
         <div class="row" style="margin-top:10px">
           <button class="btn ghost" data-act="sync-now">🔄 סנכרון עכשיו</button>
-          <button class="btn ghost" data-act="logout">🚪 התנתקות</button>
+          ${u.claude ? '' : '<button class="btn ghost" data-act="logout">🚪 התנתקות</button>'}
         </div>
-        <details class="danger-zone"><summary>מחיקת החשבון</summary>
+        ${u.claude ? '' : `<details class="danger-zone"><summary>מחיקת החשבון</summary>
           <p class="muted tiny">פעולה זו מוחקת את החשבון ואת כל הנתונים השמורים בו לצמיתות.</p>
           <button class="btn ghost danger small" data-act="delete-account">🗑️ מחיקת החשבון לצמיתות</button>
-        </details>`;
+        </details>`}`;
     } else if (account.status === 'guest') {
       const reg = authTab === 'register';
       body = `
