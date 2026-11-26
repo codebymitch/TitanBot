@@ -399,17 +399,17 @@ window.RemindersModule = function (ctx) {
         break;
       }
       case 'del-one':
-        if (r && (r.done || confirm(`למחוק את "${r.title}"?`))) { S().reminders = S().reminders.filter((x) => x.id !== r.id); save(); rerender(); toast('התזכורת נמחקה'); }
+        if (r && (r.done || await ctx.ask(`למחוק את "${r.title}"?`, { ok: 'מחיקה', danger: true }))) { S().reminders = S().reminders.filter((x) => x.id !== r.id); save(); rerender(); toast('התזכורת נמחקה'); }
         break;
       case 'clear-done':
-        if (confirm('למחוק את כל התזכורות שבוצעו?')) { S().reminders = S().reminders.filter((x) => !x.done); save(); rerender(); }
+        if (await ctx.ask('למחוק את כל התזכורות שבוצעו?', { ok: 'מחיקה', danger: true })) { S().reminders = S().reminders.filter((x) => !x.done); save(); rerender(); }
         break;
       case 'ask-notify':
         try { await Notification.requestPermission(); } catch (err) { /* ignore */ }
         rerender();
         break;
       case 'delete':
-        if (confirm('למחוק את התזכורת?')) { S().reminders = S().reminders.filter((x) => x.id !== sh.id); save(); sheet.close(); rerender(); toast('נמחקה'); }
+        if (await ctx.ask('למחוק את התזכורת?', { ok: 'מחיקה', danger: true })) { S().reminders = S().reminders.filter((x) => x.id !== sh.id); save(); sheet.close(); rerender(); toast('נמחקה'); }
         break;
       case 'dup': {
         readForm($('#rForm'));

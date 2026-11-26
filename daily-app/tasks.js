@@ -442,7 +442,7 @@ window.TasksModule = function (ctx) {
   async function shareList() {
     const id = sh.id;
     const local = localLists().find((x) => x.id === id);
-    if (!confirm(`להפוך את "${local.name}" לרשימה משותפת? אחרי זה אפשר להזמין אליה אנשים.`)) return;
+    if (!(await ctx.ask(`להפוך את "${local.name}" לרשימה משותפת? אחרי זה אפשר להזמין אליה אנשים.`, { ok: '🤝 שיתוף' }))) return;
     try {
       const own = S().tasks.filter((t) => t.listId === id);
       const sid = await SH().shareLocal(Object.assign({}, local, { name: ($('#lForm').name.value || local.name).trim(), emoji: sh.draft.emoji, color: sh.draft.color }), own);
@@ -459,11 +459,11 @@ window.TasksModule = function (ctx) {
     const id = sh.id;
     const l = listOf(id);
     if (l.shared) {
-      if (!confirm('למחוק את הרשימה המשותפת, את כל המשימות והתגובות שבה, אצל כל המשתתפים?')) return;
+      if (!(await ctx.ask('למחוק את הרשימה המשותפת, את כל המשימות והתגובות שבה, אצל כל המשתתפים?', { ok: 'מחיקה', danger: true }))) return;
       try { await SH().deleteList(l.sid); } catch (e) { fail(e); return; }
     } else {
       const target = localLists().find((x) => x.id !== id);
-      if (!confirm(moveTasks ? `להעביר את המשימות ל"${target.name}" ולמחוק את הרשימה?` : 'למחוק את הרשימה ואת כל המשימות שבה?')) return;
+      if (!(await ctx.ask(moveTasks ? `להעביר את המשימות ל"${target.name}" ולמחוק את הרשימה?` : 'למחוק את הרשימה ואת כל המשימות שבה?', { ok: 'מחיקה', danger: true }))) return;
       const st = S();
       if (moveTasks) st.tasks.forEach((t) => { if (t.listId === id) t.listId = target.id; });
       else st.tasks = st.tasks.filter((t) => t.listId !== id);
@@ -511,7 +511,7 @@ window.TasksModule = function (ctx) {
       case 'edit': openEdit(b.dataset.id); break;
       case 'row-del': {
         const t = find(b.dataset.id);
-        if (!t || (!t.done && !confirm(`למחוק את "${t.title}"?`))) break;
+        if (!t || (!t.done && !(await ctx.ask(`למחוק את "${t.title}"?`, { ok: 'מחיקה', danger: true })))) break;
         try { await removeTask(t); toast('המשימה נמחקה'); } catch (err) { fail(err); }
         rerender();
         break;
@@ -519,7 +519,7 @@ window.TasksModule = function (ctx) {
       case 'show-done': showDone = !showDone; rerender(); break;
       case 'clear-done': {
         const ds = filtered(current).filter((t) => t.done && canList(t.listId, 'editor'));
-        if (!confirm(`למחוק ${ds.length} משימות שהושלמו?`)) break;
+        if (!(await ctx.ask(`למחוק ${ds.length} משימות שהושלמו?`, { ok: 'מחיקה', danger: true }))) break;
         try { for (const t of ds) await removeTask(t); } catch (err) { fail(err); }
         rerender();
         break;
@@ -527,7 +527,7 @@ window.TasksModule = function (ctx) {
       case 'close': sheet.close(); break;
       case 'save': saveTask(); break;
       case 'delete':
-        if (confirm('למחוק את המשימה?')) { try { await removeTask(find(sh.key)); sheet.close(); rerender(); toast('נמחקה'); } catch (err) { fail(err); } }
+        if (await ctx.ask('למחוק את המשימה?', { ok: 'מחיקה', danger: true })) { try { await removeTask(find(sh.key)); sheet.close(); rerender(); toast('נמחקה'); } catch (err) { fail(err); } }
         break;
       case 'dup':
         read($('#tForm'));
@@ -552,7 +552,7 @@ window.TasksModule = function (ctx) {
       case 'list-delete': removeList(false); break;
       case 'list-leave': {
         const l = listOf(sh.id);
-        if (!confirm(`לעזוב את "${l.name}"? אפשר להצטרף שוב רק עם קוד חדש.`)) break;
+        if (!(await ctx.ask(`לעזוב את "${l.name}"? אפשר להצטרף שוב רק עם קוד חדש.`, { ok: 'עזיבה', danger: true }))) break;
         try { await SH().leave(l.sid); } catch (err) { fail(err); }
         current = 'today'; remember(); sheet.close(); rerender();
         break;
@@ -561,13 +561,15 @@ window.TasksModule = function (ctx) {
         const l = listOf(sh.id);
         try {
           const code = await SH().createInvite(l.sid, b.dataset.r);
-          try { await navigator.clipboard.writeText(code); toast('הקוד נוצר והועתק 📋'); } catch (err) { toast('הקוד נוצר'); }
+          let copied = false;
+          try { await navigator.clipboard.writeText(code); copied = true; } catch (err) { /* blocked in some frames */ }
+          await ctx.ask(copied ? 'הקוד נוצר והועתק 📋 — שלחו אותו למי שרוצים להזמין:' : 'הקוד נוצר — העתיקו אותו ושלחו למי שרוצים להזמין:', { code, ok: 'סגירה' });
           setTimeout(() => { if (sh && sh.mode === 'list') drawList(); }, 400);
         } catch (err) { fail(err); }
         break;
       }
       case 'inv-copy':
-        try { await navigator.clipboard.writeText(b.dataset.code); toast('הועתק 📋'); } catch (err) { prompt('העתיקו את הקוד:', b.dataset.code); }
+        try { await navigator.clipboard.writeText(b.dataset.code); toast('הועתק 📋'); } catch (err) { await ctx.ask('העתיקו את הקוד ושלחו אותו:', { code: b.dataset.code, ok: 'סגירה' }); }
         break;
       case 'inv-revoke': {
         const l = listOf(sh.id);
@@ -576,7 +578,7 @@ window.TasksModule = function (ctx) {
       }
       case 'm-remove': {
         const l = listOf(sh.id);
-        if (!confirm('להסיר את המשתתף/ת מהרשימה?')) break;
+        if (!(await ctx.ask('להסיר את המשתתף/ת מהרשימה?', { ok: 'הסרה', danger: true }))) break;
         try { await SH().removeMember(l.sid, b.dataset.u); toast('הוסר/ה'); setTimeout(() => { if (sh && sh.mode === 'list') drawList(); }, 400); } catch (err) { fail(err); }
         break;
       }

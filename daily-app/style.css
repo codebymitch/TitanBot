@@ -727,3 +727,13 @@ body.restricted { padding-bottom: 24px; }
 .ro-info span { background: var(--bg); border-radius: 999px; padding: 4px 10px; }
 .t-del, .rem-item > .del { align-self: center; opacity: .55; font-size: .95rem; }
 .t-del:hover, .rem-item > .del:hover { opacity: 1; }
+
+/* ===== in-app dialog ===== */
+.ask-wrap { position: fixed; inset: 0; z-index: 60; background: rgba(10, 12, 30, .45); display: grid; place-items: center; padding: 16px; opacity: 0; transition: opacity .15s; }
+.ask-wrap.open { opacity: 1; }
+.ask { background: var(--card); border-radius: 18px; padding: 18px; width: min(360px, 100%); box-shadow: 0 10px 40px rgba(0,0,0,.25); display: grid; gap: 12px; }
+.ask-msg { margin: 0; font-size: 1rem; line-height: 1.5; }
+.ask-code { font-size: 1.05rem; text-align: center; font-weight: 700; letter-spacing: .5px; }
+.ask-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.ask-btns .btn { flex: 1; }
+.btn.danger-solid { background: var(--danger); color: #fff; }

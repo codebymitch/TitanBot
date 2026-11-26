@@ -628,7 +628,7 @@ window.CaloriesModule = function (ctx) {
   }
 
   // ---------- actions ----------
-  function onAction(e) {
+  async function onAction(e) {
     const b = e.target.closest('[data-cact]');
     if (!b) return;
     const id = b.dataset.id;
@@ -647,7 +647,7 @@ window.CaloriesModule = function (ctx) {
       case 'edit-entry': {
         const en = st.foods.find((x) => x.id === id);
         if (en && en.foodId && findFood(en.foodId)) openSheet({ mode: 'food', foodId: en.foodId, entryId: en.id, meal: en.meal, unit: en.unit || 'גרם', qty: en.qty || en.grams });
-        else if (en && confirm(`למחוק את "${en.name}" (${Math.round(nutr(en).kcal)} קק״ל) מהיומן?`)) { st.foods = st.foods.filter((x) => x.id !== id); save(); rerender(); toast('נמחק מהיומן'); }
+        else if (en && await ctx.ask(`למחוק את "${en.name}" (${Math.round(nutr(en).kcal)} קק״ל) מהיומן?`, { ok: 'מחיקה', danger: true })) { st.foods = st.foods.filter((x) => x.id !== id); save(); rerender(); toast('נמחק מהיומן'); }
         break;
       }
       case 'close-sheet': closeSheet(); break;
@@ -685,7 +685,7 @@ window.CaloriesModule = function (ctx) {
       case 'new-custom': openSheet({ mode: 'custom', meal: sheet ? sheet.meal : guessMeal(), q: sheet ? sheet.q : foodsQ, back: !!sheet, fromFoods: !sheet }); break;
       case 'edit-custom': openSheet({ mode: 'custom', editId: id, meal: sheet.meal, fromFoods: sheet.fromFoods }); break;
       case 'del-custom':
-        if (confirm('למחוק את המאכל מהמאגר? (פריטים שכבר ביומן יישארו)')) {
+        if (await ctx.ask('למחוק את המאכל מהמאגר? (פריטים שכבר ביומן יישארו)', { ok: 'מחיקה', danger: true })) {
           st.customFoods = st.customFoods.filter((x) => x.id !== id);
           st.favorites = st.favorites.filter((x) => x !== id);
           save(); closeSheet(); rerender();

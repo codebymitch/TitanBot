@@ -338,7 +338,7 @@ window.HabitsModule = function (ctx) {
   }
 
   // ---------- actions ----------
-  function onAction(e) {
+  async function onAction(e) {
     const b = e.target.closest('[data-hact]');
     if (!b) return;
     const t = dayKey();
@@ -391,7 +391,7 @@ window.HabitsModule = function (ctx) {
         toast(h.archived ? 'ההרגל הועבר לארכיון — ההיסטוריה נשמרת' : 'ההרגל חזר לרשימה');
         break;
       case 'delete':
-        if (confirm(`למחוק את "${h.name}" וכל ההיסטוריה שלו? (אפשר במקום זה להעביר לארכיון)`)) {
+        if (await ctx.ask(`למחוק את "${h.name}" וכל ההיסטוריה שלו? (אפשר במקום זה להעביר לארכיון)`, { ok: 'מחיקה', danger: true })) {
           S().habits = S().habits.filter((x) => x.id !== h.id); save(); sheet.close(); rerender(); toast('ההרגל נמחק');
         }
         break;

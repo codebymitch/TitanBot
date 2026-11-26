@@ -115,7 +115,8 @@
     setGate(me && me.isOwner ? 'full' : 'tasks');
     if (!db || !me || !me.id) return false;
     let canWrite = user && user.can ? await user.can('data.write') : null;
-    if (canWrite == null) canWrite = me.isOwner || me.canEdit ? true : null;
+    if (me.isOwner) canWrite = true; // הבעלים תמיד יכול לכתוב
+    if (canWrite == null) canWrite = me.canEdit ? true : null;
     sharedSvc.start({ db, user, me: me.id, canWrite: canWrite !== false });
     if (canWrite === false) { account.status = 'readonly'; refreshAccountUI(); render(); return true; } // צופה: המשימות האישיות נשמרות בדפדפן
     account.provider = 'claude';
@@ -278,6 +279,31 @@
     try { if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate([200, 100, 200]); } catch (e) { /* ignore */ }
   }
 
+  // ---------- In-app dialog (confirm()/prompt() are blocked inside claude.ai) ----------
+  function ask(message, opts = {}) {
+    return new Promise((resolve) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'ask-wrap';
+      wrap.innerHTML = `<div class="ask" role="alertdialog" aria-modal="true">
+        <p class="ask-msg"></p>
+        ${opts.code ? `<input class="ask-code" readonly dir="ltr">` : ''}
+        <div class="ask-btns">
+          ${opts.code ? '' : `<button class="btn ghost" data-v="0">${opts.cancel || 'ביטול'}</button>`}
+          <button class="btn ${opts.danger ? 'danger-solid' : ''}" data-v="1">${opts.ok || 'אישור'}</button>
+        </div></div>`;
+      wrap.querySelector('.ask-msg').textContent = message;
+      const code = wrap.querySelector('.ask-code');
+      if (code) code.value = opts.code;
+      document.body.appendChild(wrap);
+      requestAnimationFrame(() => wrap.classList.add('open'));
+      const done = (v) => { wrap.remove(); document.removeEventListener('keydown', key, true); resolve(v); };
+      const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } if (e.key === 'Enter') { e.preventDefault(); done(true); } };
+      document.addEventListener('keydown', key, true);
+      wrap.addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (b) done(b.dataset.v === '1'); else if (e.target === wrap) done(false); });
+      if (code) { code.focus(); code.select(); } else wrap.querySelector('[data-v="1"]').focus();
+    });
+  }
+
   // ---------- Bottom sheet helper ----------
   function makeSheet(id, onAction, onClose) {
     let el = null;
@@ -303,7 +329,7 @@
 
   // ---------- Modules (calories.js, habits.js, reminders.js) ----------
   const modCtx = {
-    $, esc, uid, dayKey, addDays, parseDay, fmtDay, DAYS, toast, notify, makeSheet, view: $('#view'),
+    $, esc, uid, dayKey, addDays, parseDay, fmtDay, DAYS, toast, notify, makeSheet, ask, view: $('#view'),
     state: () => state, save: () => save(), render: () => render(),
   };
   const sharedSvc = window.SharedLists(modCtx);
@@ -660,7 +686,7 @@
         toast('התנתקת. הנתונים נשארו שמורים בחשבון');
         break;
       case 'delete-account': {
-        if (!confirm('למחוק את החשבון ואת כל הנתונים שבו לצמיתות? אי אפשר לבטל את זה.')) break;
+        if (!(await ask('למחוק את החשבון ואת כל הנתונים שבו לצמיתות? אי אפשר לבטל את זה.', { ok: 'מחיקה', danger: true }))) break;
         const { auth, authM, fs } = account.fb;
         try {
           const ref = account.docRef;
