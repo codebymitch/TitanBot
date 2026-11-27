@@ -129,6 +129,61 @@ export function clearQueue(guildId) {
   return true;
 }
 
+export function moveInQueue(guildId, fromIndex, toIndex) {
+  const state = getPlayerState(guildId);
+  if (!state || !Array.isArray(state.queue)) return false;
+
+  const from = Number(fromIndex) - 1;
+  const to = Number(toIndex) - 1;
+
+  if (
+    !Number.isInteger(from) ||
+    !Number.isInteger(to) ||
+    from < 0 ||
+    from >= state.queue.length ||
+    to < 0 ||
+    to >= state.queue.length
+  ) {
+    return false;
+  }
+
+  const [movedItem] = state.queue.splice(from, 1);
+  state.queue.splice(to, 0, movedItem);
+  setPlayerState(guildId, state);
+  return movedItem;
+}
+
+export function destroyPlayerSession(guildIdOrInteraction) {
+  const guildId = typeof guildIdOrInteraction === 'string'
+    ? guildIdOrInteraction
+    : guildIdOrInteraction?.guild?.id;
+
+  if (!guildId) return false;
+
+  const state = getPlayerState(guildId);
+  if (state && typeof state.cleanupStream === 'function') {
+    try {
+      state.cleanupStream();
+    } catch {}
+  }
+
+  if (state?.player) {
+    try {
+      state.player.stop(true);
+    } catch {}
+  }
+
+  try {
+    const connection = getVoiceConnection(guildId);
+    if (connection) {
+      connection.destroy();
+    }
+  } catch {}
+
+  clearPlayerState(guildId);
+  return true;
+}
+
 export async function resolveTrack(query, requestedBy) {
   const input = isUrl(query) ? query.trim() : `ytsearch1:${query.trim()}`;
 
@@ -340,34 +395,7 @@ export async function joinVoiceChannel(interactionOrGuild, voiceChannel) {
 }
 
 export function leaveVoiceChannel(guildIdOrInteraction) {
-  const guildId = typeof guildIdOrInteraction === 'string'
-    ? guildIdOrInteraction
-    : guildIdOrInteraction?.guild?.id;
-
-  if (!guildId) return false;
-
-  const state = getPlayerState(guildId);
-  if (state && typeof state.cleanupStream === 'function') {
-    try {
-      state.cleanupStream();
-    } catch {}
-  }
-
-  if (state?.player) {
-    try {
-      state.player.stop(true);
-    } catch {}
-  }
-
-  try {
-    const connection = getVoiceConnection(guildId);
-    if (connection) {
-      connection.destroy();
-    }
-  } catch {}
-
-  clearPlayerState(guildId);
-  return true;
+  return destroyPlayerSession(guildIdOrInteraction);
 }
 
 export async function playNextInQueue(guildId, client) {
@@ -511,7 +539,7 @@ export async function handleStop(interaction) {
     return replyMusicError(interaction, 'The bot is not currently playing audio.', true);
   }
 
-  leaveVoiceChannel(interaction.guild.id);
+  destroyPlayerSession(interaction.guild.id);
 
   return replyMusicSuccess(interaction, 'Stopped playback and left the voice channel.');
 }
