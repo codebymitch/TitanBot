@@ -14,7 +14,7 @@ import {
 } from './musicEmbeds.js';
 import { refreshPlayerMessage } from './playerHandler.js';
 
-const YOUTUBE_URL_PATTERN = /(?:youtube\.com|youtu\.be)/i;
+const URL_PATTERN = /^https?:\/\/\S+$/i;
 const PLAYER_CONNECT_TIMEOUT_MS = 12_000;
 
 function getConnectedLavalinkNodes(client) {
@@ -158,6 +158,25 @@ function isDuplicateTrack(player, track) {
     return player.queue.some((existing) => existing.info?.uri === uri);
 }
 
+async function resolveTracks(client, rawQuery, requester, source = 'auto') {
+    const query = String(rawQuery || '').trim();
+    if (!query) {
+        throw new TitanBotError('Empty query', ErrorTypes.USER_INPUT, 'Please provide a song name or URL.');
+    }
+
+    const isUrl = URL_PATTERN.test(query) || query.startsWith('spotify:');
+    const resolvePayload = {
+        query,
+        requester,
+    };
+
+    if (!isUrl && source && source !== 'auto') {
+        resolvePayload.source = source;
+    }
+
+    return client.riffy.resolve(resolvePayload);
+}
+
 export async function joinVoiceChannel(client, interaction) {
     assertRiffyAvailable(client);
     assertInVoice(interaction.member);
@@ -191,33 +210,22 @@ export async function joinVoiceChannel(client, interaction) {
 
     return successEmbed(
         'Joined Voice Channel',
-        `Connected to **${channel.name}**. Use /play to start music, or /music for playback controls.`,
+        `Connected to **${channel.name}**. Use /play to start music from Spotify, YouTube, or any source, or /music for controls.`,
     );
 }
 
-export async function playQuery(client, interaction, query) {
-    if (YOUTUBE_URL_PATTERN.test(query)) {
-        throw new TitanBotError(
-            'YouTube URL blocked',
-            ErrorTypes.USER_INPUT,
-            'YouTube links are not supported. Try a song name instead.',
-        );
-    }
+export async function playQuery(client, interaction, query, options = {}) {
+    const { player } = await ensurePlayer(client, interaction);
+    const source = options.source ?? 'auto';
 
-    const { player, guildData } = await ensurePlayer(client, interaction);
-
-    const result = await client.riffy.resolve({
-        query,
-        requester: interaction.user,
-    });
-
+    const result = await resolveTracks(client, query, interaction.user, source);
     const { loadType, tracks, playlistInfo } = result;
 
     if (loadType === 'playlist' || loadType === 'PLAYLIST_LOADED') {
         let added = 0;
         let skipped = 0;
 
-        for (const track of tracks) {
+        for (const track of tracks || []) {
             track.info.requester = interaction.user;
             if (isDuplicateTrack(player, track)) {
                 skipped += 1;
@@ -227,14 +235,14 @@ export async function playQuery(client, interaction, query) {
             added += 1;
         }
 
-        if (!player.playing && !player.paused) {
+        if (!player.playing && !player.paused && added > 0) {
             await startPlayback(player);
         }
 
         return {
             embed: successEmbed(
                 'Playlist Added',
-                `**${playlistInfo?.name || 'Playlist'}**\nAdded ${added} of ${tracks.length} track(s).${skipped ? ` Skipped ${skipped} duplicate(s).` : ''}`,
+                `**${playlistInfo?.name || 'Playlist'}**\nAdded ${added} of ${(tracks || []).length} track(s).${skipped ? ` Skipped ${skipped} duplicate(s).` : ''}`,
             ),
         };
     }
@@ -288,8 +296,6 @@ export async function skipTrack(client, interaction) {
     }
     assertCanControl(interaction.member, player);
     const title = player.current.info?.title || 'Unknown';
-    // Under track-loop, stop() would replay the same track. Clear it so the skip
-    // advances; trackStart re-applies the stored loop mode to the next track.
     if (player.loop === 'track') {
         player.setLoop('none');
     }
