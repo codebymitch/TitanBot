@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import {
   playQuery,
   pausePlayback,
@@ -168,7 +168,6 @@ export default {
       sub
         .setName('clear')
         .setDescription('Clear all queued tracks')
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
     ),
 
   async execute(interaction) {
