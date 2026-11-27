@@ -42,8 +42,15 @@ python3 -m http.server 8080
    window.FIREBASE_CONFIG = { apiKey: "...", authDomain: "...", projectId: "...", storageBucket: "...", messagingSenderId: "...", appId: "..." };
    ```
    (הערכים האלה לא סודיים — האבטחה היא בכללי Firestore.)
-6. **Authentication → Settings → Authorized domains** → מוסיפים את `ofeknave.github.io` (ו־`localhost` כבר קיים לבדיקות).
-7. עושים commit ל־`main` — האתר יתעדכן תוך דקה-שתיים.
+6. באותו קובץ, ב־`window.SITE_OWNER_EMAIL`, כותבים את המייל של בעל/ת האתר. רק החשבון הזה יראה את כל הפונקציות; כל שאר המשתמשים יראו רק משימות (כולל רשימות שמשתפים איתם). ריק = כולם רואים הכל.
+7. **Authentication → Settings → Authorized domains** → מוסיפים את `ofeknave.github.io` (ו־`localhost` כבר קיים לבדיקות).
+8. עושים commit ל־`main` — האתר יתעדכן תוך דקה-שתיים.
+
+### רשימות משותפות
+- ברשימה אישית: ✏️ ← "🤝 שיתוף הרשימה". בהגדרות הרשימה המשותפת (👥) יוצרים קוד הזמנה לפי תפקיד: עורך/ת, מגיב/ה או צופה.
+- מי שמקבל/ת את הקוד: נרשם/ת לאתר ← משימות ← "🔑 הצטרפות בקוד".
+- ההרשאות נאכפות בשרת לפי `firestore.rules` (צופה לא יכול/ה לכתוב, מגיב/ה רק מגיב/ה, רק הבעלים מנהל/ת משתתפים וקודים).
+- מבנה: `slists/{id}` (רשימה, משתתפים ותפקידים), `slists/{id}/tasks`, `slists/{id}/comments`, `invites/{code}`.
 
 ### איך הנתונים נשמרים
 - כל משתמש מקבל מסמך אחד: `users/{uid}` עם כל הנתונים שלו.

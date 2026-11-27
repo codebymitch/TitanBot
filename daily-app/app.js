@@ -43,13 +43,18 @@
   const account = { status: 'loading', user: null, fb: null, docRef: null, unsub: null, lastSync: 0, error: '' };
   let cloudTimer = null, cloudWriting = false, cloudDirty = false, lastCloudJson = '';
   let authTab = 'login', authBusy = false, authEmail = '', authName = '';
-  // מצב תצוגה: pending (בטעינה בתוך claude.ai) · full (הכל) · tasks (משימות בלבד)
-  let gate = window.parent !== window ? 'pending' : 'full';
+  // מצב תצוגה: pending (בטעינה) · full (הכל) · tasks (משימות בלבד — לכל מי שאינו בעל/ת האתר)
+  const fbConfigured = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
+  const OWNER_EMAIL = String(window.SITE_OWNER_EMAIL || '').trim().toLowerCase();
+  let gate = window.parent !== window || (fbConfigured && OWNER_EMAIL) ? 'pending' : 'full';
+  const RESTRICTED_ROUTES = ['tasks', 'account'];
   function setGate(g) {
     gate = g;
     document.body.classList.toggle('restricted', g === 'tasks');
-    if (g === 'tasks' && currentRoute() !== 'tasks') history.replaceState(null, '', '#/tasks');
+    if (g === 'tasks' && !RESTRICTED_ROUTES.includes(currentRoute())) history.replaceState(null, '', '#/tasks');
   }
+  // באתר העצמאי: רק המייל שמוגדר כבעל/ת האתר מקבל את כל הפונקציות
+  const gateForUser = (u) => (!OWNER_EMAIL || (u && (u.email || '').toLowerCase() === OWNER_EMAIL) ? 'full' : 'tasks');
 
   function queueCloudSave() {
     if (!account.docRef) return;
@@ -94,6 +99,7 @@
       const auth = authM.getAuth(app);
       auth.languageCode = 'he';
       account.fb = { auth, authM, fs, db: fs.getFirestore(app) };
+      if (cfg.emulator) { authM.connectAuthEmulator(auth, `http://${cfg.emulator}:9099`, { disableWarnings: true }); fs.connectFirestoreEmulator(account.fb.db, cfg.emulator, 8089); } // לבדיקות מקומיות בלבד
       authM.getRedirectResult(auth).catch((e) => { account.error = authError(e); refreshAccountUI(); });
       authM.onAuthStateChanged(auth, onUser);
     } catch (e) {
@@ -152,6 +158,9 @@
   }
 
   async function onUser(u) {
+    setGate(gateForUser(u));
+    if (u) { fbShared.start({ fs: account.fb.fs, db: account.fb.db, uid: u.uid, name: u.displayName || (u.email || '').split('@')[0] }); modCtx.shared = fbShared; }
+    else fbShared.stop();
     if (account.unsub) { account.unsub(); account.unsub = null; }
     if (cloudDirty && account.docRef) { clearTimeout(cloudTimer); await flushCloud(); }
     account.user = u;
@@ -334,6 +343,9 @@
   };
   const sharedSvc = window.SharedLists(modCtx);
   modCtx.shared = sharedSvc;
+  const fbShared = window.SharedListsFirebase(modCtx);
+  // מאפשר למודול המשימות להציע התחברות כדי להצטרף לרשימות משותפות
+  modCtx.canSignIn = () => !!(account.fb && !account.user);
   const cal = window.CaloriesModule(modCtx);
   const habitsMod = window.HabitsModule(modCtx);
   const remMod = window.RemindersModule(modCtx);
@@ -360,7 +372,7 @@
   const subRoute = () => location.hash.replace(/^#\/?/, '').split('/')[1] || '';
   function render() {
     if (gate === 'pending') { view.innerHTML = '<p class="empty" style="padding-top:40px">טוען…</p>'; return; }
-    const r = gate === 'tasks' ? 'tasks' : currentRoute();
+    const r = gate === 'tasks' && !RESTRICTED_ROUTES.includes(currentRoute()) ? 'tasks' : currentRoute();
     $('#pageTitle').textContent = routes[r].title;
     $('#backBtn').hidden = r === '';
     document.querySelectorAll('#tabbar a').forEach((a) => a.classList.toggle('active', a.dataset.route === r));
@@ -611,7 +623,7 @@
         if (authTab === 'register') {
           const cred = await authM.createUserWithEmailAndPassword(auth, email, pw);
           const nm = f.name && f.name.value.trim();
-          if (nm) { await authM.updateProfile(cred.user, { displayName: nm }); await cred.user.reload(); account.user = auth.currentUser; }
+          if (nm) { await authM.updateProfile(cred.user, { displayName: nm }); await cred.user.reload(); account.user = auth.currentUser; fbShared.start({ fs: account.fb.fs, db: account.fb.db, uid: cred.user.uid, name: nm }); }
           toast('החשבון נוצר — ברוכים הבאים! 🎉');
         } else {
           await authM.signInWithEmailAndPassword(auth, email, pw);

@@ -171,7 +171,7 @@ window.SharedLists = function (ctx) {
   return {
     ROLE_NAME, RANK,
     available: () => started, canWrite: () => canWrite, me: () => me, start,
-    lists, raw, role, can, tasksOf, nameOf,
+    lists, raw, role, can, tasksOf, nameOf, codeLabel: (sid, c) => sid + '-' + c,
     shareLocal, updateList, deleteList, createInvite, revokeInvite, setRole, removeMember, join, leave,
     saveTask, patchTask, deleteTask, watchComments, addComment, deleteComment,
   };

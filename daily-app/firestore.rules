@@ -1,9 +1,71 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // כל משתמש יכול לקרוא ולכתוב רק את המסמך שלו
+    function signedIn() { return request.auth != null; }
+
+    // הנתונים האישיים של כל משתמש — רק הוא קורא וכותב
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // קודי הזמנה: מי שיודע את הקוד יכול לקרוא אותו (הקוד הוא הסוד). רק בעל/ת הרשימה יוצר/ת ומוחק/ת.
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.owner == request.auth.uid
+        && get(/databases/$(database)/documents/slists/$(request.resource.data.listId)).data.owner == request.auth.uid;
+      allow delete: if signedIn() && resource.data.owner == request.auth.uid;
+    }
+
+    // רשימות משותפות
+    match /slists/{listId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
+      allow create: if signedIn()
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid];
+      allow delete: if signedIn() && resource.data.owner == request.auth.uid;
+      allow update: if signedIn() && (isOwner() || joining() || leaving());
+
+      function isOwner() {
+        return resource.data.owner == request.auth.uid && request.resource.data.owner == resource.data.owner;
+      }
+      // הצטרפות עם קוד: מוסיף/ה רק את עצמו/ה, בתפקיד שהקוד נותן
+      function joining() {
+        let inv = get(/databases/$(database)/documents/invites/$(request.resource.data.lastJoin.code)).data;
+        return request.resource.data.lastJoin.uid == request.auth.uid
+          && inv.listId == listId
+          && request.resource.data.members.get(request.auth.uid, '') == inv.role
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberIds', 'names', 'lastJoin', 'updatedAt'])
+          && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.memberIds.toSet() == resource.data.memberIds.toSet().union([request.auth.uid].toSet());
+      }
+      // עזיבה: מסיר/ה רק את עצמו/ה
+      function leaving() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberIds', 'updatedAt'])
+          && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid])
+          && !(request.auth.uid in request.resource.data.members)
+          && request.resource.data.memberIds.toSet() == resource.data.memberIds.toSet().difference([request.auth.uid].toSet());
+      }
+      function listRole() {
+        let l = get(/databases/$(database)/documents/slists/$(listId)).data;
+        return l.owner == request.auth.uid ? 'owner' : l.members.get(request.auth.uid, 'none');
+      }
+
+      match /tasks/{taskId} {
+        allow read: if signedIn() && listRole() != 'none';
+        allow create, delete: if signedIn() && listRole() in ['owner', 'editor'];
+        allow update: if signedIn() && (
+          listRole() in ['owner', 'editor']
+          || (listRole() == 'commenter'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'updatedAt', 'updatedBy'])));
+      }
+      match /comments/{commentId} {
+        allow read: if signedIn() && listRole() != 'none';
+        allow create: if signedIn() && listRole() in ['owner', 'editor', 'commenter']
+          && request.resource.data.author == request.auth.uid;
+        allow delete: if signedIn() && (resource.data.author == request.auth.uid || listRole() == 'owner');
+      }
     }
   }
 }

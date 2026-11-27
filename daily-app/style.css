@@ -701,7 +701,7 @@ a.chip-status { text-decoration: none; }
 .wk-add { display: flex; gap: 14px; }
 
 /* ===== restricted mode (non-owner: tasks only) ===== */
-body.restricted .tabbar, body.restricted #menuBtn, body.restricted #backBtn, body.restricted #accountChip { display: none !important; }
+body.restricted .tabbar, body.restricted #menuBtn, body.restricted #backBtn { display: none !important; }
 body.restricted { padding-bottom: 24px; }
 
 /* ===== shared lists ===== */

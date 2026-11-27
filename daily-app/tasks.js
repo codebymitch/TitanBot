@@ -17,6 +17,7 @@ window.TasksModule = function (ctx) {
 
   let current = (() => { try { return localStorage.getItem('tasks-list') || 'today'; } catch (e) { return 'today'; } })();
   let showDone = false;
+  let pendingSince = 0, pendingTimer = null;
   let sh = null;
   let commentsUnsub = null;
   const sheet = ctx.makeSheet('taskSheet', onAction, () => { sh = null; if (commentsUnsub) { commentsUnsub(); commentsUnsub = null; } });
@@ -139,7 +140,16 @@ window.TasksModule = function (ctx) {
   }
 
   function render() {
-    if (!isSmart(current) && !lists().some((l) => l.id === current)) current = 'today';
+    if (!isSmart(current) && !lists().some((l) => l.id === current)) {
+      // רשימה משותפת שעוד לא הגיעה מהשרת (למשל מיד אחרי הצטרפות או שיתוף) — מחכים לה עד 10 שניות
+      if (String(current).startsWith('S:') && sharedOn() && Date.now() - (pendingSince || (pendingSince = Date.now())) < 10000) {
+        view.innerHTML = '<div class="card"><p class="empty">⏳ טוען את הרשימה המשותפת…</p></div>';
+        clearTimeout(pendingTimer); pendingTimer = setTimeout(rerender, 1000);
+        return;
+      }
+      current = 'today';
+    }
+    pendingSince = 0;
     const t = dayKey();
     const items = filtered(current);
     const open = items.filter((x) => !x.done).sort(sortOpen);
@@ -161,7 +171,7 @@ window.TasksModule = function (ctx) {
         ${shared.length ? '<span class="k-sep"></span>' : ''}
         ${shared.map((l) => `<button class="chip t-lchip ${current === l.id ? 'on' : ''}" style="--lc:${l.color}" data-tact="list" data-l="${l.id}">🤝 ${esc(l.emoji)} ${esc(l.name)}${countOpen(l.id) ? ` · ${countOpen(l.id)}` : ''}</button>`).join('')}
         <button class="chip" data-tact="new-list">＋ רשימה</button>
-        ${sharedOn() ? '<button class="chip" data-tact="join">🔑 הצטרפות בקוד</button>' : ''}
+        ${sharedOn() ? '<button class="chip" data-tact="join">🔑 הצטרפות בקוד</button>' : ctx.canSignIn && ctx.canSignIn() ? '<a class="chip" href="#/account">🔑 התחברות כדי להצטרף לרשימה משותפת</a>' : ''}
       </div>
 
       <div class="card t-head" ${cur ? `style="--lc:${cur.color}"` : ''}>
@@ -394,8 +404,8 @@ window.TasksModule = function (ctx) {
               <button type="button" class="btn ghost small" data-tact="inv-new" data-r="viewer">👁️ צופה</button>
             </div>
             ${invites.length ? `<ul class="list invites">${invites.map(([c, r]) => `<li>
-              <code dir="ltr">${l.sid}-${c}</code><span class="role-tag">${ROLE_ICON[r]} ${ROLE[r]}</span>
-              <button type="button" class="btn ghost small" data-tact="inv-copy" data-code="${l.sid}-${c}">העתקה</button>
+              <code dir="ltr">${SH().codeLabel(l.sid, c)}</code><span class="role-tag">${ROLE_ICON[r]} ${ROLE[r]}</span>
+              <button type="button" class="btn ghost small" data-tact="inv-copy" data-code="${SH().codeLabel(l.sid, c)}">העתקה</button>
               <button type="button" class="del" data-tact="inv-revoke" data-c="${c}" aria-label="ביטול הקוד">✕</button></li>`).join('')}</ul>` : ''}
             <ul class="facts tiny">
               <li><b>עורך/ת</b> — מוסיף/ה, עורך/ת, מסמן/ת ומוחק/ת משימות ומגיב/ה.</li>
@@ -482,7 +492,7 @@ window.TasksModule = function (ctx) {
       <div class="sheet-head"><strong>🔑 הצטרפות לרשימה משותפת</strong><button class="icon-btn" data-tact="close" aria-label="סגירה">✕</button></div>
       <form id="jForm" class="sheet-body">
         <p class="muted">הדביקו את קוד ההזמנה שקיבלתם מבעל/ת הרשימה.</p>
-        <input name="code" dir="ltr" placeholder="sxxxxxxxxxx-xxxxxx" autocomplete="off" required>
+        <input name="code" dir="ltr" placeholder="הדביקו כאן את הקוד" autocomplete="off" required>
         <button class="btn" style="width:100%;margin-top:10px">הצטרפות</button>
       </form>`;
     $('#jForm').addEventListener('submit', async (e) => {
