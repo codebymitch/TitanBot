@@ -7,11 +7,34 @@ export default {
     category: 'Music',
     data: new SlashCommandBuilder()
         .setName('nowplaying')
-        .setDescription('Show the currently playing track'),
+        .setDescription('Show the currently playing track (Spotify, YouTube, and all sources)'),
 
     async execute(interaction, config, client) {
-        await deferMusicCommand(interaction);
-        const payload = buildNowPlayingReply(client, interaction.guild.id);
-        await InteractionHelper.safeEditReply(interaction, payload);
+        const deferred = await deferMusicCommand(interaction);
+        if (deferred === false) {
+            return;
+        }
+
+        const guildId = interaction.guildId ?? interaction.guild?.id;
+        if (!guildId) {
+            await InteractionHelper.safeEditReply(interaction, {
+                content: 'هذا الأمر يعمل داخل السيرفرات فقط.',
+            });
+            return;
+        }
+
+        const payload = await buildNowPlayingReply(client, guildId);
+
+        if (!payload) {
+            await InteractionHelper.safeEditReply(interaction, {
+                content: 'لا يوجد مقطع يعمل حالياً.',
+            });
+            return;
+        }
+
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: payload.embeds ?? [],
+            components: payload.components ?? [],
+        });
     },
 };
