@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+ import { spawn } from 'node:child_process';
 import {
   AudioPlayerStatus,
   NoSubscriberBehavior,
@@ -119,6 +119,52 @@ export function applyResume(guildId) {
     return state.player.unpause();
   }
   return false;
+}
+
+export function pausePlayback(guildIdOrInteraction) {
+  const guildId = typeof guildIdOrInteraction === 'string'
+    ? guildIdOrInteraction
+    : guildIdOrInteraction?.guild?.id;
+
+  if (!guildId) return false;
+  const state = getPlayerState(guildId);
+  if (!state?.player) return false;
+
+  if (state.player.state.status === AudioPlayerStatus.Playing) {
+    state.isPlaying = false;
+    setPlayerState(guildId, state);
+    return state.player.pause();
+  }
+
+  return false;
+}
+
+export function setLoopMode(guildIdOrInteraction, modeOrToggle) {
+  const guildId = typeof guildIdOrInteraction === 'string'
+    ? guildIdOrInteraction
+    : guildIdOrInteraction?.guild?.id;
+
+  if (!guildId) return false;
+  const state = getPlayerState(guildId);
+  if (!state) return false;
+
+  if (typeof modeOrToggle === 'boolean') {
+    state.loop = modeOrToggle;
+  } else if (typeof modeOrToggle === 'string') {
+    const normalized = modeOrToggle.toLowerCase();
+    if (normalized === 'off' || normalized === 'none') {
+      state.loop = false;
+    } else if (normalized === 'track' || normalized === 'song' || normalized === 'on') {
+      state.loop = true;
+    } else {
+      state.loop = !state.loop;
+    }
+  } else {
+    state.loop = !state.loop;
+  }
+
+  setPlayerState(guildId, state);
+  return state.loop;
 }
 
 export function clearQueue(guildId) {
