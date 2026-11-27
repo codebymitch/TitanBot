@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { playQuery, replyMusicSuccess, replyMusicError } from '../../services/music/musicActions.js';
+import { playQuery, replyMusicSuccess } from '../../services/music/musicActions.js';
 
 export default {
     slashOnly: true,
@@ -37,11 +37,13 @@ export default {
 
         const result = await playQuery(client, interaction, query, { source });
 
-        if (!result?.ok) {
-            await replyMusicError(interaction, result?.message ?? 'حدث خطأ أثناء محاولة تشغيل المقطع.');
+        if (result?.embed) {
+            await replyMusicSuccess(interaction, result.embed);
             return;
         }
 
-        await replyMusicSuccess(interaction, result.embed);
+        await InteractionHelper.safeEditReply(interaction, {
+            content: result?.message ?? 'تعذر تشغيل المقطع المطلوب.',
+        });
     },
 };
