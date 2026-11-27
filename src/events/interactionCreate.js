@@ -22,6 +22,7 @@ import { enforceDefaultCommandPermissions } from '../utils/permissionGuard.js';
 
 const COMMAND_ERROR_SUBTYPES = {
   warn: 'warn_failed',
+  softwarn: 'softwarn_failed',
   kick: 'kick_failed',
   ban: 'ban_failed',
   unban: 'unban_failed',
