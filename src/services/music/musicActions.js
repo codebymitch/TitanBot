@@ -28,6 +28,7 @@ export function initializeMusic(client) {
   if (!client.music) {
     client.music = {
       directMode: true,
+      providers: ['youtube', 'spotify'],
     };
   }
 }
@@ -39,6 +40,72 @@ function isUrl(value) {
   } catch {
     return false;
   }
+}
+
+function extractSpotifyTrackId(input) {
+  const raw = String(input || '').trim();
+  const uriMatch = raw.match(/^spotify:track:([A-Za-z0-9]+)$/i);
+  if (uriMatch) return uriMatch[1];
+
+  try {
+    const url = new URL(raw);
+    if (url.hostname.includes('spotify.com')) {
+      const parts = url.pathname.split('/').filter(Boolean);
+      const trackIdx = parts.findIndex((p) => p === 'track');
+      if (trackIdx !== -1 && parts[trackIdx + 1]) {
+        return parts[trackIdx + 1].split('?')[0];
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+async function fetchSpotifyTrackMetadata(trackId) {
+  const embedUrl = `https://open.spotify.com/embed/track/${trackId}`;
+  const res = await fetch(embedUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0',
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('تعذر جلب بيانات مقطع سبوتيفاي.');
+  }
+
+  const html = await res.text();
+  const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+  if (!nextDataMatch) {
+    throw new Error('تعذر قراءة بيانات مقطع سبوتيفاي.');
+  }
+
+  const json = JSON.parse(nextDataMatch[1]);
+  const track =
+    json?.props?.pageProps?.state?.data?.entity ||
+    json?.props?.pageProps?.state?.data?.trackUnion ||
+    null;
+
+  const title = track?.title || track?.name || '';
+  const artists = Array.isArray(track?.artists)
+    ? track.artists.map((a) => a.name).filter(Boolean)
+    : Array.isArray(track?.artists?.items)
+      ? track.artists.items.map((a) => a?.profile?.name).filter(Boolean)
+      : [];
+
+  const durationMs = Number(track?.duration?.totalMilliseconds ?? track?.duration_ms ?? 0);
+
+  if (!title) {
+    throw new Error('لم يتم العثور على اسم المقطع في رابط سبوتيفاي.');
+  }
+
+  return {
+    title,
+    artists,
+    artistText: artists.join(', '),
+    durationSec: durationMs > 0 ? Math.round(durationMs / 1000) : 0,
+    spotifyUrl: `https://open.spotify.com/track/${trackId}`,
+  };
 }
 
 function formatDuration(seconds) {
@@ -413,7 +480,7 @@ export function destroyPlayerSession(guildIdOrInteraction) {
   return true;
 }
 
-function runYtDlpJson(input, extraArgs = []) {
+function runYtDlpJson(input, extraArgs = [], limit = 1) {
   return new Promise((resolve, reject) => {
     const args = [
       '--dump-single-json',
@@ -451,27 +518,33 @@ function runYtDlpJson(input, extraArgs = []) {
 
       try {
         const parsed = JSON.parse(stdout);
-        const entry = Array.isArray(parsed.entries) && parsed.entries.length > 0
-          ? parsed.entries[0]
-          : parsed;
+        const rawEntries = Array.isArray(parsed.entries) && parsed.entries.length > 0
+          ? parsed.entries.slice(0, limit)
+          : [parsed];
 
-        if (!entry || (!entry.webpage_url && !entry.url && !entry.id)) {
+        const entries = rawEntries
+          .filter((entry) => entry && (entry.webpage_url || entry.url || entry.id))
+          .map((entry) => {
+            const sourceUrl =
+              entry.webpage_url ||
+              (entry.id ? `https://www.youtube.com/watch?v=${entry.id}` : entry.url);
+
+            return {
+              title: entry.title || 'Audio Track',
+              url: sourceUrl,
+              streamTarget: entry.url || sourceUrl,
+              durationSec: Number(entry.duration || 0),
+              thumbnail: entry.thumbnail || null,
+              author: entry.uploader || entry.channel || 'Unknown',
+            };
+          });
+
+        if (!entries.length) {
           reject(new Error('Empty metadata returned by yt-dlp'));
           return;
         }
 
-        const sourceUrl =
-          entry.webpage_url ||
-          (entry.id ? `https://www.youtube.com/watch?v=${entry.id}` : entry.url);
-
-        resolve({
-          title: entry.title || 'Audio Track',
-          url: sourceUrl,
-          streamTarget: entry.url || sourceUrl,
-          durationSec: Number(entry.duration || 0),
-          thumbnail: entry.thumbnail || null,
-          author: entry.uploader || entry.channel || 'Unknown',
-        });
+        resolve(entries);
       } catch (err) {
         reject(new Error(`Metadata JSON parse error: ${err.message}`));
       }
@@ -479,13 +552,59 @@ function runYtDlpJson(input, extraArgs = []) {
   });
 }
 
+function pickBestSpotifyMatch(candidates, expectedTitle, expectedDurationSec) {
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return null;
+  }
+
+  const normalizedTitle = String(expectedTitle || '').toLowerCase();
+
+  const scored = candidates.map((item) => {
+    let score = 0;
+    const itemTitle = String(item.title || '').toLowerCase();
+
+    if (normalizedTitle && itemTitle.includes(normalizedTitle)) {
+      score += 30;
+    }
+
+    if (expectedDurationSec > 0 && item.durationSec > 0) {
+      const diff = Math.abs(item.durationSec - expectedDurationSec);
+      if (diff <= 3) score += 40;
+      else if (diff <= 10) score += 25;
+      else if (diff > 30) score -= 20;
+    }
+
+    return { item, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].item;
+}
+
 export async function resolveTrack(query, requestedBy) {
   const rawQuery = String(query || '').trim();
   if (!rawQuery) {
-    throw new Error('Please enter a song name or link.');
+    throw new Error('من فضلك أدخل اسم الأغنية أو رابط يوتيوب أو سبوتيفاي.');
   }
 
-  const input = isUrl(rawQuery) ? rawQuery : `ytsearch1:${rawQuery}`;
+  const spotifyTrackId = extractSpotifyTrackId(rawQuery);
+  let input = rawQuery;
+  let sourceType = 'youtube';
+  let expectedMeta = null;
+
+  if (spotifyTrackId) {
+    sourceType = 'spotify';
+    expectedMeta = await fetchSpotifyTrackMetadata(spotifyTrackId);
+    const searchQuery = expectedMeta.artistText
+      ? `"${expectedMeta.title}" ${expectedMeta.artistText}`
+      : expectedMeta.title;
+    input = `ytsearch5:${searchQuery}`;
+  } else if (isUrl(rawQuery)) {
+    input = rawQuery;
+  } else {
+    input = `ytsearch1:${rawQuery}`;
+  }
+
   const attempts = [
     ['-f', 'bestaudio/best'],
     ['--extractor-args', 'youtube:player_client=android,web'],
@@ -496,10 +615,23 @@ export async function resolveTrack(query, requestedBy) {
 
   for (const args of attempts) {
     try {
-      const meta = await runYtDlpJson(input, args);
+      const limit = sourceType === 'spotify' ? 5 : 1;
+      const entries = await runYtDlpJson(input, args, limit);
+      const chosen = sourceType === 'spotify'
+        ? pickBestSpotifyMatch(entries, expectedMeta?.title, expectedMeta?.durationSec)
+        : entries[0];
+
+      if (!chosen) {
+        throw new Error('لم يتم العثور على مقطع مطابق.');
+      }
+
       return {
-        ...meta,
-        duration: formatDuration(meta.durationSec),
+        ...chosen,
+        title: expectedMeta?.title || chosen.title,
+        author: expectedMeta?.artistText || chosen.author,
+        durationSec: expectedMeta?.durationSec || chosen.durationSec,
+        duration: formatDuration(expectedMeta?.durationSec || chosen.durationSec),
+        source: sourceType,
         requestedBy,
       };
     } catch (err) {
@@ -508,7 +640,7 @@ export async function resolveTrack(query, requestedBy) {
   }
 
   console.error('[RESOLVE TRACK FAILED]:', lastError?.message || lastError);
-  throw new Error(lastError?.message || 'Could not resolve the requested track.');
+  throw new Error(lastError?.message || 'تعذر تجهيز المقطع المطلوب.');
 }
 
 function createAudioStreamFromTrack(track) {
@@ -583,7 +715,7 @@ function createAudioStreamFromTrack(track) {
   const opusStream = ffmpeg.stdout.pipe(opusEncoder);
 
   const resource = createAudioResource(opusStream, {
-    inputType: prism.opus.Encoder ? 'opus' : undefined,
+    inputType: 'opus',
     inlineVolume: true,
   });
 
@@ -638,30 +770,35 @@ export async function ensureVoiceConnection(interaction, voiceChannel) {
   return connection;
 }
 
-export async function joinVoiceChannel(interactionOrGuild, voiceChannel) {
-  const ctx = interactionOrGuild?.interaction || interactionOrGuild;
-  if (ctx?.guild && voiceChannel) {
-    return ensureVoiceConnection(ctx, voiceChannel);
-  }
-  const guild = ctx;
-  const existing = getVoiceConnection(guild.id);
-  if (existing) return existing;
+export async function joinVoiceChannel(firstArg, secondArg) {
+  // دعم استدعاء (client, interaction) أو (interaction, voiceChannel) أو (guild, voiceChannel)
+  const interaction = secondArg?.member ? secondArg : firstArg;
+  const ctx = interaction?.interaction || interaction;
+  const voiceChannel =
+    secondArg?.id && secondArg?.guild
+      ? secondArg
+      : ctx?.member?.voice?.channel;
 
-  const connection = joinDiscordVoiceChannel({
-    channelId: voiceChannel.id,
-    guildId: guild.id,
-    adapterCreator: guild.voiceAdapterCreator,
-    selfDeaf: true,
-  });
-  await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
-  return connection;
+  if (!ctx?.guild || !voiceChannel) {
+    return {
+      ok: false,
+      message: 'يجب أن تكون داخل قناة صوتية أولاً.',
+    };
+  }
+
+  await ensureVoiceConnection(ctx, voiceChannel);
+  return {
+    ok: true,
+    message: `تم الانضمام إلى القناة الصوتية <#${voiceChannel.id}>.`,
+  };
 }
 
 export function leaveVoiceChannel(guildIdOrInteraction) {
   return destroyPlayerSession(guildIdOrInteraction);
 }
 
-export async function playNextInQueue(guildId, client) {
+export async function playNextInQueue(guildId, client, options = {}) {
+  const { announce = true } = options;
   const state = getPlayerState(guildId);
   if (!state) return;
 
@@ -692,7 +829,7 @@ export async function playNextInQueue(guildId, client) {
 
   state.player.play(resource);
 
-  if (state.textChannel) {
+  if (announce && state.textChannel) {
     const embed = buildNowPlayingEmbed(nextTrack, state);
     await state.textChannel.send({ embeds: [embed] }).catch(() => {});
   }
@@ -751,11 +888,11 @@ export async function handlePlay(interaction, query) {
           current.queue.unshift(current.currentTrack);
         }
         setPlayerState(ctx.guild.id, current);
-        await playNextInQueue(ctx.guild.id, ctx.client);
+        await playNextInQueue(ctx.guild.id, ctx.client, { announce: true });
       });
 
       player.on('error', async () => {
-        await playNextInQueue(ctx.guild.id, ctx.client);
+        await playNextInQueue(ctx.guild.id, ctx.client, { announce: true });
       });
 
       setPlayerState(ctx.guild.id, state);
@@ -770,7 +907,7 @@ export async function handlePlay(interaction, query) {
     setPlayerState(ctx.guild.id, state);
 
     if (shouldStartNow) {
-      await playNextInQueue(ctx.guild.id, ctx.client);
+      await playNextInQueue(ctx.guild.id, ctx.client, { announce: false });
       const latestState = getPlayerState(ctx.guild.id);
       return safeSendMusicPayload(ctx, {
         embeds: [buildNowPlayingEmbed(latestState?.currentTrack || track, latestState)],
