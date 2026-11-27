@@ -241,6 +241,18 @@ export function buildQueueReply(guildId) {
   };
 }
 
+export async function handleQueue(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const payload = buildQueueReply(guildId);
+  await safeSendMusicPayload(ctx, payload);
+}
+
 export function applyPause(guildId) {
   const state = getPlayerState(guildId);
   if (!state?.player) return false;
@@ -791,6 +803,19 @@ export async function ensureVoiceConnection(interaction, voiceChannel) {
     }
   }
 
+  return connection;
+}
+
+export async function joinVoiceChannel(interaction, voiceChannel) {
+  const ctx = interaction?.interaction || interaction;
+  const targetChannel = voiceChannel || ctx?.member?.voice?.channel;
+  if (!targetChannel) {
+    await replyMusicError(ctx, 'يجب أن تكون متواجداً داخل روم صوتي أولاً.', true);
+    return null;
+  }
+
+  const connection = await ensureVoiceConnection(ctx, targetChannel);
+  await replyMusicSuccess(ctx, `تم الانضمام إلى <#${targetChannel.id}>.`, false);
   return connection;
 }
 
