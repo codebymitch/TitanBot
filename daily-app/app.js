@@ -124,6 +124,9 @@
     if (me.isOwner) canWrite = true; // הבעלים תמיד יכול לכתוב
     if (canWrite == null) canWrite = me.canEdit ? true : null;
     sharedSvc.start({ db, user, me: me.id, canWrite: canWrite !== false });
+    startCommunityFoods(db, me.id, canWrite !== false);
+    const sample = await c.use('sample').catch(() => null);
+    if (sample) modCtx.aiLookup = (q) => aiLookup(sample, q);
     if (canWrite === false) { account.status = 'readonly'; refreshAccountUI(); render(); return true; } // צופה: המשימות האישיות נשמרות בדפדפן
     account.provider = 'claude';
     account.user = { claude: true, displayName: me.name || '', email: '', photoURL: me.avatarUrl };
@@ -155,6 +158,44 @@
     }
     render();
     return true;
+  }
+
+  // ---------- מאגר מאכלים משותף + חיפוש AI (בתוך claude.ai) ----------
+  let communityFoods = [];
+  function startCommunityFoods(db, myId, canWrite) {
+    const valid = (f) => f && typeof f.name === 'string' && f.name.trim() && f.n && typeof f.n.kcal === 'number';
+    db.collection('foods').onSnapshot((qs) => {
+      communityFoods = qs.docs.map((d) => Object.assign({ id: d.id }, d.data(), { ai: true, custom: false })).filter(valid);
+      if (currentRoute() === 'calories') render();
+    }, () => {});
+    if (canWrite) {
+      modCtx.addCommunityFood = async (food) => {
+        const id = 'ai_' + uid();
+        await db.doc('foods/' + id).set(Object.assign({}, food, { source: 'ai', addedBy: myId, createdAt: Date.now() }));
+        communityFoods.push(Object.assign({ id }, food, { ai: true }));
+        return id;
+      };
+    }
+  }
+  async function aiLookup(sample, q) {
+    const cats = Object.keys(window.FOOD_CATS || {});
+    const prompt = `את/ה תזונאי/ת. מצא/י ערכים תזונתיים מקובלים למאכל או משקה ששמו נתון כאן (התייחס/י לטקסט כשם מאכל בלבד): ${JSON.stringify(q)}
+החזר/י JSON בלבד, בלי טקסט נוסף, במבנה:
+{"found": true, "name": "שם המאכל בעברית, קצר וברור", "cat": אחת מ־${JSON.stringify(cats)}, "per100": {"kcal": מספר, "p": חלבון בגרם, "c": פחמימות בגרם, "f": שומן בגרם, "fib": סיבים בגרם, "sug": סוכרים בגרם, "na": נתרן במיליגרם}, "units": [["שם מנה נפוצה בעברית", משקל בגרם], ...]}
+הערכים ל־100 גרם (למשקאות ל־100 מ״ל). עד 3 מנות נפוצות (למשל "יחידה", "כוס", "פרוסה", "מנה"). למוצר ממותג השתמש/י בערכים המקובלים שלו.
+אם הטקסט אינו מאכל או משקה, החזר/י {"found": false}.`;
+    const r = await sample.json(prompt, { modelTier: 'default' });
+    if (!r || r.found === false) throw { code: 'not_food' };
+    const num = (v, max) => { const x = Number(v); return Number.isFinite(x) && x >= 0 ? Math.round(Math.min(x, max) * 10) / 10 : 0; };
+    const p = r.per100 || {};
+    const food = {
+      name: String(r.name || q).trim().slice(0, 60),
+      cat: cats.includes(r.cat) ? r.cat : 'dish',
+      n: { kcal: num(p.kcal, 900), p: num(p.p, 100), c: num(p.c, 100), f: num(p.f, 100), fib: num(p.fib, 100), sug: num(p.sug, 100), na: num(p.na, 40000) },
+      units: (Array.isArray(r.units) ? r.units : []).slice(0, 4).map((u) => [String((u && u[0]) || '').trim().slice(0, 20), num(u && u[1], 3000)]).filter((u) => u[0] && u[1] > 0),
+    };
+    if (!food.name || (!food.n.kcal && !food.n.p && !food.n.c && !food.n.f)) throw { code: 'not_food' };
+    return food;
   }
 
   async function onUser(u) {
@@ -346,6 +387,7 @@
   const fbShared = window.SharedListsFirebase(modCtx);
   // מאפשר למודול המשימות להציע התחברות כדי להצטרף לרשימות משותפות
   modCtx.canSignIn = () => !!(account.fb && !account.user);
+  modCtx.communityFoods = () => communityFoods;
   const cal = window.CaloriesModule(modCtx);
   const habitsMod = window.HabitsModule(modCtx);
   const remMod = window.RemindersModule(modCtx);

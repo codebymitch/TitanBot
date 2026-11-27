@@ -752,3 +752,11 @@ body.restricted { padding-bottom: 24px; }
 .t-group { font-size: .78rem; font-weight: 700; color: var(--muted); padding: 10px 0 2px !important; border-bottom: 0 !important; gap: 6px !important; }
 .t-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--tc); }
 .t-colors .none { display: grid; place-items: center; background: var(--bg); color: var(--muted); font-size: .8rem; }
+
+/* ===== AI food search ===== */
+.badge-ai { font-size: .66rem; background: linear-gradient(90deg, #ede9fe, #e0f2fe); color: #5b21b6; padding: 1px 6px; border-radius: 999px; vertical-align: middle; }
+@media (prefers-color-scheme: dark) { .badge-ai { background: #2e1065; color: #ddd6fe; } }
+.ai-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin-top: 10px; text-align: center; }
+.ai-btn { background: linear-gradient(90deg, #7c3aed, #2563eb); color: #fff; }
+.ai-btn.ghost { background: linear-gradient(90deg, #ede9fe, #dbeafe); color: #4c1d95; }
+.ai-btn:disabled { opacity: .7; cursor: progress; }

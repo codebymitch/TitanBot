@@ -33,7 +33,15 @@ window.CaloriesModule = function (ctx) {
   const nutr = (e) => e.n || Object.assign(ZERO(), { kcal: e.kcal || 0 });
   const sum = (list) => list.reduce((t, e) => { const n = nutr(e); KEYS.forEach((k) => { t[k] += n[k] || 0; }); return t; }, ZERO());
   const entriesOf = (d) => S().foods.filter((f) => f.day === d);
-  const allFoods = () => S().customFoods.concat(DB);
+  // מאגר: מאכלים אישיים + מאכלים שנוספו למאגר המשותף (למשל ע״י AI) + המאגר המובנה. בלי כפילויות לפי שם.
+  function allFoods() {
+    const seen = new Set();
+    const community = ctx.communityFoods ? ctx.communityFoods() : [];
+    return S().customFoods.concat(community, DB).filter((f) => { const k = norm(f.name); if (seen.has(k)) return false; seen.add(k); return true; });
+  }
+  const aiOn = () => !!ctx.aiLookup;
+  let aiBusy = false;
+  const aiButton = (q, big) => (aiOn() && norm(q) ? `<button class="btn ${big ? '' : 'ghost'} ai-btn" data-cact="ai-search" ${aiBusy ? 'disabled' : ''}>${aiBusy ? '🤖 מחפש ערכים תזונתיים…' : `🤖 חיפוש "${esc(q.trim())}" עם AI`}</button>` : '');
   const findFood = (id) => allFoods().find((f) => f.id === id);
   const norm = (s) => String(s).toLowerCase().replace(/["'׳״`\-()]/g, '').replace(/\s+/g, ' ').trim();
   const calc = (food, grams) => { const o = {}; KEYS.forEach((k) => { o[k] = ((food.n[k] || 0) * grams) / 100; }); return o; };
@@ -170,7 +178,7 @@ window.CaloriesModule = function (ctx) {
     const ku = u ? Math.round((f.n.kcal * u[1]) / 100) : null;
     return `<li><button class="food-row" data-cact="${act}" data-id="${f.id}">
       <span class="grow">
-        <span class="title">${esc(f.name)}${f.custom ? ' <span class="badge-mine">שלי</span>' : ''}${S().favorites.includes(f.id) ? ' ⭐' : ''}</span>
+        <span class="title">${esc(f.name)}${f.custom ? ' <span class="badge-mine">שלי</span>' : ''}${f.ai ? ' <span class="badge-ai">🤖 AI</span>' : ''}${S().favorites.includes(f.id) ? ' ⭐' : ''}</span>
         <span class="sub">${u ? `${esc(u[0])} (${u[1]} ג׳) · ${ku} קק״ל · ` : ''}100 ג׳ · ${k} קק״ל</span>
       </span>
       <span class="pcf">ח׳ ${fmt('p', f.n.p)}<br>פ׳ ${fmt('c', f.n.c)}<br>ש׳ ${fmt('f', f.n.f)}</span>
@@ -206,7 +214,9 @@ window.CaloriesModule = function (ctx) {
   let foodsQ = '', foodsCat = '';
   function foodsResults() {
     const list = filterCat(searchFoods(foodsQ, foodsCat === 'mine' ? '' : foodsCat), foodsCat);
-    return list.length ? `<ul class="list">${list.slice(0, 120).map((f) => foodRow(f, 'view-food')).join('')}</ul>` : '<p class="empty">לא נמצא מאכל — אפשר להוסיף אותו למאגר ✏️</p>';
+    const ai = aiButton(foodsQ, !list.length);
+    return (list.length ? `<ul class="list">${list.slice(0, 120).map((f) => foodRow(f, 'view-food')).join('')}</ul>` : `<p class="empty">לא נמצא "${esc(foodsQ)}" במאגר${aiOn() ? ' — אפשר לחפש עם AI' : ' — אפשר להוסיף אותו ✏️'}</p>`)
+      + (ai ? `<div class="ai-row">${ai}<span class="muted tiny">ה־AI מחפש ערכים תזונתיים ומוסיף את המאכל למאגר</span></div>` : '');
   }
   function renderFoods() {
     return `
@@ -495,8 +505,10 @@ window.CaloriesModule = function (ctx) {
       return html;
     }
     const list = filterCat(searchFoods(q, cat === 'mine' ? '' : cat), cat);
-    return list.length ? `<ul class="list">${list.slice(0, 80).map((f) => foodRow(f)).join('')}</ul>`
-      : `<p class="empty">לא נמצא "${esc(q)}".<br><button class="btn ghost small" style="margin-top:8px" data-cact="new-custom">✏️ להוסיף אותו למאגר</button></p>`;
+    const ai = aiButton(q, !list.length);
+    return (list.length ? `<ul class="list">${list.slice(0, 80).map((f) => foodRow(f)).join('')}</ul>`
+      : `<p class="empty">לא נמצא "${esc(q)}" במאגר.</p>`)
+      + `<div class="ai-row">${ai}${!list.length ? '<button class="btn ghost small" data-cact="new-custom">✏️ הוספה ידנית</button>' : ''}</div>`;
   }
 
   function foodGrams() {
@@ -537,7 +549,7 @@ window.CaloriesModule = function (ctx) {
         <button class="icon-btn" data-cact="close-sheet" aria-label="סגירה">✕</button>
       </div>
       <div class="sheet-body">
-        <div class="muted tiny">${esc(CATS[f.cat] || '')}${f.custom ? ' · מאכל שלי' : ''}</div>
+        <div class="muted tiny">${esc(CATS[f.cat] || '')}${f.custom ? ' · מאכל שלי' : ''}${f.ai ? ' · 🤖 ערכים שנמצאו ע״י AI — הערכה, כדאי לבדוק מול התווית' : ''}</div>
         <div class="amount row">
           <label class="field"><span>כמות</span><input id="fQty" type="number" min="0" step="${isG ? 1 : 0.25}" value="${sheet.qty}" inputmode="decimal"></label>
           <label class="field"><span>יחידה</span><select id="fUnit">${units.map(([l, gr]) => `<option value="${esc(l)}" ${l === sheet.unit ? 'selected' : ''}>${esc(l)}${l === 'גרם' ? '' : ` (${gr} ג׳)`}</option>`).join('')}</select></label>
@@ -626,6 +638,34 @@ window.CaloriesModule = function (ctx) {
     openSheet(Object.assign({ mode: 'food', foodId, meal: opts.meal || guessMeal(), unit: u ? u[0] : 'גרם', qty: u ? 1 : 100, q: sheet && sheet.q, cat: sheet && sheet.cat }, opts));
   }
 
+  // ---------- AI: חיפוש ערכים תזונתיים למאכל שלא קיים במאגר ----------
+  const AI_ERR = {
+    not_granted: 'צריך לאשר ל־Claude לענות כדי להשתמש בחיפוש ה־AI',
+    rate_limited: 'יותר מדי בקשות — נסו שוב בעוד רגע',
+    not_food: 'ה־AI לא זיהה מאכל בשם הזה. נסו שם אחר או הוספה ידנית',
+  };
+  async function aiSearch() {
+    const q = ((sheet && sheet.mode === 'search' ? sheet.q : foodsQ) || '').trim();
+    if (!q || aiBusy) return;
+    aiBusy = true;
+    const redraw = () => { if (sheet && sheet.mode === 'search') { const r = $('#sheetResults'); if (r) r.innerHTML = sheetResults(); } else { const l = $('#foodsList'); if (l) l.innerHTML = foodsResults(); } };
+    redraw();
+    try {
+      const food = await ctx.aiLookup(q);
+      // אולי כבר נוסף בינתיים מאכל באותו שם
+      const existing = allFoods().find((f) => norm(f.name) === norm(food.name));
+      const id = existing ? existing.id : await ctx.addCommunityFood(food);
+      aiBusy = false;
+      toast(existing ? `"${existing.name}" כבר במאגר` : `🤖 "${food.name}" נוסף למאגר`);
+      if (sheet && sheet.mode === 'search') openFood(id, { meal: sheet.meal });
+      else { foodsQ = food.name; rerender(); openFood(id, { meal: guessMeal(), fromFoods: true }); }
+    } catch (e) {
+      aiBusy = false;
+      redraw();
+      toast(AI_ERR[e && (e.code || e.message)] || 'חיפוש ה־AI נכשל — נסו שוב או הוסיפו ידנית');
+    }
+  }
+
   // ---------- actions ----------
   async function onAction(e) {
     const b = e.target.closest('[data-cact]');
@@ -681,6 +721,7 @@ window.CaloriesModule = function (ctx) {
       }
       case 'sheet-del-entry':
         st.foods = st.foods.filter((x) => x.id !== sheet.entryId); save(); closeSheet(); rerender(); break;
+      case 'ai-search': aiSearch(); break;
       case 'new-custom': openSheet({ mode: 'custom', meal: sheet ? sheet.meal : guessMeal(), q: sheet ? sheet.q : foodsQ, back: !!sheet, fromFoods: !sheet }); break;
       case 'edit-custom': openSheet({ mode: 'custom', editId: id, meal: sheet.meal, fromFoods: sheet.fromFoods }); break;
       case 'del-custom':
