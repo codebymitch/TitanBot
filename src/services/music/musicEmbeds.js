@@ -1,5 +1,15 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 
+export const MUSIC_BUTTON_IDS = {
+  TOGGLE_PAUSE: 'music_toggle_pause',
+  PAUSE: 'music_pause',
+  RESUME: 'music_resume',
+  SKIP: 'music_skip',
+  STOP: 'music_stop',
+  QUEUE: 'music_queue',
+  LOOP: 'music_loop',
+};
+
 export function buildNowPlayingEmbed(track, state) {
   const title = track?.title || 'Audio Track';
   const description = track?.url ? `[${title}](${track.url})` : title;
@@ -57,19 +67,19 @@ export function buildPlayerButtonRows(state) {
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId('music_toggle_pause')
+      .setCustomId(MUSIC_BUTTON_IDS.TOGGLE_PAUSE)
       .setLabel(isPaused ? 'Resume' : 'Pause')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId('music_skip')
+      .setCustomId(MUSIC_BUTTON_IDS.SKIP)
       .setLabel('Skip')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
-      .setCustomId('music_stop')
+      .setCustomId(MUSIC_BUTTON_IDS.STOP)
       .setLabel('Stop')
       .setStyle(ButtonStyle.Danger),
     new ButtonBuilder()
-      .setCustomId('music_queue')
+      .setCustomId(MUSIC_BUTTON_IDS.QUEUE)
       .setLabel('Queue')
       .setStyle(ButtonStyle.Secondary)
   );
