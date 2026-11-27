@@ -38,6 +38,31 @@ function getTrackArtwork(track) {
     return track?.info?.artworkUrl || track?.info?.thumbnail || null;
 }
 
+function detectTrackSource(track) {
+    const uri = String(track?.info?.uri || '').toLowerCase();
+    const rawSource = String(track?.info?.sourceName || track?.info?.source || '').toLowerCase();
+
+    if (uri.includes('spotify.com') || uri.startsWith('spotify:') || rawSource.includes('spotify')) {
+        return 'Spotify';
+    }
+    if (uri.includes('youtube.com') || uri.includes('youtu.be') || rawSource.includes('youtube')) {
+        return 'YouTube';
+    }
+    if (uri.includes('soundcloud.com') || rawSource.includes('soundcloud')) {
+        return 'SoundCloud';
+    }
+    if (rawSource) {
+        return rawSource.charAt(0).toUpperCase() + rawSource.slice(1);
+    }
+    return uri ? 'Link' : 'Stream';
+}
+
+function formatTrackTitle(track) {
+    const title = track?.info?.title || 'Unknown track';
+    const uri = track?.info?.uri;
+    return uri ? `[${title}](${uri})` : title;
+}
+
 function getLoopLabel(loop) {
     switch (loop) {
         case 'track':
@@ -57,13 +82,15 @@ export function buildNowPlayingEmbed(track, player, guildData) {
 
     const position = formatDuration(player?.position || 0);
     const duration = formatDuration(track?.info?.length || 0);
+    const sourceLabel = detectTrackSource(track);
 
     return createEmbed({
         title: 'Now Playing',
-        description: track?.info?.title || 'Unknown track',
+        description: formatTrackTitle(track),
         color: 'primary',
         fields: [
             { name: 'Artist', value: track?.info?.author || 'Unknown', inline: true },
+            { name: 'Source', value: sourceLabel, inline: true },
             { name: 'Requester', value: requesterLabel, inline: true },
             { name: 'Progress', value: `${position} / ${duration}`, inline: true },
             { name: 'Volume', value: `${guildData?.volume ?? 75}%`, inline: true },
@@ -84,7 +111,9 @@ export function buildQueueEmbed(queue, currentTrack, page = 0) {
 
     let description = '';
     if (currentTrack) {
-        description += `**Now Playing**\n${currentTrack.info?.title || 'Unknown'} — ${currentTrack.info?.author || 'Unknown'}\n\n`;
+        const currentSource = detectTrackSource(currentTrack);
+        const currentDuration = formatDuration(currentTrack.info?.length || 0);
+        description += `**Now Playing**\n${formatTrackTitle(currentTrack)} — ${currentTrack.info?.author || 'Unknown'} \`[${currentDuration}]\` • *${currentSource}*\n\n`;
     }
 
     if (slice.length === 0) {
@@ -93,7 +122,9 @@ export function buildQueueEmbed(queue, currentTrack, page = 0) {
         description += slice
             .map((track, index) => {
                 const num = start + index + 1;
-                return `${num}. ${track.info?.title || 'Unknown'} — ${track.info?.author || 'Unknown'}`;
+                const source = detectTrackSource(track);
+                const duration = formatDuration(track.info?.length || 0);
+                return `${num}. ${formatTrackTitle(track)} — ${track.info?.author || 'Unknown'} \`[${duration}]\` • *${source}*`;
             })
             .join('\n');
     }
@@ -107,14 +138,16 @@ export function buildQueueEmbed(queue, currentTrack, page = 0) {
 }
 
 export function buildPlayerButtonRows(player, guildData) {
-    const paused = player?.paused;
+    const paused = Boolean(player?.paused);
+    const isLoopActive = Boolean(guildData?.loop && guildData.loop !== 'none');
+
     const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId(MUSIC_BUTTON_IDS.PAUSE)
             .setLabel('Pause')
             .setStyle(ButtonStyle.Primary)
             .setEmoji('⏸️')
-            .setDisabled(Boolean(paused)),
+            .setDisabled(paused),
         new ButtonBuilder()
             .setCustomId(MUSIC_BUTTON_IDS.RESUME)
             .setLabel('Resume')
@@ -142,7 +175,7 @@ export function buildPlayerButtonRows(player, guildData) {
         new ButtonBuilder()
             .setCustomId(MUSIC_BUTTON_IDS.LOOP)
             .setLabel('Loop')
-            .setStyle(guildData?.loop !== 'none' ? ButtonStyle.Success : ButtonStyle.Secondary)
+            .setStyle(isLoopActive ? ButtonStyle.Success : ButtonStyle.Secondary)
             .setEmoji('🔁'),
         new ButtonBuilder()
             .setCustomId(MUSIC_BUTTON_IDS.VOL_DOWN)
