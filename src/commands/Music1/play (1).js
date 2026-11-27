@@ -31,7 +31,16 @@ export default {
         const deferred = await InteractionHelper.safeDefer(interaction, {
             flags: MessageFlags.Ephemeral,
         });
-        if (!deferred) return;
+        if (!deferred) {
+            return;
+        }
+
+        if (!interaction.guildId) {
+            await InteractionHelper.safeEditReply(interaction, {
+                content: 'هذا الأمر يعمل داخل السيرفرات فقط.',
+            });
+            return;
+        }
 
         const query = interaction.options.getString('query', true).trim();
         const source = interaction.options.getString('source') ?? 'auto';
