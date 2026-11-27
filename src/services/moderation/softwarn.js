@@ -1,70 +1,64 @@
-const DEFAULT_SOFT_WARN_THRESHOLD = 3;
+import { EmbedBuilder } from 'discord.js';
+import { logger } from '../../utils/logger.js';
 
-class SoftWarningServiceClass {
-    constructor(threshold = DEFAULT_SOFT_WARN_THRESHOLD) {
-        this.threshold = threshold;
-        // المفتاح: `${guildId}:${userId}` -> { count: number, warnings: Array }
-        this.records = new Map();
+export async function notifySoftWarn(targetUser, {
+  guildName,
+  moderatorTag,
+  reason,
+  softCount,
+  threshold,
+  warningId,
+  escalated = false,
+  officialTotalCount = null,
+}) {
+  if (!targetUser) {
+    return { delivered: false, reason: 'لم يتم العثور على العضو' };
+  }
+
+  try {
+    const embed = new EmbedBuilder()
+      .setColor(escalated ? 0xed4245 : 0xfee75c)
+      .setTitle(escalated ? '⚠️ تحذير خفيف — تم إصدار تحذير رسمي' : '⚠️ تحذير خفيف')
+      .setDescription(
+        `لقد تلقيت تحذيرًا خفيفًا في سيرفر **${guildName}**.` +
+        (escalated
+          ? `\nلقد وصلت إلى الحد المحدد للتحذيرات الخفيفة (**${softCount}/${threshold}**) وتم إصدار **تحذير رسمي** بحقك.`
+          : '')
+      )
+      .addFields(
+        { name: 'السبب', value: reason || 'لم يتم تحديد سبب', inline: false },
+        { name: 'التحذيرات الخفيفة', value: `${softCount} / ${threshold}`, inline: true },
+        { name: 'رقم الحالة', value: warningId ? `#${warningId}` : 'غير متوفر', inline: true }
+      )
+      .setTimestamp();
+
+    if (moderatorTag) {
+      embed.setFooter({ text: `بواسطة المشرف: ${moderatorTag}` });
     }
 
-    getKey(guildId, userId) {
-        return `${guildId}:${userId}`;
+    if (escalated && officialTotalCount !== null) {
+      embed.addFields({
+        name: 'إجمالي التحذيرات الرسمية',
+        value: `${officialTotalCount}`,
+        inline: true,
+      });
     }
 
-    getRecord(guildId, userId) {
-        const key = this.getKey(guildId, userId);
-
-        if (!this.records.has(key)) {
-            this.records.set(key, {
-                count: 0,
-                warnings: []
-            });
-        }
-
-        return this.records.get(key);
-    }
-
-    addSoftWarning({ guildId, userId, moderatorId, reason, timestamp = Date.now() }) {
-        const record = this.getRecord(guildId, userId);
-        const id = `sw_${timestamp}_${Math.random().toString(36).slice(2, 7)}`;
-
-        record.count += 1;
-        record.warnings.push({
-            id,
-            moderatorId,
-            reason,
-            timestamp
-        });
-
-        const currentCount = record.count;
-        const reachedThreshold = currentCount >= this.threshold;
-
-        if (reachedThreshold) {
-            record.count = 0;
-        }
-
-        return {
-            id,
-            softCount: currentCount,
-            threshold: this.threshold,
-            reachedThreshold
-        };
-    }
-
-    getCount(guildId, userId) {
-        return this.getRecord(guildId, userId).count;
-    }
-
-    getWarnings(guildId, userId) {
-        return this.getRecord(guildId, userId).warnings;
-    }
-
-    clearWarnings(guildId, userId) {
-        this.records.set(this.getKey(guildId, userId), {
-            count: 0,
-            warnings: []
-        });
-    }
+    await targetUser.send({ embeds: [embed] });
+    return { delivered: true };
+  } catch (error) {
+    logger.warn('Failed to deliver softwarn DM to user:', {
+      userId: targetUser.id,
+      guildId: guildName,
+      error: error?.message || String(error),
+    });
+    return {
+      delivered: false,
+      reason: error?.code === 50007 ? 'الرسائل الخاصة مغلقة لدى العضو' : 'تعذر إرسال الرسالة الخاصة',
+    };
+  }
 }
 
-export const SoftWarningService = new SoftWarningServiceClass();
+export default {
+  notifySoftWarn,
+};
