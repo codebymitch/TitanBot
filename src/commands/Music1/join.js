@@ -23,17 +23,27 @@ export default {
             return;
         }
 
-        const result = await joinVoiceChannel(client, interaction);
+        try {
+            const result = await joinVoiceChannel(client, interaction);
 
-        if (result && typeof result === 'object' && 'ok' in result) {
-            if (!result.ok) {
-                await replyMusicError(interaction, result.message ?? 'تعذر الانضمام إلى القناة الصوتية.');
+            if (!result) {
+                await replyMusicError(interaction, 'تعذر الانضمام إلى القناة الصوتية.');
                 return;
             }
-            await replyMusicSuccess(interaction, result.embed);
-            return;
-        }
 
-        await replyMusicSuccess(interaction, result);
+            if (typeof result === 'object' && 'ok' in result) {
+                if (!result.ok) {
+                    await replyMusicError(interaction, result.message ?? 'تعذر الانضمام إلى القناة الصوتية.');
+                    return;
+                }
+                await replyMusicSuccess(interaction, result.embed);
+                return;
+            }
+
+            await replyMusicSuccess(interaction, result);
+        } catch (error) {
+            console.error('[JOIN COMMAND ERROR]:', error);
+            await replyMusicError(interaction, 'حدث خطأ أثناء محاولة الانضمام إلى القناة الصوتية.');
+        }
     },
 };
