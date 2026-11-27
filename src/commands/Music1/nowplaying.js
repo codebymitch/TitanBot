@@ -23,18 +23,27 @@ export default {
             return;
         }
 
-        const payload = await buildNowPlayingReply(client, guildId);
+        try {
+            const payload = await buildNowPlayingReply(client, guildId);
 
-        if (!payload) {
+            if (!payload) {
+                await InteractionHelper.safeEditReply(interaction, {
+                    content: 'لا يوجد مقطع يعمل حالياً.',
+                });
+                return;
+            }
+
             await InteractionHelper.safeEditReply(interaction, {
-                content: 'لا يوجد مقطع يعمل حالياً.',
+                content: payload.content ?? null,
+                embeds: payload.embeds ?? [],
+                components: payload.components ?? [],
+                files: payload.files ?? [],
             });
-            return;
+        } catch (error) {
+            console.error('[NOWPLAYING COMMAND ERROR]:', error);
+            await InteractionHelper.safeEditReply(interaction, {
+                content: 'حدث خطأ أثناء جلب بيانات المقطع الحالي.',
+            });
         }
-
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: payload.embeds ?? [],
-            components: payload.components ?? [],
-        });
     },
 };
