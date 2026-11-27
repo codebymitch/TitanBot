@@ -34,7 +34,7 @@ export function initializeMusic(client) {
 
 function isUrl(value) {
   try {
-    const parsed = new URL(value);
+    const parsed = new URL(String(value).trim());
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch {
     return false;
@@ -106,7 +106,7 @@ async function safeSendMusicPayload(target, payload) {
         components: payload.components ?? [],
       });
     }
-  } catch (err) {
+  } catch {
     if (ctx.channel && typeof ctx.channel.send === 'function') {
       return await ctx.channel.send({
         embeds: payload.embeds,
@@ -381,17 +381,14 @@ export function destroyPlayerSession(guildIdOrInteraction) {
   return true;
 }
 
-export async function resolveTrack(query, requestedBy) {
-  const input = isUrl(query) ? query.trim() : `ytsearch1:${query.trim()}`;
-
+function runYtDlpJson(input, extraArgs = []) {
   return new Promise((resolve, reject) => {
     const args = [
       '--dump-single-json',
       '--no-playlist',
       '--no-warnings',
-      '--prefer-free-formats',
-      '-f',
-      'bestaudio/best',
+      '--skip-download',
+      ...extraArgs,
       input,
     ];
 
@@ -411,12 +408,12 @@ export async function resolveTrack(query, requestedBy) {
     });
 
     proc.on('error', (err) => {
-      reject(new Error(`Failed to start yt-dlp: ${err.message}`));
+      reject(new Error(`yt-dlp binary error: ${err.message}`));
     });
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(stderr.trim() || 'Could not find the requested track.'));
+        reject(new Error(stderr.trim() || `yt-dlp exited with code ${code}`));
         return;
       }
 
@@ -426,29 +423,60 @@ export async function resolveTrack(query, requestedBy) {
           ? parsed.entries[0]
           : parsed;
 
-        if (!entry || (!entry.webpage_url && !entry.url)) {
-          reject(new Error('No valid playable stream URL found for this track.'));
+        if (!entry || (!entry.webpage_url && !entry.url && !entry.id)) {
+          reject(new Error('Empty metadata returned by yt-dlp'));
           return;
         }
 
-        const sourceUrl = entry.webpage_url || entry.url;
-        const durationSec = Number(entry.duration || 0);
+        const sourceUrl =
+          entry.webpage_url ||
+          (entry.id ? `https://www.youtube.com/watch?v=${entry.id}` : entry.url);
 
         resolve({
           title: entry.title || 'Audio Track',
           url: sourceUrl,
           streamTarget: entry.url || sourceUrl,
-          duration: formatDuration(durationSec),
-          durationSec,
+          durationSec: Number(entry.duration || 0),
           thumbnail: entry.thumbnail || null,
           author: entry.uploader || entry.channel || 'Unknown',
-          requestedBy,
         });
       } catch (err) {
-        reject(new Error(`Failed to parse track metadata: ${err.message}`));
+        reject(new Error(`Metadata JSON parse error: ${err.message}`));
       }
     });
   });
+}
+
+export async function resolveTrack(query, requestedBy) {
+  const rawQuery = String(query || '').trim();
+  if (!rawQuery) {
+    throw new Error('Please enter a song name or link.');
+  }
+
+  const input = isUrl(rawQuery) ? rawQuery : `ytsearch1:${rawQuery}`;
+  const attempts = [
+    ['-f', 'bestaudio/best'],
+    ['--extractor-args', 'youtube:player_client=android,web'],
+    [],
+  ];
+
+  let lastError = null;
+
+  for (const args of attempts) {
+    try {
+      const meta = await runYtDlpJson(input, args);
+      return {
+        ...meta,
+        duration: formatDuration(meta.durationSec),
+        requestedBy,
+      };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  console.error('[RESOLVE TRACK FAILED]:', lastError?.message || lastError);
+  throw new Error(lastError?.message || 'Could not resolve the requested track.');
 }
 
 function createAudioStreamFromTrack(track) {
@@ -495,7 +523,11 @@ function createAudioStreamFromTrack(track) {
 
   ytdlp.stdout.pipe(ffmpeg.stdin);
 
-  ytdlp.stderr.on('data', () => {});
+  ytdlp.stderr.on('data', (chunk) => {
+    const msg = chunk.toString().trim();
+    if (msg) console.error('[YT-DLP STREAM]:', msg);
+  });
+
   ffmpeg.stderr.on('data', () => {});
 
   ytdlp.on('error', () => {
