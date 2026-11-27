@@ -13,7 +13,13 @@ export const botConfig = {
     // Current online state shown on Discord.
     status: "online",
 
-    // Activity lines shown under the bot name.
+    // How long each activity is shown before switching to the next one (ms).
+    // Set to 0 to disable rotation (only the first activity is used).
+    // Keep this >= 15000 to stay well clear of Discord's presence rate limits.
+    rotateIntervalMs: 30000,
+
+    // Activity lines shown under the bot name. When `rotateIntervalMs` > 0 and
+    // there is more than one entry, the bot cycles through them in order.
     // `type` number mapping from Discord:
     // 0 = Playing
     // 1 = Streaming
@@ -23,9 +29,19 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        name: "Custom Status", // required by Discord API, not shown in the client
-        state: "stalking",     // this is what people actually see
+        name: "/help | Show All Commands", // required by Discord API, not shown in the client
+        state: "",     // this is what people actually see
         type: 4,               // Custom
+      },
+      {
+        name: "/help | Show All Commands",
+        state: "",
+        type: 4,
+      },
+      {
+        name: "/help | Show All Commands",
+        state: "",
+        type: 4,
       },
     ],
   },
@@ -97,7 +113,7 @@ export const botConfig = {
       secondary: "#2F3136",
 
       // Standard status colors for success/error/warning/info messages.
-      success: "#57F287",
+      success: "#ff88d7",
       error: "#ED4245",
       warning: "#FEE75C",
       info: "#3498DB",
@@ -141,7 +157,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "Titan Bot",
+      text: "MannNayla",
       // Footer icon URL (null = no icon).
       icon: null,
     },
@@ -161,21 +177,22 @@ export const botConfig = {
   economy: {
     currency: {
       // Currency display name.
-      name: "coins",
+      name: "Rupiah",
       // Plural display name.
-      namePlural: "coins",
+      namePlural: "Rupiah",
       // Currency symbol shown in balances.
-      symbol: "$",
+      symbol: "IDR",
     },
 
     // Starting balance for new users.
     startingBalance: 0,
 
     // Maximum bank amount before upgrades (if upgrades are used).
-    baseBankCapacity: 100000,
+    // 1 Billion (1B).
+    baseBankCapacity: 1_000_000_000,
 
     // Daily reward amount.
-    dailyAmount: 100,
+    dailyAmount: 10_000,
 
     // Work command random payout range.
     workMin: 10,
@@ -431,6 +448,40 @@ export const botConfig = {
   },
 
   // =========================
+  // AI CHAT SETTINGS
+  // =========================
+  // Works with any OpenAI-compatible endpoint (OpenAI, Groq, OpenRouter, ...).
+  ai: {
+    // Base URL of the OpenAI-compatible API (no trailing slash needed).
+    baseUrl: process.env.AI_BASE_URL || "https://api.openai.com/v1",
+
+    // API key for the provider. When empty, AI chat stays disabled bot-wide.
+    apiKey: process.env.AI_API_KEY || "",
+
+    // Default model used when a server does not override it.
+    model: process.env.AI_MODEL || "gpt-4o-mini",
+
+    // System prompt / personality used when a server does not set its own.
+    defaultSystemPrompt:
+      "You are a helpful, friendly assistant inside a Discord server. Reply concisely and naturally in the same language the user writes in. Keep answers short and readable in chat.",
+
+    // Maximum tokens generated per reply.
+    maxTokens: Number(process.env.AI_MAX_TOKENS) || 700,
+
+    // Sampling temperature (0 = deterministic, 2 = very random).
+    temperature: Number(process.env.AI_TEMPERATURE) || 0.7,
+
+    // How many previous messages are kept per channel as conversation memory.
+    historyLimit: Number(process.env.AI_HISTORY_LIMIT) || 12,
+
+    // Minimum time between two AI requests from the same user (milliseconds).
+    cooldownMs: Number(process.env.AI_COOLDOWN_MS) || 3000,
+
+    // HTTP timeout for a single provider request (milliseconds).
+    requestTimeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS) || 30000,
+  },
+
+  // =========================
   // GENERIC BOT MESSAGES
   // =========================
   messages: {
@@ -450,7 +501,6 @@ export const botConfig = {
   features: {
     // Core systems.
     economy: true,
-    leveling: true,
     moderation: true,
     logging: true,
     welcome: true,
@@ -464,16 +514,20 @@ export const botConfig = {
     // Security and self-service systems.
     verification: true,
     reactionRoles: true,
+    autoReactions: true,
     joinToCreate: true,
 
     // Utility/quality-of-life modules.
     voice: true,
     search: true,
+    sticky: true,
     tools: true,
     utility: true,
     community: true,
     fun: true,
-    music: true,
+
+    // AI chat assistant.
+    aiChat: true,
   },
 };
 
@@ -530,23 +584,25 @@ if (configErrors.length > 0) {
 export const BotConfig = botConfig;
 
 const COMMAND_CATEGORY_FEATURE_MAP = {
+  ai: "aiChat",
   birthday: "birthday",
   community: "community",
   economy: "economy",
   fun: "fun",
   giveaway: "giveaways",
   jointocreate: "joinToCreate",
-  leveling: "leveling",
   logging: "logging",
   moderation: "moderation",
-  music: "music",
   reaction_roles: "reactionRoles",
+  autoreactions: "autoReactions",
   search: "search",
+  sticky: "sticky",
   serverstats: "counter",
   ticket: "tickets",
   tools: "tools",
   utility: "utility",
   verification: "verification",
+  voicemilestone: "voice",
   welcome: "welcome",
 };
 

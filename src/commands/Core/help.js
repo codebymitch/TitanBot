@@ -12,34 +12,36 @@ import {
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import { isBotOwner } from "../../config/bot.js";
+import { OWNER_CATEGORIES } from "../../config/commands/commandCategories.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CATEGORY_SELECT_ID = "help-category-select";
 const ALL_COMMANDS_ID = "help-all-commands";
-const BUG_REPORT_BUTTON_ID = "help-bug-report";
-const HELP_MENU_TIMEOUT_MS = 5 * 60 * 1000;
 
 const CATEGORY_ICONS = {
+    AI: "🤖",
     Core: "ℹ️",
     Moderation: "🛡️",
     Economy: "💰",
-    Music: "🎵",
     Fun: "🎮",
-    Leveling: "📊",
     Utility: "🔧",
     Ticket: "🎫",
     Welcome: "👋",
     Giveaway: "🎉",
     Counter: "🔢",
     Tools: "🛠️",
+    Sticky: "📌",
+    AutoReactions: "🔁",
     Search: "🔍",
     "Reaction Roles": "🎭",
     Community: "👥",
     Birthday: "🎂",
     "Join To Create": "🔌",
     Verification: "✅",
+    Owner: "👑",
 };
 
 function formatCategoryName(rawCategory) {
@@ -49,13 +51,15 @@ function formatCategoryName(rawCategory) {
         .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export async function createInitialHelpMenu(client) {
+export async function createInitialHelpMenu(client, viewerId = null) {
     const commandsPath = path.join(__dirname, "../../commands");
     const categoryDirs = (
         await fs.readdir(commandsPath, { withFileTypes: true })
     )
         .filter((dirent) => dirent.isDirectory())
         .map((dirent) => dirent.name)
+        // Kategori khusus owner cuma kelihatan buat bot owner.
+        .filter((name) => !OWNER_CATEGORIES.has(name.toLowerCase()) || isBotOwner(viewerId))
         .sort();
 
     const options = [
@@ -99,11 +103,6 @@ export async function createInitialHelpMenu(client) {
                 ].join('\n'),
                 inline: false,
             },
-            {
-                name: '\u200B',
-                value: `-# ${botName} is [open source](https://youtu.be/1jCZX8s3bJE?si=NPOYx-vxVE1I5vJK)`,
-                inline: false,
-            },
         ],
     });
 
@@ -113,13 +112,13 @@ export async function createInitialHelpMenu(client) {
     embed.setTimestamp();
 
     const bugReportButton = new ButtonBuilder()
-        .setCustomId(BUG_REPORT_BUTTON_ID)
         .setLabel("Report Bug")
-        .setStyle(ButtonStyle.Danger);
+        .setURL("https://discord.gg/wmxB2qgUBQ")
+        .setStyle(ButtonStyle.Link);
 
     const supportButton = new ButtonBuilder()
         .setLabel("Support Server")
-        .setURL("https://discord.gg/QnWNz2dKCE")
+        .setURL("https://discord.gg/wmxB2qgUBQ")
         .setStyle(ButtonStyle.Link);
 
     const selectRow = createSelectMenu(
@@ -146,36 +145,13 @@ export default {
         .setDescription("Displays the help menu with all available commands"),
 
     async execute(interaction, guildConfig, client) {
-        
-        const { MessageFlags } = await import('discord.js');
         await InteractionHelper.safeDefer(interaction);
         
-        const { embeds, components } = await createInitialHelpMenu(client);
+        const { embeds, components } = await createInitialHelpMenu(client, interaction.user.id);
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds,
             components,
         });
-
-        setTimeout(async () => {
-            try {
-                if (!InteractionHelper.isInteractionValid(interaction)) {
-                    return;
-                }
-
-                const closedEmbed = createEmbed({
-                    title: "Help menu closed",
-                    description: "Help menu has been closed, use /help again.",
-                    color: "secondary",
-                });
-
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [closedEmbed],
-                    components: [],
-                });
-            } catch (error) {
-                logger.debug('Help menu close edit failed (interaction may have expired):', error?.message);
-            }
-        }, HELP_MENU_TIMEOUT_MS);
     },
 };

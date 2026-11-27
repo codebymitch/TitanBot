@@ -3,30 +3,297 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { getItemById } from '../../config/shop/items.js';
+import { getGuildConfig } from '../../services/config/guildConfig.js';
 
-const FISH_COOLDOWN = 45 * 60 * 1000; 
+const FISH_COOLDOWN = 0; 
 const BASE_MIN_REWARD = 300;
 const BASE_MAX_REWARD = 900;
-const FISHING_ROD_MULTIPLIER = 1.5;
+const DEFAULT_LUCK_POTION_DURATION_MS = 5 * 60 * 1000;
+const PREMIUM_FISHING_MULTIPLIER = getItemById('premium_role')?.effect?.multiplier ?? 1.1;
+const PREMIUM_PLUS_EFFECT = getItemById('premium_role_plus')?.effect ?? {};
+const PREMIUM_PLUS_LUCK_MULTIPLIER = PREMIUM_PLUS_EFFECT.luckMultiplier ?? 1;
+const PREMIUM_PLUS_INCOME_MULTIPLIER = PREMIUM_PLUS_EFFECT.incomeMultiplier ?? 1;
+const PREMIUM_PLUS_RARITY_UP_CHANCE = PREMIUM_PLUS_EFFECT.rarityUpChance ?? 0;
 
-const FISH_TYPES = [
-    { name: 'Bass', emoji: '🐟', rarity: 'common' },
-    { name: 'Salmon', emoji: '🐟', rarity: 'common' },
-    { name: 'Trout', emoji: '🐟', rarity: 'common' },
-    { name: 'Tuna', emoji: '🐠', rarity: 'uncommon' },
-    { name: 'Swordfish', emoji: '🐠', rarity: 'uncommon' },
-    { name: 'Octopus', emoji: '🐙', rarity: 'rare' },
-    { name: 'Lobster', emoji: '🦞', rarity: 'rare' },
-    { name: 'Shark', emoji: '🦈', rarity: 'epic' },
-    { name: 'Whale', emoji: '🐋', rarity: 'legendary' },
+// Rarity tiers ordered from lowest to highest (used for rarity-upgrade perks).
+export const RARITY_ORDER = [
+    'common', 'uncommon', 'rare', 'epic', 'legendary',
+    'mythic', 'secret', 'divine', 'transcendent', 'celestial'
 ];
 
+// Roll a random upgrade on a caught rarity (e.g. the Premium Role+ perk).
+export function applyRarityUpgrade(rarity, chance) {
+    if (!chance || Math.random() >= chance) return rarity;
+    const index = RARITY_ORDER.indexOf(rarity);
+    if (index < 0 || index >= RARITY_ORDER.length - 1) return rarity;
+    return RARITY_ORDER[index + 1];
+}
+
+// ===== Exclusive Catch: ikan langka khusus pemilik Premium Role+ =====
+// Ikan-ikan ini tidak muncul di pool normal dan hanya bisa ditangkap lewat
+// peluang bonus milik role Premium Role+.
+export const EXCLUSIVE_FISH = [
+    { name: 'Aurora Piranha', emoji: '🌈' },
+    { name: 'Chrono Sturgeon', emoji: '⏰' },
+    { name: 'Prism Barracuda', emoji: '🔮' },
+    { name: 'Abyssal Phoenix', emoji: '🔥' },
+    { name: 'Quantum Manta', emoji: '⚛️' },
+    { name: 'Mythril Anglerfish', emoji: '💠' },
+];
+export const EXCLUSIVE_COLOR = '#F1C40F';
+const EXCLUSIVE_PRICE_MIN = 137500;
+const EXCLUSIVE_PRICE_MAX = 550000;
+export const EXCLUSIVE_CATCH_CHANCE = 0.15;
+
+// Roll a bonus exclusive catch (nilai jauh di atas ikan biasa).
+export function rollExclusiveCatch() {
+    const fish = EXCLUSIVE_FISH[Math.floor(Math.random() * EXCLUSIVE_FISH.length)];
+    const baseEarned = Math.floor(Math.random() * (EXCLUSIVE_PRICE_MAX - EXCLUSIVE_PRICE_MIN + 1)) + EXCLUSIVE_PRICE_MIN;
+    return { fish, baseEarned };
+}
+
+// Helper: find the highest-tier fishing rod the user owns
+function getBestFishingRod(inventory) {
+    for (let tier = 5; tier >= 1; tier--) {
+        const id = `fishing_rod_${tier}`;
+        const legacyTierFiveQuantity = tier === 5
+            ? Number(inventory.fishibg_rod_5 || 0)
+            : 0;
+        if (Number(inventory[id] || 0) > 0 || legacyTierFiveQuantity > 0) {
+            const item = getItemById(id);
+            if (item) return item;
+        }
+    }
+    return null;
+}
+
+// Helper: find the highest-tier luck potion with an active timer
+function getBestActiveLuckPotion(potionExpiries, now) {
+    for (let tier = 5; tier >= 1; tier--) {
+        const id = `luck_potion_${tier}`;
+        if (Number(potionExpiries[id]) > now) {
+            const item = getItemById(id);
+            if (item) return item;
+        }
+    }
+    return null;
+}
+
+export const FISH_TYPES = [
+    // Common
+    { name: 'Bass', emoji: '🐟', rarity: 'common' },
+    { name: 'Salmon', emoji: '🐠', rarity: 'common' },
+    { name: 'forel', emoji: '🐟', rarity: 'common' },
+    { name: 'Carp', emoji: '🐟', rarity: 'common' },
+    { name: 'Catfish', emoji: '🐟', rarity: 'common' },
+    { name: 'Perch', emoji: '🐟', rarity: 'common' },
+    { name: 'Sardine', emoji: '🐟', rarity: 'common' },
+    { name: 'Mackerel', emoji: '🐟', rarity: 'common' },
+
+    // Uncommon
+    { name: 'Tuna', emoji: '🐡', rarity: 'uncommon' },
+    { name: 'Swordfish', emoji: '🐟', rarity: 'uncommon' },
+    { name: 'Octopus', emoji: '🐙', rarity: 'uncommon' },
+    { name: 'Barracuda', emoji: '🐟', rarity: 'uncommon' },
+    { name: 'Pufferfish', emoji: '🐡', rarity: 'uncommon' },
+    { name: 'Snapper', emoji: '🐠', rarity: 'uncommon' },
+    { name: 'Mahi Mahi', emoji: '🐠', rarity: 'uncommon' },
+
+    // Rare
+    { name: 'Lobster', emoji: '🦞', rarity: 'rare' },
+    { name: 'Shark', emoji: '🦈', rarity: 'rare' },
+    { name: 'Manta Ray', emoji: '🐟', rarity: 'rare' },
+    { name: 'Stingray', emoji: '🐟', rarity: 'rare' },
+    { name: 'Anglerfish', emoji: '🐡', rarity: 'rare' },
+    { name: 'Moray Eel', emoji: '🐍', rarity: 'rare' },
+    { name: 'Hammerhead Shark', emoji: '🦈', rarity: 'rare' },
+
+    // Epic
+    { name: 'Golden Koi', emoji: '🐠', rarity: 'epic' },
+    { name: 'Blue Marlin', emoji: '🐟', rarity: 'epic' },
+    { name: 'Crystal Fish', emoji: '💎', rarity: 'epic' },
+    { name: 'Moonfish', emoji: '🌙', rarity: 'epic' },
+    { name: 'Electric Eel', emoji: '⚡', rarity: 'epic' },
+    { name: 'Ruby Grouper', emoji: '🔴', rarity: 'epic' },
+    { name: 'Sapphire Tuna', emoji: '🔵', rarity: 'epic' },
+
+    // Legendary
+    { name: 'Golden Shark', emoji: '🦈', rarity: 'legendary' },
+    { name: 'Sea Dragon', emoji: '🐉', rarity: 'legendary' },
+    { name: 'Golden Whale', emoji: '🐋', rarity: 'legendary' },
+    { name: 'Storm Serpent', emoji: '🌩️', rarity: 'legendary' },
+    { name: 'Aurora Whale', emoji: '🌌', rarity: 'legendary' },
+    { name: 'Thunder Marlin', emoji: '⚡', rarity: 'legendary' },
+    { name: 'Emerald Leviathan', emoji: '💚', rarity: 'legendary' },
+
+    // Mythic
+    { name: 'Leviathan', emoji: '🐉', rarity: 'mythic' },
+    { name: 'Megalodon', emoji: '🦈', rarity: 'mythic' },
+    { name: 'Phoenix Koi', emoji: '🔥', rarity: 'mythic' },
+    { name: 'Celestial Turtle', emoji: '🐢', rarity: 'mythic' },
+    { name: 'Abyssal Dragon', emoji: '🐉', rarity: 'mythic' },
+    { name: 'Star Kraken', emoji: '🐙', rarity: 'mythic' },
+    { name: 'Obsidian Whale', emoji: '🐋', rarity: 'mythic' },
+
+    // Secret
+    { name: 'Void Whale', emoji: '🌌', rarity: 'secret' },
+    { name: 'Ancient Kraken', emoji: '🐙', rarity: 'secret' },
+    { name: 'Abyss Serpent', emoji: '🐍', rarity: 'secret' },
+    { name: 'Shadow Leviathan', emoji: '🌑', rarity: 'secret' },
+    { name: 'Eclipse Ray', emoji: '🌘', rarity: 'secret' },
+    { name: 'Genesis Eel', emoji: '⚡', rarity: 'secret' },
+    { name: 'Nebula Shark', emoji: '🦈', rarity: 'secret' },
+
+    // Divine (Above Secret)
+    { name: 'Cosmic Leviathan', emoji: '🌠', rarity: 'divine' },
+    { name: 'God of Ocean', emoji: '🔱', rarity: 'divine' },
+    { name: 'Eternal Whale', emoji: '🌌', rarity: 'divine' },
+    { name: 'Ocean Titan', emoji: '🌊', rarity: 'divine' },
+    { name: 'Holy Megalodon', emoji: '✨', rarity: 'divine' },
+    { name: 'Astral Dragon', emoji: '🐉', rarity: 'divine' },
+    { name: 'Solar Koi', emoji: '☀️', rarity: 'divine' },
+
+    // Transcendent (Above Divine)
+    { name: 'Chronos Whale', emoji: '⏳', rarity: 'transcendent' },
+    { name: 'Omnipotent Kraken', emoji: '👑', rarity: 'transcendent' },
+    { name: 'Primordial Serpent', emoji: '🐍', rarity: 'transcendent' },
+    { name: 'Infinity Koi', emoji: '♾️', rarity: 'transcendent' },
+    { name: 'Genesis Leviathan', emoji: '🌟', rarity: 'transcendent' },
+    { name: 'Celestia Dragon', emoji: '🐲', rarity: 'transcendent' },
+
+    // Celestial (Above Transcendent) — Kitsune, peluang 2x lebih susah dari transcendent
+    { name: 'Kitsune', emoji: '🦊', rarity: 'celestial' }
+];
+
+export const FISH_PRICES = {
+    common: [200, 450],
+    uncommon: [450, 750],
+    rare: [1000, 1250],
+    epic: [1750, 3000],
+    legendary: [3750, 7500],
+    mythic: [15000, 25000],
+    secret: [30000, 50000],
+    divine: [62500, 150000],
+    transcendent: [250000, 450000],
+    celestial: [7500000, 12000000]
+};
+
+export const RARITY_COLORS = {
+    common: '#95A5A6',
+    uncommon: '#2ECC71',
+    rare: '#3498DB',
+    epic: '#9B59B6',
+    legendary: '#F1C40F',
+    mythic: '#E91E63',
+    secret: '#404850',
+    divine: '#00FFFF',
+    transcendent: '#FF00FF',
+    celestial: '#FF69B4'
+};
+
+// Map a random roll (0-1) to a rarity using the standard catch distribution.
+export function selectRarity(roll) {
+    if (roll < 0.45) return 'common';
+    if (roll < 0.70) return 'uncommon';
+    if (roll < 0.85) return 'rare';
+    if (roll < 0.94) return 'epic';
+    if (roll < 0.98) return 'legendary';
+    if (roll < 0.995) return 'mythic';
+    if (roll < 0.9995) return 'secret';
+    if (roll < 0.9997) return 'divine';
+    if (roll < 0.9999) return 'transcendent';
+    return 'celestial';
+}
+
+// Pick a random fish of a given rarity and roll its sale value.
+export function pickFish(rarity) {
+    const availableFish = FISH_TYPES.filter(f => f.rarity === rarity);
+    const fish = availableFish[Math.floor(Math.random() * availableFish.length)];
+    const [minPrice, maxPrice] = FISH_PRICES[rarity];
+    const baseEarned = Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+    return { fish, baseEarned };
+}
+
+// Roll a fresh catch with the standard distribution (no potion/luck modifiers).
+export function rollFishingCatch() {
+    return pickFish(selectRarity(Math.random()));
+}
+
+// Resolve a user's active potion state: convert legacy inventory potions into
+// running timers, then return the active luck potion (and admin potion if any).
+export function resolveActivePotions(inventory, userData, now) {
+    const potionExpiries = { ...(userData.luckPotionExpiresAt || {}) };
+    for (let tier = 1; tier <= 5; tier++) {
+        const potionId = `luck_potion_${tier}`;
+        const legacyQuantity = Number(inventory[potionId] || 0);
+        if (legacyQuantity > 0) {
+            const currentExpiry = Math.max(now, Number(potionExpiries[potionId]) || 0);
+            const duration = Number(getItemById(potionId)?.effect?.duration)
+                || DEFAULT_LUCK_POTION_DURATION_MS;
+            potionExpiries[potionId] = currentExpiry + (duration * legacyQuantity);
+            delete inventory[potionId];
+        }
+    }
+
+    const bestPotion = getBestActiveLuckPotion(potionExpiries, now);
+    let adminPotion = null;
+    let activeIncomeMultiplier = 1;
+    let activeIncomeExpiresAt = 0;
+    for (const [potionId, expiry] of Object.entries(potionExpiries)) {
+        if (Number(expiry) > now) {
+            const potionItem = getItemById(potionId);
+            if (!potionItem) continue;
+            if (
+                potionItem.effect?.admin &&
+                !adminPotion &&
+                (potionItem.effect.multiplier || potionItem.effect.chances)
+            ) {
+                adminPotion = potionItem;
+            }
+            const potionIncome = Number(potionItem.effect?.incomeMultiplier) || 1;
+            if (potionIncome > 1) {
+                activeIncomeMultiplier *= potionIncome;
+                activeIncomeExpiresAt = Math.max(activeIncomeExpiresAt, Number(expiry) || 0);
+            }
+        }
+    }
+
+    return { potionExpiries, bestPotion, adminPotion, activeIncomeMultiplier, activeIncomeExpiresAt };
+}
+
+// Roll a rarity from a random value biased by the given potion's luck.
+// extraLuckMultiplier applies additional luck (e.g. from the Premium Role+).
+// Admin potions also get a flat chance at the top tier (celestial/Kitsune).
+export function rollRarityWithPotion(activePotion, extraLuckMultiplier = 1) {
+    const adminChances = activePotion?.effect?.chances || null;
+    if (adminChances && Math.random() < (adminChances.celestial || 0)) {
+        return 'celestial';
+    }
+
+    let rand = Math.random();
+    let luckMultiplier = Number(extraLuckMultiplier) || 1;
+    if (activePotion) {
+        luckMultiplier *= activePotion.effect.multiplier || 1;
+    }
+    if (luckMultiplier > 1) {
+        rand = 1 - Math.pow(1 - rand, luckMultiplier);
+        if (rand > 0.9998) rand = 0.9998;
+    }
+    return selectRarity(rand);
+}
+
 const CATCH_MESSAGES = [
-    "You cast your line into the crystal clear waters...",
-    "You wait patiently as your bobber floats...",
-    "After a few minutes of waiting, you feel a tug...",
-    "The water ripples as something takes your bait...",
-    "You reel in your catch with expert precision...",
+    "Kamu melemparkan kailmu ke dalam air yang sangat jernih...",
+    "Kamu menunggu dengan sabar saat pelampung pancingmu mengapung...",
+    "Setelah beberapa menit menunggu, kamu merasakan tarikan pada kailmu...",
+    "Air mulai beriak saat sesuatu memakan umpanmu...",
+    "Kamu menarik hasil tangkapanmu dengan sangat ahli...",
+    "Pelampungmu tenggelam! Sepertinya ada ikan yang menyambar...",
+    "Air di sekitarmu mulai bergejolak...",
+    "Tarikan semakin kuat, sepertinya ikan ini cukup besar...",
+    "Kailmu bergerak liar, tangkapanmu berusaha melarikan diri...",
+    "Setelah perjuangan panjang, akhirnya kamu berhasil mendapatkan ikan...",
 ];
 
 export default {
@@ -44,7 +311,29 @@ export default {
 
             const userData = await getEconomyData(client, guildId, userId);
             const lastFish = userData.lastFish || 0;
-            const hasFishingRod = userData.inventory["fishing_rod"] || 0;
+            const inventory = userData.inventory || {};
+            const bestRod = getBestFishingRod(inventory);
+            const {
+                potionExpiries,
+                bestPotion,
+                adminPotion: activeAdminPotion,
+                activeIncomeMultiplier,
+                activeIncomeExpiresAt,
+            } =
+                resolveActivePotions(inventory, userData, now);
+            userData.luckPotionExpiresAt = potionExpiries;
+
+            const guildConfig = await getGuildConfig(client, guildId);
+            const premiumRoleId = guildConfig.premiumRoleId;
+            const premiumPlusRoleId = guildConfig.premiumPlusRoleId;
+            const hasPremiumRole = Boolean(
+                premiumRoleId && interaction.member?.roles?.cache?.has(premiumRoleId)
+            );
+            const hasPremiumPlusRole = Boolean(
+                premiumPlusRoleId && interaction.member?.roles?.cache?.has(premiumPlusRoleId)
+            );
+            const roleLuckMultiplier = hasPremiumPlusRole ? PREMIUM_PLUS_LUCK_MULTIPLIER : 1;
+            const totalLuckMultiplier = roleLuckMultiplier;
 
             if (now < lastFish + FISH_COOLDOWN) {
                 const remaining = lastFish + FISH_COOLDOWN - now;
@@ -61,57 +350,107 @@ export default {
                 );
             }
 
-            const rand = Math.random();
-            let fishCaught;
-            
-            if (rand < 0.5) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'common')[Math.floor(Math.random() * 3)];
-            } else if (rand < 0.75) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'uncommon')[Math.floor(Math.random() * 2)];
-            } else if (rand < 0.9) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'rare')[Math.floor(Math.random() * 2)];
-            } else if (rand < 0.98) {
-                
-                fishCaught = FISH_TYPES.find(f => f.rarity === 'epic');
-            } else {
-                
-                fishCaught = FISH_TYPES.find(f => f.rarity === 'legendary');
+            const activePotion = activeAdminPotion || bestPotion;
+            const adminChances = activeAdminPotion?.effect?.chances || null;
+
+            let luckMessage = "";
+            if (activePotion) {
+                const minutesLeft = Math.ceil(
+                    (Number(potionExpiries[activePotion.id]) - now) / 60000
+                );
+                const effect = activePotion.effect || {};
+                const bits = [];
+                if (effect.multiplier && effect.multiplier > 1) {
+                    bits.push(`+${Math.round(effect.multiplier * 100)}% luck`);
+                }
+                if (effect.incomeMultiplier && effect.incomeMultiplier > 1) {
+                    bits.push(`+${Math.round((effect.incomeMultiplier - 1) * 100)}% income`);
+                }
+                if (adminChances?.celestial) {
+                    bits.push(`Kitsune ${Math.round(adminChances.celestial * 100)}%`);
+                }
+                if (bits.length) {
+                    const potionLabel = activePotion.id === 'admin_potion'
+                        ? 'Admin Potion'
+                        : activePotion.name;
+                    luckMessage = `\n**${potionLabel} Active: ${bits.join(', ')} (${minutesLeft}m left)**`;
+                }
             }
 
-            const baseEarned = Math.floor(
-                Math.random() * (BASE_MAX_REWARD - BASE_MIN_REWARD + 1)
-            ) + BASE_MIN_REWARD;
-
-            let finalEarned = baseEarned;
-            let multiplierMessage = "";
-
-            if (hasFishingRod > 0) {
-                finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
-                multiplierMessage = `\n🎣 **Fishing Rod Bonus: +50%**`;
+            let selectedRarity = rollRarityWithPotion(activePotion, totalLuckMultiplier);
+            if (hasPremiumPlusRole) {
+                selectedRarity = applyRarityUpgrade(selectedRarity, PREMIUM_PLUS_RARITY_UP_CHANCE);
             }
+
+            const { fish: fishCaught, baseEarned } = pickFish(selectedRarity);
+
+            let fishingMultiplier = 1;
+            const bonusMessages = [];
+            if (bestRod) {
+                const rodMultiplier = bestRod.effect.multiplier || 1;
+                fishingMultiplier *= rodMultiplier;
+                const boostPct = Math.round((rodMultiplier - 1) * 100);
+                const rodName = bestRod.name.replace(/^🎣\s*/, '');
+                bonusMessages.push(`**${rodName} Bonus: +${boostPct}%**`);
+            }
+            if (hasPremiumRole) {
+                fishingMultiplier *= PREMIUM_FISHING_MULTIPLIER;
+                const boostPct = Math.round((PREMIUM_FISHING_MULTIPLIER - 1) * 100);
+                bonusMessages.push(`**Premium Role Bonus: +${boostPct}%**`);
+            }
+            if (hasPremiumPlusRole) {
+                fishingMultiplier *= PREMIUM_PLUS_INCOME_MULTIPLIER;
+                const incomePct = Math.round((PREMIUM_PLUS_INCOME_MULTIPLIER - 1) * 100);
+                const luckPct = Math.round((PREMIUM_PLUS_LUCK_MULTIPLIER - 1) * 100);
+                const rarityUpPct = Math.round(PREMIUM_PLUS_RARITY_UP_CHANCE * 100);
+                bonusMessages.push(`**Premium Role+ Bonus: +${incomePct}% income, +${luckPct}% luck, ${rarityUpPct}% rarity-up**`);
+            }
+            if (activeIncomeMultiplier > 1) {
+                fishingMultiplier *= activeIncomeMultiplier;
+                const incomePct = Math.round((activeIncomeMultiplier - 1) * 100);
+                const minutesLeft = activeIncomeExpiresAt > now
+                    ? ` (${Math.ceil((activeIncomeExpiresAt - now) / 60000)}m left)`
+                    : '';
+                bonusMessages.push(`**Admin Income Potion: +${incomePct}% income${minutesLeft}**`);
+            }
+            const finalEarned = Math.floor(baseEarned * fishingMultiplier);
+            const multiplierMessage = bonusMessages.length
+                ? `\n\n${bonusMessages.join('\n')}`
+                : "";
+
+            // Bonus eksklusif: pemilik Premium Role+ berpeluang menangkap ikan
+            // eksklusif tambahan yang tidak ada di pool normal.
+            let exclusiveFish = null;
+            let exclusiveEarned = 0;
+            if (hasPremiumPlusRole && Math.random() < EXCLUSIVE_CATCH_CHANCE) {
+                const roll = rollExclusiveCatch();
+                exclusiveFish = roll.fish;
+                exclusiveEarned = Math.floor(roll.baseEarned * fishingMultiplier);
+            }
+            const exclusiveMessage = exclusiveFish
+                ? `\n\n🌟 **EXCLUSIVE CATCH!** You also hooked a **${exclusiveFish.emoji} ${exclusiveFish.name}** worth **$${exclusiveEarned.toLocaleString()}**!`
+                : "";
 
             const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];
 
-            userData.wallet += finalEarned;
+            userData.wallet += finalEarned + exclusiveEarned;
             userData.lastFish = now;
+            userData.fishCollection = userData.fishCollection || {};
+            userData.fishCollection[fishCaught.name] =
+                (Number(userData.fishCollection[fishCaught.name]) || 0) + 1;
+            if (exclusiveFish) {
+                userData.fishCollection[exclusiveFish.name] =
+                    (Number(userData.fishCollection[exclusiveFish.name]) || 0) + 1;
+            }
+            userData.inventory = inventory;
+            userData.luckPotionExpiresAt = potionExpiries;
 
             await setEconomyData(client, guildId, userId, userData);
 
-            const rarityColors = {
-                common: '#95A5A6',
-                uncommon: '#2ECC71',
-                rare: '#3498DB',
-                epic: '#9B59B6',
-                legendary: '#F1C40F'
-            };
-
             const embed = createEmbed({
                 title: 'Fishing Success!',
-                description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${multiplierMessage}`,
-                color: rarityColors[fishCaught.rarity]
+                description: `${catchMessage}\n\nYou caught a **${fishCaught.emoji} ${fishCaught.name}**! You sold it for **$${finalEarned.toLocaleString()}**!${exclusiveMessage}${multiplierMessage}${luckMessage}`,
+                color: exclusiveFish ? EXCLUSIVE_COLOR : RARITY_COLORS[fishCaught.rarity]
             })
                 .addFields(
                     {
@@ -124,8 +463,7 @@ export default {
                         value: fishCaught.rarity.charAt(0).toUpperCase() + fishCaught.rarity.slice(1),
                         inline: true,
                     }
-                )
-                .setFooter({ text: `Next fishing trip available in 45 minutes.` });
+                );
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }, { command: 'fish' })

@@ -16,6 +16,17 @@ export default {
                         .setDescription('The role to grant for Premium Role purchases.')
                         .setRequired(true),
                 ),
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('setrole-plus')
+                .setDescription('Set the Discord role granted when the Premium Role+ shop item is purchased.')
+                .addRoleOption(option =>
+                    option
+                        .setName('role')
+                        .setDescription('The role to grant for Premium Role+ purchases.')
+                        .setRequired(true),
+                ),
         ),
 
     async execute(interaction, config, client) {
@@ -23,6 +34,14 @@ export default {
 
         if (subcommand === 'setrole') {
             return shopConfigSetrole.execute(interaction, config, client);
+        }
+
+        if (subcommand === 'setrole-plus') {
+            return shopConfigSetrole.execute(interaction, config, client, {
+                configKey: 'premiumPlusRoleId',
+                label: 'Premium Role+ Shop Role',
+                itemName: 'Premium Role+',
+            });
         }
     },
 };

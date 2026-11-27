@@ -1,8 +1,5 @@
 import { Events } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { getLevelingConfig, getUserLevelData } from '../services/leveling/leveling.js';
-import { addXp } from '../services/leveling/xpSystem.js';
-import { checkRateLimit } from '../utils/rateLimiter.js';
 import { parsePrefixCommand } from '../utils/prefixParser.js';
 import { supportsPrefixExecution, executePrefixCommand, resolvePrefixAccessKey } from '../utils/messageAdapter.js';
 import { resolveCommandAlias, resolveSubcommandAlias } from '../config/commands/commandAliases.js';
@@ -10,34 +7,66 @@ import { getPrefixRestriction } from '../config/commands/prefixRestrictions.js';
 import { getGuildConfig } from '../services/config/guildConfig.js';
 import { getCommandPrefix, getBotMessage, isBotOwner, isCommandCategoryEnabled, isMaintenanceMode } from '../config/bot.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
-import { createEmbed } from '../utils/embeds.js';
+import { createEmbed, warningEmbed } from '../utils/embeds.js';
 import { isCommandEnabled } from '../services/commandAccessService.js';
+import {
+  generateReply as generateAiReply,
+  splitMessage as splitAiMessage,
+  checkCooldown as checkAiCooldown,
+  isAiConfigured,
+} from '../services/aiChatService.js';
 import {
   getCountingGameConfig,
   saveCountingGameConfig,
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
-
-const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
-const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
+import { handleGuess as handleTebakGambarGuess } from '../services/tebakGambarService.js';
+import { handleStickyMessage } from '../services/stickyService.js';
+import { handleAutoReaction } from '../services/autoReactionService.js';
+import StreakService from '../services/streakService.js';
+import { trackChatMessage } from '../services/chatLeaderboardService.js';
 
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
-      if (message.author.bot || !message.guild) return;
+      if (!message.guild) return;
+
+      // Sticky harus di-repost ke bawah untuk SEMUA pesan (termasuk bot lain),
+      // tapi skip pesan dari bot kita sendiri supaya tidak loop.
+      // handleStickyMessage juga punya guard internal untuk memastikan tidak loop.
+      if (message.author?.id && message.author.id !== client.user?.id) {
+        await handleStickyMessage(message, client);
+      }
+
+      if (message.author?.bot) return;
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
+      trackChatMessage(message);
 
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
         return;
       }
 
-      await handlePrefixCommand(message, client);
+      // Tebak gambar: pesan chat di channel permainan dipakai sebagai jawaban.
+      // Kalau tebakannya benar, ronde ditutup dan pesan tidak diproses lebih lanjut.
+      const tebakGambarProcessed = await handleTebakGambarGuess(message, client);
+      if (tebakGambarProcessed) {
+        return;
+      }
 
-      await handleLeveling(message, client);
+      await handleAutoReaction(message, client);
+
+      await handleStreakActivity(message, client);
+
+      const aiHandled = await handleAiChat(message, client);
+      if (aiHandled) {
+        return;
+      }
+
+      await handlePrefixCommand(message, client);
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
     }
@@ -55,12 +84,6 @@ async function handlePrefixCommand(message, client) {
     }
 
     let { commandName, args } = parsed;
-    const musicPrefixShortcut = commandName.toLowerCase();
-    const MUSIC_PREFIX_SHORTCUTS = new Set(['leave', 'pause', 'resume', 'skip', 'stop', 'volume']);
-    if (MUSIC_PREFIX_SHORTCUTS.has(musicPrefixShortcut)) {
-      commandName = 'music';
-      args = [musicPrefixShortcut, ...args];
-    }
 
     logger.info(`Prefix command detected: ${commandName}, args: ${args.join(', ')}`);
 
@@ -97,14 +120,8 @@ async function handlePrefixCommand(message, client) {
 
     const restriction = getPrefixRestriction(command, args, resolveSubcommandAlias);
     if (!supportsPrefixExecution(command) || restriction.blocked) {
-      if (restriction.blocked && restriction.reason) {
-        const embed = createEmbed({
-          title: 'Slash Command Only',
-          description: `${restriction.reason}\nUse \`/${resolvedCommandName}\` instead.`,
-          color: 'info',
-        });
-        await message.channel.send({ embeds: [embed] }).catch(() => {});
-      }
+      // Silent ignore: do not respond to prefix commands that are slash-only.
+      // This lets the same message be handled by another bot in the server.
       return;
     }
 
@@ -182,72 +199,124 @@ async function handleCountingGame(message, client) {
   }
 }
 
-async function handleLeveling(message, client) {
+async function handleStreakActivity(message, client) {
   try {
-    const rateLimitKey = `xp-event:${message.guild.id}:${message.author.id}`;
-    const canProcess = await checkRateLimit(rateLimitKey, MESSAGE_XP_RATE_LIMIT_ATTEMPTS, MESSAGE_XP_RATE_LIMIT_WINDOW_MS);
-    if (!canProcess) {
+    if (!message.author || message.author.bot || !message.guild) {
       return;
     }
 
-    const levelingConfig = await getLevelingConfig(client, message.guild.id);
-    
-    if (!levelingConfig?.enabled) {
+    const guildConfig = await getGuildConfig(client, message.guild.id);
+    if (guildConfig?.streak?.enabled !== true) {
       return;
     }
 
-    if (levelingConfig.ignoredChannels?.includes(message.channel.id)) {
+    // Streak hanya aktif di channel streak yang di-set oleh /streak channel.
+    // Chat di channel lain tidak akan memicu bot merespons di channel streak.
+    const streakChannelId = guildConfig.streak.channelId;
+    if (streakChannelId && message.channel.id !== streakChannelId) {
       return;
     }
 
-    if (levelingConfig.ignoredRoles?.length > 0) {
-      const member = await message.guild.members.fetch(message.author.id).catch(() => {
-        return null;
-      });
-      if (member && member.roles.cache.some(role => levelingConfig.ignoredRoles.includes(role.id))) {
-        return;
-      }
-    }
+    const result = await StreakService.recordActivity(client, message.guild.id, message.author.id, {
+      timestamp: message.createdTimestamp,
+    });
 
-    if (levelingConfig.blacklistedUsers?.includes(message.author.id)) {
+    if (!result?.incremented && !result?.alreadyOn) {
       return;
     }
 
-    if (!message.content || message.content.trim().length === 0) {
-      return;
-    }
+    const embed = result.incremented
+      ? createEmbed({
+          title: '<a:Firee:1572339013346402384> STREAK UPDATED',
+          description: `Wihh ${message.author} streak api kamu udah nyampe **${result.streak.currentCount} hari** nih! jangan sampai putus yaa, terus nyalain apinya 🔥`,
+          color: 'success',
+          thumbnail: message.author.displayAvatarURL({ dynamic: true, size: 128 }),
+        })
+      : createEmbed({
+          title: '<a:Firee:1572339013346402384> THE FIRE IS ALREADY ON',
+          description: `Streak kamu ${message.author} udah aktif lagi\nBesok jangan lupa mampir dan chat lagi yaa`,
+          color: 'success',
+        });
 
-    const userData = await getUserLevelData(client, message.guild.id, message.author.id);
+    const streakChannel = streakChannelId
+      ? message.guild.channels.cache.get(streakChannelId)
+      : null;
 
-    const cooldownTime = levelingConfig.xpCooldown || 60;
-    const now = Date.now();
-    const timeSinceLastMessage = now - (userData.lastMessage || 0);
-
-    if (timeSinceLastMessage < cooldownTime * 1000) {
-      return;
-    }
-
-    const minXP = levelingConfig.xpRange?.min || levelingConfig.xpPerMessage?.min || 15;
-    const maxXP = levelingConfig.xpRange?.max || levelingConfig.xpPerMessage?.max || 25;
-
-    const safeMinXP = Math.max(1, minXP);
-    const safeMaxXP = Math.max(safeMinXP, maxXP);
-
-    const xpToGive = Math.floor(Math.random() * (safeMaxXP - safeMinXP + 1)) + safeMinXP;
-
-    let finalXP = xpToGive;
-    if (levelingConfig.xpMultiplier && levelingConfig.xpMultiplier > 1) {
-      finalXP = Math.floor(finalXP * levelingConfig.xpMultiplier);
-    }
-
-    const result = await addXp(client, message.guild, message.member, finalXP);
-
-    if (result?.leveledUp) {
-      logger.info(
-        `${message.author.tag} leveled up to level ${result.level} in ${message.guild.name}`
-      );
+    if (streakChannel && streakChannel.isTextBased()) {
+      await streakChannel
+        .send({ embeds: [embed], allowedMentions: { users: [message.author.id] } })
+        .catch(() => null);
+    } else {
+      await message.reply({
+        embeds: [embed],
+        allowedMentions: { users: [message.author.id], repliedUser: true },
+      }).catch(() => null);
     }
   } catch (error) {
-    logger.error('Error handling leveling for message:', error);
+    logger.error('Error handling streak activity:', error);
+  }
+}
+
+async function handleAiChat(message, client) {
+  try {
+    if (!message.guild || message.author?.bot) {
+      return false;
+    }
+
+    const guildConfig = await getGuildConfig(client, message.guild.id);
+    const aiChat = guildConfig?.aiChat;
+
+    if (!aiChat?.enabled || !aiChat.channelId || message.channel.id !== aiChat.channelId) {
+      return false;
+    }
+
+    // Jangan balas pesan yang sebenarnya prefix command.
+    const prefix = guildConfig?.prefix || getCommandPrefix();
+    if (prefix && message.content.startsWith(prefix)) {
+      return false;
+    }
+
+    if (!message.content.trim()) {
+      return false;
+    }
+
+    if (!isAiConfigured()) {
+      logger.warn(`AI chat is enabled in guild ${message.guild.id} but no API key is configured.`);
+      return false;
+    }
+
+    // Cooldown per user supaya tidak spam; diamkan saja kalau masih cooldown.
+    const cooldown = checkAiCooldown(`${message.guild.id}:${message.author.id}`);
+    if (!cooldown.allowed) {
+      return true;
+    }
+
+    if (typeof message.channel.sendTyping === 'function') {
+      await message.channel.sendTyping().catch(() => {});
+    }
+
+    const reply = await generateAiReply(client, message.guild.id, message.channel.id, message.content);
+
+    const chunks = splitAiMessage(reply);
+
+    await message.reply({
+      content: chunks[0],
+      allowedMentions: { repliedUser: false, parse: [] },
+    });
+
+    for (const chunk of chunks.slice(1)) {
+      await message.channel.send({
+        content: chunk,
+        allowedMentions: { parse: [] },
+      }).catch(() => null);
+    }
+
+    return true;
+  } catch (error) {
+    logger.error('Error handling AI chat:', error);
+    await message.channel.send({
+      embeds: [warningEmbed('AI Error', error?.userMessage || 'AI gagal membalas. Coba lagi sebentar lagi.')],
+    }).catch(() => null);
+    return true;
   }
 }

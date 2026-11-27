@@ -17,7 +17,6 @@ export const commandAliases = {
     'rob': 'rob',
     'crime': 'crime',
     'pay': 'pay',
-    'give': 'pay',
     'send': 'pay',
 
     'ping': 'ping',
@@ -29,6 +28,8 @@ export const commandAliases = {
     'kick': 'kick',
     'mute': 'timeout',
     'warn': 'warn',
+    'am': 'automod',
+    'automoderation': 'automod',
     'clear': 'purge',
     'purge': 'purge',
     'untimeout': 'untimeout',
@@ -48,19 +49,10 @@ export const commandAliases = {
     'items': 'inventory',
 
     'user': 'userinfo',
-    'avatar': 'avatar',
-    'pfp': 'avatar',
-    'icon': 'avatar',
 
     'bd': 'birthday',
     'bday': 'birthday',
     'b': 'birthday',
-
-    'flip': 'flip',
-    'coin': 'flip',
-    'roll': 'roll',
-    'dice': 'roll',
-    'fight': 'fight',
 
     'gcreate': 'gcreate',
     'gstart': 'gcreate',
@@ -79,14 +71,11 @@ export const commandAliases = {
     'av': 'autoverify',
 
     'welcome': 'welcome',
-    'greet': 'greet',
-    'goodbye': 'goodbye',
     'autorole': 'autorole',
 
     'calc': 'calculate',
     'math': 'calculate',
     'weather': 'weather',
-    'todo': 'todo',
     'report': 'report',
     'userinfo': 'userinfo',
     'whois': 'userinfo',
@@ -101,9 +90,6 @@ export const commandAliases = {
 
     'jtc': 'jointocreate',
     'jointocreate': 'jointocreate',
-
-    'np': 'nowplaying',
-    'now': 'nowplaying',
 };
 
 export const subcommandAliases = {
@@ -121,6 +107,9 @@ export const subcommandAliases = {
     'c': 'complete',
     'done': 'complete',
     'd': 'complete',
+
+    'pfp': 'avatar',
+    'icon': 'avatar',
 
     'start': 'create',
     'stop': 'end',

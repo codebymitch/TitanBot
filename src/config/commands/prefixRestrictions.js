@@ -24,17 +24,10 @@ export const GLOBAL_BLOCKED_SUBCOMMAND_GROUPS = new Set([
 
 /** Per-command subcommands that stay slash-only (beyond the global block list). */
 export const COMMAND_BLOCKED_SUBCOMMANDS = {
-  music: new Set([
-    'shuffle',
-    'loop',
-    'seek',
-    'remove',
-    'move',
-    'clear',
-    '247',
-  ]),
+  ai: new Set(['setchannel', 'toggle', 'persona', 'model', 'reset']),
   birthday: new Set(['setchannel']),
   report: new Set(['setchannel']),
+  welcome: new Set(['goodbye']),
 };
 
 function collectSubcommandNames(commandJson) {

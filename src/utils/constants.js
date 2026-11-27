@@ -18,6 +18,7 @@ export const DEFAULT_ECONOMY_DATA = {
     lastDeposit: 0,
     lastWithdraw: 0,
     inventory: {},
+    fishCollection: {},
     upgrades: {},
     cooldowns: {}
 };
@@ -26,6 +27,7 @@ export const DEFAULT_GUILD_CONFIG = {
     enabledCommands: {},
     birthdayChannelId: null,
     premiumRoleId: null,
+    premiumPlusRoleId: null,
     modRole: null,
     adminRole: null,
     welcomeChannel: null,
@@ -38,6 +40,20 @@ export const DEFAULT_GUILD_CONFIG = {
     },
     verification: {
         enabled: false
+    },
+    streak: {
+        enabled: false,
+        channelId: null
+    },
+    aiChat: {
+        enabled: false,
+        channelId: null,
+        systemPrompt: null,
+        model: null
+    },
+    musicStatus: {
+        groups: [],
+        live: { channelId: null, messageId: null }
     }
 };
 
