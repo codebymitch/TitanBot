@@ -106,35 +106,24 @@ export class ResponseCoordinator {
       return this.edit(payload);
     }
 
-    this.interaction.replied = true;
-
-    if (this.message?.channel) {
-      const sentMessage = await this.message.channel.send(payload);
-      this.setReplyMessage(sentMessage);
-      return sentMessage;
+    if (this.message?.channel || this.isPrefixInteraction()) {
+      this.interaction.replied = true;
+      return this.sendPrefixPayload(payload);
     }
 
-    if (this.interaction.deferred) {
-      if (this.isPrefixInteraction()) {
-        return this.sendPrefixPayload(payload);
-      }
+    if (this.interaction.deferred && !this.interaction.replied) {
       await this.interaction.editReply(payload);
+      this.interaction.replied = true;
       return null;
     }
 
     if (this.interaction.replied) {
-      if (this.message?.channel) {
-        return this.message.channel.send(payload);
-      }
       await this.interaction.followUp(payload);
       return null;
     }
 
-    if (this.isPrefixInteraction()) {
-      return this.sendPrefixPayload(payload);
-    }
-
     await this.interaction.reply(payload);
+    this.interaction.replied = true;
     return null;
   }
 
@@ -164,6 +153,7 @@ export class ResponseCoordinator {
 
     if (this.interaction.deferred || this.interaction.replied) {
       await this.interaction.editReply(payload);
+      this.interaction.replied = true;
       return null;
     }
 
