@@ -1,77 +1,84 @@
-const الحجم_الافتراضي_للصوت = 75;
-const وضع_التكرار_الافتراضي = 'none';
+const DEFAULT_VOLUME = 75;
+const DEFAULT_LOOP_MODE = 'none';
 
-export class بيانات_موسيقى_السيرفر {
+export class GuildMusicData {
   constructor() {
-    this.معرف_رسالة_المشغل = null;
-    this.معرف_قناة_المشغل = null;
-    this.التشغيل_التلقائي = false;
-    this.التكرار = وضع_التكرار_الافتراضي;
-    this.الصوت = الحجم_الافتراضي_للصوت;
-    this.الخلط = false;
-    this.المقاطع_السابقة = [];
-    this.تشغيل_مستمر_24_7 = false;
-    this.صفحات_قائمة_الانتظار = new Map();
-    this.مؤقت_التحديث = null;
-    this.مؤقت_الخمول = null;
-    this.إيقاف_مؤقت_تلقائي = false;
-    this.انتظار_تأكيد_الإيقاف = null;
+    this.playerMessageId = null;
+    this.playerChannelId = null;
+    this.autoplay = false;
+    this.loop = DEFAULT_LOOP_MODE;
+    this.volume = DEFAULT_VOLUME;
+    this.shuffle = false;
+    this.previousTracks = [];
+    this.twentyFourSeven = false;
+    this.queuePages = new Map();
+    this.updateInterval = null;
+    this.idleTimeout = null;
+    this.autoPaused = false;
+    this.stopConfirmPending = null;
   }
 
-  إعادة_ضبط_الجلسة() {
-    تنظيف_المؤقتات(this);
-    this.معرف_رسالة_المشغل = null;
-    this.معرف_قناة_المشغل = null;
-    this.الخلط = false;
-    this.المقاطع_السابقة = [];
-    this.صفحات_قائمة_الانتظار?.clear();
-    this.إيقاف_مؤقت_تلقائي = false;
-    this.انتظار_تأكيد_الإيقاف = null;
+  resetSession() {
+    clearTimers(this);
+    this.playerMessageId = null;
+    this.playerChannelId = null;
+    this.shuffle = false;
+    this.previousTracks = [];
+    this.queuePages?.clear();
+    this.autoPaused = false;
+    this.stopConfirmPending = null;
   }
 }
 
-export function مسح_مؤقت_التحديث(بيانات_السيرفر) {
-  if (!بيانات_السيرفر?.مؤقت_التحديث) {
+export function clearUpdateInterval(guildData) {
+  if (!guildData?.updateInterval) {
     return;
   }
-  clearInterval(بيانات_السيرفر.مؤقت_التحديث);
-  بيانات_السيرفر.مؤقت_التحديث = null;
+  clearInterval(guildData.updateInterval);
+  guildData.updateInterval = null;
 }
 
-export function مسح_مؤقت_الخمول(بيانات_السيرفر) {
-  if (!بيانات_السيرفر?.مؤقت_الخمول) {
+export function clearIdleTimeout(guildData) {
+  if (!guildData?.idleTimeout) {
     return;
   }
-  clearTimeout(بيانات_السيرفر.مؤقت_الخمول);
-  بيانات_السيرفر.مؤقت_الخمول = null;
+  clearTimeout(guildData.idleTimeout);
+  guildData.idleTimeout = null;
 }
 
-function تنظيف_المؤقتات(بيانات_السيرفر) {
-  مسح_مؤقت_التحديث(بيانات_السيرفر);
-  مسح_مؤقت_الخمول(بيانات_السيرفر);
+function clearTimers(guildData) {
+  clearUpdateInterval(guildData);
+  clearIdleTimeout(guildData);
 }
 
-const مخزن_السيرفرات = new Map();
+const guildStore = new Map();
 
-export function جلب_بيانات_موسيقى_السيرفر(معرف_السيرفر) {
-  if (!معرف_السيرفر) {
-    return new بيانات_موسيقى_السيرفر();
+export function getGuildMusicData(guildId) {
+  if (!guildId) {
+    return new GuildMusicData();
   }
 
-  if (!مخزن_السيرفرات.has(معرف_السيرفر)) {
-    مخزن_السيرفرات.set(معرف_السيرفر, new بيانات_موسيقى_السيرفر());
+  if (!guildStore.has(guildId)) {
+    guildStore.set(guildId, new GuildMusicData());
   }
-  return مخزن_السيرفرات.get(معرف_السيرفر);
+  return guildStore.get(guildId);
 }
 
-export function حذف_بيانات_موسيقى_السيرفر(معرف_السيرفر) {
-  if (!معرف_السيرفر) {
+export function deleteGuildMusicData(guildId) {
+  if (!guildId) {
     return;
   }
 
-  const بيانات_السيرفر = مخزن_السيرفرات.get(معرف_السيرفر);
-  if (بيانات_السيرفر) {
-    تنظيف_المؤقتات(بيانات_السيرفر);
+  const guildData = guildStore.get(guildId);
+  if (guildData) {
+    clearTimers(guildData);
   }
-  مخزن_السيرفرات.delete(معرف_السيرفر);
+  guildStore.delete(guildId);
 }
+
+// أسماء بديلة بالعربي في حال استدعائها في أي مكان
+export const بيانات_موسيقى_السيرفر = GuildMusicData;
+export const مسح_مؤقت_التحديث = clearUpdateInterval;
+export const مسح_مؤقت_الخمول = clearIdleTimeout;
+export const جلب_بيانات_موسيقى_السيرفر = getGuildMusicData;
+export const حذف_بيانات_موسيقى_السيرفر = deleteGuildMusicData;
