@@ -1,4 +1,4 @@
- import { spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import {
   AudioPlayerStatus,
   NoSubscriberBehavior,
@@ -173,6 +173,20 @@ export function clearQueue(guildId) {
   state.queue = [];
   setPlayerState(guildId, state);
   return true;
+}
+
+export function removeFromQueue(guildId, positionOrIndex) {
+  const state = getPlayerState(guildId);
+  if (!state || !Array.isArray(state.queue)) return null;
+
+  const index = Number(positionOrIndex) - 1;
+  if (!Number.isInteger(index) || index < 0 || index >= state.queue.length) {
+    return null;
+  }
+
+  const [removed] = state.queue.splice(index, 1);
+  setPlayerState(guildId, state);
+  return removed;
 }
 
 export function moveInQueue(guildId, fromIndex, toIndex) {
