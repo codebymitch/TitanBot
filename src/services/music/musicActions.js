@@ -1,5 +1,15 @@
-import { once } from 'node:events';
+import { Readable } from 'node:stream';
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
+import {
+  joinVoiceChannel as discordJoinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+  AudioPlayerStatus,
+  NoSubscriberBehavior,
+  entersState,
+  VoiceConnectionStatus,
+  getVoiceConnection,
+} from '@discordjs/voice';
 import { successEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { botHasPermission } from '../../utils/permissionGuard.js';
@@ -7,612 +17,536 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getGuildMusicData, clearUpdateInterval } from './playerStore.js';
 import { canControlMusic, requireVoiceChannel, VOICE_CHANNEL_DENIAL } from './permissions.js';
 import {
-    buildNowPlayingEmbed,
-    buildQueueEmbed,
-    buildQueuePaginationRow,
-    getQueuePageSize,
+  buildNowPlayingEmbed,
+  buildQueueEmbed,
+  buildQueuePaginationRow,
+  getQueuePageSize,
 } from './musicEmbeds.js';
 import { refreshPlayerMessage } from './playerHandler.js';
 
-const URL_PATTERN = /^https?:\/\/\S+$/i;
-const PLAYER_CONNECT_TIMEOUT_MS = 12_000;
+const URL_PATTERN = /^https?:\/\/\S+\$/i;
+const VOICE_CONNECT_TIMEOUT_MS = 15_000;
 
-function getConnectedLavalinkNodes(client) {
-    if (!client.riffy?.nodeMap) {
-        return [];
-    }
+const directSessions = new Map();
 
-    return [...client.riffy.nodeMap.values()].filter((node) => node.connected);
+function toNodeStream(body) {
+  if (!body) return null;
+  if (typeof body.pipe === 'function') return body;
+  if (typeof Readable.fromWeb === 'function') {
+    return Readable.fromWeb(body);
+  }
+  return null;
 }
 
-export function assertLavalinkNodeAvailable(client) {
-    if (!getConnectedLavalinkNodes(client).length) {
-        throw new TitanBotError(
-            'Lavalink unavailable',
-            ErrorTypes.CONFIGURATION,
-            'Music is temporarily unavailable — no Lavalink nodes are connected. Try again shortly or configure your own Lavalink server.',
-        );
+function createDirectTrack(rawTrack, requester) {
+  const info = rawTrack?.info ?? rawTrack ?? {};
+  const title = info.title || 'مقطع صوتي';
+  const author = info.author || 'مصدر مباشر';
+  const uri = info.uri || info.url || '';
+  const length = Number(info.length) || 0;
+  const isStream = Boolean(info.isStream);
+
+  return {
+    title,
+    author,
+    uri,
+    length,
+    isStream,
+    requester,
+    info: {
+      title,
+      author,
+      uri,
+      length,
+      isStream,
+      isSeekable: false,
+      requester,
+    },
+  };
+}
+
+function getDirectSession(client, guildId) {
+  const guildData = getGuildMusicData(guildId);
+
+  if (!directSessions.has(guildId)) {
+    const player = createAudioPlayer({
+      behaviors: {
+        noSubscriber: NoSubscriberBehavior.Pause,
+      },
+    });
+
+    const queueItems = [];
+    const queueObj = {
+      get length() {
+        return queueItems.length;
+      },
+      [Symbol.iterator]() {
+        return queueItems[Symbol.iterator]();
+      },
+      some(fn) {
+        return queueItems.some(fn);
+      },
+      slice(...args) {
+        return queueItems.slice(...args);
+      },
+      add(track) {
+        queueItems.push(track);
+      },
+      remove(index) {
+        if (index >= 0 && index < queueItems.length) {
+          return queueItems.splice(index, 1)[0];
+        }
+        return null;
+      },
+      splice(start, deleteCount, ...items) {
+        return queueItems.splice(start, deleteCount, ...items);
+      },
+      clear() {
+        queueItems.length = 0;
+      },
+      shuffle() {
+        for (let i = queueItems.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [queueItems[i], queueItems[j]] = [queueItems[j], queueItems[i]];
+        }
+      },
+    };
+
+    const session = {
+      guildId,
+      voiceChannel: null,
+      textChannel: null,
+      connection: null,
+      player,
+      queue: queueObj,
+      _items: queueItems,
+      current: null,
+      paused: false,
+      playing: false,
+      connected: false,
+      loop: guildData.loop || 'none',
+      volume: guildData.volume ?? 100,
+      currentResource: null,
+      skipCurrentLoop: false,
+    };
+
+    player.on(AudioPlayerStatus.Playing, () => {
+      session.playing = true;
+      session.paused = false;
+      refreshPlayerMessage(client, guildId).catch(() => {});
+    });
+
+    player.on(AudioPlayerStatus.Paused, () => {
+      session.paused = true;
+      refreshPlayerMessage(client, guildId).catch(() => {});
+    });
+
+    player.on(AudioPlayerStatus.Idle, async () => {
+      const finished = session.current;
+      session.current = null;
+      session.currentResource = null;
+      session.playing = false;
+      session.paused = false;
+
+      if (finished && !session.skipCurrentLoop) {
+        if (session.loop === 'track') {
+          session._items.unshift(finished);
+        } else if (session.loop === 'queue') {
+          session._items.push(finished);
+        }
+      }
+      session.skipCurrentLoop = false;
+
+      if (session._items.length > 0) {
+        try {
+          await playNextInSession(session);
+        } catch {
+          // في حال فشل تشغيل المقطع التالي
+        }
+      } else {
+        const latestGuildData = getGuildMusicData(guildId);
+        if (!latestGuildData.twentyFourSeven) {
+          latestGuildData.idleTimeout = setTimeout(() => {
+            const currentSession = getPlayer(client, guildId);
+            if (currentSession && !currentSession.current && currentSession.queue.length === 0) {
+              destroyPlayerSession(client, guildId, currentSession, latestGuildData).catch(() => {});
+            }
+          }, 30_000);
+        }
+        refreshPlayerMessage(client, guildId).catch(() => {});
+      }
+    });
+
+    player.on('error', () => {
+      session.current = null;
+      session.currentResource = null;
+      session.playing = false;
+      if (session._items.length > 0) {
+        playNextInSession(session).catch(() => {});
+      }
+    });
+
+    session.setVolume = (vol) => {
+      session.volume = Math.max(0, Math.min(100, Number(vol) || 0));
+      if (session.currentResource?.volume) {
+        session.currentResource.volume.setVolume(session.volume / 100);
+      }
+    };
+
+    session.setLoop = (mode) => {
+      session.loop = mode || 'none';
+    };
+
+    session.pause = (shouldPause = true) => {
+      if (shouldPause) {
+        player.pause();
+        session.paused = true;
+      } else {
+        player.unpause();
+        session.paused = false;
+      }
+    };
+
+    session.stop = () => {
+      session.skipCurrentLoop = true;
+      player.stop(true);
+    };
+
+    session.seek = () => {
+      // البث المباشر الحالي لا يدعم التقديم أو الترجيع الزمني
+    };
+
+    session.destroy = () => {
+      session._items.length = 0;
+      session.current = null;
+      session.currentResource = null;
+      session.playing = false;
+      session.paused = false;
+      session.connected = false;
+      try {
+        player.stop(true);
+      } catch {
+        // تجاهل
+      }
+      const conn = session.connection ?? getVoiceConnection(guildId);
+      if (conn) {
+        try {
+          conn.destroy();
+        } catch {
+          // تجاهل
+        }
+      }
+      session.connection = null;
+      directSessions.delete(guildId);
+    };
+
+    directSessions.set(guildId, session);
+  }
+
+  return directSessions.get(guildId);
+}
+
+async function resolveAudioSource(rawQuery, requester) {
+  const query = String(rawQuery || '').trim();
+  if (!query) {
+    throw new TitanBotError('Empty query', ErrorTypes.USER_INPUT, 'يرجى إدخال رابط صوتي مباشر أو اسم للملف.');
+  }
+
+  if (URL_PATTERN.test(query)) {
+    const cleanName = decodeURIComponent(query.split('/').pop()?.split('?')[0] || 'مقطع صوتي مباشر');
+    return [
+      createDirectTrack(
+        {
+          title: cleanName,
+          author: 'رابط صوتي مباشر',
+          uri: query,
+          isStream: true,
+        },
+        requester,
+      ),
+    ];
+  }
+
+  // محاولة البحث المباشر إذا كانت مكتبة play-dl مثبتة داخل المشروع بدون وسيط خارجي
+  try {
+    const mod = await import('play-dl');
+    const playDl = mod.default ?? mod;
+    if (typeof playDl.search === 'function') {
+      const results = await playDl.search(query, { limit: 1 });
+      const first = Array.isArray(results) ? results[0] : null;
+      if (first?.url) {
+        return [
+          createDirectTrack(
+            {
+              title: first.title || query,
+              author: first.channel?.name || 'مصدر مباشر',
+              uri: first.url,
+              length: (first.durationInSec || 0) * 1000,
+              isStream: false,
+            },
+            requester,
+          ),
+        ];
+      }
     }
+  } catch {
+    // عدم توفر مكتبة بحث إضافية لا يمنع تشغيل الروابط المباشرة
+  }
+
+  throw new TitanBotError(
+    'Direct URL required',
+    ErrorTypes.USER_INPUT,
+    'التشغيل المباشر بدون وسيط يدعم الروابط الصوتية المباشرة حاليًا. أرسل رابطًا صوتيًا مباشرًا (مثل `.mp3` أو `.ogg`).',
+  );
+}
+
+async function buildTrackAudioResource(track, volume = 100) {
+  let stream = null;
+
+  if (track.uri && URL_PATTERN.test(track.uri)) {
+    // إذا كان الرابط متاحًا عبر play-dl stream نستخدمه، وإلا نستخدم fetch المباشر
+    try {
+      const mod = await import('play-dl');
+      const playDl = mod.default ?? mod;
+      if (typeof playDl.stream === 'function' && !/\.(mp3|ogg|wav|m4a|flac)(\?.*)?\$/i.test(track.uri)) {
+        const streamInfo = await playDl.stream(track.uri);
+        stream = streamInfo?.stream ?? null;
+      }
+    } catch {
+      // الانتقال إلى fetch المباشر
+    }
+
+    if (!stream) {
+      const res = await fetch(track.uri);
+      if (!res.ok || !res.body) {
+        throw new TitanBotError('Stream error', ErrorTypes.USER_INPUT, 'تعذر فتح البث من الرابط الصوتي المباشر.');
+      }
+      stream = toNodeStream(res.body);
+    }
+  }
+
+  if (!stream) {
+    throw new TitanBotError('Invalid stream', ErrorTypes.USER_INPUT, 'تعذر تجهيز المصدر الصوتي للتشغيل.');
+  }
+
+  const resource = createAudioResource(stream, {
+    inlineVolume: true,
+  });
+
+  if (resource.volume) {
+    resource.volume.setVolume(Math.max(0, Math.min(1, volume / 100)));
+  }
+
+  return resource;
+}
+
+async function playNextInSession(session) {
+  const nextTrack = session._items.shift();
+  if (!nextTrack) {
+    session.current = null;
+    session.currentResource = null;
+    session.playing = false;
+    return null;
+  }
+
+  session.current = nextTrack;
+  const resource = await buildTrackAudioResource(nextTrack, session.volume);
+  session.currentResource = resource;
+  session.playing = true;
+  session.paused = false;
+  session.player.play(resource);
+  return nextTrack;
+}
+
+async function connectSessionToVoice(session, guild, voiceChannel, textChannelId) {
+  const connection = discordJoinVoiceChannel({
+    channelId: voiceChannel.id,
+    guildId: guild.id,
+    adapterCreator: guild.voiceAdapterCreator,
+    selfDeaf: true,
+  });
+
+  session.voiceChannel = voiceChannel.id;
+  session.textChannel = textChannelId;
+  session.connection = connection;
+  connection.subscribe(session.player);
+
+  try {
+    await entersState(connection, VoiceConnectionStatus.Ready, VOICE_CONNECT_TIMEOUT_MS);
+    session.connected = true;
+  } catch {
+    session.connected = false;
+    throw new TitanBotError(
+      'Voice connection failed',
+      ErrorTypes.CONFIGURATION,
+      'تعذر الاتصال بالقناة الصوتية. تأكد من صلاحيات الاتصال والتحدث للبوت وحاول مرة أخرى.',
+    );
+  }
 }
 
 function assertBotVoicePermissions(channel) {
-    if (!channel) {
-        throw new TitanBotError(
-            'Voice channel unavailable',
-            ErrorTypes.CONFIGURATION,
-            'Could not access that voice channel.',
-        );
-    }
+  if (!channel) {
+    throw new TitanBotError(
+      'Voice channel unavailable',
+      ErrorTypes.CONFIGURATION,
+      'تعذر الوصول إلى القناة الصوتية.',
+    );
+  }
 
-    if (!botHasPermission(channel, [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak])) {
-        throw new TitanBotError(
-            'Missing voice permissions',
-            ErrorTypes.PERMISSION,
-            'I need **Connect** and **Speak** permissions in your voice channel.',
-        );
-    }
-}
-
-async function waitForPlayerConnection(player) {
-    if (player.connected) {
-        return;
-    }
-
-    try {
-        await player.connection.resolve();
-    } catch {
-        // Fall through to event-based wait below.
-    }
-
-    if (player.connected) {
-        return;
-    }
-
-    try {
-        await once(player, 'connectionRestored', {
-            signal: AbortSignal.timeout(PLAYER_CONNECT_TIMEOUT_MS),
-        });
-    } catch {
-        // Timed out waiting for Lavalink to confirm the voice session.
-    }
-
-    if (!player.connected) {
-        throw new TitanBotError(
-            'Voice connection failed',
-            ErrorTypes.CONFIGURATION,
-            'Could not connect to the voice channel. Ensure Lavalink is online, the bot has Connect and Speak permissions, then try again.',
-        );
-    }
-}
-
-async function startPlayback(player) {
-    await waitForPlayerConnection(player);
-    await player.play();
+  if (!botHasPermission(channel, [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak])) {
+    throw new TitanBotError(
+      'Missing voice permissions',
+      ErrorTypes.PERMISSION,
+      'أحتاج إلى صلاحيّتي **Connect** و**Speak** في القناة الصوتية.',
+    );
+  }
 }
 
 export function getPlayer(client, guildId) {
-    return client.riffy?.players?.get(guildId) || null;
-}
-
-export function assertRiffyAvailable(client) {
-    if (!client.riffy) {
-        throw new TitanBotError(
-            'Lavalink not configured',
-            ErrorTypes.CONFIGURATION,
-            'Music is unavailable — Lavalink is not configured.',
-        );
-    }
+  return directSessions.get(guildId) || null;
 }
 
 export function assertInVoice(member) {
-    if (!requireVoiceChannel(member)) {
-        throw new TitanBotError(
-            'Not in voice channel',
-            ErrorTypes.USER_INPUT,
-            'You need to be in a voice channel.',
-        );
-    }
+  if (!requireVoiceChannel(member)) {
+    throw new TitanBotError(
+      'Not in voice channel',
+      ErrorTypes.USER_INPUT,
+      'يجب أن تكون داخل قناة صوتية أولًا.',
+    );
+  }
 }
 
 export function assertCanControl(member, player) {
-    if (!canControlMusic(member, player)) {
-        throw new TitanBotError(
-            'Wrong voice channel',
-            ErrorTypes.PERMISSION,
-            VOICE_CHANNEL_DENIAL,
-        );
-    }
+  if (!canControlMusic(member, player)) {
+    throw new TitanBotError(
+      'Wrong voice channel',
+      ErrorTypes.PERMISSION,
+      VOICE_CHANNEL_DENIAL,
+    );
+  }
 }
 
 export async function ensurePlayer(client, interaction) {
-    assertRiffyAvailable(client);
-    assertLavalinkNodeAvailable(client);
-    assertInVoice(interaction.member);
+  assertInVoice(interaction.member);
 
-    const guildId = interaction.guild.id;
-    const guildData = getGuildMusicData(guildId);
-    let player = getPlayer(client, guildId);
+  const voiceChannel = interaction.member.voice.channel;
+  assertBotVoicePermissions(voiceChannel);
 
-    if (!player) {
-        player = client.riffy.createConnection({
-            guildId,
-            voiceChannel: interaction.member.voice.channel.id,
-            textChannel: interaction.channel.id,
-            deaf: true,
-        });
-        guildData.playerChannelId = interaction.channel.id;
-    }
+  const guild = interaction.guild;
+  const guildId = guild.id;
+  const guildData = getGuildMusicData(guildId);
+  const session = getDirectSession(client, guildId);
 
-    player.setVolume(guildData.volume);
-    return { player, guildData };
+  if (guildData.idleTimeout) {
+    clearTimeout(guildData.idleTimeout);
+    guildData.idleTimeout = null;
+  }
+
+  if (!session.connection || session.voiceChannel !== voiceChannel.id) {
+    await connectSessionToVoice(session, guild, voiceChannel, interaction.channel?.id || null);
+    guildData.playerChannelId = interaction.channel?.id || null;
+  }
+
+  session.setVolume(guildData.volume ?? 100);
+  return { player: session, guildData };
 }
 
 function isDuplicateTrack(player, track) {
-    const uri = track?.info?.uri;
-    if (!uri) {
-        return false;
-    }
-    if (player.current?.info?.uri === uri) {
-        return true;
-    }
-    return player.queue.some((existing) => existing.info?.uri === uri);
-}
-
-async function resolveTracks(client, rawQuery, requester, source = 'auto') {
-    const query = String(rawQuery || '').trim();
-    if (!query) {
-        throw new TitanBotError('Empty query', ErrorTypes.USER_INPUT, 'Please provide a song name or URL.');
-    }
-
-    const isUrl = URL_PATTERN.test(query) || query.startsWith('spotify:');
-    const resolvePayload = {
-        query,
-        requester,
-    };
-
-    if (!isUrl && source && source !== 'auto') {
-        resolvePayload.source = source;
-    }
-
-    return client.riffy.resolve(resolvePayload);
+  const uri = track?.info?.uri;
+  if (!uri) return false;
+  if (player.current?.info?.uri === uri) return true;
+  return player.queue.some((existing) => existing.info?.uri === uri);
 }
 
 export async function joinVoiceChannel(client, interaction) {
-    assertRiffyAvailable(client);
-    assertInVoice(interaction.member);
+  assertInVoice(interaction.member);
 
-    const guildId = interaction.guild.id;
-    const guildData = getGuildMusicData(guildId);
-    const channel = interaction.member.voice.channel;
-    assertBotVoicePermissions(channel);
-    let player = getPlayer(client, guildId);
+  const guild = interaction.guild;
+  const guildId = guild.id;
+  const guildData = getGuildMusicData(guildId);
+  const channel = interaction.member.voice.channel;
+  assertBotVoicePermissions(channel);
 
-    if (player && player.voiceChannel !== channel.id) {
-        try {
-            player.destroy();
-        } catch {
-            // player may already be gone
-        }
-        player = null;
+  const session = getDirectSession(client, guildId);
+  if (session.connection && session.voiceChannel !== channel.id) {
+    try {
+      session.connection.destroy();
+    } catch {
+      // تجاهل
     }
+    session.connection = null;
+  }
 
-    if (!player) {
-        player = client.riffy.createConnection({
-            guildId,
-            voiceChannel: channel.id,
-            textChannel: interaction.channel.id,
-            deaf: true,
-        });
-        guildData.playerChannelId = interaction.channel.id;
-    }
+  await connectSessionToVoice(session, guild, channel, interaction.channel?.id || null);
+  guildData.playerChannelId = interaction.channel?.id || null;
+  session.setVolume(guildData.volume ?? 100);
 
-    player.setVolume(guildData.volume);
-
-    return successEmbed(
-        'Joined Voice Channel',
-        `Connected to **${channel.name}**. Use /play to start music from Spotify, YouTube, or any source, or /music for controls.`,
-    );
+  return successEmbed(
+    'تم الانضمام للقناة الصوتية',
+    `تم الاتصال بـ **${channel.name}** بنجاح. يمكنك استخدام أمر التشغيل المباشر الآن.`,
+  );
 }
 
 export async function playQuery(client, interaction, query, options = {}) {
-    const { player } = await ensurePlayer(client, interaction);
-    const source = options.source ?? 'auto';
+  const { player } = await ensurePlayer(client, interaction);
+  const resolvedTracks = await resolveAudioSource(query, interaction.user);
 
-    const result = await resolveTracks(client, query, interaction.user, source);
-    const { loadType, tracks, playlistInfo } = result;
+  const track = resolvedTracks[0];
+  if (!track) {
+    throw new TitanBotError('No results', ErrorTypes.USER_INPUT, 'لم يتم العثور على مقطع صوتي صالح للتشغيل.');
+  }
 
-    if (loadType === 'playlist' || loadType === 'PLAYLIST_LOADED') {
-        let added = 0;
-        let skipped = 0;
+  if (isDuplicateTrack(player, track)) {
+    throw new TitanBotError(
+      'Duplicate track',
+      ErrorTypes.USER_INPUT,
+      `**${track.info.title}** موجود بالفعل في قائمة الانتظار أو قيد التشغيل.`,
+    );
+  }
 
-        for (const track of tracks || []) {
-            track.info.requester = interaction.user;
-            if (isDuplicateTrack(player, track)) {
-                skipped += 1;
-                continue;
-            }
-            player.queue.add(track);
-            added += 1;
-        }
+  const willPlayNow = !player.current && !player.playing;
+  player.queue.add(track);
+  const queuePosition = player.queue.length;
 
-        if (!player.playing && !player.paused && added > 0) {
-            await startPlayback(player);
-        }
+  if (willPlayNow) {
+    await playNextInSession(player);
+  }
 
-        return {
-            embed: successEmbed(
-                'Playlist Added',
-                `**${playlistInfo?.name || 'Playlist'}**\nAdded ${added} of ${(tracks || []).length} track(s).${skipped ? ` Skipped ${skipped} duplicate(s).` : ''}`,
-            ),
-        };
-    }
-
-    if (
-        loadType === 'search'
-        || loadType === 'track'
-        || loadType === 'SEARCH_RESULT'
-        || loadType === 'TRACK_LOADED'
-    ) {
-        const track = tracks?.[0];
-        if (!track) {
-            throw new TitanBotError('No results', ErrorTypes.USER_INPUT, 'No results found for that query.');
-        }
-
-        if (isDuplicateTrack(player, track)) {
-            throw new TitanBotError(
-                'Duplicate track',
-                ErrorTypes.USER_INPUT,
-                `**${track.info.title}** is already in the queue or playing.`,
-            );
-        }
-
-        track.info.requester = interaction.user;
-
-        const willPlayNow = !player.playing && !player.paused;
-        player.queue.add(track);
-        const queuePosition = player.queue.length;
-
-        if (willPlayNow) {
-            await startPlayback(player);
-        }
-
-        return {
-            embed: successEmbed(
-                willPlayNow ? 'Now Playing' : 'Track Added',
-                willPlayNow
-                    ? `**${track.info.title}**\n${track.info.author}`
-                    : `**${track.info.title}**\n${track.info.author}\nPosition: #${queuePosition} in queue`,
-            ),
-        };
-    }
-
-    throw new TitanBotError('No results', ErrorTypes.USER_INPUT, `No results found. (loadType: ${loadType})`);
+  return {
+    embed: successEmbed(
+      willPlayNow ? 'جاري التشغيل الآن' : 'تمت الإضافة للقائمة',
+      willPlayNow
+        ? `**${track.info.title}**\n${track.info.author}`
+        : `**${track.info.title}**\n${track.info.author}\nالترتيب: #${queuePosition} في قائمة الانتظار`,
+    ),
+  };
 }
 
 export async function skipTrack(client, interaction) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player?.current) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'Nothing is playing right now.');
-    }
-    assertCanControl(interaction.member, player);
-    const title = player.current.info?.title || 'Unknown';
-    if (player.loop === 'track') {
-        player.setLoop('none');
-    }
-    player.stop();
-    return successEmbed('Skipped', `Skipped **${title}**.`);
+  const player = getPlayer(client, interaction.guild.id);
+  if (!player?.current) {
+    throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'لا يوجد مقطع قيد التشغيل حاليًا.');
+  }
+  assertCanControl(interaction.member, player);
+
+  const title = player.current.info?.title || 'غير معروف';
+  if (player.loop === 'track') {
+    player.setLoop('none');
+  }
+  player.stop();
+  return successEmbed('تم التخطي', `تم تخطي **${title}**.`);
 }
 
 export async function stopPlayback(client, interaction) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'No active music player.');
-    }
-    assertCanControl(interaction.member, player);
+  const player = getPlayer(client, interaction.guild.id);
+  if (!player) {
+    throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'لا توجد جلسة تشغيل صوتية نشطة.');
+  }
+  assertCanControl(interaction.member, player);
 
-    const guildData = getGuildMusicData(interaction.guild.id);
-    const queueLength = player.queue?.length || 0;
+  const guildData = getGuildMusicData(interaction.guild.id);
+  const queueLength = player.queue?.length || 0;
 
-    if (queueLength >= 5 && guildData.stopConfirmPending !== interaction.user.id) {
-        guildData.stopConfirmPending = interaction.user.id;
-        setTimeout(() => {
-            if (guildData.stopConfirmPending === interaction.user.id) {
-                guildData.stopConfirmPending = null;
-            }
-        }, 15000);
-        return successEmbed(
-            'Confirm Stop',
-            `There are **${queueLength}** tracks in the queue. Run **/music stop** again within 15 seconds to confirm.`,
-        );
-    }
-
-    guildData.stopConfirmPending = null;
-    await destroyPlayerSession(client, interaction.guild.id, player, guildData);
-    return successEmbed('Stopped', 'Playback stopped and the queue was cleared.');
-}
-
-export async function applyPause(client, guildId) {
-    const player = getPlayer(client, guildId);
-    if (!player?.current || player.paused) {
-        return false;
-    }
-
-    player.pause(true);
-    await refreshPlayerMessage(client, guildId);
-    return true;
-}
-
-export async function applyResume(client, guildId) {
-    const player = getPlayer(client, guildId);
-    if (!player?.current || !player.paused) {
-        return false;
-    }
-
-    player.pause(false);
-    await refreshPlayerMessage(client, guildId);
-    return true;
-}
-
-export async function pausePlayback(client, interaction) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player?.current) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'Nothing is playing right now.');
-    }
-    assertCanControl(interaction.member, player);
-
-    if (player.paused) {
-        throw new TitanBotError('Already paused', ErrorTypes.USER_INPUT, 'Playback is already paused.');
-    }
-
-    await applyPause(client, interaction.guild.id);
-    return successEmbed('Paused', 'Playback paused.');
-}
-
-export async function resumePlayback(client, interaction) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player?.current) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'Nothing is playing right now.');
-    }
-    assertCanControl(interaction.member, player);
-
-    if (!player.paused) {
-        throw new TitanBotError('Not paused', ErrorTypes.USER_INPUT, 'Playback is not paused.');
-    }
-
-    await applyResume(client, interaction.guild.id);
-    return successEmbed('Resumed', 'Playback resumed.');
-}
-
-export async function shuffleQueue(client, interaction) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player?.queue?.length) {
-        throw new TitanBotError('Empty queue', ErrorTypes.USER_INPUT, 'The queue is empty.');
-    }
-    assertCanControl(interaction.member, player);
-    player.queue.shuffle();
-    getGuildMusicData(interaction.guild.id).shuffle = true;
-    await refreshPlayerMessage(client, interaction.guild.id);
-    return successEmbed('Shuffled', 'The queue has been shuffled.');
-}
-
-export async function setLoopMode(client, interaction, mode) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'No active music player.');
-    }
-    assertCanControl(interaction.member, player);
-
-    const guildData = getGuildMusicData(interaction.guild.id);
-    guildData.loop = mode;
-    player.setLoop(mode);
-
-    const labels = { none: 'Off', track: 'Track', queue: 'Queue' };
-    await refreshPlayerMessage(client, interaction.guild.id);
-    return successEmbed('Loop Updated', `Loop mode set to **${labels[mode] || mode}**.`);
-}
-
-export async function toggleLoop(client, interaction) {
-    const guildData = getGuildMusicData(interaction.guild.id);
-    const next = guildData.loop === 'none' ? 'track' : guildData.loop === 'track' ? 'queue' : 'none';
-    return setLoopMode(client, interaction, next);
-}
-
-export async function setVolume(client, interaction, volume) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'No active music player.');
-    }
-    assertCanControl(interaction.member, player);
-
-    const guildData = getGuildMusicData(interaction.guild.id);
-    guildData.volume = Math.max(0, Math.min(100, volume));
-    player.setVolume(guildData.volume);
-    await refreshPlayerMessage(client, interaction.guild.id);
-    return successEmbed('Volume Updated', `Volume set to **${guildData.volume}%**.`);
-}
-
-export async function adjustVolume(client, interaction, delta) {
-    const guildData = getGuildMusicData(interaction.guild.id);
-    return setVolume(client, interaction, guildData.volume + delta);
-}
-
-export async function seekTrack(client, interaction, seconds) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player?.current) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'Nothing is playing right now.');
-    }
-    assertCanControl(interaction.member, player);
-
-    const info = player.current.info || {};
-    if (info.isStream || info.isSeekable === false) {
-        throw new TitanBotError(
-            'Not seekable',
-            ErrorTypes.USER_INPUT,
-            'This track cannot be seeked (it may be a live stream).',
-        );
-    }
-
-    const position = Math.max(0, seconds * 1000);
-    if (info.length && position > info.length) {
-        throw new TitanBotError(
-            'Seek out of range',
-            ErrorTypes.USER_INPUT,
-            `You can only seek up to ${Math.floor(info.length / 1000)}s for this track.`,
-        );
-    }
-
-    player.seek(position);
-    await refreshPlayerMessage(client, interaction.guild.id);
-    return successEmbed('Seeked', `Seeked to **${seconds}s**.`);
-}
-
-export async function removeFromQueue(client, interaction, index) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player?.queue?.length) {
-        throw new TitanBotError('Empty queue', ErrorTypes.USER_INPUT, 'The queue is empty.');
-    }
-    assertCanControl(interaction.member, player);
-
-    const queueIndex = index - 1;
-    if (queueIndex < 0 || queueIndex >= player.queue.length) {
-        throw new TitanBotError('Invalid index', ErrorTypes.USER_INPUT, `Invalid queue position. Queue has ${player.queue.length} track(s).`);
-    }
-
-    const removed = player.queue[queueIndex];
-    player.queue.remove(queueIndex);
-    await refreshPlayerMessage(client, interaction.guild.id);
-    return successEmbed('Removed', `Removed **${removed.info?.title || 'track'}** from the queue.`);
-}
-
-export async function moveInQueue(client, interaction, from, to) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player?.queue?.length) {
-        throw new TitanBotError('Empty queue', ErrorTypes.USER_INPUT, 'The queue is empty.');
-    }
-    assertCanControl(interaction.member, player);
-
-    const fromIndex = from - 1;
-    const toIndex = to - 1;
-    if (fromIndex < 0 || fromIndex >= player.queue.length || toIndex < 0 || toIndex >= player.queue.length) {
-        throw new TitanBotError('Invalid index', ErrorTypes.USER_INPUT, 'Invalid queue positions.');
-    }
-
-    const track = player.queue[fromIndex];
-    player.queue.remove(fromIndex);
-    player.queue.splice(toIndex, 0, track);
-    await refreshPlayerMessage(client, interaction.guild.id);
-    return successEmbed('Moved', `Moved **${track.info?.title || 'track'}** to position #${to}.`);
-}
-
-export async function clearQueue(client, interaction) {
-    const player = getPlayer(client, interaction.guild.id);
-    if (!player?.queue?.length) {
-        throw new TitanBotError('Empty queue', ErrorTypes.USER_INPUT, 'The queue is already empty.');
-    }
-    assertCanControl(interaction.member, player);
-    player.queue.clear();
-    await refreshPlayerMessage(client, interaction.guild.id);
-    return successEmbed('Queue Cleared', 'All queued tracks were removed.');
-}
-
-export async function setTwentyFourSeven(client, interaction, enabled) {
-    const guildData = getGuildMusicData(interaction.guild.id);
-    guildData.twentyFourSeven = enabled;
-    return successEmbed(
-        '24/7 Mode',
-        enabled
-            ? '24/7 mode enabled. The bot will stay in the voice channel when the queue ends.'
-            : '24/7 mode disabled. The bot will leave after 30 seconds of idle time.',
-    );
-}
-
-export function buildNowPlayingReply(client, guildId) {
-    const player = getPlayer(client, guildId);
-    if (!player?.current) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'Nothing is playing right now.');
-    }
-    const guildData = getGuildMusicData(guildId);
-    return {
-        embeds: [buildNowPlayingEmbed(player.current, player, guildData)],
-    };
-}
-
-export function buildQueueReply(client, guildId, page = 0) {
-    const player = getPlayer(client, guildId);
-    if (!player) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'No active music player.');
-    }
-
-    const totalPages = Math.max(1, Math.ceil((player.queue?.length || 0) / getQueuePageSize()));
-    const safePage = Math.min(Math.max(page, 0), totalPages - 1);
-
-    return {
-        embeds: [buildQueueEmbed(player.queue, player.current, safePage)],
-        components: totalPages > 1 ? [buildQueuePaginationRow(safePage, totalPages)] : [],
-        page: safePage,
-        totalPages,
-    };
-}
-
-export async function destroyPlayerSession(client, guildId, player, guildData, { forceDisconnect = false } = {}) {
-    clearUpdateInterval(guildData);
-    if (guildData.idleTimeout) {
-        clearTimeout(guildData.idleTimeout);
-        guildData.idleTimeout = null;
-    }
-
-    guildData.previousTracks = [];
-    guildData.stopConfirmPending = null;
-    guildData.autoPaused = false;
-    guildData.queuePages?.clear();
-
-    if (guildData.playerMessageId && guildData.playerChannelId) {
-        try {
-            const channel = client.channels.cache.get(guildData.playerChannelId);
-            if (channel) {
-                const msg = await channel.messages.fetch(guildData.playerMessageId);
-                await msg.delete();
-            }
-        } catch {
-            // message already deleted
-        }
-    }
-
-    guildData.playerMessageId = null;
-    guildData.playerChannelId = null;
-
-    if (player) {
-        player.queue.clear();
-        player.stop();
-        if (forceDisconnect || !guildData.twentyFourSeven) {
-            player.destroy();
-        }
-    }
-}
-
-export async function leaveVoiceChannel(client, interaction) {
-    assertRiffyAvailable(client);
-
-    const guildId = interaction.guild.id;
-    const player = getPlayer(client, guildId);
-    if (!player) {
-        throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'I am not in a voice channel.');
-    }
-    assertCanControl(interaction.member, player);
-
-    const channel = interaction.guild.channels.cache.get(player.voiceChannel);
-    const channelName = channel?.name || 'voice channel';
-    const guildData = getGuildMusicData(guildId);
-
-    await destroyPlayerSession(client, guildId, player, guildData, { forceDisconnect: true });
-
-    return successEmbed('Left Voice Channel', `Disconnected from **${channelName}**.`);
-}
-
-export async function replyMusicSuccess(interaction, embed) {
-    const options = { embeds: [embed] };
-    if (!interaction._isPrefixCommand) {
-        options.flags = MessageFlags.Ephemeral;
-    }
-    await InteractionHelper.safeReply(interaction, options);
-}
+  if (queueLength >= 5 && guildData.stopConfirmPending !== interaction.user.id) {
+    guildData.stopConfirmPending = interaction.user.id;
+    setTimeout(() => {
