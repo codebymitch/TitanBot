@@ -240,6 +240,38 @@ export function seekTrack(guildIdOrInteraction, positionInput) {
   return clampedSec;
 }
 
+export function setVolume(guildIdOrInteraction, volumeInput) {
+  const guildId = typeof guildIdOrInteraction === 'string'
+    ? guildIdOrInteraction
+    : guildIdOrInteraction?.guild?.id;
+
+  if (!guildId) return false;
+  const numericVolume = Number(volumeInput);
+  if (!Number.isFinite(numericVolume)) return false;
+
+  const clampedVolume = Math.max(0, Math.min(200, Math.round(numericVolume)));
+  const state = getPlayerState(guildId) || {
+    guildId,
+    queue: [],
+    currentTrack: null,
+    isPlaying: false,
+    volume: 100,
+    seekSeconds: 0,
+    loop: false,
+    twentyFourSeven: false,
+  };
+
+  state.volume = clampedVolume;
+
+  const resource = state.player?.state?.resource;
+  if (resource?.volume && typeof resource.volume.setVolume === 'function') {
+    resource.volume.setVolume(Math.max(0, Math.min(2, clampedVolume / 100)));
+  }
+
+  setPlayerState(guildId, state);
+  return clampedVolume;
+}
+
 export function setLoopMode(guildIdOrInteraction, modeOrToggle) {
   const guildId = typeof guildIdOrInteraction === 'string'
     ? guildIdOrInteraction
@@ -652,7 +684,7 @@ export async function playNextInQueue(guildId, client) {
 
   const { resource, cleanup } = createAudioStreamFromTrack(nextTrack);
   if (resource.volume) {
-    resource.volume.setVolume(Math.max(0, Math.min(1, (state.volume ?? 100) / 100)));
+    resource.volume.setVolume(Math.max(0, Math.min(2, (state.volume ?? 100) / 100)));
   }
 
   state.cleanupStream = cleanup;
