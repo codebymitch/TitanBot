@@ -375,4 +375,124 @@ export async function handlePlay(interaction, query) {
 
   try {
     const track = await resolveTrack(query, interaction.user);
-    const connection = await ensureVoice
+    const connection = await ensureVoiceConnection(interaction, voiceChannel);
+
+    let state = getPlayerState(interaction.guild.id);
+
+    if (!state) {
+      const player = createAudioPlayer({
+        behaviors: {
+          noSubscriber: NoSubscriberBehavior.Pause,
+        },
+      });
+
+      state = {
+        guildId: interaction.guild.id,
+        voiceChannelId: voiceChannel.id,
+        textChannel: interaction.channel,
+        connection,
+        player,
+        queue: [],
+        currentTrack: null,
+        isPlaying: false,
+        volume: 100,
+        cleanupStream: null,
+      };
+
+      connection.subscribe(player);
+
+      player.on(AudioPlayerStatus.Idle, async () => {
+        const current = getPlayerState(interaction.guild.id);
+        if (!current) return;
+        if (current.loop && current.currentTrack) {
+          current.queue.unshift(current.currentTrack);
+        }
+        setPlayerState(interaction.guild.id, current);
+        await playNextInQueue(interaction.guild.id, interaction.client);
+      });
+
+      player.on('error', async () => {
+        await playNextInQueue(interaction.guild.id, interaction.client);
+      });
+
+      setPlayerState(interaction.guild.id, state);
+    } else {
+      state.voiceChannelId = voiceChannel.id;
+      state.textChannel = interaction.channel;
+      connection.subscribe(state.player);
+    }
+
+    const shouldStartNow = !state.currentTrack && state.player.state.status !== AudioPlayerStatus.Playing;
+    state.queue.push(track);
+    setPlayerState(interaction.guild.id, state);
+
+    if (shouldStartNow) {
+      await playNextInQueue(interaction.guild.id, interaction.client);
+      const latestState = getPlayerState(interaction.guild.id);
+      return interaction.editReply({
+        embeds: [buildNowPlayingEmbed(latestState?.currentTrack || track, latestState)],
+      });
+    }
+
+    return replyMusicSuccess(
+      interaction,
+      `Added **${track.title}** to the queue (position: ${state.queue.length}).`
+    );
+  } catch (error) {
+    return replyMusicError(
+      interaction,
+      error.message || 'An error occurred while trying to play the track.'
+    );
+  }
+}
+
+export async function playQuery(interaction, query) {
+  return handlePlay(interaction, query);
+}
+
+export async function handleSkip(interaction) {
+  const state = getPlayerState(interaction.guild.id);
+  if (!state || !state.currentTrack) {
+    return replyMusicError(interaction, 'There is no track currently playing to skip.', true);
+  }
+
+  state.player.stop(true);
+  return replyMusicSuccess(interaction, 'Skipped the current track.');
+}
+
+export async function handleStop(interaction) {
+  const state = getPlayerState(interaction.guild.id);
+  if (!state) {
+    return replyMusicError(interaction, 'The bot is not currently playing audio.', true);
+  }
+
+  if (typeof state.cleanupStream === 'function') {
+    state.cleanupStream();
+  }
+  state.queue = [];
+  state.currentTrack = null;
+
+  try {
+    state.player.stop(true);
+  } catch {}
+
+  try {
+    const connection = getVoiceConnection(interaction.guild.id);
+    if (connection) connection.destroy();
+  } catch {}
+
+  clearPlayerState(interaction.guild.id);
+
+  return replyMusicSuccess(interaction, 'Stopped playback and left the voice channel.');
+}
+
+export async function handleQueue(interaction) {
+  const state = getPlayerState(interaction.guild.id);
+  if (!state || (!state.currentTrack && (!state.queue || state.queue.length === 0))) {
+    return replyMusicSuccess(interaction, 'The queue is currently empty.', true);
+  }
+
+  return interaction.reply({
+    embeds: [buildQueueEmbed(state)],
+  });
+}
