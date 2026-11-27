@@ -70,6 +70,54 @@ function parseSecondsInput(value) {
   return NaN;
 }
 
+async function safeSendMusicPayload(target, payload) {
+  if (!target) return null;
+
+  const ctx = target.interaction || target;
+
+  try {
+    if (ctx.deferred || ctx.replied) {
+      if (typeof ctx.editReply === 'function') {
+        return await ctx.editReply({
+          embeds: payload.embeds,
+          components: payload.components ?? [],
+        });
+      }
+    }
+
+    if (typeof ctx.reply === 'function') {
+      return await ctx.reply(payload);
+    }
+
+    if (typeof ctx.followUp === 'function') {
+      return await ctx.followUp(payload);
+    }
+
+    if (typeof ctx.editReply === 'function') {
+      return await ctx.editReply({
+        embeds: payload.embeds,
+        components: payload.components ?? [],
+      });
+    }
+
+    if (ctx.channel && typeof ctx.channel.send === 'function') {
+      return await ctx.channel.send({
+        embeds: payload.embeds,
+        components: payload.components ?? [],
+      });
+    }
+  } catch (err) {
+    if (ctx.channel && typeof ctx.channel.send === 'function') {
+      return await ctx.channel.send({
+        embeds: payload.embeds,
+        components: payload.components ?? [],
+      }).catch(() => null);
+    }
+  }
+
+  return null;
+}
+
 export function getPlayer(guildId) {
   return getPlayerState(guildId);
 }
@@ -79,10 +127,7 @@ export function replyMusicSuccess(interaction, message, ephemeral = false) {
     embeds: [buildMusicInfoEmbed(message)],
     ephemeral,
   };
-  if (interaction.deferred || interaction.replied) {
-    return interaction.editReply({ embeds: payload.embeds });
-  }
-  return interaction.reply(payload);
+  return safeSendMusicPayload(interaction, payload);
 }
 
 export function replyMusicError(interaction, message, ephemeral = true) {
@@ -90,10 +135,7 @@ export function replyMusicError(interaction, message, ephemeral = true) {
     embeds: [buildMusicErrorEmbed(message)],
     ephemeral,
   };
-  if (interaction.deferred || interaction.replied) {
-    return interaction.editReply({ embeds: payload.embeds });
-  }
-  return interaction.reply(payload);
+  return safeSendMusicPayload(interaction, payload);
 }
 
 export function buildNowPlayingReply(guildId) {
@@ -224,6 +266,42 @@ export function setLoopMode(guildIdOrInteraction, modeOrToggle) {
 
   setPlayerState(guildId, state);
   return state.loop;
+}
+
+export function setTwentyFourSeven(guildIdOrInteraction, enabledOrToggle) {
+  const guildId = typeof guildIdOrInteraction === 'string'
+    ? guildIdOrInteraction
+    : guildIdOrInteraction?.guild?.id;
+
+  if (!guildId) return false;
+  const state = getPlayerState(guildId) || {
+    guildId,
+    queue: [],
+    currentTrack: null,
+    isPlaying: false,
+    volume: 100,
+    seekSeconds: 0,
+    loop: false,
+    twentyFourSeven: false,
+  };
+
+  if (typeof enabledOrToggle === 'boolean') {
+    state.twentyFourSeven = enabledOrToggle;
+  } else if (typeof enabledOrToggle === 'string') {
+    const normalized = enabledOrToggle.toLowerCase();
+    if (normalized === 'off' || normalized === 'false' || normalized === 'disable') {
+      state.twentyFourSeven = false;
+    } else if (normalized === 'on' || normalized === 'true' || normalized === 'enable') {
+      state.twentyFourSeven = true;
+    } else {
+      state.twentyFourSeven = !state.twentyFourSeven;
+    }
+  } else {
+    state.twentyFourSeven = !state.twentyFourSeven;
+  }
+
+  setPlayerState(guildId, state);
+  return state.twentyFourSeven;
 }
 
 export function clearQueue(guildId) {
@@ -465,7 +543,8 @@ function createAudioStreamFromTrack(track) {
 }
 
 export async function ensureVoiceConnection(interaction, voiceChannel) {
-  const guild = interaction.guild;
+  const ctx = interaction?.interaction || interaction;
+  const guild = ctx.guild;
   let connection = getVoiceConnection(guild.id);
 
   if (!connection) {
@@ -496,10 +575,11 @@ export async function ensureVoiceConnection(interaction, voiceChannel) {
 }
 
 export async function joinVoiceChannel(interactionOrGuild, voiceChannel) {
-  if (interactionOrGuild?.guild && voiceChannel) {
-    return ensureVoiceConnection(interactionOrGuild, voiceChannel);
+  const ctx = interactionOrGuild?.interaction || interactionOrGuild;
+  if (ctx?.guild && voiceChannel) {
+    return ensureVoiceConnection(ctx, voiceChannel);
   }
-  const guild = interactionOrGuild;
+  const guild = ctx;
   const existing = getVoiceConnection(guild.id);
   if (existing) return existing;
 
@@ -555,22 +635,25 @@ export async function playNextInQueue(guildId, client) {
 }
 
 export async function handlePlay(interaction, query) {
-  const member = interaction.member;
+  const ctx = interaction?.interaction || interaction;
+  const member = ctx?.member;
   const voiceChannel = member?.voice?.channel;
 
   if (!voiceChannel) {
-    return replyMusicError(interaction, 'Join a voice channel first so I can play audio.', true);
-  }
-
-  if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply();
+    return replyMusicError(ctx, 'Join a voice channel first so I can play audio.', true);
   }
 
   try {
-    const track = await resolveTrack(query, interaction.user);
-    const connection = await ensureVoiceConnection(interaction, voiceChannel);
+    if (!ctx.deferred && !ctx.replied && typeof ctx.deferReply === 'function') {
+      await ctx.deferReply();
+    }
+  } catch {}
 
-    let state = getPlayerState(interaction.guild.id);
+  try {
+    const track = await resolveTrack(query, ctx.user || ctx.author);
+    const connection = await ensureVoiceConnection(ctx, voiceChannel);
+
+    let state = getPlayerState(ctx.guild.id);
 
     if (!state) {
       const player = createAudioPlayer({
@@ -580,9 +663,9 @@ export async function handlePlay(interaction, query) {
       });
 
       state = {
-        guildId: interaction.guild.id,
+        guildId: ctx.guild.id,
         voiceChannelId: voiceChannel.id,
-        textChannel: interaction.channel,
+        textChannel: ctx.channel,
         connection,
         player,
         queue: [],
@@ -590,51 +673,54 @@ export async function handlePlay(interaction, query) {
         isPlaying: false,
         volume: 100,
         seekSeconds: 0,
+        loop: false,
+        twentyFourSeven: false,
         cleanupStream: null,
       };
 
       connection.subscribe(player);
 
       player.on(AudioPlayerStatus.Idle, async () => {
-        const current = getPlayerState(interaction.guild.id);
+        const current = getPlayerState(ctx.guild.id);
         if (!current) return;
         if (current.loop && current.currentTrack) {
           current.queue.unshift(current.currentTrack);
         }
-        setPlayerState(interaction.guild.id, current);
-        await playNextInQueue(interaction.guild.id, interaction.client);
+        setPlayerState(ctx.guild.id, current);
+        await playNextInQueue(ctx.guild.id, ctx.client);
       });
 
       player.on('error', async () => {
-        await playNextInQueue(interaction.guild.id, interaction.client);
+        await playNextInQueue(ctx.guild.id, ctx.client);
       });
 
-      setPlayerState(interaction.guild.id, state);
+      setPlayerState(ctx.guild.id, state);
     } else {
       state.voiceChannelId = voiceChannel.id;
-      state.textChannel = interaction.channel;
+      state.textChannel = ctx.channel;
       connection.subscribe(state.player);
     }
 
     const shouldStartNow = !state.currentTrack && state.player.state.status !== AudioPlayerStatus.Playing;
     state.queue.push(track);
-    setPlayerState(interaction.guild.id, state);
+    setPlayerState(ctx.guild.id, state);
 
     if (shouldStartNow) {
-      await playNextInQueue(interaction.guild.id, interaction.client);
-      const latestState = getPlayerState(interaction.guild.id);
-      return interaction.editReply({
+      await playNextInQueue(ctx.guild.id, ctx.client);
+      const latestState = getPlayerState(ctx.guild.id);
+      return safeSendMusicPayload(ctx, {
         embeds: [buildNowPlayingEmbed(latestState?.currentTrack || track, latestState)],
+        components: buildPlayerButtonRows(latestState),
       });
     }
 
     return replyMusicSuccess(
-      interaction,
+      ctx,
       `Added **${track.title}** to the queue (position: ${state.queue.length}).`
     );
   } catch (error) {
     return replyMusicError(
-      interaction,
+      ctx,
       error.message || 'An error occurred while trying to play the track.'
     );
   }
@@ -645,33 +731,36 @@ export async function playQuery(interaction, query) {
 }
 
 export async function handleSkip(interaction) {
-  const state = getPlayerState(interaction.guild.id);
+  const ctx = interaction?.interaction || interaction;
+  const state = getPlayerState(ctx.guild.id);
   if (!state || !state.currentTrack) {
-    return replyMusicError(interaction, 'There is no track currently playing to skip.', true);
+    return replyMusicError(ctx, 'There is no track currently playing to skip.', true);
   }
 
   state.player.stop(true);
-  return replyMusicSuccess(interaction, 'Skipped the current track.');
+  return replyMusicSuccess(ctx, 'Skipped the current track.');
 }
 
 export async function handleStop(interaction) {
-  const state = getPlayerState(interaction.guild.id);
+  const ctx = interaction?.interaction || interaction;
+  const state = getPlayerState(ctx.guild.id);
   if (!state) {
-    return replyMusicError(interaction, 'The bot is not currently playing audio.', true);
+    return replyMusicError(ctx, 'The bot is not currently playing audio.', true);
   }
 
-  destroyPlayerSession(interaction.guild.id);
+  destroyPlayerSession(ctx.guild.id);
 
-  return replyMusicSuccess(interaction, 'Stopped playback and left the voice channel.');
+  return replyMusicSuccess(ctx, 'Stopped playback and left the voice channel.');
 }
 
 export async function handleQueue(interaction) {
-  const state = getPlayerState(interaction.guild.id);
+  const ctx = interaction?.interaction || interaction;
+  const state = getPlayerState(ctx.guild.id);
   if (!state || (!state.currentTrack && (!state.queue || state.queue.length === 0))) {
-    return replyMusicSuccess(interaction, 'The queue is currently empty.', true);
+    return replyMusicSuccess(ctx, 'The queue is currently empty.', true);
   }
 
-  return interaction.reply({
+  return safeSendMusicPayload(ctx, {
     embeds: [buildQueueEmbed(state)],
   });
 }
