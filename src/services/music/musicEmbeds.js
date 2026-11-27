@@ -10,24 +10,39 @@ export const MUSIC_BUTTON_IDS = {
   LOOP: 'music_loop',
 };
 
+function formatSourceLabel(source) {
+  const normalized = String(source || '').toLowerCase();
+  if (normalized === 'spotify') return 'Spotify';
+  return 'YouTube';
+}
+
 export function buildNowPlayingEmbed(track, state) {
   const title = track?.title || 'Audio Track';
-  const description = track?.url ? `[${title}](${track.url})` : title;
+  const linkUrl = track?.displayUrl || track?.url;
+  const description = linkUrl ? `[${title}](${linkUrl})` : title;
   const duration = track?.duration || 'Live / Unknown';
   const author = track?.author || 'Unknown';
+  const sourceLabel = formatSourceLabel(track?.source);
   const requestedBy = track?.requestedBy ? `${track.requestedBy}` : 'User';
   const queueLeft = `${state?.queue?.length ?? 0}`;
 
-  return new EmbedBuilder()
-    .setColor(0x2b2d31)
-    .setTitle('Now Playing')
+  const embed = new EmbedBuilder()
+    .setColor(sourceLabel === 'Spotify' ? 0x1db954 : 0xff0000)
+    .setTitle(`Now Playing • ${sourceLabel}`)
     .setDescription(description)
     .addFields(
       { name: 'Duration', value: duration, inline: true },
       { name: 'Author', value: author, inline: true },
+      { name: 'Source', value: sourceLabel, inline: true },
       { name: 'Requested By', value: requestedBy, inline: true },
       { name: 'Queue Left', value: queueLeft, inline: true }
     );
+
+  if (track?.thumbnail) {
+    embed.setThumbnail(track.thumbnail);
+  }
+
+  return embed;
 }
 
 export function buildQueueEmbed(state) {
@@ -64,6 +79,7 @@ export function buildMusicInfoEmbed(message) {
 
 export function buildPlayerButtonRows(state) {
   const isPaused = state?.player?.state?.status === 'paused';
+  const isLooping = Boolean(state?.loop);
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -74,6 +90,10 @@ export function buildPlayerButtonRows(state) {
       .setCustomId(MUSIC_BUTTON_IDS.SKIP)
       .setLabel('Skip')
       .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(MUSIC_BUTTON_IDS.LOOP)
+      .setLabel(isLooping ? 'Loop: On' : 'Loop: Off')
+      .setStyle(isLooping ? ButtonStyle.Success : ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId(MUSIC_BUTTON_IDS.STOP)
       .setLabel('Stop')
