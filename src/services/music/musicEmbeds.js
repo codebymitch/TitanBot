@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-iimport { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 export function buildNowPlayingEmbed(track, state) {
   const title = track?.title || 'Audio Track';
