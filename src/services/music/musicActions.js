@@ -139,6 +139,24 @@ export function pausePlayback(guildIdOrInteraction) {
   return false;
 }
 
+export function resumePlayback(guildIdOrInteraction) {
+  const guildId = typeof guildIdOrInteraction === 'string'
+    ? guildIdOrInteraction
+    : guildIdOrInteraction?.guild?.id;
+
+  if (!guildId) return false;
+  const state = getPlayerState(guildId);
+  if (!state?.player) return false;
+
+  if (state.player.state.status === AudioPlayerStatus.Paused) {
+    state.isPlaying = true;
+    setPlayerState(guildId, state);
+    return state.player.unpause();
+  }
+
+  return false;
+}
+
 export function setLoopMode(guildIdOrInteraction, modeOrToggle) {
   const guildId = typeof guildIdOrInteraction === 'string'
     ? guildIdOrInteraction
