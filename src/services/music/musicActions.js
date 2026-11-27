@@ -89,6 +89,20 @@ export function buildNowPlayingReply(guildId) {
   };
 }
 
+export function buildQueueReply(guildId) {
+  const state = getPlayerState(guildId);
+  if (!state || (!state.currentTrack && (!Array.isArray(state.queue) || state.queue.length === 0))) {
+    return {
+      embeds: [buildMusicInfoEmbed('The queue is currently empty.')],
+      components: [],
+    };
+  }
+  return {
+    embeds: [buildQueueEmbed(state)],
+    components: buildPlayerButtonRows(state),
+  };
+}
+
 export function applyPause(guildId) {
   const state = getPlayerState(guildId);
   if (!state?.player) return false;
@@ -325,6 +339,37 @@ export async function joinVoiceChannel(interactionOrGuild, voiceChannel) {
   return connection;
 }
 
+export function leaveVoiceChannel(guildIdOrInteraction) {
+  const guildId = typeof guildIdOrInteraction === 'string'
+    ? guildIdOrInteraction
+    : guildIdOrInteraction?.guild?.id;
+
+  if (!guildId) return false;
+
+  const state = getPlayerState(guildId);
+  if (state && typeof state.cleanupStream === 'function') {
+    try {
+      state.cleanupStream();
+    } catch {}
+  }
+
+  if (state?.player) {
+    try {
+      state.player.stop(true);
+    } catch {}
+  }
+
+  try {
+    const connection = getVoiceConnection(guildId);
+    if (connection) {
+      connection.destroy();
+    }
+  } catch {}
+
+  clearPlayerState(guildId);
+  return true;
+}
+
 export async function playNextInQueue(guildId, client) {
   const state = getPlayerState(guildId);
   if (!state) return;
@@ -466,22 +511,7 @@ export async function handleStop(interaction) {
     return replyMusicError(interaction, 'The bot is not currently playing audio.', true);
   }
 
-  if (typeof state.cleanupStream === 'function') {
-    state.cleanupStream();
-  }
-  state.queue = [];
-  state.currentTrack = null;
-
-  try {
-    state.player.stop(true);
-  } catch {}
-
-  try {
-    const connection = getVoiceConnection(interaction.guild.id);
-    if (connection) connection.destroy();
-  } catch {}
-
-  clearPlayerState(interaction.guild.id);
+  leaveVoiceChannel(interaction.guild.id);
 
   return replyMusicSuccess(interaction, 'Stopped playback and left the voice channel.');
 }
