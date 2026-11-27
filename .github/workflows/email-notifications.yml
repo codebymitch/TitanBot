@@ -1,0 +1,50 @@
+name: Daily app email notifications
+
+# שולח תזכורות במייל וסיכום יומי לאתר daily-app. רץ כל 10 דקות.
+# דורש Secrets: FIREBASE_SERVICE_ACCOUNT, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (ולא חובה: MAIL_FROM, SITE_URL).
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: email-notifications
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check configuration
+        id: cfg
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SMTP: ${{ secrets.SMTP_PASS }}
+        run: |
+          if [ -n "$SA" ] && [ -n "$SMTP" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "Email secrets are not set yet — skipping."; fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          node-version: 20
+      - name: Install
+        if: steps.cfg.outputs.ready == 'true'
+        working-directory: daily-app-mailer
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Send emails
+        if: steps.cfg.outputs.ready == 'true'
+        working-directory: daily-app-mailer
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: node send.mjs

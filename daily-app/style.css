@@ -760,3 +760,9 @@ body.restricted { padding-bottom: 24px; }
 .ai-btn { background: linear-gradient(90deg, #7c3aed, #2563eb); color: #fff; }
 .ai-btn.ghost { background: linear-gradient(90deg, #ede9fe, #dbeafe); color: #4c1d95; }
 .ai-btn:disabled { opacity: .7; cursor: progress; }
+
+/* ===== email notifications ===== */
+.mail-form { display: grid; gap: 10px; }
+.mail-form .switch-row { font-weight: 500; gap: 10px; }
+.mail-note { background: color-mix(in srgb, var(--cal) 12%, transparent); border-radius: 10px; padding: 8px 10px; font-size: .85rem; margin: 0 0 10px; }
+.mail-ok { background: var(--hab-soft); color: var(--hab); border-radius: 10px; padding: 8px 10px; font-size: .88rem; margin: 8px 0 0; }

@@ -640,6 +640,7 @@
           : `<p style="color:var(--danger)">${esc(account.error)}</p>`}`;
     }
     view.innerHTML = `<div class="card">${body}</div>
+      ${gate === 'full' ? emailCard() : ''}
       <div class="card">
         <h3>הנתונים שלי</h3>
         <div class="stats">
@@ -654,6 +655,11 @@
       const n = $('#accName'); if (n) n.textContent = u.displayName || (u.email || '').split('@')[0] || 'המשתמש שלי';
       const em = $('#accEmail'); if (em) em.textContent = u.email || '';
       const av = $('#accAvatar'); if (av) av.src = u.photoURL;
+    }
+    const ef = $('#emailForm');
+    if (ef) {
+      ef.addEventListener('change', (e) => { if (e.target.name === 'enabled' || e.target.name === 'digest') { readEmailForm(ef); renderAccount(); } });
+      ef.addEventListener('submit', (e) => { e.preventDefault(); readEmailForm(ef); save(); toast('הגדרות המייל נשמרו 📧'); renderAccount(); });
     }
     const f = $('#authForm');
     if (f) f.addEventListener('input', () => { authEmail = f.email.value; if (f.name) authName = f.name.value; });
@@ -674,6 +680,45 @@
       });
     });
   }
+  // ---------- התראות במייל (נשלחות ע״י GitHub Actions — daily-app-mailer) ----------
+  function emailSettings() {
+    state.settings = state.settings || {};
+    const def = { enabled: false, email: state.settings.email || (account.user && account.user.email) || '', reminders: true, digest: false, digestHour: 7, tz: '' };
+    state.settings.emailNotif = Object.assign(def, state.settings.emailNotif || {});
+    return state.settings.emailNotif;
+  }
+  const serverMailReady = () => !!(account.fb && account.user && account.status === 'connected');
+  function readEmailForm(f) {
+    const e = emailSettings();
+    e.enabled = f.enabled.checked;
+    if (f.email) { e.email = f.email.value.trim(); state.settings.email = e.email; }
+    if (f.reminders) e.reminders = f.reminders.checked;
+    if (f.digest) e.digest = f.digest.checked;
+    if (f.digestHour) e.digestHour = Number(f.digestHour.value);
+    try { e.tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (err) { e.tz = 'Asia/Jerusalem'; }
+  }
+  function emailCard() {
+    const e = emailSettings();
+    const ready = serverMailReady();
+    return `<div class="card">
+      <h3>📧 התראות במייל</h3>
+      ${ready ? '' : `<p class="mail-note">${account.provider === 'claude'
+        ? 'התראות במייל עובדות רק באתר העצמאי (עם חשבון). כאן בתוך Claude אפשר להשתמש בכפתור "הוספה ליומן" בתזכורת.'
+        : 'כדי לקבל מיילים צריך להתחבר לחשבון באתר.'}</p>`}
+      <form id="emailForm" class="mail-form">
+        <label class="switch-row"><span>שליחת התראות למייל</span><input type="checkbox" name="enabled" ${e.enabled ? 'checked' : ''}></label>
+        ${e.enabled ? `
+          <label class="field"><span>לאיזו כתובת?</span><input name="email" type="email" dir="ltr" value="${esc(e.email)}" placeholder="name@example.com" required></label>
+          <label class="switch-row"><span>⏰ תזכורות שסימנתי "במייל"</span><input type="checkbox" name="reminders" ${e.reminders ? 'checked' : ''}></label>
+          <label class="switch-row"><span>☀️ סיכום יומי (תזכורות, משימות והרגלים להיום)</span><input type="checkbox" name="digest" ${e.digest ? 'checked' : ''}></label>
+          ${e.digest ? `<label class="field"><span>שעת הסיכום</span><select name="digestHour">${[5, 6, 7, 8, 9, 10, 12, 18, 20].map((h) => `<option value="${h}" ${Number(e.digestHour) === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select></label>` : ''}
+          <p class="muted tiny">המיילים נשלחים מהשרת גם כשהאתר סגור (בדיקה כל ~10 דקות). בכל תזכורת מסמנים "📧 תזכורת גם במייל".</p>` : ''}
+        <button class="btn">שמירה</button>
+      </form>
+    </div>`;
+  }
+  modCtx.serverEmail = () => { const e = emailSettings(); return serverMailReady() && e.enabled && e.reminders && e.email ? e.email : null; };
+
   async function authRun(fn) {
     authBusy = true; account.error = ''; render();
     try { await fn(); } catch (e) { account.error = authError(e); }

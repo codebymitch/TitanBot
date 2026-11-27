@@ -300,9 +300,15 @@ window.RemindersModule = function (ctx) {
 
         <div class="email-box">
           <label class="switch-row"><span>📧 תזכורת גם במייל</span><input type="checkbox" name="email" ${d.email ? 'checked' : ''}></label>
-          ${d.email ? `
+          ${d.email && ctx.serverEmail && ctx.serverEmail() ? `
+            <p class="mail-ok">✅ יישלח מייל ל־<b dir="ltr">${esc(ctx.serverEmail())}</b> בזמן התזכורת${d.early ? ' (ובזמן ההתראה המוקדמת)' : ''}, גם כשהאתר סגור.</p>
+            <details class="per100"><summary>אפשרויות נוספות</summary><div class="email-actions">
+              <a class="btn ghost" href="${gcalUrl(d)}" target="_blank" rel="noopener" data-ract="cal-link">📅 הוספה ל־Google Calendar</a>
+              <a class="btn ghost" href="${outlookUrl(d)}" target="_blank" rel="noopener" data-ract="cal-link">📆 הוספה ל־Outlook</a>
+              <a class="btn ghost" href="${mailtoUrl(d)}" target="_blank" rel="noopener" data-ract="cal-link">✉️ שליחה למייל עכשיו</a>
+            </div></details>` : d.email ? `
             <label class="field" style="margin-top:8px"><span>כתובת המייל שלי</span><input name="addr" type="email" value="${esc(st.email)}" placeholder="name@example.com" dir="ltr"></label>
-            <p class="muted tiny">כדי לקבל מייל בזמן גם כשהאפליקציה סגורה, מוסיפים את התזכורת ליומן (Google או Outlook) ובוחרים שם התראה <b>באימייל</b>. היומן ישלח את המייל בזמן, כולל בחזרות.</p>
+            <p class="muted tiny">${ctx.serverEmail ? 'כדי שהשרת ישלח מייל בזמן — מפעילים "התראות במייל" במסך החשבון (☰ ← חשבון). בינתיים אפשר' : 'כדי לקבל מייל בזמן גם כשהאפליקציה סגורה,'} להוסיף את התזכורת ליומן (Google או Outlook) ולבחור שם התראה <b>באימייל</b>.</p>
             <div class="email-actions">
               <a class="btn" href="${gcalUrl(d)}" target="_blank" rel="noopener" data-ract="cal-link">📅 Google Calendar</a>
               <a class="btn ghost" href="${outlookUrl(d)}" target="_blank" rel="noopener" data-ract="cal-link">📆 Outlook</a>

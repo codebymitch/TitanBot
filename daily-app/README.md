@@ -57,6 +57,29 @@ python3 -m http.server 8080
 - בהרשמה ראשונה, מה שכבר נשמר בדפדפן עובר לחשבון החדש.
 - אחרי התנתקות, הנתונים נשארים בחשבון ומופיעים שוב בהתחברות מכל מכשיר.
 
+## התראות במייל (בחינם, דרך GitHub Actions)
+
+התיקייה `daily-app-mailer/` מכילה סקריפט שרץ כל 10 דקות (`.github/workflows/email-notifications.yml`), קורא את נתוני המשתמשים מ־Firestore ושולח:
+- ⏰ **תזכורות** שסומנו "📧 תזכורת גם במייל" — בזמן התזכורת (ובזמן ההתראה המוקדמת), כולל תזכורות חוזרות, גם כשהאתר סגור.
+- ☀️ **סיכום יומי** בשעה שבוחרים — תזכורות, משימות (כולל באיחור) והרגלים להיום.
+
+כל משתמש מפעיל את זה באתר: ☰ ← חשבון ← "📧 התראות במייל". הסקריפט שומר מה נשלח (`emailLog/{uid}`) כדי לא לשלוח פעמיים.
+
+**הגדרה חד־פעמית** — ב־GitHub: Settings → Secrets and variables → Actions → New repository secret:
+
+| Secret | מה שמים |
+|---|---|
+| `FIREBASE_SERVICE_ACCOUNT` | ב־Firebase: ⚙️ Project settings → Service accounts → **Generate new private key** — מדביקים את כל תוכן קובץ ה־JSON |
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `465` |
+| `SMTP_USER` | כתובת ה־Gmail שממנה יישלחו המיילים |
+| `SMTP_PASS` | **App Password** של Gmail (myaccount.google.com → Security → 2-Step Verification → App passwords) — לא הסיסמה הרגילה |
+| `MAIL_FROM` (לא חובה) | למשל `היום שלי <you@gmail.com>` |
+| `SITE_URL` (לא חובה) | כתובת האתר לקישור במייל |
+
+בדיקה: Actions → **Daily app email notifications** → Run workflow. כל עוד ה־Secrets לא הוגדרו, ה־workflow פשוט מדלג.
+> GitHub מריץ משימות מתוזמנות "בערך" בזמן — לפעמים באיחור של כמה דקות. הסקריפט משלים התראות שפוספסו ב־40 הדקות האחרונות.
+
 ## קבצים
 
 | קובץ | תפקיד |
