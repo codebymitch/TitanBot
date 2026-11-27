@@ -1,4 +1,4 @@
-iimport { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { buildQueueReply } from '../../services/music/musicActions.js';
 
