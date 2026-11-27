@@ -4,8 +4,11 @@ WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 
+RUN apk add --no-cache ffmpeg python3 py3-pip && \
+    pip3 install --no-cache-dir --break-system-packages yt-dlp
+
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 COPY . .
 
