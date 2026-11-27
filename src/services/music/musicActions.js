@@ -49,6 +49,27 @@ function formatDuration(seconds) {
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
+function parseSecondsInput(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+  if (typeof value !== 'string') return NaN;
+  const trimmed = value.trim();
+  if (!trimmed) return NaN;
+  if (/^\d+$/.test(trimmed)) {
+    return Math.max(0, Number(trimmed));
+  }
+  const parts = trimmed.split(':').map((p) => Number(p));
+  if (parts.some((n) => !Number.isFinite(n) || n < 0)) return NaN;
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  }
+  if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  return NaN;
+}
+
 export function getPlayer(guildId) {
   return getPlayerState(guildId);
 }
@@ -155,6 +176,26 @@ export function resumePlayback(guildIdOrInteraction) {
   }
 
   return false;
+}
+
+export function seekTrack(guildIdOrInteraction, positionInput) {
+  const guildId = typeof guildIdOrInteraction === 'string'
+    ? guildIdOrInteraction
+    : guildIdOrInteraction?.guild?.id;
+
+  if (!guildId) return false;
+  const state = getPlayerState(guildId);
+  if (!state?.currentTrack) return false;
+
+  const seconds = parseSecondsInput(positionInput);
+  if (!Number.isFinite(seconds) || seconds < 0) return false;
+
+  const maxSec = Number(state.currentTrack.durationSec || 0);
+  const clampedSec = maxSec > 0 ? Math.min(seconds, Math.max(0, maxSec - 1)) : seconds;
+
+  state.seekSeconds = clampedSec;
+  setPlayerState(guildId, state);
+  return clampedSec;
 }
 
 export function setLoopMode(guildIdOrInteraction, modeOrToggle) {
@@ -495,6 +536,7 @@ export async function playNextInQueue(guildId, client) {
   const nextTrack = state.queue.shift();
   state.currentTrack = nextTrack;
   state.isPlaying = true;
+  state.seekSeconds = 0;
 
   const { resource, cleanup } = createAudioStreamFromTrack(nextTrack);
   if (resource.volume) {
@@ -547,6 +589,7 @@ export async function handlePlay(interaction, query) {
         currentTrack: null,
         isPlaying: false,
         volume: 100,
+        seekSeconds: 0,
         cleanupStream: null,
       };
 
