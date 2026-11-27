@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
 import { getPaginationRow } from '../../utils/components.js';
+import { getGuildMusicData } from './playerStore.js';
 
 const QUEUE_PAGE_SIZE = 10;
 
@@ -21,7 +22,7 @@ export const MUSIC_BUTTON_IDS = {
 };
 
 export function formatDuration(ms) {
-    if (!ms || Number.isNaN(ms)) {
+    if (!ms || Number.isNaN(ms) || ms <= 0) {
         return 'Live';
     }
     const totalSeconds = Math.floor(ms / 1000);
@@ -35,12 +36,14 @@ export function formatDuration(ms) {
 }
 
 function getTrackArtwork(track) {
-    return track?.info?.artworkUrl || track?.info?.thumbnail || null;
+    return track?.info?.artworkUrl || track?.info?.thumbnail || track?.artworkUrl || track?.thumbnail || null;
 }
 
 function detectTrackSource(track) {
-    const uri = String(track?.info?.uri || '').toLowerCase();
-    const rawSource = String(track?.info?.sourceName || track?.info?.source || '').toLowerCase();
+    const uri = String(track?.info?.uri || track?.uri || '').toLowerCase();
+    const rawSource = String(
+        track?.info?.sourceName || track?.info?.source || track?.sourceName || track?.source || '',
+    ).toLowerCase();
 
     if (uri.includes('spotify.com') || uri.startsWith('spotify:') || rawSource.includes('spotify')) {
         return 'Spotify';
@@ -58,8 +61,8 @@ function detectTrackSource(track) {
 }
 
 function formatTrackTitle(track) {
-    const title = track?.info?.title || 'Unknown track';
-    const uri = track?.info?.uri;
+    const title = track?.info?.title || track?.title || 'Unknown track';
+    const uri = track?.info?.uri || track?.uri;
     return uri ? `[${title}](${uri})` : title;
 }
 
@@ -74,27 +77,35 @@ function getLoopLabel(loop) {
     }
 }
 
-export function buildNowPlayingEmbed(track, player, guildData) {
-    const requester = track?.info?.requester;
+export function buildNowPlayingEmbed(trackOrPlayer, maybePlayer = null, maybeGuildData = null) {
+    const isPlayerArg = Boolean(trackOrPlayer?.current || trackOrPlayer?.queue);
+    const player = isPlayerArg ? trackOrPlayer : maybePlayer;
+    const track = isPlayerArg ? player?.current : trackOrPlayer;
+    const guildId = player?.guildId || maybeGuildData?.guildId;
+    const guildData = maybeGuildData || (guildId ? getGuildMusicData(guildId) : null);
+
+    const requester = track?.info?.requester || track?.requester;
     const requesterLabel = requester
         ? (requester.username || requester.tag || 'Unknown')
         : 'Unknown';
 
     const position = formatDuration(player?.position || 0);
-    const duration = formatDuration(track?.info?.length || 0);
+    const duration = formatDuration(track?.info?.length || track?.length || 0);
     const sourceLabel = detectTrackSource(track);
+    const volumeValue = guildData?.volume ?? player?.volume ?? 75;
+    const loopMode = guildData?.loop ?? player?.loop ?? 'none';
 
     return createEmbed({
         title: 'Now Playing',
         description: formatTrackTitle(track),
         color: 'primary',
         fields: [
-            { name: 'Artist', value: track?.info?.author || 'Unknown', inline: true },
+            { name: 'Artist', value: track?.info?.author || track?.author || 'Unknown', inline: true },
             { name: 'Source', value: sourceLabel, inline: true },
             { name: 'Requester', value: requesterLabel, inline: true },
             { name: 'Progress', value: `${position} / ${duration}`, inline: true },
-            { name: 'Volume', value: `${guildData?.volume ?? 75}%`, inline: true },
-            { name: 'Loop', value: getLoopLabel(guildData?.loop), inline: true },
+            { name: 'Volume', value: `${volumeValue}%`, inline: true },
+            { name: 'Loop', value: getLoopLabel(loopMode), inline: true },
             { name: 'Queue', value: `${player?.queue?.length || 0} track(s)`, inline: true },
         ],
         thumbnail: getTrackArtwork(track),
@@ -102,18 +113,24 @@ export function buildNowPlayingEmbed(track, player, guildData) {
     });
 }
 
-export function buildQueueEmbed(queue, currentTrack, page = 0) {
+export function buildQueueEmbed(queueOrPlayer, currentOrPage = 0, maybePageSize = QUEUE_PAGE_SIZE) {
+    const isPlayerArg = Boolean(queueOrPlayer?.queue && !Array.isArray(queueOrPlayer?.queue));
+    const player = isPlayerArg ? queueOrPlayer : null;
+    const queue = isPlayerArg ? player.queue : queueOrPlayer;
+    const currentTrack = isPlayerArg ? player.current : currentOrPage;
+    const rawPage = isPlayerArg ? Number(currentOrPage || 1) - 1 : Number(maybePageSize || 0);
+
     const totalTracks = queue?.length || 0;
     const totalPages = Math.max(1, Math.ceil(totalTracks / QUEUE_PAGE_SIZE));
-    const safePage = Math.min(Math.max(page, 0), totalPages - 1);
+    const safePage = Math.min(Math.max(rawPage, 0), totalPages - 1);
     const start = safePage * QUEUE_PAGE_SIZE;
-    const slice = queue?.slice(start, start + QUEUE_PAGE_SIZE) || [];
+    const slice = typeof queue?.slice === 'function' ? queue.slice(start, start + QUEUE_PAGE_SIZE) : [];
 
     let description = '';
     if (currentTrack) {
         const currentSource = detectTrackSource(currentTrack);
-        const currentDuration = formatDuration(currentTrack.info?.length || 0);
-        description += `**Now Playing**\n${formatTrackTitle(currentTrack)} — ${currentTrack.info?.author || 'Unknown'} \`[${currentDuration}]\` • *${currentSource}*\n\n`;
+        const currentDuration = formatDuration(currentTrack.info?.length || currentTrack.length || 0);
+        description += `**Now Playing**\n${formatTrackTitle(currentTrack)} — ${currentTrack.info?.author || currentTrack.author || 'Unknown'} \`[${currentDuration}]\` • *${currentSource}*\n\n`;
     }
 
     if (slice.length === 0) {
@@ -123,8 +140,8 @@ export function buildQueueEmbed(queue, currentTrack, page = 0) {
             .map((track, index) => {
                 const num = start + index + 1;
                 const source = detectTrackSource(track);
-                const duration = formatDuration(track.info?.length || 0);
-                return `${num}. ${formatTrackTitle(track)} — ${track.info?.author || 'Unknown'} \`[${duration}]\` • *${source}*`;
+                const duration = formatDuration(track.info?.length || track.length || 0);
+                return `${num}. ${formatTrackTitle(track)} — ${track.info?.author || track.author || 'Unknown'} \`[${duration}]\` • *${source}*`;
             })
             .join('\n');
     }
@@ -139,7 +156,8 @@ export function buildQueueEmbed(queue, currentTrack, page = 0) {
 
 export function buildPlayerButtonRows(player, guildData) {
     const paused = Boolean(player?.paused);
-    const isLoopActive = Boolean(guildData?.loop && guildData.loop !== 'none');
+    const loopMode = guildData?.loop ?? player?.loop ?? 'none';
+    const isLoopActive = Boolean(loopMode && loopMode !== 'none');
 
     const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -197,8 +215,14 @@ export function buildPlayerButtonRows(player, guildData) {
     return [row1, row2];
 }
 
-export function buildQueuePaginationRow(page, totalPages) {
-    return getPaginationRow('music_queue', page + 1, totalPages);
+export function buildQueuePaginationRow(pageOrPlayer, totalPagesOrPage = 1, maybePageSize = QUEUE_PAGE_SIZE) {
+    if (pageOrPlayer && typeof pageOrPlayer === 'object' && pageOrPlayer.queue) {
+        const totalTracks = pageOrPlayer.queue.length || 0;
+        const totalPages = Math.max(1, Math.ceil(totalTracks / maybePageSize));
+        const currentPage = Math.min(Math.max(Number(totalPagesOrPage) || 1, 1), totalPages);
+        return getPaginationRow('music_queue', currentPage, totalPages);
+    }
+    return getPaginationRow('music_queue', Number(pageOrPlayer) + 1, Number(totalPagesOrPage) || 1);
 }
 
 export function getQueuePageSize() {
