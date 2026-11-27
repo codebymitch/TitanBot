@@ -18,6 +18,14 @@ window.TasksModule = function (ctx) {
   let current = (() => { try { return localStorage.getItem('tasks-list') || 'today'; } catch (e) { return 'today'; } })();
   let showDone = false;
   let pendingSince = 0, pendingTimer = null;
+  const pref = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+  const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } };
+  let sortBy = pref('tasks-sort', 'due');
+  let colorFilter = '';
+  // צבעי סימון למשימות (לפי הסדר הזה נעשה המיון לפי צבע)
+  const TASK_COLORS = [['#ef4444', 'אדום'], ['#f97316', 'כתום'], ['#eab308', 'צהוב'], ['#16a34a', 'ירוק'], ['#14b8a6', 'טורקיז'], ['#0ea5e9', 'כחול'], ['#6366f1', 'סגול'], ['#ec4899', 'ורוד'], ['#64748b', 'אפור']];
+  const COLOR_NAME = Object.fromEntries(TASK_COLORS);
+  const SORTS = [['due', '📅 לפי תאריך יעד'], ['color', '🎨 לפי צבע'], ['priority', '‼️ לפי עדיפות'], ['alpha', '🔤 לפי שם (א–ת)'], ['newest', '🆕 החדשות קודם'], ['oldest', '⏳ הישנות קודם'], ['list', '🗂️ לפי רשימה']];
   let sh = null;
   let commentsUnsub = null;
   const sheet = ctx.makeSheet('taskSheet', onAction, () => { sh = null; if (commentsUnsub) { commentsUnsub(); commentsUnsub = null; } });
@@ -57,6 +65,32 @@ window.TasksModule = function (ctx) {
   const isSmart = (id) => SMART.some(([k]) => k === id);
   const prioRank = { high: 0, normal: 1, low: 2 };
   const sortOpen = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.time || '99').localeCompare(b.time || '99') || prioRank[a.priority] - prioRank[b.priority] || a.createdAt - b.createdAt;
+  const colorRank = (t) => { const i = TASK_COLORS.findIndex(([c]) => c === t.color); return i < 0 ? 99 : i; };
+  const SORTERS = {
+    due: sortOpen,
+    color: (a, b) => colorRank(a) - colorRank(b) || sortOpen(a, b),
+    priority: (a, b) => prioRank[a.priority] - prioRank[b.priority] || sortOpen(a, b),
+    alpha: (a, b) => a.title.localeCompare(b.title, 'he'),
+    newest: (a, b) => b.createdAt - a.createdAt,
+    oldest: (a, b) => a.createdAt - b.createdAt,
+    list: (a, b) => listOf(a.listId).name.localeCompare(listOf(b.listId).name, 'he') || sortOpen(a, b),
+  };
+  // כותרות קבוצה כשממיינים לפי צבע / עדיפות / רשימה
+  function groupKey(t) {
+    if (sortBy === 'color') return t.color ? `<i class="t-dot" style="--tc:${t.color}"></i> ${COLOR_NAME[t.color] || 'צבע'}` : 'ללא צבע';
+    if (sortBy === 'priority') return PRIO[t.priority];
+    if (sortBy === 'list') { const l = listOf(t.listId); return `${esc(l.emoji)} ${esc(l.name)}`; }
+    return null;
+  }
+  function listHtml(arr, showList) {
+    let html = '', last = null;
+    arr.forEach((x) => {
+      const g = groupKey(x);
+      if (g !== null && g !== last) { html += `<li class="t-group">${g}</li>`; last = g; }
+      html += item(x, showList);
+    });
+    return html;
+  }
   const writable = () => lists().filter((l) => RANK[l.role] >= RANK.editor);
 
   function filtered(id) {
@@ -104,7 +138,7 @@ window.TasksModule = function (ctx) {
       if (done) toast('✓ משימה הושלמה');
     } catch (e) { fail(e); }
   }
-  const taskData = (d) => ({ title: d.title, notes: d.notes, due: d.due, time: d.time, priority: d.priority, subtasks: d.subtasks });
+  const taskData = (d) => ({ title: d.title, notes: d.notes, due: d.due, time: d.time, priority: d.priority, subtasks: d.subtasks, color: d.color || '' });
 
   // ---------- public ----------
   function homeSummary() {
@@ -123,7 +157,7 @@ window.TasksModule = function (ctx) {
     const subDone = t.subtasks.filter((s) => s.done).length;
     const l = listOf(t.listId);
     const ro = !canList(t.listId, 'editor');
-    return `<li class="task ${t.done ? 'done' : ''} prio-${t.priority}" style="--lc:${l.color}">
+    return `<li class="task ${t.done ? 'done' : ''} prio-${t.priority} ${t.color ? 'has-color' : ''}" style="--lc:${l.color};--tc:${t.color || l.color}">
       <button class="t-check ${ro ? 'ro' : ''}" data-tact="toggle" data-id="${t.key}" aria-label="${t.done ? 'החזרה לפתוחות' : 'סימון כבוצעה'}" ${ro ? 'aria-disabled="true"' : ''}>${t.done ? '✓' : ''}</button>
       <button class="t-body" data-tact="edit" data-id="${t.key}">
         <span class="title">${t.priority === 'high' ? '<b class="flag">‼️</b> ' : ''}${esc(t.title)}</span>
@@ -151,8 +185,11 @@ window.TasksModule = function (ctx) {
     }
     pendingSince = 0;
     const t = dayKey();
-    const items = filtered(current);
-    const open = items.filter((x) => !x.done).sort(sortOpen);
+    const allItems = filtered(current);
+    const usedColors = TASK_COLORS.filter(([c]) => allItems.some((x) => x.color === c));
+    if (colorFilter && colorFilter !== 'none' && !usedColors.some(([c]) => c === colorFilter)) colorFilter = '';
+    const items = colorFilter === 'none' ? allItems.filter((x) => !x.color) : colorFilter ? allItems.filter((x) => x.color === colorFilter) : allItems;
+    const open = items.filter((x) => !x.done).sort(SORTERS[sortBy] || sortOpen);
     const done = items.filter((x) => x.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const countOpen = (id) => filtered(id).filter((x) => !x.done).length;
     const cur = isSmart(current) ? null : listOf(current);
@@ -188,8 +225,17 @@ window.TasksModule = function (ctx) {
         </form>` : `<p class="muted tiny">${cur && cur.role === 'commenter' ? 'אפשר לקרוא ולהגיב על משימות ברשימה הזו.' : 'צפייה בלבד ברשימה הזו.'}</p>`}
       </div>
 
+      ${allItems.length ? `<div class="t-tools">
+        <label class="t-sort"><span>מיון</span><select id="tSort">${SORTS.map(([k, l]) => `<option value="${k}" ${sortBy === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        ${usedColors.length ? `<div class="t-cfilter" role="group" aria-label="סינון לפי צבע">
+          <button class="cf ${!colorFilter ? 'on' : ''}" data-tact="cfilter" data-c="" title="כל הצבעים">הכל</button>
+          ${usedColors.map(([c, n]) => `<button class="cf dot ${colorFilter === c ? 'on' : ''}" style="--tc:${c}" data-tact="cfilter" data-c="${c}" title="${n}" aria-label="${n}"></button>`).join('')}
+          <button class="cf ${colorFilter === 'none' ? 'on' : ''}" data-tact="cfilter" data-c="none" title="משימות בלי צבע">ללא</button>
+        </div>` : ''}
+      </div>` : ''}
+
       <div class="card">
-        ${open.length ? `<ul class="list tasks">${open.map((x) => item(x, !cur)).join('')}</ul>`
+        ${open.length ? `<ul class="list tasks">${listHtml(open, !cur)}</ul>`
           : `<p class="empty">${allTasks().length ? 'אין משימות פתוחות כאן 🎉' : 'עוד אין משימות — כתבו משימה למעלה ✍️'}</p>`}
         ${done.length ? `
           <button class="link-btn t-done-toggle" data-tact="show-done">${showDone ? '▾' : '◂'} הושלמו (${done.length})</button>
@@ -197,6 +243,8 @@ window.TasksModule = function (ctx) {
             ${done.some((x) => canList(x.listId, 'editor')) ? '<button class="btn ghost small" data-tact="clear-done">🧹 מחיקת המשימות שהושלמו</button>' : ''}` : ''}` : ''}
       </div>`;
 
+    const so = $('#tSort');
+    if (so) so.addEventListener('change', () => { sortBy = so.value; setPref('tasks-sort', sortBy); rerender(); });
     const q = $('#taskQuick');
     if (q) q.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -215,8 +263,8 @@ window.TasksModule = function (ctx) {
     const t = key ? find(key) : null;
     if (key && !t) return;
     const defList = isSmart(current) || !canList(current, 'editor') ? (writable().find((l) => !l.shared) || writable()[0]).id : current;
-    const base = t || Object.assign({ title: '', notes: '', listId: defList, due: '', time: '', priority: 'normal', subtasks: [] }, preset || {});
-    sh = { mode: 'task', key: key || null, draft: JSON.parse(JSON.stringify({ title: base.title, notes: base.notes, listId: base.listId, due: base.due, time: base.time, priority: base.priority, subtasks: base.subtasks })), comments: null };
+    const base = t || Object.assign({ title: '', notes: '', listId: defList, due: '', time: '', priority: 'normal', subtasks: [], color: colorFilter && colorFilter !== 'none' ? colorFilter : '' }, preset || {});
+    sh = { mode: 'task', key: key || null, draft: JSON.parse(JSON.stringify({ title: base.title, notes: base.notes, listId: base.listId, due: base.due, time: base.time, priority: base.priority, subtasks: base.subtasks, color: base.color || '' })), comments: null };
     sheet.open();
     drawTask();
     if (t && t.shared) {
@@ -281,6 +329,11 @@ window.TasksModule = function (ctx) {
 
         <label class="field" style="margin-top:8px"><span>עדיפות</span><select name="priority">${Object.entries(PRIO).map(([k, l]) => `<option value="${k}" ${d.priority === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`}
 
+        ${ro ? '' : `<div class="section-label">צבע העיגול</div>
+        <div class="swatches t-colors">
+          <button type="button" class="none ${!d.color ? 'on' : ''}" data-tact="d-color" data-c="" aria-label="ללא צבע (צבע הרשימה)" title="ללא — צבע הרשימה">✕</button>
+          ${TASK_COLORS.map(([c, n]) => `<button type="button" class="${d.color === c ? 'on' : ''}" style="--c:${c}" data-tact="d-color" data-c="${c}" aria-label="${n}" title="${n}"></button>`).join('')}
+        </div>`}
         <div class="section-label">תתי־משימות ${d.subtasks.length ? `(${d.subtasks.filter((s) => s.done).length}/${d.subtasks.length})` : ''}</div>
         <ul class="list subtasks">${d.subtasks.map((s, i) => `<li class="${s.done ? 'done' : ''}">
           <button type="button" class="t-check small" data-tact="sub-toggle" data-i="${i}" ${dis}>${s.done ? '✓' : ''}</button>
@@ -544,6 +597,8 @@ window.TasksModule = function (ctx) {
         break;
       case 'sheet-toggle': { const k = sh.key; sheet.close(); await toggle(k); rerender(); break; }
       case 'd-list': read($('#tForm')); sh.draft.listId = b.dataset.l; drawTask(); break;
+      case 'd-color': read($('#tForm')); sh.draft.color = b.dataset.c; drawTask(); break;
+      case 'cfilter': colorFilter = b.dataset.c; rerender(); break;
       case 'd-due': read($('#tForm')); sh.draft.due = b.dataset.v; if (!b.dataset.v) sh.draft.time = ''; drawTask(); break;
       case 'sub-add': addSub(); break;
       case 'sub-toggle': read($('#tForm')); { const s = sh.draft.subtasks[+b.dataset.i]; s.done = !s.done; } drawTask(); break;

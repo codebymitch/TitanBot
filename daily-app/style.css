@@ -735,3 +735,20 @@ body.restricted { padding-bottom: 24px; }
 .ask-btns { display: flex; gap: 8px; justify-content: flex-end; }
 .ask-btns .btn { flex: 1; }
 .btn.danger-solid { background: var(--danger); color: #fff; }
+
+/* ===== task colors & sorting ===== */
+.task .t-check { border-color: var(--tc, var(--lc)); }
+.task.has-color .t-check { border-width: 2.5px; background: color-mix(in srgb, var(--tc) 14%, transparent); }
+.task.done .t-check { background: var(--tc, var(--lc)); border-color: var(--tc, var(--lc)); }
+.task.prio-high:not(.has-color) .t-check { border-color: var(--danger); }
+.t-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -4px 2px 10px; }
+.t-sort { display: flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); }
+.t-sort select { width: auto; padding: 6px 8px; font-size: .85rem; background: var(--card); }
+.t-cfilter { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.cf { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 4px 9px; font-size: .78rem; cursor: pointer; color: var(--muted); }
+.cf.dot { width: 24px; height: 24px; padding: 0; background: var(--tc); border: 2px solid var(--card); box-shadow: 0 0 0 1px var(--border); }
+.cf.on { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.cf.dot.on { box-shadow: 0 0 0 2px var(--tc); }
+.t-group { font-size: .78rem; font-weight: 700; color: var(--muted); padding: 10px 0 2px !important; border-bottom: 0 !important; gap: 6px !important; }
+.t-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--tc); }
+.t-colors .none { display: grid; place-items: center; background: var(--bg); color: var(--muted); font-size: .8rem; }

@@ -121,7 +121,7 @@ window.CalendarModule = function (ctx) {
   function taskItem(t) {
     const l = tsk().listOf(t.listId);
     const sub = t.subtasks.length ? ` · ☑️ ${t.subtasks.filter((x) => x.done).length}/${t.subtasks.length}` : '';
-    return `<li class="kev ktask ${t.done ? 'done' : ''} ${t.carried ? 'over' : ''}" style="--c:${l.color}">
+    return `<li class="kev ktask ${t.done ? 'done' : ''} ${t.carried ? 'over' : ''}" style="--c:${t.color || l.color}">
       <button class="tick sq" data-kact="task-tick" data-id="${t.key || t.id}" aria-label="${t.done ? 'החזרה' : 'סימון כבוצעה'}">${t.done ? '✓' : ''}</button>
       <button class="kev-body" data-kact="task-edit" data-id="${t.key || t.id}">
         <span class="kev-time">${t.carried ? fmtDay(t.due) : t.time || '📋'}</span>
