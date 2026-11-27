@@ -1,5 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 
 export function buildNowPlayingEmbed(track, state) {
   const title = track?.title || 'Audio Track';
@@ -51,4 +50,29 @@ export function buildMusicInfoEmbed(message) {
     .setColor(0x57f287)
     .setTitle('Music Info')
     .setDescription(message || 'Done.');
+}
+
+export function buildPlayerButtonRows(state) {
+  const isPaused = state?.player?.state?.status === 'paused';
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('music_toggle_pause')
+      .setLabel(isPaused ? 'Resume' : 'Pause')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('music_skip')
+      .setLabel('Skip')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('music_stop')
+      .setLabel('Stop')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('music_queue')
+      .setLabel('Queue')
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return [row];
 }
