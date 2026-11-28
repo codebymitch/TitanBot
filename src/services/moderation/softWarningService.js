@@ -8,6 +8,9 @@ class SoftWarningServiceClass {
   }
 
   getKey(guildId, userId) {
+    if (!guildId || !userId) {
+      throw new Error('Both guildId and userId are required for SoftWarningService');
+    }
     return `${guildId}:${userId}`;
   }
 
