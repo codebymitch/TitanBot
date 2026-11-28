@@ -1,4 +1,4 @@
-import { MessageFlags, ChannelType } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { handleInteractionError, replyUserError, ErrorTypes } from '../utils/errorHandler.js';
 import {
@@ -10,7 +10,22 @@ import {
     applyResume,
 } from '../services/music/musicActions.js';
 import { refreshPlayerMessage } from '../services/music/playerHandler.js';
-import { MUSIC_BUTTON_IDS } from '../services/music/musicEmbeds.js';
+
+const MUSIC_BUTTON_IDS = {
+    PAUSE: 'music_pause',
+    RESUME: 'music_resume',
+    SKIP: 'music_skip',
+    STOP: 'music_stop',
+    SHUFFLE: 'music_shuffle',
+    LOOP: 'music_loop',
+    VOL_DOWN: 'music_vol_down',
+    VOL_UP: 'music_vol_up',
+    QUEUE: 'music_queue',
+    QUEUE_FIRST: 'music_queue_first',
+    QUEUE_PREV: 'music_queue_prev',
+    QUEUE_NEXT: 'music_queue_next',
+    QUEUE_LAST: 'music_queue_last',
+};
 
 const VOICE_CHANNEL_DENIAL = 'You must be in the same voice channel as the bot to control music.';
 
