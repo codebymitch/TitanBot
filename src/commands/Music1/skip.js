@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { handleSkip } from '../../services/music/music.js';
+import { handleSkip } from '../../services/music/musicActions.js';
 
 export default {
   data: new SlashCommandBuilder()
