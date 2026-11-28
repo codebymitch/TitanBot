@@ -151,11 +151,12 @@ export default {
         let dmSent = false;
         try {
             const dmEmbed = warningEmbed(
-                `⚠️ لقد تلقيت تحذيراً في سيرفر **${interaction.guild.name}**`,
+                `# ⚠️ تحذير في سيرفر ${interaction.guild.name}`,
                 [
-                    `**السبب:** ${reason}`,
-                    `**عدد مرات التحذير الإجمالي:** ${totalCount}`,
-                    `**الشخص الذي أعطاك التحذير:** ${moderator.tag} (${moderator})`,
+                    `## السبب: ${reason}`,
+                    `## عدد مرات التحذير الإجمالي: ${totalCount}`,
+                    `### المشرف: ${moderator.tag} (${moderator})`,
+                    '',
                     `**أعلى رول موجود في السيرفر:** ${topServerRole}`,
                     `**أعلى رول معك:** ${targetHighestRole}`,
                     `**أعلى رول مع من أعطاك التحذير:** ${moderatorHighestRole}`,
@@ -197,23 +198,24 @@ export default {
         });
 
         const replyDescription = [
-            `**الشخص الذي أخذ التحذير:** ${target.tag} (${target})`,
-            `**الشخص الذي أعطى التحذير:** ${moderator.tag} (${moderator})`,
-            `**السبب:** ${reason}`,
-            `**عدد مرات التحذير:** ${totalCount}`,
-            `**أعلى رول موجود في السيرفر:** ${topServerRole}`,
-            `**أعلى رول مع المُحذَّر:** ${targetHighestRole}`,
-            `**رولات المُحذَّر:** ${formatRolesList(targetRoles)}`,
-            `**أعلى رول مع المُحذِّرِ (المشرف):** ${moderatorHighestRole}`,
-            `**رولات المُحذِّرِ (المشرف):** ${formatRolesList(moderatorRoles)}`,
-            `**أعلى رول مشترك بين الاثنين:** ${commonHighestRole}`,
-            `**إرسال رسالة الخاص (DM):** ${dmSent ? 'تم الإرسال بنجاح ✅' : 'تعذر الإرسال (الخاص مغلق أو غير متاح) ⚠️'}`
+            `## الشخص الذي أخذ التحذير: ${target.tag} (${target})`,
+            `## الشخص الذي أعطى التحذير: ${moderator.tag} (${moderator})`,
+            `## السبب: ${reason}`,
+            `## عدد مرات التحذير: ${totalCount}`,
+            '',
+            `### **أعلى رول موجود في السيرفر:** ${topServerRole}`,
+            `### **أعلى رول مع المُحذَّر:** ${targetHighestRole}`,
+            `**رولات المُحذَّر:** ${formatRolesList(targetRoles)}`,
+            `### **أعلى رول مع المُحذِّرِ (المشرف):** ${moderatorHighestRole}`,
+            `**رولات المُحذِّرِ (المشرف):** ${formatRolesList(moderatorRoles)}`,
+            `### **أعلى رول مشترك بين الاثنين:** ${commonHighestRole}`,
+            `### **إرسال رسالة الخاص (DM):** ${dmSent ? 'تم الإرسال بنجاح ✅' : 'تعذر الإرسال (الخاص مغلق أو غير متاح) ⚠️'}`
         ].join('\n');
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
-                    `⚠️ تم إعطاء تحذير لـ ${target.tag}`,
+                    `# ⚠️ تم إعطاء تحذير لـ ${target.tag}`,
                     replyDescription,
                 ),
             ],
