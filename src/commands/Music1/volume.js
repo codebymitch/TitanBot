@@ -1,5 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { setVolume, replyMusicError, replyMusicSuccess } from '../../services/music/musicActions.js';
+import {
+  setVolume,
+  replyMusicError,
+  replyMusicSuccess,
+} from '../../services/music/musicActions.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -15,11 +19,29 @@ export default {
     ),
 
   async execute(interaction) {
-    const level = interaction.options.getInteger('level', true);
-    const result = setVolume(interaction.guildId, level);
-    if (result === false) {
-      return replyMusicError(interaction, 'تعذر ضبط مستوى الصوت.', true);
+    if (!interaction.inGuild()) {
+      return replyMusicError(interaction, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
     }
-    return replyMusicSuccess(interaction, `🔊 تم ضبط مستوى الصوت على **${result}%**.`);
+
+    const level = interaction.options.getInteger('level', true);
+
+    try {
+      const result = await setVolume(interaction.guildId, level);
+
+      if (result === false || result === null || typeof result === 'undefined') {
+        return replyMusicError(interaction, 'تعذر ضبط مستوى الصوت؛ تأكد من وجود مشغل نشط.', true);
+      }
+
+      const finalLevel = typeof result === 'number' ? result : level;
+      const icon = finalLevel === 0 ? '🔇' : '🔊';
+
+      return replyMusicSuccess(
+        interaction,
+        `${icon} تم ضبط مستوى الصوت على **${finalLevel}%**.`
+      );
+    } catch (error) {
+      console.error('Error in /volume command:', error);
+      return replyMusicError(interaction, 'حدث خطأ أثناء تغيير مستوى الصوت.', true);
+    }
   },
 };
