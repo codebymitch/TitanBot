@@ -1,7 +1,6 @@
 import { MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { handleInteractionError } from '../utils/errorHandler.js';
-import { getGuildMusicData } from '../services/music/playerStore.js';
+import { handleInteractionError, replyUserError, ErrorTypes } from '../utils/errorHandler.js';
 import {
     getPlayer,
     buildQueueReply,
@@ -10,10 +9,46 @@ import {
     applyPause,
     applyResume,
 } from '../services/music/musicActions.js';
-import { canControlMusic, VOICE_CHANNEL_DENIAL } from '../services/music/permissions.js';
-import { refreshPlayerMessage } from '../services/music/playerHandler.js';
-import { MUSIC_BUTTON_IDS } from '../services/music/musicEmbeds.js';
-import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
+
+const MUSIC_BUTTON_IDS = {
+    PAUSE: 'music_pause',
+    RESUME: 'music_resume',
+    SKIP: 'music_skip',
+    STOP: 'music_stop',
+    SHUFFLE: 'music_shuffle',
+    LOOP: 'music_loop',
+    VOL_DOWN: 'music_vol_down',
+    VOL_UP: 'music_vol_up',
+    QUEUE: 'music_queue',
+    QUEUE_FIRST: 'music_queue_first',
+    QUEUE_PREV: 'music_queue_prev',
+    QUEUE_NEXT: 'music_queue_next',
+    QUEUE_LAST: 'music_queue_last',
+};
+
+const VOICE_CHANNEL_DENIAL = 'You must be in the same voice channel as the bot to control music.';
+
+function canControlMusic(member, player) {
+    const memberVoiceId = member?.voice?.channelId;
+    if (!memberVoiceId) return false;
+    const botVoiceId = player?.voiceChannelId || player?.voiceChannel || member?.guild?.members?.me?.voice?.channelId;
+    if (!botVoiceId) return true;
+    return memberVoiceId === botVoiceId;
+}
+
+const guildMusicStore = new Map();
+
+function getGuildMusicData(guildId) {
+    if (!guildMusicStore.has(guildId)) {
+        guildMusicStore.set(guildId, {
+            queuePages: new Map(),
+            shuffle: false,
+            loop: 'none',
+            volume: 100,
+        });
+    }
+    return guildMusicStore.get(guildId);
+}
 
 async function handleMusicButton(interaction, client) {
     const player = getPlayer(client, interaction.guild.id);
@@ -100,8 +135,6 @@ async function handleMusicButton(interaction, client) {
                 await applyResume(client, interaction.guild.id);
                 break;
             case MUSIC_BUTTON_IDS.SKIP:
-                // Under track-loop, stop() would replay the same track. Clear it so the
-                // skip advances; trackStart re-applies the stored loop to the next track.
                 if (player.loop === 'track') {
                     player.setLoop('none');
                 }
@@ -114,24 +147,22 @@ async function handleMusicButton(interaction, client) {
                 if (player.queue.length > 0) {
                     player.queue.shuffle();
                     guildData.shuffle = true;
-                    await refreshPlayerMessage(client, interaction.guild.id);
                 }
                 break;
             case MUSIC_BUTTON_IDS.LOOP: {
                 const guildDataLoop = getGuildMusicData(interaction.guild.id);
                 const next = guildDataLoop.loop === 'none' ? 'track' : guildDataLoop.loop === 'track' ? 'queue' : 'none';
+                guildDataLoop.loop = next;
                 await setLoopMode(client, interaction, next);
                 break;
             }
             case MUSIC_BUTTON_IDS.VOL_DOWN:
                 guildData.volume = Math.max(0, guildData.volume - 10);
                 player.setVolume(guildData.volume);
-                await refreshPlayerMessage(client, interaction.guild.id);
                 break;
             case MUSIC_BUTTON_IDS.VOL_UP:
                 guildData.volume = Math.min(100, guildData.volume + 10);
                 player.setVolume(guildData.volume);
-                await refreshPlayerMessage(client, interaction.guild.id);
                 break;
             default:
                 break;

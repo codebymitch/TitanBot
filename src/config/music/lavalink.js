@@ -11,20 +11,6 @@ function parseBoolean(value, defaultValue = false) {
     return ['true', '1', 'yes'].includes(String(value).toLowerCase());
 }
 
-function parseNodesFromEnv() {
-    const raw = process.env.LAVALINK_NODES?.trim();
-    if (!raw) {
-        return null;
-    }
-
-    try {
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : null;
-    } catch {
-        return null;
-    }
-}
-
 function parseNodesPayload(parsed) {
     if (Array.isArray(parsed)) {
         return parsed;
@@ -33,6 +19,20 @@ function parseNodesPayload(parsed) {
         return parsed.nodes;
     }
     return null;
+}
+
+function parseNodesFromEnv() {
+    const raw = process.env.LAVALINK_NODES?.trim();
+    if (!raw) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        return parseNodesPayload(parsed);
+    } catch {
+        return null;
+    }
 }
 
 function loadNodesFromFile() {
@@ -51,29 +51,29 @@ function loadNodesFromFile() {
     }
 }
 
+function normalizeNode(node, index = 0) {
+    return {
+        name: node?.name || `Node-${index + 1}`,
+        host: node?.host || 'localhost',
+        port: Number(node?.port || 2333),
+        password: node?.password || 'youshallnotpass',
+        secure: parseBoolean(node?.secure, false),
+    };
+}
+
 export function getLavalinkNodes() {
-    const fromJson = parseNodesFromEnv();
-    if (fromJson?.length) {
-        return fromJson;
+    const rawNodes = parseNodesFromEnv() || loadNodesFromFile();
+    if (rawNodes?.length) {
+        return rawNodes.map((node, idx) => normalizeNode(node, idx));
     }
 
-    const fromFile = loadNodesFromFile();
-    if (fromFile?.length) {
-        return fromFile;
-    }
-
-    const host = process.env.LAVALINK_HOST || 'localhost';
-    const port = Number(process.env.LAVALINK_PORT || 2333);
-    const password = process.env.LAVALINK_PASSWORD || 'youshallnotpass';
-    const secure = parseBoolean(process.env.LAVALINK_SECURE, false);
-
-    return [{
-        host,
-        port,
-        password,
-        secure,
+    return [normalizeNode({
         name: process.env.LAVALINK_NAME || 'Main',
-    }];
+        host: process.env.LAVALINK_HOST || 'localhost',
+        port: Number(process.env.LAVALINK_PORT || 2333),
+        password: process.env.LAVALINK_PASSWORD || 'youshallnotpass',
+        secure: parseBoolean(process.env.LAVALINK_SECURE, false),
+    }, 0)];
 }
 
 export const lavalinkConfig = {

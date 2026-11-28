@@ -2,9 +2,46 @@ import { Events } from "discord.js";
 import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
-import { reconcileTicketPanels, reconcileVerificationPanels, reconcileReactionRolePanelHealth } from "../services/panelHealthService.js";
+import {
+  reconcileTicketPanels,
+  reconcileVerificationPanels,
+  reconcileReactionRolePanelHealth,
+} from "../services/panelHealthService.js";
 import { reconcileLevelRoles } from "../services/leveling/levelRoleSyncService.js";
-import { initRiffyAfterReady } from "../services/music/riffySetup.js";
+
+let cachedInitializeMusic;
+let checkedInitializeMusic = false;
+
+async function getInitializeMusic() {
+  if (checkedInitializeMusic) return cachedInitializeMusic;
+  checkedInitializeMusic = true;
+
+  try {
+    const musicModule = await import("../services/music/music.js");
+    if (typeof musicModule.initializeMusic === "function") {
+      cachedInitializeMusic = musicModule.initializeMusic;
+    } else if (typeof musicModule.default === "function") {
+      cachedInitializeMusic = musicModule.default;
+    }
+  } catch (error) {
+    logger.warn(
+      `⚠️  Music initializer unavailable (../services/music/music.js): ${error.message}`
+    );
+  }
+
+  return cachedInitializeMusic;
+}
+
+async function runSafeReconciliation(label, fn, formatSummary) {
+  try {
+    const summary = await fn();
+    if (summary && typeof formatSummary === "function") {
+      startupLog(formatSummary(summary));
+    }
+  } catch (error) {
+    logger.error(`Error during ${label}:`, error);
+  }
+}
 
 export default {
   name: Events.ClientReady,
@@ -12,39 +49,55 @@ export default {
 
   async execute(client) {
     try {
-      client.user.setPresence(config.bot.presence);
-
-      startupLog(`Ready! Logged in as ${client.user.tag}`);
-      startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
-      startupLog(`Loaded ${client.commands.size} commands`);
-
-      if (client.config?.features?.music) {
-        initRiffyAfterReady(client);
+      if (client.user && config?.bot?.presence) {
+        client.user.setPresence(config.bot.presence);
       }
 
-      const reconciliationSummary = await reconcileReactionRoleMessages(client);
-      startupLog(
-        `Reaction role reconciliation: scanned ${reconciliationSummary.scannedMessages}, removed ${reconciliationSummary.removedMessages}, errors ${reconciliationSummary.errors}`
+      startupLog(`Ready! Logged in as ${client.user?.tag || "Bot"}`);
+      startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
+      startupLog(`Loaded ${client.commands?.size ?? 0} commands`);
+
+      const musicEnabled = client.config?.features?.music ?? true;
+      if (musicEnabled) {
+        const initMusic = await getInitializeMusic();
+        if (initMusic) {
+          await initMusic(client);
+        }
+      }
+
+      await runSafeReconciliation(
+        "reaction role reconciliation",
+        () => reconcileReactionRoleMessages(client),
+        (s) =>
+          `Reaction role reconciliation: scanned ${s.scannedMessages}, removed ${s.removedMessages}, errors ${s.errors}`
       );
 
-      const ticketPanelSummary = await reconcileTicketPanels(client);
-      startupLog(
-        `Ticket panel health: scanned ${ticketPanelSummary.scannedGuilds} guilds, healthy ${ticketPanelSummary.healthyPanels}, deleted ${ticketPanelSummary.deletedPanels}, missing channel ${ticketPanelSummary.missingChannels}, recovered ${ticketPanelSummary.recoveredIds}, errors ${ticketPanelSummary.errors}`
+      await runSafeReconciliation(
+        "ticket panel health",
+        () => reconcileTicketPanels(client),
+        (s) =>
+          `Ticket panel health: scanned ${s.scannedGuilds} guilds, healthy ${s.healthyPanels}, deleted ${s.deletedPanels}, missing channel ${s.missingChannels}, recovered ${s.recoveredIds}, errors ${s.errors}`
       );
 
-      const verificationPanelSummary = await reconcileVerificationPanels(client);
-      startupLog(
-        `Verification panel health: scanned ${verificationPanelSummary.scannedGuilds} guilds, healthy ${verificationPanelSummary.healthyPanels}, deleted ${verificationPanelSummary.deletedPanels}, missing channel ${verificationPanelSummary.missingChannels}, recovered ${verificationPanelSummary.recoveredIds}, errors ${verificationPanelSummary.errors}`
+      await runSafeReconciliation(
+        "verification panel health",
+        () => reconcileVerificationPanels(client),
+        (s) =>
+          `Verification panel health: scanned ${s.scannedGuilds} guilds, healthy ${s.healthyPanels}, deleted ${s.deletedPanels}, missing channel ${s.missingChannels}, recovered ${s.recoveredIds}, errors ${s.errors}`
       );
 
-      const reactionRolePanelSummary = await reconcileReactionRolePanelHealth(client);
-      startupLog(
-        `Reaction role panel health: scanned ${reactionRolePanelSummary.scannedPanels} panels, healthy ${reactionRolePanelSummary.healthyPanels}, deleted ${reactionRolePanelSummary.deletedPanels}, missing channel ${reactionRolePanelSummary.missingChannels}, recovered ${reactionRolePanelSummary.recoveredIds}, errors ${reactionRolePanelSummary.errors}`
+      await runSafeReconciliation(
+        "reaction role panel health",
+        () => reconcileReactionRolePanelHealth(client),
+        (s) =>
+          `Reaction role panel health: scanned ${s.scannedPanels} panels, healthy ${s.healthyPanels}, deleted ${s.deletedPanels}, missing channel ${s.missingChannels}, recovered ${s.recoveredIds}, errors ${s.errors}`
       );
 
-      const levelRoleSummary = await reconcileLevelRoles(client);
-      startupLog(
-        `Level role sync: scanned ${levelRoleSummary.scannedGuilds} guilds, pruned ${levelRoleSummary.prunedRewardEntries} stale rewards, re-awarded ${levelRoleSummary.rolesReAwarded} roles, errors ${levelRoleSummary.errors}`
+      await runSafeReconciliation(
+        "level role sync",
+        () => reconcileLevelRoles(client),
+        (s) =>
+          `Level role sync: scanned ${s.scannedGuilds} guilds, pruned ${s.prunedRewardEntries} stale rewards, re-awarded ${s.rolesReAwarded} roles, errors ${s.errors}`
       );
     } catch (error) {
       logger.error("Error in ready event:", error);

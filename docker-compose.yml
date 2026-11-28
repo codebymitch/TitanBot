@@ -1,6 +1,8 @@
 services:
   bot:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: titanbot
     restart: unless-stopped
     env_file:
@@ -21,10 +23,13 @@ services:
       - AUTO_MIGRATE=true
       - LOG_LEVEL=${LOG_LEVEL:-warn}
       - LAVALINK_NODES_FILE=lavalink/nodes.json
+      - YTDLP_COOKIES_PATH=/app/secrets/cookies.txt
       - PORT=3000
       - WEB_HOST=0.0.0.0
     ports:
       - "${PORT:-3000}:3000"
+    volumes:
+      - ${YTDLP_COOKIES_HOST_PATH:-/secure/path/cookies.txt}:/app/secrets/cookies.txt:ro
     depends_on:
       db:
         condition: service_healthy
@@ -46,7 +51,7 @@ services:
     environment:
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
     volumes:
-      - ./lavalink/application.yml:/opt/Lavalink/application.yml
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
     networks:
       - titan-network
 
