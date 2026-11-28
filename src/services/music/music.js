@@ -59,17 +59,25 @@ function getOrCreateSession(guildId) {
     seekSeconds: 0,
     activeProcesses: [],
     nowPlayingMessageId: null,
+    isTransitioning: false,
   };
 
   player.on(AudioPlayerStatus.Idle, () => {
+    if (session.isTransitioning) return;
     session.seekSeconds = 0;
+
     if (session.loop && session.current) {
       session.queue.unshift({ ...session.current });
     }
-    playNextInQueue(session).catch(() => {});
+
+    playNextInQueue(session).catch((err) => {
+      console.error(`[music:${guildId}] Idle next track error:`, err);
+    });
   });
 
-  player.on('error', () => {
+  player.on('error', (err) => {
+    if (session.isTransitioning) return;
+    console.error(`[music:${guildId}] Audio player error:`, err?.message || err);
     session.seekSeconds = 0;
     playNextInQueue(session).catch(() => {});
   });
@@ -172,13 +180,8 @@ export function applyResume(guildId) {
   return false;
 }
 
-export function pausePlayback(guildId) {
-  return applyPause(guildId);
-}
-
-export function resumePlayback(guildId) {
-  return applyResume(guildId);
-}
+export const pausePlayback = applyPause;
+export const resumePlayback = applyResume;
 
 function buildYtDlpArgs(target, cookiesPath) {
   const args = [
@@ -230,11 +233,12 @@ function runYtDlpJson(query) {
 
       try {
         const parsed = JSON.parse(stdout);
-        const entry = Array.isArray(parsed.entries) && parsed.entries.length > 0
-          ? parsed.entries[0]
-          : parsed;
+        const entry =
+          Array.isArray(parsed.entries) && parsed.entries.length > 0
+            ? parsed.entries[0]
+            : parsed;
 
-        if (!entry || !entry.webpage_url && !entry.url && !entry.title) {
+        if (!entry || (!entry.webpage_url && !entry.url && !entry.title)) {
           reject(new Error('لم يتم العثور على نتائج مطابقة.'));
           return;
         }
@@ -248,7 +252,7 @@ function runYtDlpJson(query) {
           title: entry.title || query,
           url: entry.webpage_url || streamUrl,
           streamUrl,
-          duration: durationSec ? `${mins}:${secs}` : 'Live / Unknown',
+          duration: durationSec ? `${mins}:${secs}` : 'مباشر / غير معروف',
           durationSec,
           thumbnail: entry.thumbnail || null,
         });
@@ -322,25 +326,34 @@ function createFfmpegStream(session, track, startSec = 0) {
 }
 
 async function startTrack(session, track, startSec = 0) {
-  session.current = track;
-  session.paused = false;
-  session.seekSeconds = startSec;
+  session.isTransitioning = true;
+  try {
+    session.current = track;
+    session.paused = false;
+    session.seekSeconds = startSec;
 
-  const resource = createFfmpegStream(session, track, startSec);
-  if (resource.volume) {
-    resource.volume.setVolume(Math.max(0, Math.min(2, session.volume / 100)));
+    const resource = createFfmpegStream(session, track, startSec);
+    if (resource.volume) {
+      resource.volume.setVolume(Math.max(0, Math.min(2, session.volume / 100)));
+    }
+
+    session.player.play(resource);
+    await entersState(session.player, AudioPlayerStatus.Playing, 15_000).catch(() => {});
+  } finally {
+    session.isTransitioning = false;
   }
-
-  session.player.play(resource);
-  await entersState(session.player, AudioPlayerStatus.Playing, 15_000).catch(() => {});
 }
 
 async function playNextInQueue(session) {
   if (!session.queue.length) {
     session.current = null;
+    session.paused = false;
     stopActiveStreams(session);
+
     if (!session.twentyFourSeven) {
       destroyPlayerSession(session.guildId);
+    } else if (session.connection && session.connection.state.status !== VoiceConnectionStatus.Destroyed) {
+      session.connection.subscribe(session.player);
     }
     return;
   }
@@ -367,12 +380,17 @@ export async function handlePlay(interaction, query) {
     const payload = {
       embeds: [
         new EmbedBuilder()
-          .setColor(0x5865f2)
+          .setColor(0x9b59b6)
           .setTitle('➕ تمت الإضافة إلى قائمة الانتظار')
           .setDescription(`**[${track.title}](${track.url})**`)
           .addFields(
             { name: 'المدة', value: track.duration, inline: true },
-            { name: 'الترتيب', value: `#${session.queue.length}`, inline: true }
+            { name: 'الترتيب', value: `#${session.queue.length}`, inline: true },
+            {
+              name: 'بواسطة',
+              value: track.requestedBy ? `<@${track.requestedBy}>` : 'غير معروف',
+              inline: true,
+            }
           ),
       ],
     };
@@ -392,12 +410,16 @@ export async function handlePlay(interaction, query) {
   return interaction.reply(payload);
 }
 
+export const playQuery = handlePlay;
+
 export function setVolume(guildId, level) {
   const session = sessions.get(guildId);
   const num = Number(level);
   if (!Number.isFinite(num)) return false;
   const clamped = Math.max(0, Math.min(200, Math.round(num)));
-  session ? (session.volume = clamped) : null;
+  if (session) {
+    session.volume = clamped;
+  }
 
   const currentResource = session?.player?.state?.resource;
   if (currentResource?.volume) {
@@ -494,10 +516,12 @@ export function clearQueue(guildId) {
   session.queue = [];
   return true;
 }
+
 export function destroyPlayerSession(guildId) {
   const session = sessions.get(guildId);
   if (!session) return;
 
+  session.isTransitioning = true;
   stopActiveStreams(session);
   session.queue = [];
   session.current = null;
@@ -529,17 +553,24 @@ export function buildNowPlayingReply(guildId) {
     };
   }
 
+  const statusLabel = session.paused ? '⏸️ متوقف مؤقتاً' : '▶️ قيد التشغيل';
+
   const embed = new EmbedBuilder()
-    .setColor(0x2b2d31)
-    .setTitle('🎵 يتم التشغيل الآن')
+    .setColor(0x9b59b6)
+    .setTitle('🌙 Luna • يتم التشغيل الآن')
     .setDescription(`**[${track.title}](${track.url})**`)
     .addFields(
+      { name: 'الحالة', value: statusLabel, inline: true },
       { name: 'المدة', value: track.duration || 'غير معروفة', inline: true },
       { name: 'الصوت', value: `${session.volume ?? 100}%`, inline: true },
-      { name: 'التكرار', value: session.loop ? 'مفعل' : 'متوقف', inline: true },
-      { name: '24/7', value: session.twentyFourSeven ? 'مفعل' : 'متوقف', inline: true },
+      { name: 'التكرار', value: session.loop ? '🔁 مفعل' : '➡️ متوقف', inline: true },
+      { name: '24/7', value: session.twentyFourSeven ? '🌙 مفعل' : '☀️ متوقف', inline: true },
       { name: 'في الانتظار', value: `${session.queue?.length || 0}`, inline: true }
     );
+
+  if (track.requestedBy) {
+    embed.setFooter({ text: `تم الطلب بواسطة مستخدم ID: ${track.requestedBy}` });
+  }
 
   if (track.thumbnail) {
     embed.setThumbnail(track.thumbnail);
@@ -549,19 +580,23 @@ export function buildNowPlayingReply(guildId) {
     new ButtonBuilder()
       .setCustomId('music_pause_resume')
       .setLabel(session.paused ? 'استئناف' : 'إيقاف مؤقت')
-      .setStyle(ButtonStyle.Secondary),
+      .setStyle(session.paused ? ButtonStyle.Success : ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('music_skip')
       .setLabel('تخطي')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
+      .setCustomId('music_loop')
+      .setLabel(session.loop ? 'التكرار: تشغيل' : 'التكرار: إيقاف')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('music_queue')
+      .setLabel('القائمة')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
       .setCustomId('music_stop')
       .setLabel('إيقاف')
-      .setStyle(ButtonStyle.Danger),
-    new ButtonBuilder()
-      .setCustomId('music_loop')
-      .setLabel(session.loop ? 'تكرار: تشغيل' : 'تكرار: إيقاف')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Danger)
   );
 
   return {
@@ -582,7 +617,9 @@ export function buildQueueReply(guildId) {
 
   const lines = [];
   if (session.current) {
-    lines.push(`**الحالي:** [${session.current.title}](${session.current.url}) \`[${session.current.duration}]\``);
+    lines.push(
+      `**🎵 الحالي:** [${session.current.title}](${session.current.url}) \`[${session.current.duration}]\``
+    );
   }
 
   if (Array.isArray(session.queue) && session.queue.length > 0) {
@@ -597,8 +634,8 @@ export function buildQueueReply(guildId) {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x5865f2)
-    .setTitle('📜 قائمة الانتظار')
+    .setColor(0x9b59b6)
+    .setTitle('🌙 Luna • قائمة الانتظار')
     .setDescription(lines.join('\n'));
 
   return {
@@ -608,27 +645,24 @@ export function buildQueueReply(guildId) {
 }
 
 export async function replyMusicSuccess(interaction, message, ephemeral = false) {
-  const payload = {
+  if (interaction.deferred || interaction.replied) {
+    return interaction.editReply({ content: message, embeds: [], components: [] });
+  }
+  return interaction.reply({
     content: message,
     ...(ephemeral ? { ephemeral: true } : {}),
-  };
-
-  if (interaction.deferred || interaction.replied) {
-    return interaction.editReply(payload);
-  }
-  return interaction.reply(payload);
+  });
 }
 
 export async function replyMusicError(interaction, message, ephemeral = true) {
-  const payload = {
-    content: `❌ ${message}`,
-    ...(ephemeral ? { ephemeral: true } : {}),
-  };
-
+  const text = `❌ ${message}`;
   if (interaction.deferred || interaction.replied) {
-    return interaction.editReply(payload);
+    return interaction.editReply({ content: text, embeds: [], components: [] });
   }
-  return interaction.reply(payload);
+  return interaction.reply({
+    content: text,
+    ...(ephemeral ? { ephemeral: true } : {}),
+  });
 }
 
 export async function handleSkip(interaction) {
@@ -637,8 +671,11 @@ export async function handleSkip(interaction) {
     return replyMusicError(interaction, 'لا يوجد مقطع حالي أو مقاطع في الانتظار لتخطيها.', true);
   }
 
+  session.isTransitioning = true;
   session.seekSeconds = 0;
   stopActiveStreams(session);
+  session.isTransitioning = false;
+
   await playNextInQueue(session);
 
   if (session.current) {
@@ -680,7 +717,7 @@ export async function handleMusicComponent(interaction) {
 
   if (id === 'music_pause_resume') {
     const session = sessions.get(guildId);
-    if (!session) {
+    if (!session || !session.current) {
       await replyMusicError(interaction, 'لا يوجد مشغل نشط.', true);
       return true;
     }
@@ -701,6 +738,25 @@ export async function handleMusicComponent(interaction) {
     return true;
   }
 
+  if (id === 'music_loop') {
+    const session = sessions.get(guildId);
+    if (!session) {
+      await replyMusicError(interaction, 'لا يوجد مشغل نشط.', true);
+      return true;
+    }
+    setLoopMode(guildId);
+    await interaction.update(buildNowPlayingReply(guildId));
+    return true;
+  }
+
+  if (id === 'music_queue') {
+    await interaction.reply({
+      ...buildQueueReply(guildId),
+      ephemeral: true,
+    });
+    return true;
+  }
+
   if (id === 'music_stop') {
     destroyPlayerSession(guildId);
     await interaction.update({
@@ -708,12 +764,6 @@ export async function handleMusicComponent(interaction) {
       embeds: [],
       components: [],
     });
-    return true;
-  }
-
-  if (id === 'music_loop') {
-    setLoopMode(guildId);
-    await interaction.update(buildNowPlayingReply(guildId));
     return true;
   }
 
