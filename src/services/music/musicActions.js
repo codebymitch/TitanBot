@@ -1,7 +1,12 @@
 import {
   initializeMusic,
+  joinVoiceChannel,
+  getPlayer,
+  applyPause,
+  applyResume,
   pausePlayback,
   resumePlayback,
+  handlePlay,
   handleSkip,
   handleStop,
   handleQueue,
@@ -17,13 +22,17 @@ import {
   replyMusicSuccess,
   replyMusicError,
   handleMusicComponent,
-  handlePlay,
 } from './music.js';
 
 export {
   initializeMusic,
+  joinVoiceChannel,
+  getPlayer,
+  applyPause,
+  applyResume,
   pausePlayback,
   resumePlayback,
+  handlePlay,
   handleSkip,
   handleStop,
   handleQueue,
