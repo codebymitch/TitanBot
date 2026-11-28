@@ -7,7 +7,7 @@ import {
 export default {
   data: new SlashCommandBuilder()
     .setName('nowplaying')
-    .setDescription('عرض المقطع قيد التشغيل حالياً'),
+    .setDescription('عرض المقطع قيد التشغيل حالياً مع أزرار التحكم'),
 
   async execute(interaction) {
     if (!interaction.inGuild()) {
