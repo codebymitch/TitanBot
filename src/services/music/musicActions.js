@@ -1,4 +1,5 @@
 import {
+  initializeMusic,
   pausePlayback,
   resumePlayback,
   handleSkip,
@@ -20,6 +21,7 @@ import {
 } from './music.js';
 
 export {
+  initializeMusic,
   pausePlayback,
   resumePlayback,
   handleSkip,
