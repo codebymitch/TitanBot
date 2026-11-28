@@ -6,10 +6,12 @@ import { ModerationService } from '../../services/moderation/moderationService.j
 import { logModerationAction } from '../../services/moderation/moderationLogger.js';
 import { notifySoftWarn } from '../../services/moderation/softwarn.js';
 
+const SOFT_WARN_THRESHOLD = 3;
+
 export default {
   data: new SlashCommandBuilder()
     .setName('softwarn')
-    .setDescription('إصدار تحذير خفيف لعضو وترقيته إلى تحذير رسمي عند بلوغ الحد')
+    .setDescription('إصدار تحذير خفيف لعضو وتحويله إلى تحذير رسمي عند بلوغ 3 تحذيرات')
     .addUserOption((option) =>
       option
         .setName('user')
@@ -57,12 +59,18 @@ export default {
     }
 
     if (typeof ModerationService?.assertModerationHierarchy === 'function') {
-      await ModerationService.assertModerationHierarchy({
-        guild: interaction.guild,
-        moderator: interaction.member,
-        targetMember,
-        actionName: 'softwarn',
-      });
+      try {
+        await ModerationService.assertModerationHierarchy({
+          guild: interaction.guild,
+          moderator: interaction.member,
+          targetMember,
+          actionName: 'softwarn',
+        });
+      } catch (err) {
+        return interaction.editReply({
+          content: `❌ ${err?.message || 'لا يمكنك تنفيذ هذا الإجراء على هذا العضو بسبب الرتب.'}`,
+        });
+      }
     }
 
     const softRecord = await SoftWarningService.addSoftWarning({
@@ -71,12 +79,21 @@ export default {
       userId: targetUser.id,
       moderatorId: interaction.user.id,
       reason,
+      threshold: SOFT_WARN_THRESHOLD,
+      resetOnThreshold: true,
       guildConfig,
     });
 
-    const softCount = softRecord?.softCount ?? 1;
-    const threshold = softRecord?.threshold ?? 3;
-    const reachedThreshold = Boolean(softRecord?.reachedThreshold ?? (softCount >= threshold));
+    const threshold = softRecord?.threshold ?? SOFT_WARN_THRESHOLD;
+    const rawCount = softRecord?.softCount ?? 0;
+    const reachedThreshold = Boolean(
+      softRecord?.reachedThreshold ?? softRecord?.escalated ?? (rawCount >= threshold)
+    );
+
+    // إذا تم التحويل لوورن رسمي، نعرض عداد السوفت وورن بعد التصفير (0 افتراضياً)
+    const displaySoftCount = reachedThreshold
+      ? (softRecord?.resetCount ?? 0)
+      : rawCount;
 
     let officialWarning = null;
     if (reachedThreshold && typeof WarningService?.addWarning === 'function') {
@@ -85,7 +102,7 @@ export default {
         guildId: interaction.guild.id,
         userId: targetUser.id,
         moderatorId: interaction.user.id,
-        reason: `بلوغ حد التحذيرات الخفيفة (${softCount}/${threshold}): ${reason}`,
+        reason: `تحويل تلقائي بعد بلوغ حد التحذيرات الخفيفة (${threshold}/${threshold}): ${reason}`,
         source: 'softwarn_threshold',
         guildConfig,
       });
@@ -95,12 +112,12 @@ export default {
       guildName: interaction.guild.name,
       moderatorTag: interaction.user.tag,
       reason,
-      softCount,
+      softCount: displaySoftCount,
       threshold,
       warningId: softRecord?.id ?? officialWarning?.id ?? null,
       escalated: reachedThreshold,
       officialTotalCount: officialWarning?.totalCount ?? null,
-    });
+    }).catch((err) => ({ delivered: false, reason: err?.message || 'تعذر الإرسال' }));
 
     if (typeof logModerationAction === 'function') {
       await logModerationAction({
@@ -112,30 +129,30 @@ export default {
         target: targetUser,
         reason,
         metadata: {
-          softCount,
+          softCount: displaySoftCount,
           threshold,
           escalated: reachedThreshold,
           officialWarningId: officialWarning?.id ?? null,
-          dmDelivered: dmStatus.delivered,
-          dmReason: dmStatus.reason ?? null,
+          dmDelivered: Boolean(dmStatus?.delivered),
+          dmReason: dmStatus?.reason ?? null,
         },
       }).catch(() => {});
     }
 
     const replyEmbed = new EmbedBuilder()
       .setColor(reachedThreshold ? 0xed4245 : 0xfee75c)
-      .setTitle(reachedThreshold ? '⚠️ تم التحذير الخفيف والترقية لتحذير رسمي' : '⚠️ تم إصدار تحذير خفيف')
+      .setTitle(reachedThreshold ? '⚠️ تم التحذير الخفيف وتحويله إلى تحذير رسمي (1)' : '⚠️ تم إصدار تحذير خفيف')
       .addFields(
         { name: 'العضو', value: `${targetUser.tag} (${targetUser.id})`, inline: true },
         { name: 'المشرف', value: `${interaction.user.tag}`, inline: true },
+        { name: 'التحذيرات الخفيفة', value: `${displaySoftCount} / ${threshold}`, inline: true },
         {
           name: 'حالة الرسالة الخاصة',
-          value: dmStatus.delivered
+          value: dmStatus?.delivered
             ? '✅ تم إرسال التحذير في الخاص'
-            : `❌ تعذر الإرسال في الخاص (${dmStatus.reason || 'الخاص مغلق'})`,
+            : `❌ تعذر الإرسال في الخاص (${dmStatus?.reason || 'الخاص مغلق'})`,
           inline: false,
         },
-        { name: 'التحذيرات الخفيفة', value: `${softCount} / ${threshold}`, inline: true },
         { name: 'السبب', value: reason, inline: false }
       )
       .setTimestamp();
@@ -144,9 +161,9 @@ export default {
       replyEmbed.addFields({
         name: 'التحذير الرسمي',
         value: officialWarning?.totalCount
-          ? `تم الإصدار (إجمالي التحذيرات الرسمية: ${officialWarning.totalCount})`
-          : 'تم الإصدار',
-        inline: true,
+          ? `تم إضافة (+1) وورن — إجمالي التحذيرات الرسمية: ${officialWarning.totalCount}`
+          : 'تم إضافة (+1) وورن رسمي وتصفير التحذيرات الخفيفة',
+        inline: false,
       });
     }
 
