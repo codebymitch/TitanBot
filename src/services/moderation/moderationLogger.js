@@ -1,6 +1,8 @@
 import { EmbedBuilder } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 
+const RED_COLOR = 0xdc2626;
+
 export async function logModerationAction({
   client,
   guild,
@@ -36,22 +38,26 @@ export async function logModerationAction({
     }
 
     const embed = new EmbedBuilder()
-      .setColor(metadata.escalated ? 0xed4245 : 0xfee75c)
-      .setTitle(`📋 سجل إشرافي — ${action}`)
+      .setColor(RED_COLOR)
+      .setTitle(`## 📋 سجل إشرافي — ${action}`)
       .addFields(
         {
-          name: 'العضو',
-          value: target ? `${target.tag || target.username || target.id} (${target.id})` : 'غير معروف',
+          name: '**العضو**',
+          value: target
+            ? `**${target.tag || target.username || target.id}**\n\`${target.id}\``
+            : '**غير معروف**',
           inline: true,
         },
         {
-          name: 'المشرف',
-          value: moderator ? `${moderator.tag || moderator.username || moderator.id} (${moderator.id})` : 'غير معروف',
+          name: '**المشرف**',
+          value: moderator
+            ? `**${moderator.tag || moderator.username || moderator.id}**\n\`${moderator.id}\``
+            : '**غير معروف**',
           inline: true,
         },
         {
-          name: 'السبب',
-          value: reason,
+          name: '**السبب**',
+          value: `**${reason}**`,
           inline: false,
         }
       )
@@ -59,16 +65,26 @@ export async function logModerationAction({
 
     if (typeof metadata.softCount === 'number' && typeof metadata.threshold === 'number') {
       embed.addFields({
-        name: 'التحذيرات الخفيفة',
-        value: `${metadata.softCount} / ${metadata.threshold}`,
+        name: '**التحذيرات الخفيفة**',
+        value: `**${metadata.softCount} / ${metadata.threshold}**`,
+        inline: true,
+      });
+    }
+
+    if (metadata.escalated) {
+      embed.addFields({
+        name: '**التحويل الرسمي**',
+        value: metadata.officialTotalWarns
+          ? `**+1 (الإجمالي: ${metadata.officialTotalWarns})**`
+          : '**+1 تحذير رسمي**',
         inline: true,
       });
     }
 
     if (typeof metadata.dmDelivered === 'boolean') {
       embed.addFields({
-        name: 'حالة الرسالة الخاصة',
-        value: metadata.dmDelivered ? '✅ تم الإرسال' : '❌ لم يتم الإرسال',
+        name: '**حالة الرسالة الخاصة**',
+        value: metadata.dmDelivered ? '**✅ تم الإرسال**' : '**❌ لم يتم الإرسال**',
         inline: true,
       });
     }
