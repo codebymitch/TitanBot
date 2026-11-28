@@ -5,7 +5,25 @@ import { logger } from '../utils/logger.js';
 import { ResponseCoordinator } from '../utils/responseCoordinator.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { handleInteractionError } from '../utils/errorHandler.js';
-import { handleMusicComponent } from '../services/music/music.js';
+
+let cachedMusicComponentHandler;
+let checkedMusicComponentHandler = false;
+
+async function getMusicComponentHandler() {
+  if (checkedMusicComponentHandler) return cachedMusicComponentHandler;
+  checkedMusicComponentHandler = true;
+
+  try {
+    const musicModule = await import('../services/music/music.js');
+    if (typeof musicModule.handleMusicComponent === 'function') {
+      cachedMusicComponentHandler = musicModule.handleMusicComponent;
+    }
+  } catch (error) {
+    logger.warn(`⚠️  Music component handler unavailable (../services/music/music.js): ${error.message}`);
+  }
+
+  return cachedMusicComponentHandler;
+}
 
 export default {
   name: Events.InteractionCreate,
@@ -45,8 +63,11 @@ export default {
 
       if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
         if (interaction.customId?.startsWith('music_')) {
-          const handled = await handleMusicComponent(interaction, client);
-          if (handled) return;
+          const handleMusicComponent = await getMusicComponentHandler();
+          if (handleMusicComponent) {
+            const handled = await handleMusicComponent(interaction, client);
+            if (handled) return;
+          }
 
           const musicCommand = client.commands?.get('music') || client.commands?.get('play');
           if (musicCommand?.handleComponent) {
