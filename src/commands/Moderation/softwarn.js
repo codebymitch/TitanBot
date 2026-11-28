@@ -1,175 +1,282 @@
-import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } from 'discord.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { logModerationAction } from '../../utils/moderation.js';
+import { logger } from '../../utils/logger.js';
 import { SoftWarningService } from '../../services/moderation/softWarningService.js';
 import { WarningService } from '../../services/moderation/warningService.js';
 import { ModerationService } from '../../services/moderation/moderationService.js';
-import { logModerationAction } from '../../services/moderation/moderationLogger.js';
-import { notifySoftWarn } from '../../services/moderation/softwarn.js';
+import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const SOFT_WARN_THRESHOLD = 3;
+const RED_COLOR = 0xdc2626;
+
+/**
+ * Helper: يرجع رولات العضو (باستثناء @everyone) مرتبة من الأعلى للأدنى
+ */
+function getSortedMemberRoles(guildMember) {
+    if (!guildMember?.roles?.cache) return [];
+    return [...guildMember.roles.cache
+        .filter((role) => role.id !== guildMember.guild.id)
+        .sort((a, b) => b.position - a.position)
+        .values()];
+}
+
+/**
+ * Helper: يرجع أعلى رول موجود في السيرفر (باستثناء @everyone)
+ */
+function getGuildHighestRole(guild) {
+    if (!guild?.roles?.cache) return null;
+    return [...guild.roles.cache
+        .filter((role) => role.id !== guild.id)
+        .sort((a, b) => b.position - a.position)
+        .values()][0] || null;
+}
+
+/**
+ * Helper: يختصر قائمة الرولات حتى لا تتخطى حد أحرف ديسكورد
+ */
+function formatRolesList(roles, maxChars = 900) {
+    if (!roles.length) return 'لا يوجد رولات (بخلاف @everyone)';
+
+    const formatted = [];
+    let currentLength = 0;
+
+    for (const role of roles) {
+        const entry = `${role}`;
+        if (currentLength + entry.length + 2 > maxChars) {
+            const remaining = roles.length - formatted.length;
+            formatted.push(`+${remaining} رول إضافي`);
+            break;
+        }
+        formatted.push(entry);
+        currentLength += entry.length + 2;
+    }
+
+    return formatted.join('، ');
+}
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('softwarn')
-    .setDescription('إصدار تحذير خفيف لعضو وتحويله إلى تحذير رسمي عند بلوغ 3 تحذيرات')
-    .addUserOption((option) =>
-      option
-        .setName('user')
-        .setDescription('العضو المطلوب تحذيره')
-        .setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
-        .setName('reason')
-        .setDescription('سبب التحذير الخفيف')
-        .setRequired(false)
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
-    .setDMPermission(false),
+    data: new SlashCommandBuilder()
+        .setName("softwarn")
+        .setDescription("Give a soft warning to a user (3 soft warns = 1 official warning)")
+        .addUserOption((o) =>
+            o
+                .setName("target")
+                .setRequired(true)
+                .setDescription("User to soft-warn"),
+        )
+        .addStringOption((o) =>
+            o
+                .setName("reason")
+                .setRequired(false)
+                .setDescription("Reason for the soft warning"),
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+    category: "moderation",
 
-  async execute(interaction, guildConfig, client) {
-    await InteractionHelper.safeDefer(interaction);
+    async execute(interaction, config, client) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn(`SoftWarn interaction defer failed`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'softwarn'
+            });
+            return;
+        }
 
-    if (!interaction.guild) {
-      return interaction.editReply({
-        content: '❌ يمكن استخدام هذا الأمر داخل السيرفر فقط.',
-      });
-    }
+        const target = interaction.options.getUser("target");
+        const member = interaction.options.getMember("target");
+        const reason = interaction.options.getString("reason")?.trim() || 'لم يتم تحديد سبب';
+        const moderator = interaction.user;
+        const executorMember = interaction.member;
+        const guildId = interaction.guildId;
 
-    const targetUser = interaction.options.getUser('user', true);
-    const reason = interaction.options.getString('reason')?.trim() || 'لم يتم تحديد سبب';
+        if (!target) {
+            throw new TitanBotError(
+                'Missing target user',
+                ErrorTypes.USER_INPUT,
+                'You must specify a user to soft-warn.',
+                { subtype: 'invalid_user' },
+            );
+        }
 
-    if (targetUser.bot) {
-      return interaction.editReply({
-        content: '❌ لا يمكنك إعطاء تحذير خفيف لبوت.',
-      });
-    }
+        if (target.bot) {
+            throw new TitanBotError(
+                'Cannot soft-warn bot',
+                ErrorTypes.USER_INPUT,
+                'You cannot give a soft warning to a bot.',
+                { subtype: 'bot_target' },
+            );
+        }
 
-    if (targetUser.id === interaction.user.id) {
-      return interaction.editReply({
-        content: '❌ لا يمكنك إعطاء تحذير خفيف لنفسك.',
-      });
-    }
+        if (target.id === moderator.id) {
+            throw new TitanBotError(
+                'Cannot soft-warn self',
+                ErrorTypes.USER_INPUT,
+                'You cannot give a soft warning to yourself.',
+                { subtype: 'self_target' },
+            );
+        }
 
-    const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
-    if (!targetMember) {
-      return interaction.editReply({
-        content: '❌ هذا العضو غير موجود في السيرفر.',
-      });
-    }
+        const targetMember = member || await interaction.guild.members.fetch(target.id).catch(() => null);
+        if (!targetMember) {
+            throw new TitanBotError(
+                "Target not found",
+                ErrorTypes.USER_INPUT,
+                "The target user is not currently in this server."
+            );
+        }
 
-    if (typeof ModerationService?.assertModerationHierarchy === 'function') {
-      try {
-        await ModerationService.assertModerationHierarchy({
-          guild: interaction.guild,
-          moderator: interaction.member,
-          targetMember,
-          actionName: 'softwarn',
+        ModerationService.assertModerationHierarchy(executorMember, targetMember, 'softwarn');
+
+        const softRecord = await SoftWarningService.addSoftWarning({
+            client,
+            guildId,
+            userId: target.id,
+            moderatorId: moderator.id,
+            reason,
+            threshold: SOFT_WARN_THRESHOLD,
+            resetOnThreshold: true,
+            guildConfig: config,
         });
-      } catch (err) {
-        return interaction.editReply({
-          content: `❌ ${err?.message || 'لا يمكنك تنفيذ هذا الإجراء على هذا العضو بسبب الرتب.'}`,
+
+        const threshold = softRecord?.threshold ?? SOFT_WARN_THRESHOLD;
+        const rawCount = softRecord?.softCount ?? 0;
+        const reachedThreshold = Boolean(
+            softRecord?.reachedThreshold ?? softRecord?.escalated ?? (rawCount >= threshold)
+        );
+        const displaySoftCount = reachedThreshold
+            ? (softRecord?.resetCount ?? 0)
+            : rawCount;
+
+        let officialWarning = null;
+        if (reachedThreshold && typeof WarningService?.addWarning === 'function') {
+            officialWarning = await WarningService.addWarning({
+                guildId,
+                userId: target.id,
+                moderatorId: moderator.id,
+                reason: `تحويل تلقائي بعد بلوغ حد التحذيرات الخفيفة (${threshold}/${threshold}): ${reason}`,
+                source: 'softwarn_threshold',
+                timestamp: Date.now(),
+            });
+        }
+
+        // أعلى رول موجود في السيرفر بالكامل
+        const topServerRoleObj = getGuildHighestRole(interaction.guild);
+        const topServerRole = topServerRoleObj ? `${topServerRoleObj}` : 'لا يوجد';
+
+        // بيانات الرولات للشخص اللي أخذ التحذير الخفيف والشخص اللي أعطاه
+        const targetRoles = getSortedMemberRoles(targetMember);
+        const moderatorRoles = getSortedMemberRoles(executorMember);
+
+        const targetHighestRole = targetMember.roles.highest?.id !== guildId
+            ? `${targetMember.roles.highest}`
+            : 'لا يوجد';
+
+        const moderatorHighestRole = executorMember?.roles?.highest?.id !== guildId
+            ? `${executorMember.roles.highest}`
+            : 'لا يوجد';
+
+        // أعلى رول مشترك بين الاثنين
+        const commonRoles = targetRoles.filter((tRole) =>
+            moderatorRoles.some((mRole) => mRole.id === tRole.id)
+        );
+        const commonHighestRole = commonRoles.length > 0 ? `${commonRoles[0]}` : 'لا يوجد رول مشترك';
+
+        // إرسال رسالة في الخاص (DM) للشخص اللي أخذ التحذير الخفيف
+        let dmSent = false;
+        try {
+            const dmLines = [
+                `## السبب: ${reason}`,
+                `## التحذيرات الخفيفة: ${displaySoftCount} / ${threshold}`,
+                reachedThreshold
+                    ? `## تم التحويل تلقائيًا إلى: **1 تحذير رسمي**${officialWarning?.totalCount ? ` (الإجمالي: ${officialWarning.totalCount})` : ''}`
+                    : `## متبقي للتحويل لوورن رسمي: ${Math.max(threshold - displaySoftCount, 0)}`,
+                `### المشرف: ${moderator.tag} (${moderator})`,
+                '',
+                `**أعلى رول موجود في السيرفر:** ${topServerRole}`,
+                `**أعلى رول معك:** ${targetHighestRole}`,
+                `**أعلى رول مع من أعطاك التحذير الخفيف:** ${moderatorHighestRole}`,
+                `**أعلى رول مشترك بينكما:** ${commonHighestRole}`,
+            ];
+
+            const dmEmbed = new EmbedBuilder()
+                .setColor(RED_COLOR)
+                .setTitle(
+                    reachedThreshold
+                        ? `# 🚨 تحذير خفيف وتحويل لوورن رسمي في سيرفر ${interaction.guild.name}`
+                        : `# ⚠️ تحذير خفيف في سيرفر ${interaction.guild.name}`
+                )
+                .setDescription(dmLines.join('\n'))
+                .setTimestamp();
+
+            await target.send({ embeds: [dmEmbed] });
+            dmSent = true;
+        } catch (dmError) {
+            logger.warn(`Could not send DM to soft-warned user`, {
+                userId: target.id,
+                guildId,
+                error: dmError?.message
+            });
+        }
+
+        await logModerationAction({
+            client,
+            guild: interaction.guild,
+            event: {
+                action: reachedThreshold ? "User Soft-Warned & Escalated to Warning" : "User Soft-Warned",
+                target: `${target.tag} (${target.id})`,
+                executor: `${moderator.tag} (${moderator.id})`,
+                reason,
+                metadata: {
+                    userId: target.id,
+                    moderatorId: moderator.id,
+                    softCount: displaySoftCount,
+                    threshold,
+                    escalated: reachedThreshold,
+                    officialWarningId: officialWarning?.id ?? null,
+                    officialTotalWarns: officialWarning?.totalCount ?? null,
+                    softWarningId: softRecord?.id ?? null,
+                    topServerRole,
+                    targetHighestRole,
+                    moderatorHighestRole,
+                    commonHighestRole,
+                    dmSent
+                }
+            }
         });
-      }
+
+        const replyLines = [
+            `## الشخص الذي أخذ التحذير الخفيف: ${target.tag} (${target})`,
+            `## الشخص الذي أعطى التحذير الخفيف: ${moderator.tag} (${moderator})`,
+            `## السبب: ${reason}`,
+            `## التحذيرات الخفيفة: **${displaySoftCount} / ${threshold}**`,
+            reachedThreshold
+                ? `## التحويل الرسمي: **تم إضافة (+1) وورن رسمي**${officialWarning?.totalCount ? ` — **الإجمالي: ${officialWarning.totalCount}**` : ''}`
+                : `## المتبقي للتحويل إلى 1 وورن رسمي: **${Math.max(threshold - displaySoftCount, 0)}**`,
+            '',
+            `### **أعلى رول موجود في السيرفر:** ${topServerRole}`,
+            `### **أعلى رول مع المُحذَّر:** ${targetHighestRole}`,
+            `**رولات المُحذَّر:** ${formatRolesList(targetRoles)}`,
+            `### **أعلى رول مع المُحذِّرِ (المشرف):** ${moderatorHighestRole}`,
+            `**رولات المُحذِّرِ (المشرف):** ${formatRolesList(moderatorRoles)}`,
+            `### **أعلى رول مشترك بين الاثنين:** ${commonHighestRole}`,
+            `### **إرسال رسالة الخاص (DM):** ${dmSent ? 'تم الإرسال بنجاح ✅' : 'تعذر الإرسال (الخاص مغلق أو غير متاح) ⚠️'}`
+        ];
+
+        const replyEmbed = new EmbedBuilder()
+            .setColor(RED_COLOR)
+            .setTitle(
+                reachedThreshold
+                    ? `# 🚨 تم تحذير ${target.tag} وتحويله إلى 1 وورن رسمي`
+                    : `# ⚠️ تم إعطاء تحذير خفيف لـ ${target.tag}`
+            )
+            .setDescription(replyLines.join('\n'))
+            .setTimestamp();
+
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [replyEmbed],
+        });
     }
-
-    const softRecord = await SoftWarningService.addSoftWarning({
-      client,
-      guildId: interaction.guild.id,
-      userId: targetUser.id,
-      moderatorId: interaction.user.id,
-      reason,
-      threshold: SOFT_WARN_THRESHOLD,
-      resetOnThreshold: true,
-      guildConfig,
-    });
-
-    const threshold = softRecord?.threshold ?? SOFT_WARN_THRESHOLD;
-    const rawCount = softRecord?.softCount ?? 0;
-    const reachedThreshold = Boolean(
-      softRecord?.reachedThreshold ?? softRecord?.escalated ?? (rawCount >= threshold)
-    );
-
-    // إذا تم التحويل لوورن رسمي، نعرض عداد السوفت وورن بعد التصفير (0 افتراضياً)
-    const displaySoftCount = reachedThreshold
-      ? (softRecord?.resetCount ?? 0)
-      : rawCount;
-
-    let officialWarning = null;
-    if (reachedThreshold && typeof WarningService?.addWarning === 'function') {
-      officialWarning = await WarningService.addWarning({
-        client,
-        guildId: interaction.guild.id,
-        userId: targetUser.id,
-        moderatorId: interaction.user.id,
-        reason: `تحويل تلقائي بعد بلوغ حد التحذيرات الخفيفة (${threshold}/${threshold}): ${reason}`,
-        source: 'softwarn_threshold',
-        guildConfig,
-      });
-    }
-
-    const dmStatus = await notifySoftWarn(targetUser, {
-      guildName: interaction.guild.name,
-      moderatorTag: interaction.user.tag,
-      reason,
-      softCount: displaySoftCount,
-      threshold,
-      warningId: softRecord?.id ?? officialWarning?.id ?? null,
-      escalated: reachedThreshold,
-      officialTotalCount: officialWarning?.totalCount ?? null,
-    }).catch((err) => ({ delivered: false, reason: err?.message || 'تعذر الإرسال' }));
-
-    if (typeof logModerationAction === 'function') {
-      await logModerationAction({
-        client,
-        guild: interaction.guild,
-        guildConfig,
-        action: 'softwarn',
-        moderator: interaction.user,
-        target: targetUser,
-        reason,
-        metadata: {
-          softCount: displaySoftCount,
-          threshold,
-          escalated: reachedThreshold,
-          officialWarningId: officialWarning?.id ?? null,
-          dmDelivered: Boolean(dmStatus?.delivered),
-          dmReason: dmStatus?.reason ?? null,
-        },
-      }).catch(() => {});
-    }
-
-    const replyEmbed = new EmbedBuilder()
-      .setColor(reachedThreshold ? 0xed4245 : 0xfee75c)
-      .setTitle(reachedThreshold ? '⚠️ تم التحذير الخفيف وتحويله إلى تحذير رسمي (1)' : '⚠️ تم إصدار تحذير خفيف')
-      .addFields(
-        { name: 'العضو', value: `${targetUser.tag} (${targetUser.id})`, inline: true },
-        { name: 'المشرف', value: `${interaction.user.tag}`, inline: true },
-        { name: 'التحذيرات الخفيفة', value: `${displaySoftCount} / ${threshold}`, inline: true },
-        {
-          name: 'حالة الرسالة الخاصة',
-          value: dmStatus?.delivered
-            ? '✅ تم إرسال التحذير في الخاص'
-            : `❌ تعذر الإرسال في الخاص (${dmStatus?.reason || 'الخاص مغلق'})`,
-          inline: false,
-        },
-        { name: 'السبب', value: reason, inline: false }
-      )
-      .setTimestamp();
-
-    if (reachedThreshold) {
-      replyEmbed.addFields({
-        name: 'التحذير الرسمي',
-        value: officialWarning?.totalCount
-          ? `تم إضافة (+1) وورن — إجمالي التحذيرات الرسمية: ${officialWarning.totalCount}`
-          : 'تم إضافة (+1) وورن رسمي وتصفير التحذيرات الخفيفة',
-        inline: false,
-      });
-    }
-
-    return interaction.editReply({
-      embeds: [replyEmbed],
-      flags: MessageFlags.Ephemeral,
-    });
-  },
 };
