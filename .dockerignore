@@ -1,16 +1,34 @@
+# Dependencies & build artifacts
 node_modules
 npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage
+dist
+build
+
+# Environment & secrets
 .env
 .env.*
 !.env.example
+cookies.txt
+
+# Version control & editor/agent folders
 .git
 .github
 .cursor
-tests
+.agent-tools
+.vscode
+.idea
+
+# Project runtime data, logs, tests & docs
 backups
 logs
+tests
+*.log
 *.md
 !README.md
+
+# OS metadata
 .DS_Store
-coverage
-.agent-tools
+Thumbs.db
