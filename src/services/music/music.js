@@ -494,3 +494,228 @@ export function clearQueue(guildId) {
   session.queue = [];
   return true;
 }
+export function destroyPlayerSession(guildId) {
+  const session = sessions.get(guildId);
+  if (!session) return;
+
+  stopActiveStreams(session);
+  session.queue = [];
+  session.current = null;
+  session.paused = false;
+  session.seekSeconds = 0;
+
+  try {
+    session.player.stop(true);
+  } catch {}
+
+  if (session.connection && session.connection.state.status !== VoiceConnectionStatus.Destroyed) {
+    try {
+      session.connection.destroy();
+    } catch {}
+  }
+
+  sessions.delete(guildId);
+}
+
+export function buildNowPlayingReply(guildId) {
+  const session = sessions.get(guildId);
+  const track = session?.current;
+
+  if (!track) {
+    return {
+      content: '📭 لا يوجد مقطع قيد التشغيل حالياً.',
+      embeds: [],
+      components: [],
+    };
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x2b2d31)
+    .setTitle('🎵 يتم التشغيل الآن')
+    .setDescription(`**[${track.title}](${track.url})**`)
+    .addFields(
+      { name: 'المدة', value: track.duration || 'غير معروفة', inline: true },
+      { name: 'الصوت', value: `${session.volume ?? 100}%`, inline: true },
+      { name: 'التكرار', value: session.loop ? 'مفعل' : 'متوقف', inline: true },
+      { name: '24/7', value: session.twentyFourSeven ? 'مفعل' : 'متوقف', inline: true },
+      { name: 'في الانتظار', value: `${session.queue?.length || 0}`, inline: true }
+    );
+
+  if (track.thumbnail) {
+    embed.setThumbnail(track.thumbnail);
+  }
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('music_pause_resume')
+      .setLabel(session.paused ? 'استئناف' : 'إيقاف مؤقت')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('music_skip')
+      .setLabel('تخطي')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('music_stop')
+      .setLabel('إيقاف')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('music_loop')
+      .setLabel(session.loop ? 'تكرار: تشغيل' : 'تكرار: إيقاف')
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return {
+    embeds: [embed],
+    components: [row],
+  };
+}
+
+export function buildQueueReply(guildId) {
+  const session = sessions.get(guildId);
+  if (!session || (!session.current && (!session.queue || session.queue.length === 0))) {
+    return {
+      content: '📭 قائمة الانتظار فارغة حالياً.',
+      embeds: [],
+      components: [],
+    };
+  }
+
+  const lines = [];
+  if (session.current) {
+    lines.push(`**الحالي:** [${session.current.title}](${session.current.url}) \`[${session.current.duration}]\``);
+  }
+
+  if (Array.isArray(session.queue) && session.queue.length > 0) {
+    lines.push('');
+    session.queue.slice(0, 10).forEach((item, idx) => {
+      lines.push(`**${idx + 1}.** [${item.title}](${item.url}) \`[${item.duration}]\``);
+    });
+
+    if (session.queue.length > 10) {
+      lines.push(`\n*... و ${session.queue.length - 10} مقاطع أخرى في القائمة.*`);
+    }
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x5865f2)
+    .setTitle('📜 قائمة الانتظار')
+    .setDescription(lines.join('\n'));
+
+  return {
+    embeds: [embed],
+    components: [],
+  };
+}
+
+export async function replyMusicSuccess(interaction, message, ephemeral = false) {
+  const payload = {
+    content: message,
+    ...(ephemeral ? { ephemeral: true } : {}),
+  };
+
+  if (interaction.deferred || interaction.replied) {
+    return interaction.editReply(payload);
+  }
+  return interaction.reply(payload);
+}
+
+export async function replyMusicError(interaction, message, ephemeral = true) {
+  const payload = {
+    content: `❌ ${message}`,
+    ...(ephemeral ? { ephemeral: true } : {}),
+  };
+
+  if (interaction.deferred || interaction.replied) {
+    return interaction.editReply(payload);
+  }
+  return interaction.reply(payload);
+}
+
+export async function handleSkip(interaction) {
+  const session = sessions.get(interaction.guildId);
+  if (!session || (!session.current && session.queue.length === 0)) {
+    return replyMusicError(interaction, 'لا يوجد مقطع حالي أو مقاطع في الانتظار لتخطيها.', true);
+  }
+
+  session.seekSeconds = 0;
+  stopActiveStreams(session);
+  await playNextInQueue(session);
+
+  if (session.current) {
+    const payload = buildNowPlayingReply(interaction.guildId);
+    if (interaction.deferred || interaction.replied) {
+      return interaction.editReply(payload);
+    }
+    return interaction.reply(payload);
+  }
+
+  return replyMusicSuccess(interaction, '⏭️ تم التخطي وانتهت قائمة الانتظار.');
+}
+
+export async function handleStop(interaction) {
+  const session = sessions.get(interaction.guildId);
+  if (!session && !interaction.guild?.members?.me?.voice?.channel) {
+    return replyMusicError(interaction, 'لا يوجد تشغيل نشط حالياً.', true);
+  }
+
+  destroyPlayerSession(interaction.guildId);
+  return replyMusicSuccess(interaction, '⏹️ تم إيقاف التشغيل ومغادرة الروم الصوتي.');
+}
+
+export async function handleQueue(interaction) {
+  const payload = buildQueueReply(interaction.guildId);
+  if (interaction.deferred || interaction.replied) {
+    return interaction.editReply(payload);
+  }
+  return interaction.reply(payload);
+}
+
+export async function handleMusicComponent(interaction) {
+  if (!interaction.isButton()) return false;
+  const id = interaction.customId;
+  if (!id || !id.startsWith('music_')) return false;
+
+  const guildId = interaction.guildId;
+  if (!guildId) return false;
+
+  if (id === 'music_pause_resume') {
+    const session = sessions.get(guildId);
+    if (!session) {
+      await replyMusicError(interaction, 'لا يوجد مشغل نشط.', true);
+      return true;
+    }
+
+    if (session.paused || session.player.state.status === AudioPlayerStatus.Paused) {
+      applyResume(guildId);
+    } else {
+      applyPause(guildId);
+    }
+
+    await interaction.update(buildNowPlayingReply(guildId));
+    return true;
+  }
+
+  if (id === 'music_skip') {
+    await interaction.deferUpdate();
+    await handleSkip(interaction);
+    return true;
+  }
+
+  if (id === 'music_stop') {
+    destroyPlayerSession(guildId);
+    await interaction.update({
+      content: '⏹️ تم إيقاف التشغيل.',
+      embeds: [],
+      components: [],
+    });
+    return true;
+  }
+
+  if (id === 'music_loop') {
+    setLoopMode(guildId);
+    await interaction.update(buildNowPlayingReply(guildId));
+    return true;
+  }
+
+  return false;
+}
