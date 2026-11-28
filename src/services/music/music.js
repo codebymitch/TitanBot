@@ -853,4 +853,415 @@ function attachVoiceConnectionListeners(connection, guild, voiceChannelId) {
   if (!connection || connection.__musicListenersAttached) return;
   connection.__musicListenersAttached = true;
 
-  connection.on('stateChange', (oldState,
+  connection.on('stateChange', (oldState,newState) => {
+    console.log(`[VOICE STATE] ${guild.id}: ${oldState.status} -> ${newState.status}`);
+  });
+
+  connection.on('error', (err) => {
+    console.error('[VOICE CONNECTION ERROR]:', err?.message || err);
+  });
+
+  connection.on(VoiceConnectionStatus.Disconnected, async () => {
+    try {
+      await Promise.race([
+        entersState(connection, VoiceConnectionStatus.Signalling, 5000),
+        entersState(connection, VoiceConnectionStatus.Connecting, 5000),
+      ]);
+    } catch {
+      try {
+        connection.destroy();
+      } catch {}
+
+      const state = getPlayerState(guild.id);
+      if (state?.twentyFourSeven || state?.currentTrack) {
+        try {
+          const rejoined = joinDiscordVoiceChannel({
+            channelId: voiceChannelId,
+            guildId: guild.id,
+            adapterCreator: guild.voiceAdapterCreator,
+            selfDeaf: true,
+          });
+          attachVoiceConnectionListeners(rejoined, guild, voiceChannelId);
+          await entersState(rejoined, VoiceConnectionStatus.Ready, 25000);
+          if (state.player) {
+            rejoined.subscribe(state.player);
+          }
+        } catch (err) {
+          console.error('[VOICE REJOIN FAILED]:', err?.message || err);
+        }
+      }
+    }
+  });
+}
+
+export async function ensureVoiceConnection(interaction, voiceChannel) {
+  const ctx = interaction?.interaction || interaction;
+  const guild = ctx.guild;
+  if (!guild) {
+    throw new Error('لا يمكن تحديد السيرفر.');
+  }
+
+  let connection = getVoiceConnection(guild.id);
+
+  if (connection && connection.joinConfig?.channelId !== voiceChannel.id) {
+    try {
+      connection.destroy();
+    } catch {}
+    connection = null;
+  }
+
+  if (!connection) {
+    connection = joinDiscordVoiceChannel({
+      channelId: voiceChannel.id,
+      guildId: guild.id,
+      adapterCreator: guild.voiceAdapterCreator,
+      selfDeaf: true,
+    });
+  }
+
+  attachVoiceConnectionListeners(connection, guild, voiceChannel.id);
+
+  if (connection.state.status !== VoiceConnectionStatus.Ready) {
+    try {
+      await entersState(connection, VoiceConnectionStatus.Ready, 25000);
+    } catch (err) {
+      console.error(
+        '[VOICE READY TIMEOUT]: status =',
+        connection.state.status,
+        'reason =',
+        err?.message || err
+      );
+      connection.destroy();
+      throw new Error(
+        'تعذر الاتصال بالروم الصوتي في الوقت المحدد. تأكد من صلاحيات البوت في الروم الصوتي وتثبيت مكتبات التشفير الصوتي (sodium-native / libsodium-wrappers).'
+      );
+    }
+  }
+
+  return connection;
+}
+
+export async function joinVoiceChannel(interaction, voiceChannel) {
+  const ctx = interaction?.interaction || interaction;
+  const targetChannel = voiceChannel || ctx?.member?.voice?.channel;
+  if (!targetChannel) {
+    await replyMusicError(ctx, 'يجب أن تكون متواجداً داخل روم صوتي أولاً.', true);
+    return null;
+  }
+
+  const connection = await ensureVoiceConnection(ctx, targetChannel);
+  await replyMusicSuccess(ctx, `تم الانضمام إلى <#${targetChannel.id}>.`, false);
+  return connection;
+}
+
+function advanceQueueOrIdle(guildId, player) {
+  const currentState = getPlayerState(guildId);
+  if (!currentState) return;
+
+  if (typeof currentState.cleanupStream === 'function') {
+    try {
+      currentState.cleanupStream();
+    } catch {}
+    currentState.cleanupStream = null;
+  }
+
+  if (currentState.loop && currentState.currentTrack) {
+    const activeConn = getVoiceConnection(guildId);
+    if (activeConn) {
+      startTrackPlayback(guildId, currentState.currentTrack, activeConn, 0);
+    }
+    return;
+  }
+
+  const nextTrack = Array.isArray(currentState.queue) ? currentState.queue.shift() : null;
+  if (nextTrack) {
+    const activeConn = getVoiceConnection(guildId);
+    if (activeConn) {
+      startTrackPlayback(guildId, nextTrack, activeConn, 0);
+      return;
+    }
+  }
+
+  currentState.currentTrack = null;
+  currentState.seekSeconds = 0;
+  currentState.isPlaying = false;
+  setPlayerState(guildId, currentState);
+
+  if (!currentState.twentyFourSeven && player) {
+    try {
+      player.stop();
+    } catch {}
+  }
+}
+
+function startTrackPlayback(guildId, track, connection, seekSec = 0) {
+  let state = getPlayerState(guildId) || {
+    guildId,
+    queue: [],
+    currentTrack: null,
+    isPlaying: false,
+    volume: 100,
+    seekSeconds: 0,
+    loop: false,
+    twentyFourSeven: false,
+    player: null,
+    cleanupStream: null,
+  };
+
+  if (typeof state.cleanupStream === 'function') {
+    try {
+      state.cleanupStream();
+    } catch {}
+  }
+
+  let player = state.player;
+  if (!player) {
+    player = createAudioPlayer({
+      behaviors: {
+        noSubscriber: NoSubscriberBehavior.Pause,
+      },
+    });
+
+    player.on(AudioPlayerStatus.Idle, () => {
+      advanceQueueOrIdle(guildId, player);
+    });
+
+    player.on('error', (err) => {
+      console.error('[AUDIO PLAYER ERROR]:', err?.message || err);
+      advanceQueueOrIdle(guildId, player);
+    });
+  }
+
+  connection.subscribe(player);
+
+  const { resource, cleanup } = createAudioStreamFromTrack(track, seekSec);
+  if (resource.volume && typeof resource.volume.setVolume === 'function') {
+    resource.volume.setVolume(Math.max(0, Math.min(2, (state.volume ?? 100) / 100)));
+  }
+
+  state = {
+    ...state,
+    guildId,
+    currentTrack: track,
+    seekSeconds: seekSec,
+    isPlaying: true,
+    player,
+    cleanupStream: cleanup,
+  };
+
+  setPlayerState(guildId, state);
+  player.play(resource);
+  return state;
+}
+
+export async function handlePlay(interaction, query) {
+  const ctx = interaction?.interaction || interaction;
+  const member = ctx.member;
+  const voiceChannel = member?.voice?.channel;
+
+  if (!voiceChannel) {
+    await replyMusicError(ctx, 'يجب أن تكون متواجداً داخل روم صوتي أولاً.', true);
+    return;
+  }
+
+  const guildId = ctx.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const track = await resolveTrack(query, ctx.user?.tag || ctx.user?.username || 'User');
+  const connection = await ensureVoiceConnection(ctx, voiceChannel);
+
+  const existingState = getPlayerState(guildId);
+  const alreadyPlaying = Boolean(
+    existingState?.currentTrack &&
+    existingState?.player &&
+    existingState.player.state.status !== AudioPlayerStatus.Idle
+  );
+
+  if (alreadyPlaying) {
+    existingState.queue = Array.isArray(existingState.queue) ? existingState.queue : [];
+    existingState.queue.push(track);
+    setPlayerState(guildId, existingState);
+
+    await safeSendMusicPayload(ctx, {
+      embeds: [buildMusicInfoEmbed(`تمت إضافة **${track.title}** إلى قائمة الانتظار.`)],
+      components: buildPlayerButtonRows(existingState),
+    });
+    return;
+  }
+
+  const updatedState = startTrackPlayback(guildId, track, connection, 0);
+
+  await safeSendMusicPayload(ctx, {
+    embeds: [buildNowPlayingEmbed(track, updatedState)],
+    components: buildPlayerButtonRows(updatedState),
+  });
+}
+
+export async function handleSkip(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const state = getPlayerState(guildId);
+  if (!state?.player || !state?.currentTrack) {
+    await replyMusicError(ctx, 'لا يوجد مقطع قيد التشغيل حالياً لتخطيه.', true);
+    return;
+  }
+
+  const nextTrack = Array.isArray(state.queue) && state.queue.length > 0 ? state.queue[0] : null;
+  state.player.stop();
+
+  await safeSendMusicPayload(ctx, {
+    embeds: [
+      buildMusicInfoEmbed(
+        nextTrack
+          ? `⏭️ تم التخطي. جارٍ تشغيل **${nextTrack.title}**...`
+          : '⏭️ تم تخطي المقطع الحالي.'
+      ),
+    ],
+  });
+}
+
+export async function handleTogglePause(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const state = getPlayerState(guildId);
+  if (!state?.player || !state?.currentTrack) {
+    await replyMusicError(ctx, 'لا يوجد مقطع نشط حالياً.', true);
+    return;
+  }
+
+  const status = state.player.state.status;
+  if (status === AudioPlayerStatus.Playing) {
+    pausePlayback(guildId);
+    await safeSendMusicPayload(ctx, {
+      embeds: [buildMusicInfoEmbed('⏸️ تم إيقاف التشغيل مؤقتاً.')],
+      components: buildPlayerButtonRows(getPlayerState(guildId)),
+    });
+    return;
+  }
+
+  if (status === AudioPlayerStatus.Paused) {
+    resumePlayback(guildId);
+    await safeSendMusicPayload(ctx, {
+      embeds: [buildMusicInfoEmbed('▶️ تم استئناف التشغيل.')],
+      components: buildPlayerButtonRows(getPlayerState(guildId)),
+    });
+    return;
+  }
+
+  await replyMusicError(ctx, 'حالة المشغل لا تسمح بالتبديل حالياً.', true);
+}
+
+export async function handleLoopToggle(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const state = getPlayerState(guildId);
+  if (!state) {
+    await replyMusicError(ctx, 'لا يوجد مشغل نشط في هذا السيرفر.', true);
+    return;
+  }
+
+  const enabled = setLoopMode(guildId);
+  await safeSendMusicPayload(ctx, {
+    embeds: [buildMusicInfoEmbed(enabled ? '🔁 تم تفعيل التكرار (Loop: On).' : '➡️ تم إيقاف التكرار (Loop: Off).')],
+    components: buildPlayerButtonRows(getPlayerState(guildId)),
+  });
+}
+
+export async function handleStop(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const state = getPlayerState(guildId);
+  if (!state) {
+    await replyMusicError(ctx, 'المشغل متوقف بالفعل.', true);
+    return;
+  }
+
+  if (state.twentyFourSeven) {
+    clearQueue(guildId);
+    if (typeof state.cleanupStream === 'function') {
+      try {
+        state.cleanupStream();
+      } catch {}
+      state.cleanupStream = null;
+    }
+    state.currentTrack = null;
+    state.isPlaying = false;
+    setPlayerState(guildId, state);
+    if (state.player) {
+      try {
+        state.player.stop(true);
+      } catch {}
+    }
+    await safeSendMusicPayload(ctx, {
+      embeds: [buildMusicInfoEmbed('⏹️ تم إيقاف المقطع وتفريغ الطابور مع بقاء وضع 24/7 مفعلاً.')],
+    });
+    return;
+  }
+
+  destroyPlayerSession(guildId);
+  await safeSendMusicPayload(ctx, {
+    embeds: [buildMusicInfoEmbed('⏹️ تم إيقاف التشغيل ومغادرة الروم الصوتي.')],
+  });
+}
+
+export async function handleMusicComponent(interaction) {
+  const customId = interaction?.customId;
+  if (!customId) return false;
+
+  switch (customId) {
+    case MUSIC_BUTTON_IDS.TOGGLE_PAUSE:
+      await handleTogglePause(interaction);
+      return true;
+    case MUSIC_BUTTON_IDS.PAUSE:
+      pausePlayback(interaction?.guild?.id);
+      await safeSendMusicPayload(interaction, {
+        embeds: [buildMusicInfoEmbed('⏸️ تم إيقاف التشغيل مؤقتاً.')],
+        components: buildPlayerButtonRows(getPlayerState(interaction?.guild?.id)),
+      });
+      return true;
+    case MUSIC_BUTTON_IDS.RESUME:
+      resumePlayback(interaction?.guild?.id);
+      await safeSendMusicPayload(interaction, {
+        embeds: [buildMusicInfoEmbed('▶️ تم استئناف التشغيل.')],
+        components: buildPlayerButtonRows(getPlayerState(interaction?.guild?.id)),
+      });
+      return true;
+    case MUSIC_BUTTON_IDS.SKIP:
+      await handleSkip(interaction);
+      return true;
+    case MUSIC_BUTTON_IDS.LOOP:
+      await handleLoopToggle(interaction);
+      return true;
+    case MUSIC_BUTTON_IDS.STOP:
+      await handleStop(interaction);
+      return true;
+    case MUSIC_BUTTON_IDS.QUEUE:
+      await handleQueue(interaction);
+      return true;
+    default:
+      return false;
+  }
+}
