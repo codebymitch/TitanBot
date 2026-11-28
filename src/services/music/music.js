@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import {
   AudioPlayerStatus,
@@ -24,6 +25,8 @@ import {
   buildPlayerButtonRows,
 } from './musicEmbeds.js';
 
+let loggedCookieStatus = false;
+
 export function initializeMusic(client) {
   if (!client) return;
   if (!client.music) {
@@ -32,6 +35,42 @@ export function initializeMusic(client) {
       providers: ['youtube', 'spotify'],
     };
   }
+  getCookiesFilePath();
+}
+
+function getCookiesFilePath() {
+  const candidates = [
+    process.env.YTDLP_COOKIES_PATH,
+    '/usr/src/app/cookies.txt',
+    './cookies.txt',
+    'cookies.txt',
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) {
+        const size = fs.statSync(candidate).size;
+        if (size > 0) {
+          if (!loggedCookieStatus) {
+            loggedCookieStatus = true;
+            console.log(`[COOKIES] Loaded ${candidate} (${size} bytes)`);
+          }
+          return candidate;
+        }
+      }
+    } catch {}
+  }
+
+  if (!loggedCookieStatus) {
+    loggedCookieStatus = true;
+    console.warn('[COOKIES] No non-empty cookies.txt found in expected paths.');
+  }
+  return null;
+}
+
+function buildCookieArgs() {
+  const cookiePath = getCookiesFilePath();
+  return cookiePath ? ['--cookies', cookiePath] : [];
 }
 
 function isUrl(value) {
@@ -514,6 +553,7 @@ function runYtDlpJson(input, extraArgs = [], limit = 1) {
       '--no-playlist',
       '--no-warnings',
       '--skip-download',
+      ...buildCookieArgs(),
       ...extraArgs,
       input,
     ];
@@ -561,6 +601,13 @@ function runYtDlpJson(input, extraArgs = [], limit = 1) {
           done(
             reject,
             new Error('هذا الرابط محمي بحماية DRM ولا يمكن تشغيله مباشرة. استخدم اسم المقطع أو رابطاً عاماً غير محمي.')
+          );
+          return;
+        }
+        if (cleanStderr.includes("Sign in to confirm you’re not a bot") || cleanStderr.includes("Sign in to confirm you're not a bot")) {
+          done(
+            reject,
+            new Error('يوتيوب يطلب تأكيد الهوية (Bot Check). تأكد من وجود ملف cookies.txt سليم أو جدّد الكوكيز.')
           );
           return;
         }
@@ -709,6 +756,7 @@ function createAudioStreamFromTrack(track, seekSec = 0) {
       '--no-warnings',
       '--buffer-size',
       '16K',
+      ...buildCookieArgs(),
       '-f',
       'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
       target,
