@@ -8,7 +8,29 @@ import {
   reconcileReactionRolePanelHealth,
 } from "../services/panelHealthService.js";
 import { reconcileLevelRoles } from "../services/leveling/levelRoleSyncService.js";
-import { initializeMusic } from "../services/music/music.js";
+
+let cachedInitializeMusic;
+let checkedInitializeMusic = false;
+
+async function getInitializeMusic() {
+  if (checkedInitializeMusic) return cachedInitializeMusic;
+  checkedInitializeMusic = true;
+
+  try {
+    const musicModule = await import("../services/music/music.js");
+    if (typeof musicModule.initializeMusic === "function") {
+      cachedInitializeMusic = musicModule.initializeMusic;
+    } else if (typeof musicModule.default === "function") {
+      cachedInitializeMusic = musicModule.default;
+    }
+  } catch (error) {
+    logger.warn(
+      `⚠️  Music initializer unavailable (../services/music/music.js): ${error.message}`
+    );
+  }
+
+  return cachedInitializeMusic;
+}
 
 async function runSafeReconciliation(label, fn, formatSummary) {
   try {
@@ -37,7 +59,10 @@ export default {
 
       const musicEnabled = client.config?.features?.music ?? true;
       if (musicEnabled) {
-        await initializeMusic();
+        const initMusic = await getInitializeMusic();
+        if (initMusic) {
+          await initMusic(client);
+        }
       }
 
       await runSafeReconciliation(
