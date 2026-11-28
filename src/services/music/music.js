@@ -705,9 +705,8 @@ export async function resolveTrack(query, requestedBy) {
   }
 
   const attempts = [
-    ['-f', 'bestaudio*/best*'],
-    ['--extractor-args', 'youtube:player_client=android,web', '-f', 'bestaudio*/best*'],
     [],
+    ['--extractor-args', 'youtube:player_client=android,web'],
   ];
 
   let lastError = null;
@@ -757,8 +756,6 @@ function createAudioStreamFromTrack(track, seekSec = 0) {
       '--buffer-size',
       '16K',
       ...buildCookieArgs(),
-      '-f',
-      'bestaudio*/best*',
       target,
     ],
     {
