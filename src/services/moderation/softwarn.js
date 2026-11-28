@@ -6,7 +6,7 @@ export async function notifySoftWarn(targetUser, {
   moderatorTag,
   reason,
   softCount,
-  threshold,
+  threshold = 3,
   warningId,
   escalated = false,
   officialTotalCount = null,
@@ -15,19 +15,22 @@ export async function notifySoftWarn(targetUser, {
     return { delivered: false, reason: 'لم يتم العثور على العضو' };
   }
 
+  const activeThreshold = Number.isInteger(threshold) && threshold > 0 ? threshold : 3;
+  const displayCount = escalated ? 0 : (softCount ?? 0);
+
   try {
     const embed = new EmbedBuilder()
       .setColor(escalated ? 0xed4245 : 0xfee75c)
-      .setTitle(escalated ? '⚠️ تحذير خفيف — تم إصدار تحذير رسمي' : '⚠️ تحذير خفيف')
+      .setTitle(escalated ? '⚠️ تحذير خفيف — تم تحويله إلى تحذير رسمي (+1)' : '⚠️ تحذير خفيف')
       .setDescription(
         `لقد تلقيت تحذيرًا خفيفًا في سيرفر **${guildName}**.` +
         (escalated
-          ? `\nلقد وصلت إلى الحد المحدد للتحذيرات الخفيفة (**${softCount}/${threshold}**) وتم إصدار **تحذير رسمي** بحقك.`
+          ? `\nلقد بلغت حد التحذيرات الخفيفة (**${activeThreshold}/${activeThreshold}**)، وتم تحويلها تلقائيًا إلى **1 تحذير رسمي** وتصفير تحذيراتك الخفيفة.`
           : '')
       )
       .addFields(
         { name: 'السبب', value: reason || 'لم يتم تحديد سبب', inline: false },
-        { name: 'التحذيرات الخفيفة', value: `${softCount} / ${threshold}`, inline: true },
+        { name: 'التحذيرات الخفيفة', value: `${displayCount} / ${activeThreshold}`, inline: true },
         { name: 'رقم الحالة', value: warningId ? `#${warningId}` : 'غير متوفر', inline: true }
       )
       .setTimestamp();
@@ -36,10 +39,12 @@ export async function notifySoftWarn(targetUser, {
       embed.setFooter({ text: `بواسطة المشرف: ${moderatorTag}` });
     }
 
-    if (escalated && officialTotalCount !== null) {
+    if (escalated) {
       embed.addFields({
-        name: 'إجمالي التحذيرات الرسمية',
-        value: `${officialTotalCount}`,
+        name: 'التحذير الرسمي',
+        value: officialTotalCount !== null && officialTotalCount !== undefined
+          ? `+1 (الإجمالي: ${officialTotalCount})`
+          : '+1 تحذير رسمي',
         inline: true,
       });
     }
@@ -48,8 +53,8 @@ export async function notifySoftWarn(targetUser, {
     return { delivered: true };
   } catch (error) {
     logger.warn('Failed to deliver softwarn DM to user:', {
-      userId: targetUser.id,
-      guildId: guildName,
+      userId: targetUser?.id ?? null,
+      guildName: guildName ?? null,
       error: error?.message || String(error),
     });
     return {
