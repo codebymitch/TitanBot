@@ -1,7 +1,6 @@
 import { MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { handleInteractionError } from '../utils/errorHandler.js';
-import { getGuildMusicData } from '../services/music/playerStore.js';
+import { handleInteractionError, replyUserError, ErrorTypes } from '../utils/errorHandler.js';
 import {
     getPlayer,
     buildQueueReply,
@@ -13,7 +12,20 @@ import {
 import { canControlMusic, VOICE_CHANNEL_DENIAL } from '../services/music/permissions.js';
 import { refreshPlayerMessage } from '../services/music/playerHandler.js';
 import { MUSIC_BUTTON_IDS } from '../services/music/musicEmbeds.js';
-import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
+
+const guildMusicStore = new Map();
+
+function getGuildMusicData(guildId) {
+    if (!guildMusicStore.has(guildId)) {
+        guildMusicStore.set(guildId, {
+            queuePages: new Map(),
+            shuffle: false,
+            loop: 'none',
+            volume: 100,
+        });
+    }
+    return guildMusicStore.get(guildId);
+}
 
 async function handleMusicButton(interaction, client) {
     const player = getPlayer(client, interaction.guild.id);
@@ -120,6 +132,7 @@ async function handleMusicButton(interaction, client) {
             case MUSIC_BUTTON_IDS.LOOP: {
                 const guildDataLoop = getGuildMusicData(interaction.guild.id);
                 const next = guildDataLoop.loop === 'none' ? 'track' : guildDataLoop.loop === 'track' ? 'queue' : 'none';
+                guildDataLoop.loop = next;
                 await setLoopMode(client, interaction, next);
                 break;
             }
