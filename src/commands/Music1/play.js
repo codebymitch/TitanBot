@@ -8,14 +8,14 @@ export default {
     .addStringOption((opt) =>
       opt
         .setName('query')
-        .setDescription('اسم الأغنية أو رابط يوتيوب أو سبوتيفاي')
+        .setDescription('اسم الأغنية أو رابط يوتيوب')
         .setRequired(true)
     ),
 
   async execute(interaction) {
     const query = interaction.options.getString('query', true).trim();
     if (!query) {
-      return replyMusicError(interaction, 'من فضلك أدخل اسم مقطع أو رابطاً صحيحاً.', true);
+      return replyMusicError(interaction, 'اكتب اسم مقطع أو رابطاً صحيحاً.', true);
     }
 
     if (!interaction.deferred && !interaction.replied) {
@@ -25,7 +25,7 @@ export default {
     try {
       await playQuery(interaction, query);
     } catch (err) {
-      await replyMusicError(interaction, err?.message || 'حدث خطأ أثناء تشغيل المقطع.', true);
+      await replyMusicError(interaction, err?.message || 'حدث خطأ أثناء التشغيل.', true);
     }
   },
 };
