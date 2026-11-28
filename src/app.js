@@ -13,7 +13,6 @@ import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/loaders/commandLoader.js';
 import { runSafeTask, handleTaskError, ErrorCodes } from './utils/errorHandler.js';
-import { initializeMusic } from './services/music/musicActions.js';
 import { shutdownMusic } from './services/music/playerHandler.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/database/schemaVersion.js';
@@ -45,6 +44,27 @@ class TitanBot extends Client {
     this.cooldowns = new Collection();
     this.db = null;
     this.rest = new REST({ version: '10' }).setToken(config.bot.token);
+  }
+
+  async initializeMusicSafe() {
+    try {
+      const musicModule = await import('./services/music/musicActions.js');
+      const initFn =
+        typeof musicModule.initializeMusic === 'function'
+          ? musicModule.initializeMusic
+          : typeof musicModule.default === 'function'
+            ? musicModule.default
+            : null;
+
+      if (initFn) {
+        await initFn(this);
+        startupLog('✅ Music service initialized');
+      } else {
+        logger.warn('⚠️  musicActions.js does not export initializeMusic or a default function; skipping music init');
+      }
+    } catch (error) {
+      logger.warn(`⚠️  Failed to initialize music service safely: ${error.message}`);
+    }
   }
 
   async start() {
@@ -82,9 +102,7 @@ class TitanBot extends Client {
       await this.loadHandlers();
       startupLog('Handlers loaded');
 
-      if (typeof initializeMusic === 'function') {
-        initializeMusic(this);
-      }
+      await this.initializeMusicSafe();
 
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
