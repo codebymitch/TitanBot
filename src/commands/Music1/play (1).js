@@ -1,29 +1,24 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { handlePlay } from '../../services/music/musicActions.js';
+import { handlePlay, replyMusicError } from '../../services/music/music.js';
 
 export default {
-  category: 'Music',
   data: new SlashCommandBuilder()
     .setName('play')
-    .setDescription('Play a track from YouTube or Spotify')
-    .addStringOption((option) =>
-      option
+    .setDescription('تشغيل مقطع صوتي أو إضافته إلى قائمة الانتظار')
+    .addStringOption((opt) =>
+      opt
         .setName('query')
-        .setDescription('Song name or YouTube / Spotify link')
+        .setDescription('اسم المقطع أو رابط يوتيوب أو سبوتيفاي')
         .setRequired(true)
     ),
 
   async execute(interaction) {
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply().catch(() => {});
+    const query = interaction.options.getString('query', true);
+    await interaction.deferReply();
+    try {
+      await handlePlay(interaction, query);
+    } catch (err) {
+      await replyMusicError(interaction, err?.message || 'حدث خطأ أثناء تشغيل المقطع.', true);
     }
-
-    const query =
-      interaction.options.getString('query', true) ||
-      interaction.options.getString('song', false) ||
-      interaction.options.getString('search', false) ||
-      '';
-
-    await handlePlay(interaction, query);
   },
 };
