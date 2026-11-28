@@ -6,7 +6,7 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logModerationAction } from '../../utils/moderation.js';
 
 function getTargetLabel(target) {
-  return target.user?.tag ?? target.displayName ?? 'this user';
+  return target?.user?.tag ?? target?.displayName ?? 'this user';
 }
 
 function getHighestRole(member) {
@@ -34,7 +34,7 @@ export class ModerationService {
     const targetRole = getHighestRole(target);
 
     if (actor === 'bot') {
-      const botMember = target.guild?.members?.me;
+      const botMember = target?.guild?.members?.me;
       const botRole = getHighestRole(botMember);
       if (!botRole || !targetRole) {
         return `Bot role hierarchy blocked ${action} for ${targetLabel}`;
@@ -120,7 +120,23 @@ export class ModerationService {
     return { valid: true };
   }
 
-  static assertModerationHierarchy(moderator, target, action) {
+  static assertModerationHierarchy(moderatorOrOptions, targetArg, actionArg) {
+    let moderator = moderatorOrOptions;
+    let target = targetArg;
+    let action = actionArg;
+
+    // دعم الاستدعاء سواء بـ (moderator, target, action) أو بـ ({ moderator, targetMember/target, action/actionName })
+    if (
+      moderatorOrOptions &&
+      typeof moderatorOrOptions === 'object' &&
+      !moderatorOrOptions.roles &&
+      ('moderator' in moderatorOrOptions || 'target' in moderatorOrOptions || 'targetMember' in moderatorOrOptions)
+    ) {
+      moderator = moderatorOrOptions.moderator;
+      target = moderatorOrOptions.targetMember ?? moderatorOrOptions.target;
+      action = moderatorOrOptions.action ?? moderatorOrOptions.actionName ?? 'moderate';
+    }
+
     const botCheck = this.validateBotHierarchy(target, action);
     if (!botCheck.valid) {
       throw new TitanBotError(botCheck.error, ErrorTypes.PERMISSION, botCheck.error);
@@ -158,19 +174,18 @@ export class ModerationService {
       if (targetMember) {
         this.assertModerationHierarchy(moderator, targetMember, 'ban');
       } else {
-
         const isOwner = guild.ownerId === moderator.id;
         const hasHighPerms = moderator.permissions.has([
-            PermissionFlagsBits.ManageGuild,
-            PermissionFlagsBits.Administrator
+          PermissionFlagsBits.ManageGuild,
+          PermissionFlagsBits.Administrator
         ]);
 
         if (!isOwner && !hasHighPerms) {
-            throw new TitanBotError(
-                'You do not have sufficient permissions to ban users who are not in the server.',
-                ErrorTypes.PERMISSION,
-                'You need "Manage Server" or "Administrator" permissions to ban users not currently in the guild.'
-            );
+          throw new TitanBotError(
+            'You do not have sufficient permissions to ban users who are not in the server.',
+            ErrorTypes.PERMISSION,
+            'You need "Manage Server" or "Administrator" permissions to ban users not currently in the guild.'
+          );
         }
       }
 
@@ -194,7 +209,7 @@ export class ModerationService {
       });
 
       logger.info(`User banned: ${user.tag} by ${moderator.user.tag} in ${guild.name}`);
-      
+
       return {
         caseId,
         user: user.tag,
@@ -251,7 +266,7 @@ export class ModerationService {
       });
 
       logger.info(`User kicked: ${member.user.tag} by ${moderator.user.tag} in ${guild.name}`);
-      
+
       return {
         caseId,
         user: member.user.tag,
@@ -312,7 +327,7 @@ export class ModerationService {
       });
 
       logger.info(`User timed out: ${member.user.tag} by ${moderator.user.tag} in ${guild.name}`);
-      
+
       return {
         caseId,
         user: member.user.tag,
@@ -378,7 +393,7 @@ export class ModerationService {
       });
 
       logger.info(`Timeout removed: ${member.user.tag} by ${moderator.user.tag} in ${guild.name}`);
-      
+
       return {
         user: member.user.tag
       };
@@ -432,7 +447,7 @@ export class ModerationService {
       });
 
       logger.info(`User unbanned: ${user.tag} by ${moderator.user.tag} in ${guild.name}`);
-      
+
       return {
         caseId,
         user: user.tag,
