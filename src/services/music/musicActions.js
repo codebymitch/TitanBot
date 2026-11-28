@@ -65,7 +65,7 @@ function extractSpotifyTrackId(input) {
 async function fetchSpotifyTrackMetadata(trackId) {
   const embedUrl = `https://open.spotify.com/embed/track/${trackId}`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const timeout = setTimeout(() => controller.abort(), 6000);
 
   try {
     const res = await fetch(embedUrl, {
@@ -324,6 +324,12 @@ export function seekTrack(guildIdOrInteraction, positionInput) {
 
   state.seekSeconds = clampedSec;
   setPlayerState(guildId, state);
+
+  const connection = getVoiceConnection(guildId);
+  if (connection) {
+    startTrackPlayback(guildId, state.currentTrack, connection, clampedSec);
+  }
+
   return clampedSec;
 }
 
@@ -526,7 +532,7 @@ function runYtDlpJson(input, extraArgs = [], limit = 1) {
         proc.kill('SIGKILL');
       } catch {}
       reject(new Error('انتهت مهلة البحث عن المقطع.'));
-    }, 15000);
+    }, 12000);
 
     const done = (fn, val) => {
       if (settled) return;
@@ -633,9 +639,9 @@ export async function resolveTrack(query, requestedBy) {
     sourceType = 'spotify';
     expectedMeta = await fetchSpotifyTrackMetadata(spotifyTrackId);
     const searchQuery = expectedMeta.artistText
-      ? `"${expectedMeta.title}" ${expectedMeta.artistText}`
+      ? `${expectedMeta.title} ${expectedMeta.artistText}`
       : expectedMeta.title;
-    input = `ytsearch5:${searchQuery}`;
+    input = `ytsearch3:${searchQuery}`;
   } else if (isUrl(rawQuery)) {
     input = rawQuery;
   } else {
@@ -643,7 +649,7 @@ export async function resolveTrack(query, requestedBy) {
   }
 
   const attempts = [
-    ['-f', 'bestaudio/best'],
+    ['-f', 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best'],
     ['--extractor-args', 'youtube:player_client=android,web'],
     [],
   ];
@@ -652,7 +658,7 @@ export async function resolveTrack(query, requestedBy) {
 
   for (const args of attempts) {
     try {
-      const limit = sourceType === 'spotify' ? 5 : 1;
+      const limit = sourceType === 'spotify' ? 3 : 1;
       const entries = await runYtDlpJson(input, args, limit);
       const chosen = sourceType === 'spotify'
         ? pickBestSpotifyMatch(entries, expectedMeta?.title, expectedMeta?.durationSec)
@@ -681,7 +687,7 @@ export async function resolveTrack(query, requestedBy) {
   throw new Error(lastError?.message || 'تعذر تجهيز المقطع المطلوب.');
 }
 
-function createAudioStreamFromTrack(track) {
+function createAudioStreamFromTrack(track, seekSec = 0) {
   const target = track.url || track.streamTarget;
 
   const ytdlp = spawn(
@@ -692,8 +698,10 @@ function createAudioStreamFromTrack(track) {
       '-q',
       '--no-playlist',
       '--no-warnings',
+      '--buffer-size',
+      '16K',
       '-f',
-      'bestaudio/best',
+      'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
       target,
     ],
     {
@@ -701,27 +709,28 @@ function createAudioStreamFromTrack(track) {
     }
   );
 
-  const ffmpeg = spawn(
-    'ffmpeg',
-    [
-      '-analyzeduration',
-      '0',
-      '-loglevel',
-      '0',
-      '-i',
-      'pipe:0',
-      '-f',
-      's16le',
-      '-ar',
-      '48000',
-      '-ac',
-      '2',
-      'pipe:1',
-    ],
-    {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }
-  );
+  const ffmpegArgs = [
+    '-analyzeduration',
+    '0',
+    '-probesize',
+    '32768',
+    '-loglevel',
+    '0',
+    ...(seekSec > 0 ? ['-ss', String(seekSec)] : []),
+    '-i',
+    'pipe:0',
+    '-f',
+    's16le',
+    '-ar',
+    '48000',
+    '-ac',
+    '2',
+    'pipe:1',
+  ];
+
+  const ffmpeg = spawn('ffmpeg', ffmpegArgs, {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
 
   ytdlp.stdout.pipe(ffmpeg.stdin);
 
@@ -761,6 +770,12 @@ function createAudioStreamFromTrack(track) {
     resource,
     cleanup: () => {
       try {
+        ytdlp.stdout.unpipe(ffmpeg.stdin);
+      } catch {}
+      try {
+        ffmpeg.stdout.unpipe(opusEncoder);
+      } catch {}
+      try {
         opusStream.destroy();
       } catch {}
       try {
@@ -774,6 +789,43 @@ function createAudioStreamFromTrack(track) {
       } catch {}
     },
   };
+}
+
+function attachVoiceConnectionListeners(connection, guild, voiceChannelId) {
+  if (!connection || connection.__musicListenersAttached) return;
+  connection.__musicListenersAttached = true;
+
+  connection.on(VoiceConnectionStatus.Disconnected, async () => {
+    try {
+      await Promise.race([
+        entersState(connection, VoiceConnectionStatus.Signalling, 5000),
+        entersState(connection, VoiceConnectionStatus.Connecting, 5000),
+      ]);
+    } catch {
+      try {
+        connection.destroy();
+      } catch {}
+
+      const state = getPlayerState(guild.id);
+      if (state?.twentyFourSeven || state?.currentTrack) {
+        try {
+          const rejoined = joinDiscordVoiceChannel({
+            channelId: voiceChannelId,
+            guildId: guild.id,
+            adapterCreator: guild.voiceAdapterCreator,
+            selfDeaf: true,
+          });
+          attachVoiceConnectionListeners(rejoined, guild, voiceChannelId);
+          await entersState(rejoined, VoiceConnectionStatus.Ready, 15000);
+          if (state.player) {
+            rejoined.subscribe(state.player);
+          }
+        } catch (err) {
+          console.error('[VOICE REJOIN FAILED]:', err?.message || err);
+        }
+      }
+    }
+  });
 }
 
 export async function ensureVoiceConnection(interaction, voiceChannel) {
@@ -793,6 +845,8 @@ export async function ensureVoiceConnection(interaction, voiceChannel) {
       selfDeaf: true,
     });
   }
+
+  attachVoiceConnectionListeners(connection, guild, voiceChannel.id);
 
   if (connection.state.status !== VoiceConnectionStatus.Ready) {
     try {
@@ -819,7 +873,47 @@ export async function joinVoiceChannel(interaction, voiceChannel) {
   return connection;
 }
 
-function startTrackPlayback(guildId, track, connection) {
+function advanceQueueOrIdle(guildId, player) {
+  const currentState = getPlayerState(guildId);
+  if (!currentState) return;
+
+  if (typeof currentState.cleanupStream === 'function') {
+    try {
+      currentState.cleanupStream();
+    } catch {}
+    currentState.cleanupStream = null;
+  }
+
+  if (currentState.loop && currentState.currentTrack) {
+    const activeConn = getVoiceConnection(guildId);
+    if (activeConn) {
+      startTrackPlayback(guildId, currentState.currentTrack, activeConn, 0);
+    }
+    return;
+  }
+
+  const nextTrack = Array.isArray(currentState.queue) ? currentState.queue.shift() : null;
+  if (nextTrack) {
+    const activeConn = getVoiceConnection(guildId);
+    if (activeConn) {
+      startTrackPlayback(guildId, nextTrack, activeConn, 0);
+      return;
+    }
+  }
+
+  currentState.currentTrack = null;
+  currentState.seekSeconds = 0;
+  currentState.isPlaying = false;
+  setPlayerState(guildId, currentState);
+
+  if (!currentState.twentyFourSeven && player) {
+    try {
+      player.stop();
+    } catch {}
+  }
+}
+
+function startTrackPlayback(guildId, track, connection, seekSec = 0) {
   let state = getPlayerState(guildId) || {
     guildId,
     queue: [],
@@ -848,46 +942,18 @@ function startTrackPlayback(guildId, track, connection) {
     });
 
     player.on(AudioPlayerStatus.Idle, () => {
-      const currentState = getPlayerState(guildId);
-      if (!currentState) return;
-
-      if (typeof currentState.cleanupStream === 'function') {
-        try {
-          currentState.cleanupStream();
-        } catch {}
-        currentState.cleanupStream = null;
-      }
-
-      if (currentState.loop && currentState.currentTrack) {
-        const activeConn = getVoiceConnection(guildId);
-        if (activeConn) {
-          startTrackPlayback(guildId, currentState.currentTrack, activeConn);
-        }
-        return;
-      }
-
-      const nextTrack = Array.isArray(currentState.queue) ? currentState.queue.shift() : null;
-      if (nextTrack) {
-        const activeConn = getVoiceConnection(guildId);
-        if (activeConn) {
-          startTrackPlayback(guildId, nextTrack, activeConn);
-          return;
-        }
-      }
-
-      currentState.currentTrack = null;
-      currentState.isPlaying = false;
-      setPlayerState(guildId, currentState);
+      advanceQueueOrIdle(guildId, player);
     });
 
     player.on('error', (err) => {
       console.error('[AUDIO PLAYER ERROR]:', err?.message || err);
+      advanceQueueOrIdle(guildId, player);
     });
   }
 
   connection.subscribe(player);
 
-  const { resource, cleanup } = createAudioStreamFromTrack(track);
+  const { resource, cleanup } = createAudioStreamFromTrack(track, seekSec);
   if (resource.volume && typeof resource.volume.setVolume === 'function') {
     resource.volume.setVolume(Math.max(0, Math.min(2, (state.volume ?? 100) / 100)));
   }
@@ -896,6 +962,7 @@ function startTrackPlayback(guildId, track, connection) {
     ...state,
     guildId,
     currentTrack: track,
+    seekSeconds: seekSec,
     isPlaying: true,
     player,
     cleanupStream: cleanup,
@@ -944,7 +1011,7 @@ export async function handlePlay(interaction, query) {
     return;
   }
 
-  const updatedState = startTrackPlayback(guildId, track, connection);
+  const updatedState = startTrackPlayback(guildId, track, connection, 0);
 
   await safeSendMusicPayload(ctx, {
     embeds: [buildNowPlayingEmbed(track, updatedState)],
