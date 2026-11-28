@@ -45,7 +45,7 @@ function isUrl(value) {
 
 function extractSpotifyTrackId(input) {
   const raw = String(input || '').trim();
-  const uriMatch = raw.match(/^spotify:track:([A-Za-z0-9]+)\$/i);
+  const uriMatch = raw.match(/^spotify:track:([A-Za-z0-9]+)$/i);
   if (uriMatch) return uriMatch[1];
 
   try {
@@ -132,7 +132,7 @@ function parseSecondsInput(value) {
   if (typeof value !== 'string') return NaN;
   const trimmed = value.trim();
   if (!trimmed) return NaN;
-  if (/^\d+\$/.test(trimmed)) {
+  if (/^\d+$/.test(trimmed)) {
     return Math.max(0, Number(trimmed));
   }
   const parts = trimmed.split(':').map((p) => Number(p));
@@ -633,3 +633,555 @@ export async function resolveTrack(query, requestedBy) {
 
   const spotifyTrackId = extractSpotifyTrackId(rawQuery);
   let input = rawQuery;
+  let sourceType = 'youtube';
+  let expectedMeta = null;
+
+  if (spotifyTrackId) {
+    sourceType = 'spotify';
+    expectedMeta = await fetchSpotifyTrackMetadata(spotifyTrackId);
+    const searchQuery = expectedMeta.artistText
+      ? `${expectedMeta.title} ${expectedMeta.artistText}`
+      : expectedMeta.title;
+    input = `ytsearch3:${searchQuery}`;
+  } else if (isUrl(rawQuery)) {
+    input = rawQuery;
+  } else {
+    input = `ytsearch1:${rawQuery}`;
+  }
+
+  const attempts = [
+    ['-f', 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best'],
+    ['--extractor-args', 'youtube:player_client=android,web'],
+    [],
+  ];
+
+  let lastError = null;
+
+  for (const args of attempts) {
+    try {
+      const limit = sourceType === 'spotify' ? 3 : 1;
+      const entries = await runYtDlpJson(input, args, limit);
+      const chosen = sourceType === 'spotify'
+        ? pickBestSpotifyMatch(entries, expectedMeta?.title, expectedMeta?.durationSec)
+        : entries[0];
+
+      if (!chosen) {
+        throw new Error('لم يتم العثور على مقطع مطابق.');
+      }
+
+      return {
+        ...chosen,
+        title: expectedMeta?.title || chosen.title,
+        author: expectedMeta?.artistText || chosen.author,
+        durationSec: expectedMeta?.durationSec || chosen.durationSec,
+        duration: formatDuration(expectedMeta?.durationSec || chosen.durationSec),
+        displayUrl: expectedMeta?.spotifyUrl || chosen.url,
+        source: sourceType,
+        requestedBy,
+      };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  console.error('[RESOLVE TRACK FAILED]:', lastError?.message || lastError);
+  throw new Error(lastError?.message || 'تعذر تجهيز المقطع المطلوب.');
+}
+
+function createAudioStreamFromTrack(track, seekSec = 0) {
+  const target = track.url || track.streamTarget;
+
+  const ytdlp = spawn(
+    'yt-dlp',
+    [
+      '-o',
+      '-',
+      '-q',
+      '--no-playlist',
+      '--no-warnings',
+      '--buffer-size',
+      '16K',
+      '-f',
+      'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
+      target,
+    ],
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }
+  );
+
+  const ffmpegArgs = [
+    '-analyzeduration',
+    '0',
+    '-probesize',
+    '32768',
+    '-loglevel',
+    '0',
+    ...(seekSec > 0 ? ['-ss', String(seekSec)] : []),
+    '-i',
+    'pipe:0',
+    '-f',
+    's16le',
+    '-ar',
+    '48000',
+    '-ac',
+    '2',
+    'pipe:1',
+  ];
+
+  const ffmpeg = spawn('ffmpeg', ffmpegArgs, {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  ytdlp.stdout.pipe(ffmpeg.stdin);
+
+  ytdlp.stderr.on('data', (chunk) => {
+    const msg = chunk.toString().trim();
+    if (msg) console.error('[YT-DLP STREAM]:', msg);
+  });
+
+  ffmpeg.stderr.on('data', () => {});
+
+  ytdlp.on('error', () => {
+    try {
+      ffmpeg.kill('SIGKILL');
+    } catch {}
+  });
+
+  ffmpeg.on('error', () => {
+    try {
+      ffmpeg.kill('SIGKILL');
+    } catch {}
+  });
+
+  const opusEncoder = new prism.opus.Encoder({
+    rate: 48000,
+    channels: 2,
+    frameSize: 960,
+  });
+
+  const opusStream = ffmpeg.stdout.pipe(opusEncoder);
+
+  const resource = createAudioResource(opusStream, {
+    inputType: 'opus',
+    inlineVolume: true,
+  });
+
+  return {
+    resource,
+    cleanup: () => {
+      try {
+        ytdlp.stdout.unpipe(ffmpeg.stdin);
+      } catch {}
+      try {
+        ffmpeg.stdout.unpipe(opusEncoder);
+      } catch {}
+      try {
+        opusStream.destroy();
+      } catch {}
+      try {
+        opusEncoder.destroy();
+      } catch {}
+      try {
+        ffmpeg.kill('SIGKILL');
+      } catch {}
+      try {
+        ytdlp.kill('SIGKILL');
+      } catch {}
+    },
+  };
+}
+
+function attachVoiceConnectionListeners(connection, guild, voiceChannelId) {
+  if (!connection || connection.__musicListenersAttached) return;
+  connection.__musicListenersAttached = true;
+
+  connection.on(VoiceConnectionStatus.Disconnected, async () => {
+    try {
+      await Promise.race([
+        entersState(connection, VoiceConnectionStatus.Signalling, 5000),
+        entersState(connection, VoiceConnectionStatus.Connecting, 5000),
+      ]);
+    } catch {
+      try {
+        connection.destroy();
+      } catch {}
+
+      const state = getPlayerState(guild.id);
+      if (state?.twentyFourSeven || state?.currentTrack) {
+        try {
+          const rejoined = joinDiscordVoiceChannel({
+            channelId: voiceChannelId,
+            guildId: guild.id,
+            adapterCreator: guild.voiceAdapterCreator,
+            selfDeaf: true,
+          });
+          attachVoiceConnectionListeners(rejoined, guild, voiceChannelId);
+          await entersState(rejoined, VoiceConnectionStatus.Ready, 15000);
+          if (state.player) {
+            rejoined.subscribe(state.player);
+          }
+        } catch (err) {
+          console.error('[VOICE REJOIN FAILED]:', err?.message || err);
+        }
+      }
+    }
+  });
+}
+
+export async function ensureVoiceConnection(interaction, voiceChannel) {
+  const ctx = interaction?.interaction || interaction;
+  const guild = ctx.guild;
+  if (!guild) {
+    throw new Error('لا يمكن تحديد السيرفر.');
+  }
+
+  let connection = getVoiceConnection(guild.id);
+
+  if (!connection) {
+    connection = joinDiscordVoiceChannel({
+      channelId: voiceChannel.id,
+      guildId: guild.id,
+      adapterCreator: guild.voiceAdapterCreator,
+      selfDeaf: true,
+    });
+  }
+
+  attachVoiceConnectionListeners(connection, guild, voiceChannel.id);
+
+  if (connection.state.status !== VoiceConnectionStatus.Ready) {
+    try {
+      await entersState(connection, VoiceConnectionStatus.Ready, 15000);
+    } catch {
+      connection.destroy();
+      throw new Error('تعذر الاتصال بالروم الصوتي في الوقت المحدد.');
+    }
+  }
+
+  return connection;
+}
+
+export async function joinVoiceChannel(interaction, voiceChannel) {
+  const ctx = interaction?.interaction || interaction;
+  const targetChannel = voiceChannel || ctx?.member?.voice?.channel;
+  if (!targetChannel) {
+    await replyMusicError(ctx, 'يجب أن تكون متواجداً داخل روم صوتي أولاً.', true);
+    return null;
+  }
+
+  const connection = await ensureVoiceConnection(ctx, targetChannel);
+  await replyMusicSuccess(ctx, `تم الانضمام إلى <#${targetChannel.id}>.`, false);
+  return connection;
+}
+
+function advanceQueueOrIdle(guildId, player) {
+  const currentState = getPlayerState(guildId);
+  if (!currentState) return;
+
+  if (typeof currentState.cleanupStream === 'function') {
+    try {
+      currentState.cleanupStream();
+    } catch {}
+    currentState.cleanupStream = null;
+  }
+
+  if (currentState.loop && currentState.currentTrack) {
+    const activeConn = getVoiceConnection(guildId);
+    if (activeConn) {
+      startTrackPlayback(guildId, currentState.currentTrack, activeConn, 0);
+    }
+    return;
+  }
+
+  const nextTrack = Array.isArray(currentState.queue) ? currentState.queue.shift() : null;
+  if (nextTrack) {
+    const activeConn = getVoiceConnection(guildId);
+    if (activeConn) {
+      startTrackPlayback(guildId, nextTrack, activeConn, 0);
+      return;
+    }
+  }
+
+  currentState.currentTrack = null;
+  currentState.seekSeconds = 0;
+  currentState.isPlaying = false;
+  setPlayerState(guildId, currentState);
+
+  if (!currentState.twentyFourSeven && player) {
+    try {
+      player.stop();
+    } catch {}
+  }
+}
+
+function startTrackPlayback(guildId, track, connection, seekSec = 0) {
+  let state = getPlayerState(guildId) || {
+    guildId,
+    queue: [],
+    currentTrack: null,
+    isPlaying: false,
+    volume: 100,
+    seekSeconds: 0,
+    loop: false,
+    twentyFourSeven: false,
+    player: null,
+    cleanupStream: null,
+  };
+
+  if (typeof state.cleanupStream === 'function') {
+    try {
+      state.cleanupStream();
+    } catch {}
+  }
+
+  let player = state.player;
+  if (!player) {
+    player = createAudioPlayer({
+      behaviors: {
+        noSubscriber: NoSubscriberBehavior.Pause,
+      },
+    });
+
+    player.on(AudioPlayerStatus.Idle, () => {
+      advanceQueueOrIdle(guildId, player);
+    });
+
+    player.on('error', (err) => {
+      console.error('[AUDIO PLAYER ERROR]:', err?.message || err);
+      advanceQueueOrIdle(guildId, player);
+    });
+  }
+
+  connection.subscribe(player);
+
+  const { resource, cleanup } = createAudioStreamFromTrack(track, seekSec);
+  if (resource.volume && typeof resource.volume.setVolume === 'function') {
+    resource.volume.setVolume(Math.max(0, Math.min(2, (state.volume ?? 100) / 100)));
+  }
+
+  state = {
+    ...state,
+    guildId,
+    currentTrack: track,
+    seekSeconds: seekSec,
+    isPlaying: true,
+    player,
+    cleanupStream: cleanup,
+  };
+
+  setPlayerState(guildId, state);
+  player.play(resource);
+  return state;
+}
+
+export async function handlePlay(interaction, query) {
+  const ctx = interaction?.interaction || interaction;
+  const member = ctx.member;
+  const voiceChannel = member?.voice?.channel;
+
+  if (!voiceChannel) {
+    await replyMusicError(ctx, 'يجب أن تكون متواجداً داخل روم صوتي أولاً.', true);
+    return;
+  }
+
+  const guildId = ctx.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const track = await resolveTrack(query, ctx.user?.tag || ctx.user?.username || 'User');
+  const connection = await ensureVoiceConnection(ctx, voiceChannel);
+
+  const existingState = getPlayerState(guildId);
+  const alreadyPlaying = Boolean(
+    existingState?.currentTrack &&
+    existingState?.player &&
+    existingState.player.state.status !== AudioPlayerStatus.Idle
+  );
+
+  if (alreadyPlaying) {
+    existingState.queue = Array.isArray(existingState.queue) ? existingState.queue : [];
+    existingState.queue.push(track);
+    setPlayerState(guildId, existingState);
+
+    await safeSendMusicPayload(ctx, {
+      embeds: [buildMusicInfoEmbed(`تمت إضافة **${track.title}** إلى قائمة الانتظار.`)],
+      components: buildPlayerButtonRows(existingState),
+    });
+    return;
+  }
+
+  const updatedState = startTrackPlayback(guildId, track, connection, 0);
+
+  await safeSendMusicPayload(ctx, {
+    embeds: [buildNowPlayingEmbed(track, updatedState)],
+    components: buildPlayerButtonRows(updatedState),
+  });
+}
+
+export async function handleSkip(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const state = getPlayerState(guildId);
+  if (!state?.player || !state?.currentTrack) {
+    await replyMusicError(ctx, 'لا يوجد مقطع قيد التشغيل حالياً لتخطيه.', true);
+    return;
+  }
+
+  const nextTrack = Array.isArray(state.queue) && state.queue.length > 0 ? state.queue[0] : null;
+  state.player.stop();
+
+  await safeSendMusicPayload(ctx, {
+    embeds: [
+      buildMusicInfoEmbed(
+        nextTrack
+          ? `⏭️ تم التخطي. جارٍ تشغيل **${nextTrack.title}**...`
+          : '⏭️ تم تخطي المقطع الحالي.'
+      ),
+    ],
+  });
+}
+
+export async function handleTogglePause(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const state = getPlayerState(guildId);
+  if (!state?.player || !state?.currentTrack) {
+    await replyMusicError(ctx, 'لا يوجد مقطع نشط حالياً.', true);
+    return;
+  }
+
+  const status = state.player.state.status;
+  if (status === AudioPlayerStatus.Playing) {
+    pausePlayback(guildId);
+    await safeSendMusicPayload(ctx, {
+      embeds: [buildMusicInfoEmbed('⏸️ تم إيقاف التشغيل مؤقتاً.')],
+      components: buildPlayerButtonRows(getPlayerState(guildId)),
+    });
+    return;
+  }
+
+  if (status === AudioPlayerStatus.Paused) {
+    resumePlayback(guildId);
+    await safeSendMusicPayload(ctx, {
+      embeds: [buildMusicInfoEmbed('▶️ تم استئناف التشغيل.')],
+      components: buildPlayerButtonRows(getPlayerState(guildId)),
+    });
+    return;
+  }
+
+  await replyMusicError(ctx, 'حالة المشغل لا تسمح بالتبديل حالياً.', true);
+}
+
+export async function handleLoopToggle(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const state = getPlayerState(guildId);
+  if (!state) {
+    await replyMusicError(ctx, 'لا يوجد مشغل نشط في هذا السيرفر.', true);
+    return;
+  }
+
+  const enabled = setLoopMode(guildId);
+  await safeSendMusicPayload(ctx, {
+    embeds: [buildMusicInfoEmbed(enabled ? '🔁 تم تفعيل التكرار (Loop: On).' : '➡️ تم إيقاف التكرار (Loop: Off).')],
+    components: buildPlayerButtonRows(getPlayerState(guildId)),
+  });
+}
+
+export async function handleStop(interaction) {
+  const ctx = interaction?.interaction || interaction;
+  const guildId = ctx?.guild?.id;
+  if (!guildId) {
+    await replyMusicError(ctx, 'هذا الأمر يعمل داخل السيرفرات فقط.', true);
+    return;
+  }
+
+  const state = getPlayerState(guildId);
+  if (!state) {
+    await replyMusicError(ctx, 'المشغل متوقف بالفعل.', true);
+    return;
+  }
+
+  if (state.twentyFourSeven) {
+    clearQueue(guildId);
+    if (typeof state.cleanupStream === 'function') {
+      try {
+        state.cleanupStream();
+      } catch {}
+      state.cleanupStream = null;
+    }
+    state.currentTrack = null;
+    state.isPlaying = false;
+    setPlayerState(guildId, state);
+    if (state.player) {
+      try {
+        state.player.stop(true);
+      } catch {}
+    }
+    await safeSendMusicPayload(ctx, {
+      embeds: [buildMusicInfoEmbed('⏹️ تم إيقاف المقطع وتفريغ الطابور مع بقاء وضع 24/7 مفعلاً.')],
+    });
+    return;
+  }
+
+  destroyPlayerSession(guildId);
+  await safeSendMusicPayload(ctx, {
+    embeds: [buildMusicInfoEmbed('⏹️ تم إيقاف التشغيل ومغادرة الروم الصوتي.')],
+  });
+}
+
+export async function handleMusicComponent(interaction) {
+  const customId = interaction?.customId;
+  if (!customId) return false;
+
+  switch (customId) {
+    case MUSIC_BUTTON_IDS.TOGGLE_PAUSE:
+      await handleTogglePause(interaction);
+      return true;
+    case MUSIC_BUTTON_IDS.PAUSE:
+      pausePlayback(interaction?.guild?.id);
+      await safeSendMusicPayload(interaction, {
+        embeds: [buildMusicInfoEmbed('⏸️ تم إيقاف التشغيل مؤقتاً.')],
+        components: buildPlayerButtonRows(getPlayerState(interaction?.guild?.id)),
+      });
+      return true;
+    case MUSIC_BUTTON_IDS.RESUME:
+      resumePlayback(interaction?.guild?.id);
+      await safeSendMusicPayload(interaction, {
+        embeds: [buildMusicInfoEmbed('▶️ تم استئناف التشغيل.')],
+        components: buildPlayerButtonRows(getPlayerState(interaction?.guild?.id)),
+      });
+      return true;
+    case MUSIC_BUTTON_IDS.SKIP:
+      await handleSkip(interaction);
+      return true;
+    case MUSIC_BUTTON_IDS.LOOP:
+      await handleLoopToggle(interaction);
+      return true;
+    case MUSIC_BUTTON_IDS.STOP:
+      await handleStop(interaction);
+      return true;
+    case MUSIC_BUTTON_IDS.QUEUE:
+      await handleQueue(interaction);
+      return true;
+    default:
+      return false;
+  }
+}
