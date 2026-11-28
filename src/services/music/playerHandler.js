@@ -12,6 +12,14 @@ import {
   replyMusicError,
 } from './music.js';
 
+export async function shutdownMusic() {
+  return true;
+}
+
+export async function handleMusicComponent() {
+  return false;
+}
+
 export {
   initializeMusic,
   joinVoiceChannel,
@@ -26,12 +34,9 @@ export {
   replyMusicError,
 };
 
-export async function handleMusicComponent() {
-  return false;
-}
-
 export default {
   initializeMusic,
+  shutdownMusic,
   joinVoiceChannel,
   handlePlay,
   pausePlayback,
