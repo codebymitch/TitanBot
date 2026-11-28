@@ -6,18 +6,27 @@ import {
   resumePlayback,
   handleSkip,
   handleStop,
+  handleQueue,
   setVolume,
   setLoopMode,
+  setTwentyFourSeven,
+  destroyPlayerSession,
+  buildNowPlayingReply,
   replyMusicSuccess,
   replyMusicError,
+  handleMusicComponent as engineHandleMusicComponent,
 } from './music.js';
 
 export async function shutdownMusic() {
   return true;
 }
 
-export async function handleMusicComponent() {
-  return false;
+export async function handleMusicComponent(interaction) {
+  return engineHandleMusicComponent(interaction);
+}
+
+export async function playQuery(interaction, query) {
+  return handlePlay(interaction, query);
 }
 
 export {
@@ -28,8 +37,12 @@ export {
   resumePlayback,
   handleSkip,
   handleStop,
+  handleQueue,
   setVolume,
   setLoopMode,
+  setTwentyFourSeven,
+  destroyPlayerSession,
+  buildNowPlayingReply,
   replyMusicSuccess,
   replyMusicError,
 };
@@ -39,12 +52,17 @@ export default {
   shutdownMusic,
   joinVoiceChannel,
   handlePlay,
+  playQuery,
   pausePlayback,
   resumePlayback,
   handleSkip,
   handleStop,
+  handleQueue,
   setVolume,
   setLoopMode,
+  setTwentyFourSeven,
+  destroyPlayerSession,
+  buildNowPlayingReply,
   replyMusicSuccess,
   replyMusicError,
   handleMusicComponent,
