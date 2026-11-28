@@ -9,7 +9,6 @@ import {
     applyPause,
     applyResume,
 } from '../services/music/musicActions.js';
-import { refreshPlayerMessage } from '../services/music/playerHandler.js';
 
 const MUSIC_BUTTON_IDS = {
     PAUSE: 'music_pause',
@@ -148,7 +147,6 @@ async function handleMusicButton(interaction, client) {
                 if (player.queue.length > 0) {
                     player.queue.shuffle();
                     guildData.shuffle = true;
-                    await refreshPlayerMessage(client, interaction.guild.id);
                 }
                 break;
             case MUSIC_BUTTON_IDS.LOOP: {
@@ -161,12 +159,10 @@ async function handleMusicButton(interaction, client) {
             case MUSIC_BUTTON_IDS.VOL_DOWN:
                 guildData.volume = Math.max(0, guildData.volume - 10);
                 player.setVolume(guildData.volume);
-                await refreshPlayerMessage(client, interaction.guild.id);
                 break;
             case MUSIC_BUTTON_IDS.VOL_UP:
                 guildData.volume = Math.min(100, guildData.volume + 10);
                 player.setVolume(guildData.volume);
-                await refreshPlayerMessage(client, interaction.guild.id);
                 break;
             default:
                 break;
