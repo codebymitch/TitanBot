@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import { ResponseCoordinator } from '../utils/responseCoordinator.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { handleInteractionError } from '../utils/errorHandler.js';
+import { handleMusicComponent } from '../services/music/music.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -16,9 +17,9 @@ export default {
 
     try {
       if (interaction.isChatInputCommand()) {
-        // Acknowledge immediately for music commands so Discord never times out
+        // Defer publicly for /play so Now Playing / queued embeds are visible in channel
         if (interaction.commandName === 'play' && !interaction.deferred && !interaction.replied) {
-          await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+          await InteractionHelper.safeDefer(interaction);
         }
 
         const command = client.commands?.get(interaction.commandName);
@@ -44,7 +45,10 @@ export default {
 
       if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
         if (interaction.customId?.startsWith('music_')) {
-          const musicCommand = client.commands?.get('play') || client.commands?.get('music');
+          const handled = await handleMusicComponent(interaction, client);
+          if (handled) return;
+
+          const musicCommand = client.commands?.get('music') || client.commands?.get('play');
           if (musicCommand?.handleComponent) {
             await musicCommand.handleComponent(interaction, client);
           }
