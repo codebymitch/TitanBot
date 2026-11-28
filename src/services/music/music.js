@@ -84,7 +84,7 @@ function isUrl(value) {
 
 function extractSpotifyTrackId(input) {
   const raw = String(input || '').trim();
-  const uriMatch = raw.match(/^spotify:track:([A-Za-z0-9]+)\$/i);
+  const uriMatch = raw.match(/^spotify:track:([A-Za-z0-9]+)$/i);
   if (uriMatch) return uriMatch[1];
 
   try {
@@ -171,7 +171,7 @@ function parseSecondsInput(value) {
   if (typeof value !== 'string') return NaN;
   const trimmed = value.trim();
   if (!trimmed) return NaN;
-  if (/^\d+\$/.test(trimmed)) {
+  if (/^\d+$/.test(trimmed)) {
     return Math.max(0, Number(trimmed));
   }
   const parts = trimmed.split(':').map((p) => Number(p));
@@ -853,7 +853,7 @@ function attachVoiceConnectionListeners(connection, guild, voiceChannelId) {
   if (!connection || connection.__musicListenersAttached) return;
   connection.__musicListenersAttached = true;
 
-  connection.on('stateChange', (oldState,newState) => {
+  connection.on('stateChange', (oldState, newState) => {
     console.log(`[VOICE STATE] ${guild.id}: ${oldState.status} -> ${newState.status}`);
   });
 
