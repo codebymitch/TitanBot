@@ -556,7 +556,15 @@ function runYtDlpJson(input, extraArgs = [], limit = 1) {
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        done(reject, new Error(stderr.trim() || `yt-dlp exited with code ${code}`));
+        const cleanStderr = stderr.trim();
+        if (cleanStderr.includes('[DRM]')) {
+          done(
+            reject,
+            new Error('هذا الرابط محمي بحماية DRM ولا يمكن تشغيله مباشرة. استخدم اسم المقطع أو رابطاً عاماً غير محمي.')
+          );
+          return;
+        }
+        done(reject, new Error(cleanStderr || `yt-dlp exited with code ${code}`));
         return;
       }
 
@@ -796,6 +804,14 @@ function attachVoiceConnectionListeners(connection, guild, voiceChannelId) {
   if (!connection || connection.__musicListenersAttached) return;
   connection.__musicListenersAttached = true;
 
+  connection.on('stateChange', (oldState, newState) => {
+    console.log(`[VOICE STATE] ${guild.id}: ${oldState.status} -> ${newState.status}`);
+  });
+
+  connection.on('error', (err) => {
+    console.error('[VOICE CONNECTION ERROR]:', err?.message || err);
+  });
+
   connection.on(VoiceConnectionStatus.Disconnected, async () => {
     try {
       await Promise.race([
@@ -817,7 +833,7 @@ function attachVoiceConnectionListeners(connection, guild, voiceChannelId) {
             selfDeaf: true,
           });
           attachVoiceConnectionListeners(rejoined, guild, voiceChannelId);
-          await entersState(rejoined, VoiceConnectionStatus.Ready, 15000);
+          await entersState(rejoined, VoiceConnectionStatus.Ready, 25000);
           if (state.player) {
             rejoined.subscribe(state.player);
           }
@@ -838,6 +854,13 @@ export async function ensureVoiceConnection(interaction, voiceChannel) {
 
   let connection = getVoiceConnection(guild.id);
 
+  if (connection && connection.joinConfig?.channelId !== voiceChannel.id) {
+    try {
+      connection.destroy();
+    } catch {}
+    connection = null;
+  }
+
   if (!connection) {
     connection = joinDiscordVoiceChannel({
       channelId: voiceChannel.id,
@@ -851,10 +874,18 @@ export async function ensureVoiceConnection(interaction, voiceChannel) {
 
   if (connection.state.status !== VoiceConnectionStatus.Ready) {
     try {
-      await entersState(connection, VoiceConnectionStatus.Ready, 15000);
-    } catch {
+      await entersState(connection, VoiceConnectionStatus.Ready, 25000);
+    } catch (err) {
+      console.error(
+        '[VOICE READY TIMEOUT]: status =',
+        connection.state.status,
+        'reason =',
+        err?.message || err
+      );
       connection.destroy();
-      throw new Error('تعذر الاتصال بالروم الصوتي في الوقت المحدد.');
+      throw new Error(
+        'تعذر الاتصال بالروم الصوتي في الوقت المحدد. تأكد من صلاحيات البوت في الروم الصوتي وتثبيت مكتبات التشفير الصوتي (sodium-native / libsodium-wrappers).'
+      );
     }
   }
 
