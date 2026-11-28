@@ -1,4 +1,4 @@
-import { MessageFlags } from 'discord.js';
+import { MessageFlags, ChannelType } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { handleInteractionError, replyUserError, ErrorTypes } from '../utils/errorHandler.js';
 import {
@@ -9,9 +9,18 @@ import {
     applyPause,
     applyResume,
 } from '../services/music/musicActions.js';
-import { canControlMusic, VOICE_CHANNEL_DENIAL } from '../services/music/permissions.js';
 import { refreshPlayerMessage } from '../services/music/playerHandler.js';
 import { MUSIC_BUTTON_IDS } from '../services/music/musicEmbeds.js';
+
+const VOICE_CHANNEL_DENIAL = 'You must be in the same voice channel as the bot to control music.';
+
+function canControlMusic(member, player) {
+    const memberVoiceId = member?.voice?.channelId;
+    if (!memberVoiceId) return false;
+    const botVoiceId = player?.voiceChannelId || player?.voiceChannel || member?.guild?.members?.me?.voice?.channelId;
+    if (!botVoiceId) return true;
+    return memberVoiceId === botVoiceId;
+}
 
 const guildMusicStore = new Map();
 
@@ -112,8 +121,6 @@ async function handleMusicButton(interaction, client) {
                 await applyResume(client, interaction.guild.id);
                 break;
             case MUSIC_BUTTON_IDS.SKIP:
-                // Under track-loop, stop() would replay the same track. Clear it so the
-                // skip advances; trackStart re-applies the stored loop to the next track.
                 if (player.loop === 'track') {
                     player.setLoop('none');
                 }
