@@ -1,29 +1,4 @@
-import {
-  initializeMusic,
-  joinVoiceChannel,
-  getPlayer,
-  applyPause,
-  applyResume,
-  pausePlayback,
-  resumePlayback,
-  handlePlay,
-  handleSkip,
-  handleStop,
-  handleQueue,
-  seekTrack,
-  setVolume,
-  setLoopMode,
-  setTwentyFourSeven,
-  removeFromQueue,
-  moveInQueue,
-  clearQueue,
-  destroyPlayerSession,
-  buildNowPlayingReply,
-  buildQueueReply,
-  replyMusicSuccess,
-  replyMusicError,
-  handleMusicComponent,
-} from './music.js';
+import { handlePlay } from './music.js';
 
 export {
   initializeMusic,
@@ -50,7 +25,7 @@ export {
   replyMusicSuccess,
   replyMusicError,
   handleMusicComponent,
-};
+} from './music.js';
 
 export async function playQuery(interaction, query) {
   return handlePlay(interaction, query);
