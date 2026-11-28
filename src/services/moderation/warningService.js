@@ -11,6 +11,7 @@ class WarningService {
     userId,
     moderatorId,
     reason,
+    source = 'manual',
     timestamp = Date.now()
   }) {
     const key = getWarningsKey(guildId, userId);
@@ -28,11 +29,12 @@ class WarningService {
     }
 
     const warning = {
-      id: Date.now(),
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       guildId,
       userId,
       moderatorId,
       reason,
+      source,
       timestamp,
       status: 'active'
     };
@@ -40,11 +42,12 @@ class WarningService {
     warnings.push(warning);
     await setInDb(key, warnings);
 
-    logger.info(`Warning added: ${userId} in ${guildId} by ${moderatorId}`);
+    const activeWarnings = warnings.filter(w => w && w.status !== 'deleted');
+    logger.info(`Warning added: ${userId} in ${guildId} by ${moderatorId} (source: ${source})`);
 
     return {
       id: warning.id,
-      totalCount: warnings.length
+      totalCount: activeWarnings.length
     };
   }
 
@@ -66,7 +69,16 @@ class WarningService {
     const key = getWarningsKey(guildId, userId);
     const warnings = await getFromDb(key, []);
 
-    const index = warnings.findIndex(w => w.id === warningId);
+    if (!Array.isArray(warnings)) {
+      throw createError(
+        'Corrupted warning data',
+        ErrorTypes.DATABASE,
+        'Warning data is corrupted.',
+        { guildId, userId, warningId, service: 'warningService', operation: 'removeWarning' }
+      );
+    }
+
+    const index = warnings.findIndex(w => w && w.id === warningId);
     if (index === -1) {
       throw createError(
         'Warning not found',
@@ -86,7 +98,9 @@ class WarningService {
   static async clearWarnings(guildId, userId) {
     const key = getWarningsKey(guildId, userId);
     const warnings = await getFromDb(key, []);
-    const count = warnings.length;
+    const count = Array.isArray(warnings)
+      ? warnings.filter(w => w && w.status !== 'deleted').length
+      : 0;
 
     await setInDb(key, []);
 
