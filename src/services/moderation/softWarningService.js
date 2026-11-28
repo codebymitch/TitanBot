@@ -24,7 +24,8 @@ class SoftWarningServiceClass {
     return this.records.get(key);
   }
 
-  async addSoftWarning({ guildId, userId, moderatorId, reason, timestamp = Date.now() }) {
+  async addSoftWarning({ guildId, userId, moderatorId, reason, threshold, timestamp = Date.now() }) {
+    const activeThreshold = Number.isInteger(threshold) && threshold > 0 ? threshold : this.threshold;
     const record = this.getRecord(guildId, userId);
     const id = `sw_${timestamp}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -36,18 +37,21 @@ class SoftWarningServiceClass {
       timestamp,
     });
 
-    const currentCount = record.count;
-    const reachedThreshold = currentCount >= this.threshold;
+    const reachedCount = record.count;
+    const reachedThreshold = reachedCount >= activeThreshold;
 
     if (reachedThreshold) {
       record.count = 0;
+      record.warnings = [];
     }
 
     return {
       id,
-      softCount: currentCount,
-      threshold: this.threshold,
+      softCount: reachedCount,
+      resetCount: record.count,
+      threshold: activeThreshold,
       reachedThreshold,
+      escalated: reachedThreshold,
     };
   }
 
