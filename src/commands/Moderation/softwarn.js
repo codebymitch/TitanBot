@@ -10,9 +10,9 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 const SOFT_WARN_THRESHOLD = 3;
 const RED_COLOR = 0xdc2626;
 
-/**
- * Helper: يرجع رولات العضو (باستثناء @everyone) مرتبة من الأعلى للأدنى
- */
+// ضع هنا رابط الصورة المباشر الخاص بك
+const LAW_BANNER_URL = 'https://example.com/law-applies-to-all.png';
+
 function getSortedMemberRoles(guildMember) {
     if (!guildMember?.roles?.cache) return [];
     return [...guildMember.roles.cache
@@ -21,9 +21,6 @@ function getSortedMemberRoles(guildMember) {
         .values()];
 }
 
-/**
- * Helper: يرجع أعلى رول موجود في السيرفر (باستثناء @everyone)
- */
 function getGuildHighestRole(guild) {
     if (!guild?.roles?.cache) return null;
     return [...guild.roles.cache
@@ -32,9 +29,6 @@ function getGuildHighestRole(guild) {
         .values()][0] || null;
 }
 
-/**
- * Helper: يختصر قائمة الرولات حتى لا تتخطى حد أحرف ديسكورد
- */
 function formatRolesList(roles, maxChars = 900) {
     if (!roles.length) return 'لا يوجد رولات (بخلاف @everyone)';
 
@@ -162,11 +156,9 @@ export default {
             });
         }
 
-        // أعلى رول موجود في السيرفر بالكامل
         const topServerRoleObj = getGuildHighestRole(interaction.guild);
         const topServerRole = topServerRoleObj ? `${topServerRoleObj}` : 'لا يوجد';
 
-        // بيانات الرولات للشخص اللي أخذ التحذير الخفيف والشخص اللي أعطاه
         const targetRoles = getSortedMemberRoles(targetMember);
         const moderatorRoles = getSortedMemberRoles(executorMember);
 
@@ -178,13 +170,11 @@ export default {
             ? `${executorMember.roles.highest}`
             : 'لا يوجد';
 
-        // أعلى رول مشترك بين الاثنين
         const commonRoles = targetRoles.filter((tRole) =>
             moderatorRoles.some((mRole) => mRole.id === tRole.id)
         );
         const commonHighestRole = commonRoles.length > 0 ? `${commonRoles[0]}` : 'لا يوجد رول مشترك';
 
-        // إرسال رسالة في الخاص (DM) للشخص اللي أخذ التحذير الخفيف
         let dmSent = false;
         try {
             const dmLines = [
@@ -209,6 +199,7 @@ export default {
                         : `# ⚠️ تحذير خفيف في سيرفر ${interaction.guild.name}`
                 )
                 .setDescription(dmLines.join('\n'))
+                .setImage(LAW_BANNER_URL)
                 .setTimestamp();
 
             await target.send({ embeds: [dmEmbed] });
@@ -273,6 +264,7 @@ export default {
                     : `# ⚠️ تم إعطاء تحذير خفيف لـ ${target.tag}`
             )
             .setDescription(replyLines.join('\n'))
+            .setImage(LAW_BANNER_URL)
             .setTimestamp();
 
         await InteractionHelper.safeEditReply(interaction, {
